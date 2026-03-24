@@ -2,60 +2,84 @@ const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
 const API_BASE = 'https://ll.thespacedevs.com/2.2.0';
 const KSC_ID = 12;
 const CAPE_ID = 27;
-const REFRESH_INTERVAL = 300000; // 5 minutes
+const REFRESH_INTERVAL = 300000;
+const DAYS_AHEAD = 14;
 
 // DOM Elements
 const loadingEl = document.getElementById('loading');
 const errorEl = document.getElementById('error');
-const launchCardEl = document.getElementById('launchCard');
+const launchListEl = document.getElementById('launchList');
 const noLaunchesEl = document.getElementById('noLaunches');
 const retryBtn = document.getElementById('retryBtn');
+const dateRangeEl = document.getElementById('dateRange');
 
-let countdownInterval = null;
+let countdownIntervals = [];
 
-// Fetch next launch from Florida
-async function fetchNextLaunch() {
+// Show date range in header
+function updateDateRange() {
+    const now = new Date();
+    const end = new Date(now.getTime() + DAYS_AHEAD * 86400000);
+    const opts = { month: 'short', day: 'numeric' };
+    const startStr = now.toLocaleDateString('en-US', opts);
+    const endStr = end.toLocaleDateString('en-US', opts);
+    dateRangeEl.textContent = `${startStr} – ${endStr}`;
+}
+
+// Fetch all launches in next 14 days
+async function fetchLaunches() {
     showLoading();
+    clearAllCountdowns();
 
     try {
         const now = new Date().toISOString();
-        const url = `${API_BASE}/launch/upcoming/?mode=detailed&limit=5&net__gte=${now}&location__ids=${KSC_ID},${CAPE_ID}&ordering=net`;
+        const end = new Date(Date.now() + DAYS_AHEAD * 86400000).toISOString();
+        const url = `${API_BASE}/launch/upcoming/?mode=detailed&limit=20&net__gte=${now}&net__lte=${end}&location__ids=${KSC_ID},${CAPE_ID}&ordering=net`;
 
         const response = await fetch(url, {
             headers: { 'Authorization': `Token ${API_KEY}` }
         });
 
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
 
         const data = await response.json();
 
         if (data.results && data.results.length > 0) {
-            displayLaunch(data.results[0]);
+            displayLaunches(data.results);
         } else {
             showNoLaunches();
         }
     } catch (err) {
-        console.error('Failed to fetch launch:', err);
+        console.error('Failed to fetch launches:', err);
         showError();
     }
 }
 
-// Display launch data
-function displayLaunch(launch) {
+// Display all launches
+function displayLaunches(launches) {
     hideAll();
-    launchCardEl.style.display = 'block';
+    launchListEl.style.display = 'block';
+    launchListEl.innerHTML = '';
 
-    // Mission name
-    const missionName = launch.mission ? launch.mission.name : launch.name;
-    document.getElementById('missionName').textContent = missionName;
+    const launchCount = document.createElement('p');
+    launchCount.className = 'launch-count';
+    launchCount.textContent = `${launches.length} launch${launches.length !== 1 ? 'es' : ''} scheduled`;
+    launchListEl.appendChild(launchCount);
 
-    // Rocket name
-    document.getElementById('rocketName').textContent = launch.rocket?.configuration?.full_name || launch.rocket?.configuration?.name || 'Unknown Rocket';
+    launches.forEach((launch, index) => {
+        const card = createLaunchCard(launch, index);
+        launchListEl.appendChild(card);
+    });
+}
 
-    // Status badge
-    const statusBadge = document.getElementById('statusBadge');
+// Create a single launch card
+function createLaunchCard(launch, index) {
+    const card = document.createElement('div');
+    card.className = 'launch-card';
+
+    // First card is featured
+    if (index === 0) card.classList.add('featured');
+
+    // Status
     const statusMap = {
         1: { text: 'GO', class: 'status-go' },
         2: { text: 'TBD', class: 'status-tbd' },
@@ -66,77 +90,104 @@ function displayLaunch(launch) {
         7: { text: 'Partial Failure', class: 'status-hold' },
         8: { text: 'TBC', class: 'status-tbc' }
     };
-
     const statusInfo = statusMap[launch.status?.id] || { text: 'Unknown', class: 'status-tbd' };
-    statusBadge.textContent = statusInfo.text;
-    statusBadge.className = `status-badge ${statusInfo.class}`;
 
-    // Date and time in Eastern
+    // Mission name and rocket
+    const missionName = launch.mission ? launch.mission.name : launch.name;
+    const rocketName = launch.rocket?.configuration?.full_name || launch.rocket?.configuration?.name || 'Unknown Rocket';
+
+    // Date/time in Eastern
     const launchDate = new Date(launch.net);
-    const dateOptions = {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
+    const dateStr = launchDate.toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
         timeZone: 'America/New_York'
-    };
-    const timeOptions = {
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZoneName: 'short',
+    });
+    const timeStr = launchDate.toLocaleTimeString('en-US', {
+        hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
         timeZone: 'America/New_York'
-    };
+    });
 
-    document.getElementById('launchDate').textContent = launchDate.toLocaleDateString('en-US', dateOptions);
-    document.getElementById('launchTime').textContent = launchDate.toLocaleTimeString('en-US', timeOptions);
+    // Pad and provider
+    const padName = launch.pad?.name || 'TBD';
+    const provider = launch.launch_service_provider?.name || 'Unknown';
 
-    // Launch pad
-    document.getElementById('launchPad').textContent = launch.pad?.name || 'TBD';
+    // Countdown ID
+    const countdownId = `countdown-${index}`;
 
-    // Provider
-    document.getElementById('provider').textContent = launch.launch_service_provider?.name || 'Unknown';
+    // Description
+    const hasDesc = launch.mission?.description;
+    const descId = `desc-${index}`;
+    const toggleId = `toggle-${index}`;
 
-    // Mission description
-    const descSection = document.getElementById('missionDescription');
-    const descText = document.getElementById('descText');
-    const descToggle = document.getElementById('descToggle');
+    card.innerHTML = `
+        <div class="card-header">
+            <span class="status-badge ${statusInfo.class}">${statusInfo.text}</span>
+            ${index === 0 ? '<span class="next-badge">NEXT UP</span>' : ''}
+        </div>
+        <h2 class="mission-name">${missionName}</h2>
+        <p class="rocket-name">${rocketName}</p>
 
-    if (launch.mission?.description) {
-        descSection.style.display = 'block';
-        descText.textContent = launch.mission.description;
-        descText.style.display = 'none';
+        <div class="countdown" id="${countdownId}"></div>
 
-        // Remove old listener by replacing element
-        const newToggle = descToggle.cloneNode(true);
-        descToggle.parentNode.replaceChild(newToggle, descToggle);
-        newToggle.addEventListener('click', () => {
-            const isHidden = descText.style.display === 'none';
-            descText.style.display = isHidden ? 'block' : 'none';
-            newToggle.textContent = isHidden ? '📋 Mission Details ▲' : '📋 Mission Details ▼';
-        });
-    } else {
-        descSection.style.display = 'none';
+        <div class="details">
+            <div class="detail-row">
+                <span class="label">📅 Date</span>
+                <span class="value">${dateStr}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">🕐 Time</span>
+                <span class="value">${timeStr}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">📍 Pad</span>
+                <span class="value">${padName}</span>
+            </div>
+            <div class="detail-row">
+                <span class="label">🏢 Provider</span>
+                <span class="value">${provider}</span>
+            </div>
+        </div>
+
+        ${hasDesc ? `
+            <div class="mission-description">
+                <button class="desc-toggle" id="${toggleId}">📋 Mission Details ▼</button>
+                <p class="desc-text" id="${descId}" style="display:none;">${launch.mission.description}</p>
+            </div>
+        ` : ''}
+    `;
+
+    // Start countdown for this card
+    startCountdown(launchDate, countdownId, index === 0);
+
+    // Description toggle
+    if (hasDesc) {
+        setTimeout(() => {
+            const toggle = document.getElementById(toggleId);
+            const desc = document.getElementById(descId);
+            if (toggle && desc) {
+                toggle.addEventListener('click', () => {
+                    const hidden = desc.style.display === 'none';
+                    desc.style.display = hidden ? 'block' : 'none';
+                    toggle.textContent = hidden ? '📋 Mission Details ▲' : '📋 Mission Details ▼';
+                });
+            }
+        }, 0);
     }
 
-    // Start countdown
-    startCountdown(launchDate);
+    return card;
 }
 
-// Countdown timer
-function startCountdown(launchDate) {
-    if (countdownInterval) clearInterval(countdownInterval);
-
-    const countdownEl = document.getElementById('countdown');
-
+// Countdown timer for each card
+function startCountdown(launchDate, elementId, isFeatured) {
     function update() {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+
         const now = new Date();
         const diff = launchDate - now;
 
         if (diff <= 0) {
-            countdownEl.innerHTML = '<div class="countdown-launched">🚀 LAUNCHED!</div>';
-            clearInterval(countdownInterval);
-            // Refresh after 60 seconds to get next launch
-            setTimeout(fetchNextLaunch, 60000);
+            el.innerHTML = '<div class="countdown-launched">🚀 LAUNCHED!</div>';
             return;
         }
 
@@ -152,14 +203,22 @@ function startCountdown(launchDate) {
             timerText = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
         }
 
-        countdownEl.innerHTML = `
+        const sizeClass = isFeatured ? 'countdown-timer featured-timer' : 'countdown-timer compact-timer';
+
+        el.innerHTML = `
             <div class="countdown-label">T-Minus</div>
-            <div class="countdown-timer">${timerText}</div>
+            <div class="${sizeClass}">${timerText}</div>
         `;
     }
 
     update();
-    countdownInterval = setInterval(update, 1000);
+    const interval = setInterval(update, 1000);
+    countdownIntervals.push(interval);
+}
+
+function clearAllCountdowns() {
+    countdownIntervals.forEach(i => clearInterval(i));
+    countdownIntervals = [];
 }
 
 function pad(num) {
@@ -185,15 +244,19 @@ function showNoLaunches() {
 function hideAll() {
     loadingEl.style.display = 'none';
     errorEl.style.display = 'none';
-    launchCardEl.style.display = 'none';
+    launchListEl.style.display = 'none';
     noLaunchesEl.style.display = 'none';
 }
 
 // Event listeners
-retryBtn.addEventListener('click', fetchNextLaunch);
+retryBtn.addEventListener('click', fetchLaunches);
 
 // Start the app
-fetchNextLaunch();
+updateDateRange();
+fetchLaunches();
 
 // Auto-refresh every 5 minutes
-setInterval(fetchNextLaunch, REFRESH_INTERVAL);
+setInterval(() => {
+    updateDateRange();
+    fetchLaunches();
+}, REFRESH_INTERVAL);
