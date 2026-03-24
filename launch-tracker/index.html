@@ -11,53 +11,27 @@
         <header>
             <h1>🚀 Florida Launch Tracker</h1>
             <p class="subtitle">Kennedy Space Center & Cape Canaveral</p>
+            <p class="date-range" id="dateRange"></p>
         </header>
 
         <div id="loading" class="loading">
             <div class="spinner"></div>
-            <p>Loading launch data...</p>
+            <p>Fetching launches...</p>
         </div>
 
         <div id="error" class="error" style="display:none;">
-            <p>⚠️ Unable to load launch data</p>
-            <button id="retryBtn" class="retry-btn">Try Again</button>
+            <p>⚠️ Couldn't load launch data</p>
+            <button class="retry-btn" id="retryBtn">Try Again</button>
         </div>
 
-        <div id="launchCard" class="launch-card" style="display:none;">
-            <div id="statusBadge" class="status-badge">GO</div>
-            <h2 id="missionName" class="mission-name"></h2>
-            <p id="rocketName" class="rocket-name"></p>
-            <div id="countdown" class="countdown"></div>
-            <div class="details">
-                <div class="detail-row">
-                    <span class="label">📅 Date:</span>
-                    <span id="launchDate" class="value"></span>
-                </div>
-                <div class="detail-row">
-                    <span class="label">🕐 Time:</span>
-                    <span id="launchTime" class="value"></span>
-                </div>
-                <div class="detail-row">
-                    <span class="label">📍 Pad:</span>
-                    <span id="launchPad" class="value"></span>
-                </div>
-                <div class="detail-row">
-                    <span class="label">🏢 Provider:</span>
-                    <span id="provider" class="value"></span>
-                </div>
-            </div>
-            <div id="missionDescription" class="mission-description" style="display:none;">
-                <button id="descToggle" class="desc-toggle">📋 Mission Details ▼</button>
-                <p id="descText" class="desc-text" style="display:none;"></p>
-            </div>
-        </div>
+        <div id="launchList" class="launch-list" style="display:none;"></div>
 
         <div id="noLaunches" class="no-launches" style="display:none;">
-            <p>🔭 No launches scheduled in the next 14 days</p>
+            <p>🛸 No launches scheduled in the next 14 days</p>
         </div>
 
         <footer>
-            <p>Auto-refreshes every 5 minutes • Data from Launch Library 2</p>
+            <p>Data from Launch Library 2 • Auto-refreshes every 5 min</p>
         </footer>
     </div>
 
