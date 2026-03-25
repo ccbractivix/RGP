@@ -1,308 +1,249 @@
-// Florida Space Launch Tracker - App.js
-// Uses Launch Library 2 API (authenticated)
-
 const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
-const API_BASE = 'https://lldev.thespacedevs.com/2.2.0';
+const BASE_URL = 'https://ll.thespacedevs.com/2.2.0';
+const FLORIDA_PAD_IDS = [27, 12, 87, 80, 84, 85]; 
+const REFRESH_INTERVAL = 300000;
 
-// Florida launch pad IDs
-const FLORIDA_PAD_IDS = [27, 12];
-
-// Cache
-let cachedLaunches = [];
 let countdownIntervals = [];
 
-// ── Fetch Launches ──────────────────────────────────────────
 async function fetchLaunches() {
-  showLoading(true);
-  clearCountdowns();
+    showLoading();
+    clearCountdowns();
 
-  try {
     const now = new Date();
-    const futureDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-    const netAfter = now.toISOString().split('.')[0] + 'Z';
-    const netBefore = futureDate.toISOString().split('.')[0] + 'Z';
+    const twoWeeks = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    const nowISO = now.toISOString().slice(0, -5) + 'Z';
+    const futureISO = twoWeeks.toISOString().slice(0, -5) + 'Z';
 
-    const url = `${API_BASE}/launch/upcoming/?mode=detailed&limit=50&ordering=net&net__gte=${netAfter}&net__lte=${netBefore}`;
+    try {
+        // Try 14-day window first
+        let url = `${BASE_URL}/launch/upcoming/?format=json&limit=20&net__gte=${nowISO}&net__lte=${futureISO}&ordering=net`;
+        let response = await fetch(url, {
+            headers: { 'Authorization': `Token ${API_KEY}` }
+        });
 
-    const response = await fetch(url, {
-      headers: {
-        'Authorization': `Token ${API_KEY}`
-      }
+        if (!response.ok) throw new Error(`API returned ${response.status}`);
+        let data = await response.json();
+
+        let launches = filterFloridaLaunches(data.results || []);
+
+        // Fallback: get next available Florida launch
+        if (launches.length === 0) {
+            url = `${BASE_URL}/launch/upcoming/?format=json&limit=10&ordering=net`;
+            response = await fetch(url, {
+                headers: { 'Authorization': `Token ${API_KEY}` }
+            });
+            if (!response.ok) throw new Error(`API returned ${response.status}`);
+            data = await response.json();
+            launches = filterFloridaLaunches(data.results || []).slice(0, 1);
+        }
+
+        displayLaunches(launches);
+        updateRefreshTime();
+
+    } catch (error) {
+        console.error('Fetch error:', error);
+        showError(error.message);
+    }
+}
+
+function filterFloridaLaunches(launches) {
+    return launches.filter(launch => {
+        const padId = launch.pad?.location?.id;
+        return FLORIDA_PAD_IDS.includes(padId);
+    });
+}
+
+function displayLaunches(launches) {
+    const container = document.getElementById('launch-container');
+
+    if (!launches || launches.length === 0) {
+        container.innerHTML = `
+            <div class="no-launches">
+                <h2>🚀 No Upcoming Florida Launches</h2>
+                <p>Check back soon for new launch schedules</p>
+                <button class="retry-btn" onclick="fetchLaunches()">Refresh Now</button>
+            </div>`;
+        return;
+    }
+
+    const countText = launches.length === 1
+        ? 'Next Florida Launch'
+        : `${launches.length} Florida Launches in Next 14 Days`;
+
+    let html = `<div class="launch-count">${countText}</div><div class="launch-list">`;
+
+    launches.forEach((launch, index) => {
+        html += buildLaunchCard(launch, index === 0);
     });
 
-    if (!response.ok) {
-      throw new Error(`API returned ${response.status}`);
-    }
+    html += '</div>';
+    container.innerHTML = html;
 
-    const data = await response.json();
-    console.log(`API returned ${data.results.length} launches`);
-
-    let floridaLaunches = data.results.filter(launch => {
-      const locId = launch.pad?.location?.id;
-      return FLORIDA_PAD_IDS.includes(locId);
+    launches.forEach((launch, index) => {
+        startCountdown(launch.net, `countdown-${index}`);
     });
-
-    console.log(`Florida launches in 14-day window: ${floridaLaunches.length}`);
-
-    if (floridaLaunches.length === 0) {
-      console.log('No Florida launches in 14-day window, fetching next available...');
-      floridaLaunches = await fetchNextFloridaLaunch();
-    }
-
-    cachedLaunches = floridaLaunches;
-    renderLaunches(floridaLaunches);
-
-  } catch (error) {
-    console.error('Fetch error:', error);
-    showError(error.message);
-  } finally {
-    showLoading(false);
-  }
 }
 
-// ── Fallback: Get Next Florida Launch ───────────────────────
-async function fetchNextFloridaLaunch() {
-  const url = `${API_BASE}/launch/upcoming/?mode=detailed&limit=50&ordering=net`;
+function buildLaunchCard(launch, isNext) {
+    const name = launch.name || 'Unknown Mission';
+    const status = launch.status?.name || 'Unknown';
+    const statusAbbrev = launch.status?.abbrev?.toLowerCase() || 'unknown';
+    const net = launch.net ? new Date(launch.net) : null;
+    const padName = launch.pad?.name || 'Unknown Pad';
+    const location = launch.pad?.location?.name || 'Florida';
+    const provider = launch.launch_service_provider?.name || 'Unknown Provider';
+    const rocketName = launch.rocket?.configuration?.name || 'Unknown Rocket';
+    const description = launch.mission?.description || '';
+    const imageUrl = launch.image || launch.rocket?.configuration?.image_url || '';
+    const orbit = launch.mission?.orbit?.name || '';
+    const cardIndex = isNext ? 0 : Math.random().toString(36).substr(2, 9);
 
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Token ${API_KEY}`
+    // Trajectory from mission type or orbit
+    const trajectory = launch.mission?.orbit?.name || launch.mission?.type || '';
+
+    const dateStr = net ? net.toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+    }) : 'TBD';
+
+    const timeStr = net ? net.toLocaleTimeString('en-US', {
+        hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+    }) : 'TBD';
+
+    let html = `<div class="launch-card ${isNext ? 'next-launch' : ''}">`;
+
+    if (isNext) {
+        html += `<div class="next-badge">🚀 NEXT FLORIDA LAUNCH</div>`;
     }
-  });
 
-  if (!response.ok) return [];
-
-  const data = await response.json();
-  const floridaLaunches = data.results.filter(launch => {
-    const locId = launch.pad?.location?.id;
-    return FLORIDA_PAD_IDS.includes(locId);
-  });
-
-  return floridaLaunches.length > 0 ? [floridaLaunches[0]] : [];
-}
-
-// ── Render Launches ─────────────────────────────────────────
-function renderLaunches(launches) {
-  const container = document.getElementById('launches-container');
-
-  if (!launches || launches.length === 0) {
-    container.innerHTML = `
-      <div class="no-launches">
-        <h2>No Upcoming Florida Launches</h2>
-        <p>Check back soon for updated launch schedules.</p>
-      </div>`;
-    updateLastRefresh();
-    return;
-  }
-
-  let html = '';
-
-  launches.forEach((launch, index) => {
-    const isNext = index === 0;
-    html += buildLaunchCard(launch, isNext, index);
-  });
-
-  container.innerHTML = html;
-  updateLastRefresh();
-
-  launches.forEach((launch, index) => {
-    if (launch.net) {
-      startCountdown(launch.net, `countdown-${index}`);
+    if (imageUrl) {
+        html += `<div class="launch-image"><img src="${imageUrl}" alt="${name}" loading="lazy"></div>`;
     }
-  });
-}
 
-// ── Build Launch Card ───────────────────────────────────────
-function buildLaunchCard(launch, isNext, cardIndex) {
-  const name = launch.name || 'Unknown Mission';
-  const provider = launch.launch_service_provider?.name || 'Unknown Provider';
-  const rocket = launch.rocket?.configuration?.name || 'Unknown Rocket';
-  const padName = launch.pad?.name || 'Unknown Pad';
-  const status = launch.status?.abbrev || 'UNK';
-  const net = launch.net ? formatDateTime(launch.net) : 'TBD';
-  const missionDesc = launch.mission?.description || 'No mission description available.';
-  const missionType = launch.mission?.type || '';
-  const orbit = launch.mission?.orbit?.name || '';
-  const image = launch.image || launch.rocket?.configuration?.image_url || '';
-  const statusClass = getStatusClass(status);
+    html += `<div class="launch-content">`;
 
-  let imageHtml = '';
-  if (image) {
-    imageHtml = `<div class="launch-image"><img src="${image}" alt="${name}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
-  }
-
-  let orbitHtml = '';
-  if (orbit) {
-    orbitHtml = `<div class="meta-item"><span class="meta-label">🌍 Orbit</span><span class="meta-value">${orbit}</span></div>`;
-  }
-
-  let typeHtml = '';
-  if (missionType) {
-    typeHtml = `<div class="meta-item"><span class="meta-label">📋 Type</span><span class="meta-value">${missionType}</span></div>`;
-  }
-
-  return `
-    <div class="launch-card ${isNext ? 'next-launch' : ''}">
-      ${isNext ? '<div class="next-badge">NEXT UP</div>' : ''}
-      ${imageHtml}
-      <div class="launch-content">
-        <div class="launch-header">
-          <h2 class="launch-name">${name}</h2>
-          <span class="status-badge status-${statusClass}">${status}</span>
-        </div>
-        <div class="launch-meta">
-          <div class="meta-item">
-            <span class="meta-label">🚀 Provider</span>
-            <span class="meta-value">${provider}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">🔧 Vehicle</span>
-            <span class="meta-value">${rocket}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">📍 Pad</span>
-            <span class="meta-value">${padName}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-label">🕐 NET</span>
-            <span class="meta-value">${net}</span>
-          </div>
-          ${orbitHtml}
-          ${typeHtml}
-        </div>
-        <div class="countdown-container" id="countdown-${cardIndex}">
-          <div class="countdown-label">T-MINUS</div>
-          <div class="countdown-timer">Calculating...</div>
-        </div>
-        <div class="mission-description">
-          <button class="desc-toggle" onclick="toggleDescription(this)">
-            Mission Details ▸
-          </button>
-          <div class="desc-content">${missionDesc}</div>
-        </div>
-      </div>
+    // Header
+    html += `<div class="launch-header">
+        <div class="launch-name">${name}</div>
+        <span class="status-badge status-${statusAbbrev}">${status}</span>
     </div>`;
-}
 
-// ── Status Badge Class ──────────────────────────────────────
-function getStatusClass(status) {
-  switch (status.toUpperCase()) {
-    case 'GO': return 'go';
-    case 'TBD': return 'tbd';
-    case 'TBC': return 'tbc';
-    case 'HOLD': return 'hold';
-    case 'SUCCESS': return 'success';
-    case 'IN FLIGHT':
-    case 'INFLIGHT': return 'inflight';
-    default: return 'tbd';
-  }
-}
+    // Meta grid
+    html += `<div class="launch-meta">
+        <div class="meta-item">
+            <span class="meta-label">Date</span>
+            <span class="meta-value">${dateStr}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Time</span>
+            <span class="meta-value">${timeStr}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Provider</span>
+            <span class="meta-value">${provider}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Rocket</span>
+            <span class="meta-value">${rocketName}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">Pad</span>
+            <span class="meta-value">${padName}</span>
+        </div>`;
 
-// ── Format Date/Time to Eastern ─────────────────────────────
-function formatDateTime(isoString) {
-  const date = new Date(isoString);
-  return date.toLocaleString('en-US', {
-    timeZone: 'America/New_York',
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZoneName: 'short'
-  });
-}
-
-// ── Countdown Timer ─────────────────────────────────────────
-function startCountdown(netISO, elementId) {
-  const target = new Date(netISO).getTime();
-
-  function update() {
-    const container = document.getElementById(elementId);
-    if (!container) return;
-
-    const now = Date.now();
-    const diff = target - now;
-
-    const timerEl = container.querySelector('.countdown-timer');
-    if (!timerEl) return;
-
-    if (diff <= 0) {
-      timerEl.textContent = 'LIFTOFF!';
-      timerEl.classList.add('liftoff');
-      return;
+    // Trajectory instead of Type
+    if (trajectory) {
+        html += `<div class="meta-item">
+            <span class="meta-label">Trajectory</span>
+            <span class="meta-value">${trajectory}</span>
+        </div>`;
     }
 
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    html += `</div>`; // close launch-meta
 
-    timerEl.textContent = `${days}d ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
-  }
+    // Countdown
+    if (net && net > new Date()) {
+        html += `<div class="countdown-container">
+            <div class="countdown-label">T-Minus</div>
+            <div class="countdown-timer" id="countdown-${isNext ? 0 : cardIndex}">--:--:--:--</div>
+        </div>`;
+    }
 
-  update();
-  const intervalId = setInterval(update, 1000);
-  countdownIntervals.push(intervalId);
+    // Description
+    if (description) {
+        html += `<div class="mission-description">
+            <button class="desc-toggle" onclick="toggleDescription(this)">▶ Mission Details</button>
+            <div class="desc-content">${description}</div>
+        </div>`;
+    }
+
+    html += `</div></div>`; // close launch-content, launch-card
+    return html;
 }
 
-function pad(num) {
-  return num.toString().padStart(2, '0');
+function toggleDescription(btn) {
+    const content = btn.nextElementSibling;
+    const isOpen = content.classList.toggle('open');
+    btn.textContent = isOpen ? '▼ Mission Details' : '▶ Mission Details';
+}
+
+function startCountdown(netTime, elementId) {
+    const target = new Date(netTime);
+
+    const update = () => {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+
+        const now = new Date();
+        const diff = target - now;
+
+        if (diff <= 0) {
+            el.textContent = '🔥 LIFTOFF!';
+            el.classList.add('liftoff');
+            return;
+        }
+
+        const days = Math.floor(diff / 86400000);
+        const hrs = Math.floor((diff % 86400000) / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+
+        el.textContent = `${days}d ${String(hrs).padStart(2, '0')}h ${String(mins).padStart(2, '0')}m ${String(secs).padStart(2, '0')}s`;
+    };
+
+    update();
+    const interval = setInterval(update, 1000);
+    countdownIntervals.push(interval);
 }
 
 function clearCountdowns() {
-  countdownIntervals.forEach(id => clearInterval(id));
-  countdownIntervals = [];
+    countdownIntervals.forEach(id => clearInterval(id));
+    countdownIntervals = [];
 }
 
-// ── Toggle Mission Description ──────────────────────────────
-function toggleDescription(button) {
-  const content = button.nextElementSibling;
-  const isOpen = content.classList.contains('open');
-
-  content.classList.toggle('open');
-  button.textContent = isOpen ? 'Mission Details ▸' : 'Mission Details ▾';
+function showLoading() {
+    document.getElementById('launch-container').innerHTML = `
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Loading Florida launches...</p>
+        </div>`;
 }
 
-// ── Loading State ───────────────────────────────────────────
-function showLoading(show) {
-  const loader = document.getElementById('loading');
-  const container = document.getElementById('launches-container');
-
-  if (loader) loader.style.display = show ? 'flex' : 'none';
-  if (container) container.style.display = show ? 'none' : 'block';
-}
-
-// ── Error Display ───────────────────────────────────────────
 function showError(message) {
-  const container = document.getElementById('launches-container');
-  container.innerHTML = `
-    <div class="error-message">
-      <h2>⚠️ Unable to Load Launches</h2>
-      <p>${message}</p>
-      <button onclick="fetchLaunches()" class="retry-btn">Retry</button>
-    </div>`;
+    document.getElementById('launch-container').innerHTML = `
+        <div class="error-message">
+            <h2>⚠️ Unable to Load Launches</h2>
+            <p>${message}</p>
+            <button class="retry-btn" onclick="fetchLaunches()">Try Again</button>
+        </div>`;
 }
 
-// ── Last Refresh Timestamp ──────────────────────────────────
-function updateLastRefresh() {
-  const el = document.getElementById('last-refresh');
-  if (el) {
-    const now = new Date().toLocaleTimeString('en-US', {
-      timeZone: 'America/New_York',
-      hour: 'numeric',
-      minute: '2-digit',
-      second: '2-digit',
-      timeZoneName: 'short'
-    });
-    el.textContent = `Last updated: ${now}`;
-  }
+function updateRefreshTime() {
+    const el = document.getElementById('last-refresh');
+    if (el) {
+        el.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+    }
 }
 
-// ── Initialize ──────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  fetchLaunches();
-
-  // Auto-refresh every 5 minutes
-  setInterval(fetchLaunches, 5 * 60 * 1000);
-});
+// Init
+fetchLaunches();
+setInterval(fetchLaunches, REFRESH_INTERVAL);
