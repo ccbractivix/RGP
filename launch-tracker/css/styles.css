@@ -364,3 +364,37 @@ footer {
         padding: 16px;
     }
 }
+.trajectory-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin: 10px 0;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.trajectory-northeast {
+    background: linear-gradient(135deg, #1a3a5c, #2a5a8c);
+    border-left: 4px solid #4aa3ff;
+    color: #b8d9ff;
+}
+
+.trajectory-southeast {
+    background: linear-gradient(135deg, #1a4a3a, #2a7a5c);
+    border-left: 4px solid #4affaa;
+    color: #b8ffd9;
+}
+
+.trajectory-icon {
+    font-size: 1.3rem;
+}
+
+.trajectory-text {
+    flex: 1;
+}
+
+.trajectory-value {
+    font-weight: 600;
+}
