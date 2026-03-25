@@ -1,6 +1,6 @@
 const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
 const BASE_URL = 'https://ll.thespacedevs.com/2.2.0';
-const FLORIDA_PAD_IDS = [27, 12, 87, 80, 84, 85]; 
+const FLORIDA_PAD_IDS = [27, 12, 87, 80, 84, 85];
 const REFRESH_INTERVAL = 300000;
 
 let countdownIntervals = [];
@@ -36,10 +36,6 @@ async function fetchLaunches() {
 
         displayLaunches(launches);
         updateRefreshTime();
-        function displayLaunches(launches) {
-    const loading = document.getElementById('loading');
-    if (loading) loading.style.display = 'none';
-
 
     } catch (error) {
         console.error('Fetch error:', error);
@@ -55,6 +51,9 @@ function filterFloridaLaunches(launches) {
 }
 
 function displayLaunches(launches) {
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'none';
+
     const container = document.getElementById('launch-container');
 
     if (!launches || launches.length === 0) {
