@@ -104,6 +104,7 @@ body {
 .launch-image-wrapper {
     position: relative;
     width: 100%;
+    max-height: 400px;
     overflow: hidden;
     border-radius: 16px 16px 0 0;
 }
