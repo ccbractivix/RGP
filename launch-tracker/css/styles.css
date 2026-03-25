@@ -392,3 +392,20 @@ body {
         gap: 12px;
     }
 }
+.footer-link {
+    text-align: center;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.footer-link a {
+    color: #4fc3f7;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.footer-link a:hover {
+    text-decoration: underline;
+    color: #81d4fa;
+}
