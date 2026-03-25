@@ -104,16 +104,13 @@ body {
 .launch-image-wrapper {
     position: relative;
     width: 100%;
-    height: 300px;
     overflow: hidden;
     border-radius: 16px 16px 0 0;
 }
 
 .launch-image {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
+    height: auto;
     display: block;
 }
 
