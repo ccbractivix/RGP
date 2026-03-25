@@ -318,7 +318,6 @@ footer {
     .launch-card {
         padding: 16px;
     }
-}
 /* ===== LAUNCH IMAGES ===== */
 .launch-image {
     width: 100%;
@@ -334,4 +333,5 @@ footer {
     height: 200px;
     object-fit: cover;
     display: block;
+}
 }
