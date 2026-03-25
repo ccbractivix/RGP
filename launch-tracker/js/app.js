@@ -15,7 +15,6 @@ async function loadCustomContent() {
         const response = await fetch(SHEET_URL);
         const text = await response.text();
 
-        // Google returns JSONP-like wrapper, strip it
         const jsonString = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);/);
         if (!jsonString) {
             console.warn("⚠️ Could not parse sheet response");
@@ -69,7 +68,6 @@ function fuzzyMatch(formInput, launchName) {
     if (name.includes(input)) return true;
     if (input.includes(name)) return true;
 
-    // Check if all words in input appear in the launch name
     const inputWords = input.split(' ');
     return inputWords.every(word => name.includes(word));
 }
@@ -79,12 +77,10 @@ function fuzzyMatch(formInput, launchName) {
 function getCustomContentForLaunch(launchName) {
     const matched = customContent.filter(entry => fuzzyMatch(entry.launchName, launchName));
 
-    // --- Rocket Talk: latest wins ---
     const rocketTalkEntries = matched.filter(e => e.contentType === 'Rocket Talk LIVE!');
     let rocketTalk = null;
     if (rocketTalkEntries.length > 0) {
         const latest = rocketTalkEntries[rocketTalkEntries.length - 1];
-        // Check for CANCEL
         if (latest.message && latest.message.trim().toUpperCase() === 'CANCEL') {
             rocketTalk = null;
         } else {
@@ -92,7 +88,6 @@ function getCustomContentForLaunch(launchName) {
         }
     }
 
-    // --- Viewing Guide: latest wins ---
     const viewingEntries = matched.filter(e => e.contentType === 'Launch Viewing Guide');
     let viewingGuide = null;
     if (viewingEntries.length > 0) {
@@ -104,7 +99,6 @@ function getCustomContentForLaunch(launchName) {
         }
     }
 
-    // --- Chris Says: all entries, newest first ---
     const chrisSays = matched
         .filter(e => e.contentType === 'Chris Says')
         .filter(e => e.message && e.message.trim().toUpperCase() !== 'CANCEL')
@@ -113,59 +107,64 @@ function getCustomContentForLaunch(launchName) {
     return { rocketTalk, viewingGuide, chrisSays };
 }
 
+// ==================== PARSE GVIZ DATES ====================
+
+function parseGvizDate(str) {
+    if (!str) return null;
+    const match = String(str).match(/Date\((\d+),(\d+),(\d+)/);
+    if (!match) return null;
+    return new Date(parseInt(match[1]), parseInt(match[2]), parseInt(match[3]));
+}
+
+function parseGvizTime(str) {
+    if (!str) return null;
+    const match = String(str).match(/Date\(\d+,\d+,\d+,(\d+),(\d+),(\d+)\)/);
+    if (!match) return null;
+    return { hours: parseInt(match[1]), minutes: parseInt(match[2]) };
+}
+
 // ==================== FORMAT ROCKET TALK ====================
 
-function formatRocketTalk(entry, launch) {
-    // Parse the gviz date strings
-    function parseGvizDate(str) {
-        if (!str) return null;
-        const match = str.match(/Date\((\d+),(\d+),(\d+)/);
-        if (!match) return null;
-        return new Date(parseInt(match[1]), parseInt(match[2]), parseInt(match[3]));
-    }
-    
-    function parseGvizTime(str) {
-        if (!str) return null;
-        const match = str.match(/Date\(\d+,\d+,\d+,(\d+),(\d+),(\d+)\)/);
-        if (!match) return null;
-        return { hours: parseInt(match[1]), minutes: parseInt(match[2]) };
-    }
-
+function formatRocketTalk(entry, launchName) {
     const eventDate = parseGvizDate(entry.eventDate);
     const eventTime = parseGvizTime(entry.eventTime);
 
-    // Format the date like "Wednesday, March 26"
+    // Format the day like "Wednesday"
+    let dayStr = 'TBD';
     let dateStr = 'TBD';
     if (eventDate) {
-        dateStr = eventDate.toLocaleDateString('en-US', { 
-            weekday: 'long', month: 'long', day: 'numeric' 
-        });
+        dayStr = eventDate.toLocaleDateString('en-US', { weekday: 'long' });
+        dateStr = eventDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
     }
 
     // Format the time like "7:00 PM ET"
     let timeStr = 'TBD';
     if (eventTime) {
         const tempDate = new Date(2000, 0, 1, eventTime.hours, eventTime.minutes);
-        timeStr = tempDate.toLocaleTimeString('en-US', { 
-            hour: 'numeric', minute: '2-digit', hour12: true 
+        timeStr = tempDate.toLocaleTimeString('en-US', {
+            hour: 'numeric', minute: '2-digit', hour12: true
         }) + ' ET';
     }
 
-    // Extract mission name and vehicle from the launch data
-    const missionName = launch?.name?.split('|')?.[1]?.trim() || launch?.name || 'Unknown Mission';
-    const vehicle = launch?.rocket?.configuration?.full_name || launch?.rocket?.configuration?.name || 'Unknown Vehicle';
+    // Extract mission name and vehicle from the launch name string
+    // Format is "Falcon 9 Block 5 | Starlink Group 10-44"
+    let vehicle = 'the rocket';
+    let missionName = 'the mission';
+    if (launchName && launchName.includes('|')) {
+        vehicle = launchName.split('|')[0].trim();
+        missionName = launchName.split('|')[1].trim();
+    } else if (launchName) {
+        missionName = launchName;
+    }
 
     return `
         <div class="rocket-talk-content">
-            <p>🎙️ <strong>Join us LIVE on YouTube as we cover the launch of ${missionName} aboard a ${vehicle} rocket!</strong></p>
-            <p>📅 <strong>Date:</strong> ${dateStr}</p>
-            <p>🕐 <strong>Time:</strong> ${timeStr}</p>
-            <p>💬 Come hang out in the live chat, ask questions, and watch the rocket light up the sky over Florida's Space Coast!</p>
-            <p>🔔 <a href="https://www.youtube.com/@FloridaSpaceLaunchTracker" target="_blank" style="color: #ff4444;">Subscribe & turn on notifications</a> so you don't miss it!</p>
+            <p>🎬 <strong>${dayStr}, ${dateStr} at ${timeStr} in the Movie Theater</strong>, I'll be profiling the ${vehicle} rocket and the <strong>${missionName}</strong> mission. We'll look at pictures and video of ${vehicle} for insights into what you'll be seeing. I'll also show you the best places to view the launch from, including balconies and other locations here on the property.</p>
+            <p>Come see what the launch is all about, stick around for Q & A with Chris, and then get ready to make some memories as a rocket lights up the sky over Florida's Space Coast!</p>
+            <p style="font-size: 0.85em; opacity: 0.8;">🎯 All ages are welcome, but parents of very young kids should be aware that this isn't really a kid-oriented program and it may not hold the attention of very young children.</p>
         </div>
     `;
 }
-
 
 // ==================== FORMAT CHRIS SAYS ====================
 
@@ -411,7 +410,6 @@ async function loadLaunches() {
     const loading = document.getElementById('loading');
 
     try {
-        // Load custom content first, then launches
         await loadCustomContent();
 
         console.log("📡 Fetching launches...");
