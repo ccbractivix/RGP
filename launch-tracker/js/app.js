@@ -3,7 +3,35 @@ const BASE_URL = 'https://ll.thespacedevs.com/2.2.0';
 const FLORIDA_PAD_IDS = [27, 12, 87, 80, 84, 85];
 const REFRESH_INTERVAL = 300000;
 
+const STARLINK_TRAJECTORIES = {
+    '6': { direction: 'Southeast', icon: '↗️🌊' },
+    '8': { direction: 'Northeast', icon: '↗️🏙️' },
+    '10': { direction: 'Northeast', icon: '↗️🏙️' },
+    '12': { direction: 'Southeast', icon: '↗️🌊' }
+};
+
 let countdownIntervals = [];
+
+function getStarlinkTrajectory(launch) {
+    const name = launch.name || '';
+    const missionName = launch.mission?.name || '';
+    const combined = `${name} ${missionName}`;
+
+    const match = combined.match(/Starlink\s+Group\s+(\d+)-(\d+)/i);
+    if (!match) return null;
+
+    const groupPrefix = match[1];
+    const groupFull = `${match[1]}-${match[2]}`;
+
+    const trajectory = STARLINK_TRAJECTORIES[groupPrefix];
+    if (!trajectory) return null;
+
+    return {
+        group: groupFull,
+        direction: trajectory.direction,
+        icon: trajectory.icon
+    };
+}
 
 async function fetchLaunches() {
     showLoading();
@@ -100,7 +128,9 @@ function buildLaunchCard(launch, index) {
     const rocketName = launch.rocket?.configuration?.name || 'Unknown Rocket';
     const description = launch.mission?.description || '';
     const imageUrl = launch.image || launch.rocket?.configuration?.image_url || '';
-    const trajectory = launch.mission?.orbit?.name || launch.mission?.type || '';
+    const orbit = launch.mission?.orbit?.name || launch.mission?.type || '';
+
+    const starlink = getStarlinkTrajectory(launch);
 
     const dateStr = net ? net.toLocaleDateString('en-US', {
         weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
@@ -127,6 +157,13 @@ function buildLaunchCard(launch, index) {
         <span class="status-badge status-${statusAbbrev}">${status}</span>
     </div>`;
 
+    if (starlink) {
+        html += `<div class="trajectory-banner trajectory-${starlink.direction.toLowerCase()}">
+            <span class="trajectory-icon">${starlink.icon}</span>
+            <span class="trajectory-text">Starlink Group ${starlink.group} — ${starlink.direction} Trajectory</span>
+        </div>`;
+    }
+
     html += `<div class="launch-meta">
         <div class="meta-item">
             <span class="meta-label">Date</span>
@@ -149,10 +186,17 @@ function buildLaunchCard(launch, index) {
             <span class="meta-value">${padName}</span>
         </div>`;
 
-    if (trajectory) {
+    if (orbit) {
         html += `<div class="meta-item">
-            <span class="meta-label">Trajectory</span>
-            <span class="meta-value">${trajectory}</span>
+            <span class="meta-label">Orbit</span>
+            <span class="meta-value">${orbit}</span>
+        </div>`;
+    }
+
+    if (starlink) {
+        html += `<div class="meta-item">
+            <span class="meta-label">Direction</span>
+            <span class="meta-value trajectory-value">${starlink.icon} ${starlink.direction}</span>
         </div>`;
     }
 
