@@ -504,3 +504,24 @@ body {
     margin-left: auto;
     margin-right: auto;
 }
+.rocket-talk-live .desc-toggle {
+    background: linear-gradient(135deg, rgba(255,152,0,0.2), rgba(255,87,34,0.2));
+    border-color: rgba(255,152,0,0.5);
+}
+
+.rocket-talk-live .desc-toggle span:first-child {
+    color: #ff9800;
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-shadow: 0 0 10px rgba(255,152,0,0.3);
+}
+
+.rocket-talk-live .desc-toggle:hover {
+    background: linear-gradient(135deg, rgba(255,152,0,0.3), rgba(255,87,34,0.3));
+    border-color: #ff9800;
+}
+
+.rocket-talk-pending span:first-child {
+    color: rgba(255,255,255,0.5);
+    font-style: italic;
+}
