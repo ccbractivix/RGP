@@ -59,7 +59,7 @@ header h1 {
 .launch-list {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 24px;
 }
 
 .launch-card {
@@ -84,16 +84,14 @@ header h1 {
 /* ===== LAUNCH IMAGES ===== */
 .launch-image {
     width: 100%;
-    height: 200px;
     overflow: hidden;
 }
 
 .launch-image img {
     width: 100%;
-    height: 200px;
-    object-fit: cover;
     display: block;
 }
+
 
 /* ===== CARD CONTENT ===== */
 .launch-content {
@@ -346,13 +344,5 @@ footer {
 
     .launch-content {
         padding: 16px;
-    }
-
-    .launch-image {
-        height: 160px;
-    }
-
-    .launch-image img {
-        height: 160px;
     }
 }
