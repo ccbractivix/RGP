@@ -4,28 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Florida Space Launch Tracker</title>
-    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🚀 Florida Launch Tracker</h1>
-            <p class="subtitle">Kennedy Space Center & Cape Canaveral</p>
-            <p id="last-refresh"></p>
-        </header>
-
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <p>Fetching launches...</p>
-        </div>
-
-        <div id="launch-container" class="launch-list"></div>
-
-        <footer>
-            <p>Data from Launch Library 2 • Auto-refreshes every 5 min</p>
-        </footer>
+    <div class="app-header">
+        <h1>🚀 Florida Space Launch Tracker</h1>
+        <p id="last-refresh">Loading launches...</p>
     </div>
-
-    <script src="./js/app.js"></script>
+    <div id="loading" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>Fetching upcoming launches...</p>
+    </div>
+    <div id="launch-container"></div>
+    <script src="app.js"></script>
 </body>
 </html>
