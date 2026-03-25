@@ -36,6 +36,10 @@ async function fetchLaunches() {
 
         displayLaunches(launches);
         updateRefreshTime();
+        function displayLaunches(launches) {
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'none';
+
 
     } catch (error) {
         console.error('Fetch error:', error);
