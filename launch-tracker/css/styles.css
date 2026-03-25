@@ -504,6 +504,8 @@ body {
     margin-left: auto;
     margin-right: auto;
 }
+/* ==================== ROCKET TALK LIVE STYLING ==================== */
+
 .rocket-talk-live .desc-toggle {
     background: linear-gradient(135deg, rgba(255,152,0,0.2), rgba(255,87,34,0.2));
     border-color: rgba(255,152,0,0.5);
