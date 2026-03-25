@@ -12,7 +12,6 @@ const API_URL = `https://ll.thespacedevs.com/2.2.0/launch/upcoming/?format=json&
 const SHEET_ID = '1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU';
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
-
 let customContent = [];
 
 // ==================== FETCH GOOGLE SHEET ====================
@@ -209,7 +208,7 @@ function buildCustomBubbles(launchName) {
 
     if (rocketTalk) {
         const hasDate = rocketTalk.eventDate && String(rocketTalk.eventDate).includes('Date(');
-        
+
         if (hasDate) {
             html += `<div class="custom-bubble rocket-talk-bubble rocket-talk-live">
                 <button class="desc-toggle" onclick="toggleDescription(this)">
@@ -234,36 +233,6 @@ function buildCustomBubbles(launchName) {
             </div>`;
         }
     }
-
-    if (viewingGuide && viewingGuide.slidesUrl) {
-        html += `<div class="custom-bubble viewing-guide-bubble">
-            <button class="desc-toggle" onclick="toggleDescription(this)">
-                <span>👀 Launch Viewing Guide</span>
-                <span class="toggle-icon">▼</span>
-            </button>
-            <div class="desc-body">
-                <div class="desc-content">
-                    <a href="${viewingGuide.slidesUrl}" target="_blank" class="viewing-guide-link">📊 Open Launch Viewing Guide</a>
-                </div>
-            </div>
-        </div>`;
-    }
-
-    if (chrisSays.length > 0) {
-        html += `<div class="custom-bubble chris-says-bubble">
-            <button class="desc-toggle" onclick="toggleDescription(this)">
-                <span>💬 Chris Says</span>
-                <span class="toggle-icon">▼</span>
-            </button>
-            <div class="desc-body">
-                <div class="desc-content chris-says-content">${formatChrisSays(chrisSays)}</div>
-            </div>
-        </div>`;
-    }
-
-    return html;
-}
-
 
     if (viewingGuide && viewingGuide.slidesUrl) {
         html += `<div class="custom-bubble viewing-guide-bubble">
@@ -358,7 +327,6 @@ function buildLaunchCard(launch, index) {
 
     let html = `<div class="launch-card">`;
 
-    // Image with status badge overlay
     if (imageUrl) {
         html += `<div class="launch-image-wrapper">
             <img class="launch-image" src="${imageUrl}" alt="${name}" loading="lazy">
@@ -368,13 +336,11 @@ function buildLaunchCard(launch, index) {
 
     html += `<div class="launch-content">`;
 
-    // Header
     html += `<div class="launch-header">
         <h2>${name}</h2>
         <span class="launch-vehicle">${provider} · ${rocketName}</span>
     </div>`;
 
-    // Meta items
     html += `<div class="launch-meta">
         <div class="meta-item">
             <span class="meta-icon">📅</span> ${dateStr}
@@ -398,9 +364,8 @@ function buildLaunchCard(launch, index) {
         </div>`;
     }
 
-    html += `</div>`; // close launch-meta
+    html += `</div>`;
 
-    // Countdown
     if (net && net > new Date()) {
         html += `<div class="countdown-container">
             <div class="countdown-label">T-Minus</div>
@@ -425,7 +390,6 @@ function buildLaunchCard(launch, index) {
         </div>`;
     }
 
-    // Mission description
     if (description) {
         html += `<button class="desc-toggle" onclick="toggleDescription(this)">
             <span>Mission Details</span>
@@ -436,10 +400,9 @@ function buildLaunchCard(launch, index) {
         </div>`;
     }
 
-    // Custom content bubbles
     html += buildCustomBubbles(name);
 
-    html += `</div></div>`; // close launch-content, launch-card
+    html += `</div></div>`;
     return html;
 }
 
