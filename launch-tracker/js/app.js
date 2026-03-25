@@ -208,16 +208,62 @@ function buildCustomBubbles(launchName) {
     let html = '';
 
     if (rocketTalk) {
-        html += `<div class="custom-bubble rocket-talk-bubble">
+        const hasDate = rocketTalk.eventDate && String(rocketTalk.eventDate).includes('Date(');
+        
+        if (hasDate) {
+            html += `<div class="custom-bubble rocket-talk-bubble rocket-talk-live">
+                <button class="desc-toggle" onclick="toggleDescription(this)">
+                    <span>🔴🎙️ Rocket Talk LIVE!</span>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="desc-body">
+                    <div class="desc-content">${formatRocketTalk(rocketTalk, launchName)}</div>
+                </div>
+            </div>`;
+        } else {
+            html += `<div class="custom-bubble rocket-talk-bubble">
+                <button class="desc-toggle rocket-talk-pending" onclick="toggleDescription(this)">
+                    <span>🎬 Rocket Talk — not yet scheduled</span>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="desc-body">
+                    <div class="desc-content">
+                        <p>A Rocket Talk session for this launch has not yet been scheduled. Check back soon for date, time, and details!</p>
+                    </div>
+                </div>
+            </div>`;
+        }
+    }
+
+    if (viewingGuide && viewingGuide.slidesUrl) {
+        html += `<div class="custom-bubble viewing-guide-bubble">
             <button class="desc-toggle" onclick="toggleDescription(this)">
-                <span>🎬 Rocket Talk LIVE!</span>
+                <span>👀 Launch Viewing Guide</span>
                 <span class="toggle-icon">▼</span>
             </button>
             <div class="desc-body">
-                <div class="desc-content">${formatRocketTalk(rocketTalk, launchName)}</div>
+                <div class="desc-content">
+                    <a href="${viewingGuide.slidesUrl}" target="_blank" class="viewing-guide-link">📊 Open Launch Viewing Guide</a>
+                </div>
             </div>
         </div>`;
     }
+
+    if (chrisSays.length > 0) {
+        html += `<div class="custom-bubble chris-says-bubble">
+            <button class="desc-toggle" onclick="toggleDescription(this)">
+                <span>💬 Chris Says</span>
+                <span class="toggle-icon">▼</span>
+            </button>
+            <div class="desc-body">
+                <div class="desc-content chris-says-content">${formatChrisSays(chrisSays)}</div>
+            </div>
+        </div>`;
+    }
+
+    return html;
+}
+
 
     if (viewingGuide && viewingGuide.slidesUrl) {
         html += `<div class="custom-bubble viewing-guide-bubble">
