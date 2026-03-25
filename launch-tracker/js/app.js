@@ -14,24 +14,27 @@ let countdownIntervals = [];
 
 function getStarlinkTrajectory(launch) {
     const name = launch.name || '';
-    const missionName = launch.mission?.name || '';
-    const combined = `${name} ${missionName}`;
-
-    const match = combined.match(/Starlink\s+Group\s+(\d+)-(\d+)/i);
+    const match = name.match(/Starlink\s+Group\s+(\d+)-(\d+)/i);
     if (!match) return null;
 
-    const groupPrefix = match[1];
-    const groupFull = `${match[1]}-${match[2]}`;
+    var groupPrefix = parseInt(match[1]);
+    var groupFull = match[1] + '-' + match[2];
 
-    const trajectory = STARLINK_TRAJECTORIES[groupPrefix];
-    if (!trajectory) return null;
+    var direction = null;
+    if (groupPrefix === 8 || groupPrefix === 10) {
+        direction = 'Northeast';
+    } else if (groupPrefix === 6 || groupPrefix === 12) {
+        direction = 'Southeast';
+    }
+
+    if (!direction) return null;
 
     return {
         group: groupFull,
-        direction: trajectory.direction,
-        icon: trajectory.icon
+        direction: direction
     };
 }
+
 
 async function fetchLaunches() {
     showLoading();
@@ -192,6 +195,13 @@ function buildLaunchCard(launch, index) {
             <span class="meta-value">${orbit}</span>
         </div>`;
     }
+        if (starlink) {
+        html += `<div class="meta-item">
+            <span class="meta-label">Trajectory</span>
+            <span class="meta-value">🧭 ${starlink.direction}</span>
+        </div>`;
+    }
+
 html += `<div style="background:#333;color:#0f0;padding:8px;font-size:12px;border-radius:4px;margin:5px 0;">DEBUG: ${name}</div>`;
 
     if (starlink) {
