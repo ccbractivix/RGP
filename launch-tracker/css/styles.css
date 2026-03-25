@@ -452,4 +452,42 @@ body {
     color: #ffb74d;
     text-shadow: 0 0 20px rgba(255,152,0,0.5);
 }
+.site-footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: 20px;
+}
 
+.footer-divider {
+    border: none;
+    border-top: 1px solid rgba(200,200,200,0.3);
+    margin: 20px auto;
+    width: 80%;
+}
+
+.footer-nav-link {
+    display: block;
+    color: #4fc3f7;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 10px 0;
+}
+
+.footer-nav-link:hover {
+    text-decoration: underline;
+    color: #81d4fa;
+}
+
+.footer-legal {
+    margin-top: 20px;
+    color: rgba(200,200,200,0.5);
+    font-size: 0.75rem;
+    line-height: 1.6;
+}
+
+.footer-logo {
+    margin-top: 20px;
+    max-width: 300px;
+    height: auto;
+}
