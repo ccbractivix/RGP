@@ -1,3 +1,33 @@
+console.log("🟢 SCRIPT STARTED");
+
+const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
+const API_URL = `https://ll.thespacedevs.com/2.2.0/launch/upcoming/?format=json&limit=10&location__ids=12,27&mode=detailed&ordering=net`;
+
+// ==================== STARLINK TRAJECTORY ====================
+
+function getStarlinkTrajectory(launch) {
+    const name = launch.name || '';
+    if (!name.toLowerCase().includes('starlink')) return null;
+
+    const match = name.match(/Starlink\s+Group\s+(\d+)-(\d+)/i);
+    if (!match) return null;
+
+    const group = parseInt(match[1]);
+
+    const northeast = [8, 10];
+    const southeast = [6, 12];
+
+    if (northeast.includes(group)) {
+        return { direction: 'Northeast', angle: '53°' };
+    } else if (southeast.includes(group)) {
+        return { direction: 'Southeast', angle: '43°' };
+    }
+
+    return { direction: 'Unknown Path', angle: 'N/A' };
+}
+
+// ==================== BUILD LAUNCH CARD ====================
+
 function buildLaunchCard(launch, index) {
     const isNext = index === 0;
     const name = launch.name || 'Unknown Mission';
@@ -93,3 +123,97 @@ function buildLaunchCard(launch, index) {
     html += `</div></div>`;
     return html;
 }
+
+// ==================== TOGGLE DESCRIPTION ====================
+
+function toggleDescription(button) {
+    const content = button.nextElementSibling;
+    if (content.style.display === 'block') {
+        content.style.display = 'none';
+        button.textContent = '▶ Mission Details';
+    } else {
+        content.style.display = 'block';
+        button.textContent = '▼ Mission Details';
+    }
+}
+
+// ==================== COUNTDOWN TIMERS ====================
+
+let countdownIntervals = [];
+
+function startCountdowns(launches) {
+    countdownIntervals.forEach(id => clearInterval(id));
+    countdownIntervals = [];
+
+    launches.forEach((launch, index) => {
+        const net = launch.net ? new Date(launch.net) : null;
+        if (!net || net <= new Date()) return;
+
+        const intervalId = setInterval(() => {
+            const now = new Date();
+            const diff = net - now;
+
+            if (diff <= 0) {
+                document.getElementById(`countdown-${index}`).textContent = 'LIFTOFF!';
+                clearInterval(intervalId);
+                return;
+            }
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            const el = document.getElementById(`countdown-${index}`);
+            if (el) {
+                el.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+            }
+        }, 1000);
+
+        countdownIntervals.push(intervalId);
+    });
+}
+
+// ==================== FETCH & RENDER ====================
+
+async function loadLaunches() {
+    const container = document.getElementById('launch-container');
+    const loading = document.getElementById('loading');
+
+    try {
+        console.log("📡 Fetching launches...");
+        const response = await fetch(API_URL, {
+            headers: { 'Authorization': `Token ${API_KEY}` }
+        });
+
+        if (!response.ok) {
+            throw new Error(`API returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(`✅ Got ${data.results.length} launches`);
+
+        loading.style.display = 'none';
+
+        if (!data.results || data.results.length === 0) {
+            container.innerHTML = '<p class="no-launches">No upcoming Florida launches found.</p>';
+            return;
+        }
+
+        container.innerHTML = data.results.map((launch, i) => buildLaunchCard(launch, i)).join('');
+
+        startCountdowns(data.results);
+
+        document.getElementById('last-refresh').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+
+    } catch (error) {
+        console.error("❌ Error:", error);
+        loading.style.display = 'none';
+        container.innerHTML = `<p class="error">Failed to load launches. ${error.message}</p>`;
+    }
+}
+
+// ==================== INIT ====================
+
+loadLaunches();
+setInterval(loadLaunches, 300000); // refresh every 5 min
