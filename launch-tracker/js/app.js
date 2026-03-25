@@ -192,6 +192,7 @@ function buildLaunchCard(launch, index) {
             <span class="meta-value">${orbit}</span>
         </div>`;
     }
+html += `<div style="background:#333;color:#0f0;padding:8px;font-size:12px;border-radius:4px;margin:5px 0;">DEBUG: ${name}</div>`;
 
     if (starlink) {
         html += `<div class="meta-item">
