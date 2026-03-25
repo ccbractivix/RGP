@@ -36,7 +36,7 @@ header h1 {
     font-size: 0.95rem;
 }
 
-.date-range {
+#last-refresh {
     color: #64ffda;
     font-size: 0.85rem;
     margin-top: 6px;
@@ -65,7 +65,7 @@ header h1 {
 .launch-card {
     background: #1a1f3d;
     border-radius: 16px;
-    padding: 20px;
+    overflow: hidden;
     border: 1px solid #2a2f4d;
     transition: transform 0.2s, border-color 0.2s;
 }
@@ -75,7 +75,7 @@ header h1 {
     border-color: #3a3f6d;
 }
 
-.launch-card.featured {
+.launch-card.next-launch {
     border-color: #64ffda;
     background: linear-gradient(135deg, #1a1f3d 0%, #1a2a3d 100%);
     box-shadow: 0 0 20px rgba(100, 255, 218, 0.1);
@@ -83,11 +83,9 @@ header h1 {
 
 /* ===== LAUNCH IMAGES ===== */
 .launch-image {
-    width: calc(100% + 40px);
-    max-height: 200px;
+    width: 100%;
+    height: 200px;
     overflow: hidden;
-    border-radius: 16px 16px 0 0;
-    margin: -20px -20px 16px -20px;
 }
 
 .launch-image img {
@@ -97,15 +95,50 @@ header h1 {
     display: block;
 }
 
+/* ===== CARD CONTENT ===== */
+.launch-content {
+    padding: 20px;
+}
+
+/* ===== NEXT BADGE ===== */
+.next-badge {
+    background: #64ffda;
+    color: #0a0e27;
+    padding: 6px 14px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-align: center;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
 /* ===== CARD HEADER ===== */
-.card-header {
+.launch-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    justify-content: space-between;
     gap: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
     flex-wrap: wrap;
 }
 
+.launch-name {
+    font-size: 1.25rem;
+    color: #ffffff;
+    line-height: 1.3;
+    flex: 1;
+}
+
+.next-launch .launch-name {
+    font-size: 1.4rem;
+}
+
+/* ===== STATUS BADGES ===== */
 .status-badge {
     padding: 4px 12px;
     border-radius: 20px;
@@ -113,6 +146,8 @@ header h1 {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .status-go { background: #00c853; color: #000; }
@@ -122,44 +157,41 @@ header h1 {
 .status-success { background: #69f0ae; color: #000; }
 .status-inflight { background: #448aff; color: #fff; }
 
-.next-badge {
-    background: #64ffda;
-    color: #0a0e27;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    font-weight: 800;
-    letter-spacing: 1px;
-    animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-}
-
-/* ===== MISSION INFO ===== */
-.mission-name {
-    font-size: 1.25rem;
-    color: #ffffff;
-    margin-bottom: 4px;
-    line-height: 1.3;
-}
-
-.featured .mission-name {
-    font-size: 1.4rem;
-}
-
-.rocket-name {
-    color: #8892b0;
-    font-size: 0.9rem;
+/* ===== META GRID ===== */
+.launch-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
     margin-bottom: 16px;
 }
 
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+.meta-label {
+    font-size: 0.75rem;
+    color: #8892b0;
+    margin-bottom: 2px;
+}
+
+.meta-value {
+    font-size: 0.9rem;
+    color: #e0e0e0;
+    font-weight: 500;
+}
+
 /* ===== COUNTDOWN ===== */
-.countdown {
+.countdown-container {
     text-align: center;
     margin: 16px 0;
+    padding: 16px;
+    background: rgba(100, 255, 218, 0.05);
+    border-radius: 12px;
 }
 
 .countdown-label {
@@ -172,52 +204,21 @@ header h1 {
 
 .countdown-timer {
     font-family: 'Courier New', monospace;
+    font-size: 1.5rem;
     color: #64ffda;
     font-weight: 700;
+    letter-spacing: 1px;
 }
 
-.featured-timer {
+.next-launch .countdown-timer {
     font-size: 2rem;
     letter-spacing: 2px;
 }
 
-.compact-timer {
-    font-size: 1.3rem;
-    letter-spacing: 1px;
-}
-
-.countdown-launched {
-    font-size: 1.5rem;
+.countdown-timer.liftoff {
+    font-size: 1.8rem;
     color: #ff9800;
-    font-weight: 700;
     animation: pulse 1.5s ease-in-out infinite;
-}
-
-/* ===== DETAILS GRID ===== */
-.details {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-}
-
-.detail-row {
-    display: flex;
-    flex-direction: column;
-    background: rgba(255, 255, 255, 0.03);
-    padding: 10px 12px;
-    border-radius: 8px;
-}
-
-.label {
-    font-size: 0.75rem;
-    color: #8892b0;
-    margin-bottom: 2px;
-}
-
-.value {
-    font-size: 0.9rem;
-    color: #e0e0e0;
-    font-weight: 500;
 }
 
 /* ===== MISSION DESCRIPTION ===== */
@@ -241,15 +242,26 @@ header h1 {
     opacity: 0.8;
 }
 
-.desc-text {
+.desc-content {
     color: #a0a8c0;
     font-size: 0.85rem;
     line-height: 1.7;
     margin-top: 8px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.desc-content.open {
+    max-height: 500px;
 }
 
 /* ===== LOADING ===== */
 .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     padding: 60px 0;
 }
@@ -269,14 +281,15 @@ header h1 {
 }
 
 /* ===== ERROR & EMPTY ===== */
-.error, .no-launches {
+.error-message, .no-launches {
     text-align: center;
     padding: 60px 0;
     color: #8892b0;
 }
 
-.error p, .no-launches p {
-    font-size: 1.1rem;
+.error-message h2, .no-launches h2 {
+    color: #ffffff;
+    margin-bottom: 8px;
 }
 
 .retry-btn {
@@ -311,32 +324,35 @@ footer {
         font-size: 1.4rem;
     }
 
-    .mission-name {
+    .launch-name {
         font-size: 1.1rem;
     }
 
-    .featured .mission-name {
+    .next-launch .launch-name {
         font-size: 1.2rem;
     }
 
-    .featured-timer {
+    .next-launch .countdown-timer {
         font-size: 1.6rem;
     }
 
-    .compact-timer {
-        font-size: 1.1rem;
+    .countdown-timer {
+        font-size: 1.2rem;
     }
 
-    .details {
+    .launch-meta {
         grid-template-columns: 1fr;
     }
 
-    .launch-card {
+    .launch-content {
         padding: 16px;
     }
 
     .launch-image {
-        width: calc(100% + 32px);
-        margin: -16px -16px 12px -16px;
+        height: 160px;
+    }
+
+    .launch-image img {
+        height: 160px;
     }
 }
