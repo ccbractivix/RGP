@@ -129,7 +129,6 @@ function formatRocketTalk(entry, launchName) {
     const eventDate = parseGvizDate(entry.eventDate);
     const eventTime = parseGvizTime(entry.eventTime);
 
-    // Format the day like "Wednesday"
     let dayStr = 'TBD';
     let dateStr = 'TBD';
     if (eventDate) {
@@ -137,7 +136,6 @@ function formatRocketTalk(entry, launchName) {
         dateStr = eventDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
     }
 
-    // Format the time like "7:00 PM ET"
     let timeStr = 'TBD';
     if (eventTime) {
         const tempDate = new Date(2000, 0, 1, eventTime.hours, eventTime.minutes);
@@ -146,8 +144,6 @@ function formatRocketTalk(entry, launchName) {
         }) + ' ET';
     }
 
-    // Extract mission name and vehicle from the launch name string
-    // Format is "Falcon 9 Block 5 | Starlink Group 10-44"
     let vehicle = 'the rocket';
     let missionName = 'the mission';
     if (launchName && launchName.includes('|')) {
@@ -205,24 +201,39 @@ function buildCustomBubbles(launchName) {
 
     if (rocketTalk) {
         html += `<div class="custom-bubble rocket-talk-bubble">
-            <button class="desc-toggle" onclick="toggleDescription(this)">▶ 🎬 Rocket Talk LIVE!</button>
-            <div class="desc-content">${formatRocketTalk(rocketTalk, launchName)}</div>
+            <button class="desc-toggle" onclick="toggleDescription(this)">
+                <span>🎬 Rocket Talk LIVE!</span>
+                <span class="toggle-icon">▼</span>
+            </button>
+            <div class="desc-body">
+                <div class="desc-content">${formatRocketTalk(rocketTalk, launchName)}</div>
+            </div>
         </div>`;
     }
 
     if (viewingGuide && viewingGuide.slidesUrl) {
         html += `<div class="custom-bubble viewing-guide-bubble">
-            <button class="desc-toggle" onclick="toggleDescription(this)">▶ 👀 Launch Viewing Guide</button>
-            <div class="desc-content">
-                <a href="${viewingGuide.slidesUrl}" target="_blank" class="viewing-guide-link">📊 Open Launch Viewing Guide</a>
+            <button class="desc-toggle" onclick="toggleDescription(this)">
+                <span>👀 Launch Viewing Guide</span>
+                <span class="toggle-icon">▼</span>
+            </button>
+            <div class="desc-body">
+                <div class="desc-content">
+                    <a href="${viewingGuide.slidesUrl}" target="_blank" class="viewing-guide-link">📊 Open Launch Viewing Guide</a>
+                </div>
             </div>
         </div>`;
     }
 
     if (chrisSays.length > 0) {
         html += `<div class="custom-bubble chris-says-bubble">
-            <button class="desc-toggle" onclick="toggleDescription(this)">▶ 💬 Chris Says</button>
-            <div class="desc-content chris-says-content">${formatChrisSays(chrisSays)}</div>
+            <button class="desc-toggle" onclick="toggleDescription(this)">
+                <span>💬 Chris Says</span>
+                <span class="toggle-icon">▼</span>
+            </button>
+            <div class="desc-body">
+                <div class="desc-content chris-says-content">${formatChrisSays(chrisSays)}</div>
+            </div>
         </div>`;
     }
 
@@ -252,6 +263,20 @@ function getStarlinkTrajectory(launch) {
     return { direction: 'Unknown Path', angle: 'N/A' };
 }
 
+// ==================== STATUS CLASS ====================
+
+function getStatusClass(abbrev) {
+    const map = {
+        'go': 'status-go',
+        'tbd': 'status-tbd',
+        'hold': 'status-hold',
+        'tbc': 'status-tbc',
+        'success': 'status-success',
+        'failure': 'status-failure'
+    };
+    return map[abbrev] || 'status-other';
+}
+
 // ==================== BUILD LAUNCH CARD ====================
 
 function buildLaunchCard(launch, index) {
@@ -266,8 +291,8 @@ function buildLaunchCard(launch, index) {
     const description = launch.mission?.description || '';
     const imageUrl = launch.image || launch.rocket?.configuration?.image_url || '';
     const orbit = launch.mission?.orbit?.name || launch.mission?.type || '';
-
     const starlink = getStarlinkTrajectory(launch);
+    const statusClass = getStatusClass(statusAbbrev);
 
     const dateStr = net ? net.toLocaleDateString('en-US', {
         weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
@@ -277,71 +302,82 @@ function buildLaunchCard(launch, index) {
         hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
     }) : 'TBD';
 
-    let html = `<div class="launch-card ${isNext ? 'next-launch' : ''}">`;
+    let html = `<div class="launch-card">`;
 
-    if (isNext) {
-        html += `<div class="next-badge">🚀 NEXT FLORIDA LAUNCH</div>`;
-    }
-
+    // Image with status badge overlay
     if (imageUrl) {
-        html += `<div class="launch-image"><img src="${imageUrl}" alt="${name}" loading="lazy"></div>`;
+        html += `<div class="launch-image-wrapper">
+            <img class="launch-image" src="${imageUrl}" alt="${name}" loading="lazy">
+            <span class="status-badge ${statusClass}">${status}</span>
+        </div>`;
     }
 
     html += `<div class="launch-content">`;
 
+    // Header
     html += `<div class="launch-header">
-        <div class="launch-name">${name}</div>
-        <span class="status-badge status-${statusAbbrev}">${status}</span>
+        <h2>${name}</h2>
+        <span class="launch-vehicle">${provider} · ${rocketName}</span>
     </div>`;
 
+    // Meta items
     html += `<div class="launch-meta">
         <div class="meta-item">
-            <span class="meta-label">Date</span>
-            <span class="meta-value">${dateStr}</span>
+            <span class="meta-icon">📅</span> ${dateStr}
         </div>
         <div class="meta-item">
-            <span class="meta-label">Time</span>
-            <span class="meta-value">${timeStr}</span>
+            <span class="meta-icon">🕐</span> ${timeStr}
         </div>
         <div class="meta-item">
-            <span class="meta-label">Provider</span>
-            <span class="meta-value">${provider}</span>
-        </div>
-        <div class="meta-item">
-            <span class="meta-label">Rocket</span>
-            <span class="meta-value">${rocketName}</span>
-        </div>
-        <div class="meta-item">
-            <span class="meta-label">Pad</span>
-            <span class="meta-value">${padName}</span>
+            <span class="meta-icon">📍</span> ${padName}
         </div>`;
 
     if (orbit && !name.toLowerCase().includes('starlink')) {
         html += `<div class="meta-item">
-            <span class="meta-label">Orbit</span>
-            <span class="meta-value">${orbit}</span>
+            <span class="meta-icon">🌍</span> ${orbit}
         </div>`;
     }
 
     if (starlink) {
         html += `<div class="meta-item">
-            <span class="meta-label">Trajectory</span>
-            <span class="meta-value">🧭 ${starlink.direction}</span>
+            <span class="meta-icon">🧭</span> ${starlink.direction} (${starlink.angle})
         </div>`;
     }
 
-    html += `</div>`;
+    html += `</div>`; // close launch-meta
 
+    // Countdown
     if (net && net > new Date()) {
         html += `<div class="countdown-container">
             <div class="countdown-label">T-Minus</div>
-            <div class="countdown-timer" id="countdown-${index}">--:--:--:--</div>
+            <div class="countdown-timer" id="countdown-${index}">
+                <div class="countdown-segment">
+                    <span class="countdown-value" id="cd-days-${index}">--</span>
+                    <span class="countdown-unit">Days</span>
+                </div>
+                <div class="countdown-segment">
+                    <span class="countdown-value" id="cd-hrs-${index}">--</span>
+                    <span class="countdown-unit">Hrs</span>
+                </div>
+                <div class="countdown-segment">
+                    <span class="countdown-value" id="cd-min-${index}">--</span>
+                    <span class="countdown-unit">Min</span>
+                </div>
+                <div class="countdown-segment">
+                    <span class="countdown-value" id="cd-sec-${index}">--</span>
+                    <span class="countdown-unit">Sec</span>
+                </div>
+            </div>
         </div>`;
     }
 
+    // Mission description
     if (description) {
-        html += `<div class="mission-description">
-            <button class="desc-toggle" onclick="toggleDescription(this)">▶ Mission Details</button>
+        html += `<button class="desc-toggle" onclick="toggleDescription(this)">
+            <span>Mission Details</span>
+            <span class="toggle-icon">▼</span>
+        </button>
+        <div class="desc-body">
             <div class="desc-content">${description}</div>
         </div>`;
     }
@@ -349,21 +385,16 @@ function buildLaunchCard(launch, index) {
     // Custom content bubbles
     html += buildCustomBubbles(name);
 
-    html += `</div></div>`;
+    html += `</div></div>`; // close launch-content, launch-card
     return html;
 }
 
 // ==================== TOGGLE DESCRIPTION ====================
 
 function toggleDescription(button) {
-    const content = button.nextElementSibling;
-    if (content.style.display === 'block') {
-        content.style.display = 'none';
-        button.textContent = button.textContent.replace('▼', '▶');
-    } else {
-        content.style.display = 'block';
-        button.textContent = button.textContent.replace('▶', '▼');
-    }
+    const body = button.nextElementSibling;
+    button.classList.toggle('active');
+    body.classList.toggle('open');
 }
 
 // ==================== COUNTDOWN TIMERS ====================
@@ -378,12 +409,13 @@ function startCountdowns(launches) {
         const net = launch.net ? new Date(launch.net) : null;
         if (!net || net <= new Date()) return;
 
-        const intervalId = setInterval(() => {
+        const update = () => {
             const now = new Date();
             const diff = net - now;
 
             if (diff <= 0) {
-                document.getElementById(`countdown-${index}`).textContent = 'LIFTOFF!';
+                const el = document.getElementById(`cd-days-${index}`);
+                if (el) el.parentElement.parentElement.innerHTML = '<span class="countdown-value" style="font-size:1.2rem;">🚀 LIFTOFF!</span>';
                 clearInterval(intervalId);
                 return;
             }
@@ -393,12 +425,19 @@ function startCountdowns(launches) {
             const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-            const el = document.getElementById(`countdown-${index}`);
-            if (el) {
-                el.textContent = `${days}d ${hours}h ${minutes}m ${seconds}s`;
-            }
-        }, 1000);
+            const dEl = document.getElementById(`cd-days-${index}`);
+            const hEl = document.getElementById(`cd-hrs-${index}`);
+            const mEl = document.getElementById(`cd-min-${index}`);
+            const sEl = document.getElementById(`cd-sec-${index}`);
 
+            if (dEl) dEl.textContent = String(days).padStart(2, '0');
+            if (hEl) hEl.textContent = String(hours).padStart(2, '0');
+            if (mEl) mEl.textContent = String(minutes).padStart(2, '0');
+            if (sEl) sEl.textContent = String(seconds).padStart(2, '0');
+        };
+
+        update();
+        const intervalId = setInterval(update, 1000);
         countdownIntervals.push(intervalId);
     });
 }
@@ -427,7 +466,7 @@ async function loadLaunches() {
         loading.style.display = 'none';
 
         if (!data.results || data.results.length === 0) {
-            container.innerHTML = '<p class="no-launches">No upcoming Florida launches found.</p>';
+            container.innerHTML = '<p style="text-align:center; color:#888; padding:40px;">No upcoming Florida launches found.</p>';
             return;
         }
 
@@ -435,12 +474,15 @@ async function loadLaunches() {
 
         startCountdowns(data.results);
 
-        document.getElementById('last-refresh').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+        const refreshEl = document.getElementById('last-refresh');
+        if (refreshEl) {
+            refreshEl.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+        }
 
     } catch (error) {
         console.error("❌ Error:", error);
         loading.style.display = 'none';
-        container.innerHTML = `<p class="error">Failed to load launches. ${error.message}</p>`;
+        container.innerHTML = `<p style="text-align:center; color:#ff6b6b; padding:40px;">Failed to load launches. ${error.message}</p>`;
     }
 }
 
