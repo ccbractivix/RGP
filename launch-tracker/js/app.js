@@ -90,7 +90,7 @@ function buildLaunchCard(launch, index) {
             <span class="meta-value">${padName}</span>
         </div>`;
 
-    if (orbit) {
+if (orbit && !name.toLowerCase().includes('starlink')) {
         html += `<div class="meta-item">
             <span class="meta-label">Orbit</span>
             <span class="meta-value">${orbit}</span>
