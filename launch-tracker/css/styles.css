@@ -394,18 +394,23 @@ body {
 }
 .footer-link {
     text-align: center;
-    padding: 20px;
-    margin-top: 20px;
+    padding: 30px 20px;
+    margin-top: 30px;
+    background: linear-gradient(135deg, rgba(255,152,0,0.15), rgba(79,195,247,0.15));
+    border-top: 2px solid rgba(255,152,0,0.3);
 }
 
 .footer-link a {
-    color: #4fc3f7;
-    font-size: 1.1rem;
-    font-weight: 600;
+    color: #ff9800;
+    font-size: 1.4rem;
+    font-weight: 700;
     text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(255,152,0,0.3);
 }
 
 .footer-link a:hover {
-    text-decoration: underline;
-    color: #81d4fa;
+    color: #ffb74d;
+    text-shadow: 0 0 20px rgba(255,152,0,0.5);
 }
