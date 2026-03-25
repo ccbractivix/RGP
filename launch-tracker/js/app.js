@@ -2,6 +2,211 @@ console.log("🟢 SCRIPT STARTED");
 
 const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
 const API_URL = `https://ll.thespacedevs.com/2.2.0/launch/upcoming/?format=json&limit=10&location__ids=12,27&mode=detailed&ordering=net`;
+const SHEET_ID = '1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU';
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+let customContent = [];
+
+// ==================== FETCH GOOGLE SHEET ====================
+
+async function loadCustomContent() {
+    try {
+        console.log("📋 Fetching custom content from Google Sheet...");
+        const response = await fetch(SHEET_URL);
+        const text = await response.text();
+
+        // Google returns JSONP-like wrapper, strip it
+        const jsonString = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);/);
+        if (!jsonString) {
+            console.warn("⚠️ Could not parse sheet response");
+            customContent = [];
+            return;
+        }
+
+        const json = JSON.parse(jsonString[1]);
+        const rows = json.table.rows;
+        const cols = json.table.cols;
+
+        console.log(`📋 Sheet has ${rows.length} rows, ${cols.length} columns`);
+
+        customContent = rows.map(row => {
+            const cells = row.c;
+            return {
+                timestamp: cells[0] ? cells[0].v : '',
+                launchName: cells[1] ? String(cells[1].v || '') : '',
+                contentType: cells[2] ? String(cells[2].v || '') : '',
+                message: cells[3] ? String(cells[3].v || '') : '',
+                eventDate: cells[4] ? cells[4].v : '',
+                eventTime: cells[5] ? String(cells[5].v || '') : '',
+                slidesUrl: cells[6] ? String(cells[6].v || '') : ''
+            };
+        }).filter(entry => entry.launchName && entry.contentType);
+
+        console.log(`✅ Loaded ${customContent.length} custom content entries`);
+
+    } catch (error) {
+        console.error("❌ Error loading custom content:", error);
+        customContent = [];
+    }
+}
+
+// ==================== FUZZY MATCH ====================
+
+function fuzzyMatch(formInput, launchName) {
+    const clean = str => str.toLowerCase()
+        .replace(/spacex\s*-?\s*/i, '')
+        .replace(/firefly\s*-?\s*/i, '')
+        .replace(/rocket\s*lab\s*-?\s*/i, '')
+        .replace(/ula\s*-?\s*/i, '')
+        .replace(/blue\s*origin\s*-?\s*/i, '')
+        .replace(/northrop\s*grumman\s*-?\s*/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const input = clean(formInput);
+    const name = clean(launchName);
+
+    if (name.includes(input)) return true;
+    if (input.includes(name)) return true;
+
+    // Check if all words in input appear in the launch name
+    const inputWords = input.split(' ');
+    return inputWords.every(word => name.includes(word));
+}
+
+// ==================== GET CUSTOM CONTENT FOR A LAUNCH ====================
+
+function getCustomContentForLaunch(launchName) {
+    const matched = customContent.filter(entry => fuzzyMatch(entry.launchName, launchName));
+
+    // --- Rocket Talk: latest wins ---
+    const rocketTalkEntries = matched.filter(e => e.contentType === 'Rocket Talk LIVE!');
+    let rocketTalk = null;
+    if (rocketTalkEntries.length > 0) {
+        const latest = rocketTalkEntries[rocketTalkEntries.length - 1];
+        // Check for CANCEL
+        if (latest.message && latest.message.trim().toUpperCase() === 'CANCEL') {
+            rocketTalk = null;
+        } else {
+            rocketTalk = latest;
+        }
+    }
+
+    // --- Viewing Guide: latest wins ---
+    const viewingEntries = matched.filter(e => e.contentType === 'Launch Viewing Guide');
+    let viewingGuide = null;
+    if (viewingEntries.length > 0) {
+        const latest = viewingEntries[viewingEntries.length - 1];
+        if (latest.slidesUrl && latest.slidesUrl.trim().toUpperCase() === 'CANCEL') {
+            viewingGuide = null;
+        } else {
+            viewingGuide = latest;
+        }
+    }
+
+    // --- Chris Says: all entries, newest first ---
+    const chrisSays = matched
+        .filter(e => e.contentType === 'Chris Says')
+        .filter(e => e.message && e.message.trim().toUpperCase() !== 'CANCEL')
+        .reverse();
+
+    return { rocketTalk, viewingGuide, chrisSays };
+}
+
+// ==================== FORMAT ROCKET TALK ====================
+
+function formatRocketTalk(entry, launchName) {
+    let dateStr = 'TBD';
+    let dayStr = 'TBD';
+
+    if (entry.eventDate) {
+        let dateObj;
+        // Handle Google Sheets date format: "Date(2025,0,27)" or regular string
+        const dateMatch = String(entry.eventDate).match(/Date\((\d+),(\d+),(\d+)\)/);
+        if (dateMatch) {
+            dateObj = new Date(parseInt(dateMatch[1]), parseInt(dateMatch[2]), parseInt(dateMatch[3]));
+        } else {
+            dateObj = new Date(entry.eventDate);
+        }
+
+        if (!isNaN(dateObj)) {
+            dayStr = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+            dateStr = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+        }
+    }
+
+    const timeStr = entry.eventTime || 'TBD';
+
+    // Extract mission name and vehicle from launch name
+    const missionName = launchName.replace(/^.*?\s*-\s*/, '').trim();
+    const vehicleMatch = launchName.match(/^(.*?)\s*-/);
+    const vehicle = vehicleMatch ? vehicleMatch[1].trim() : 'the rocket';
+
+    return `<strong>${dayStr}, ${dateStr} AT ${timeStr} IN THE MOVIE THEATER</strong>, I'll be profiling the SpaceX Falcon 9 rocket and the <strong>${missionName}</strong> mission. We'll look at pictures and video of <strong>${vehicle}</strong> for insights into what you'll be seeing. I'll also show you the best places to view the launch from, including balconies and other locations here on the property.<br><br>All ages are welcome, but parents of very young kids should be aware that this isn't really a kid-oriented program and it may not hold the attention of very young children.`;
+}
+
+// ==================== FORMAT CHRIS SAYS ====================
+
+function formatChrisSays(entries) {
+    return entries.map(entry => {
+        let timeLabel = '';
+        if (entry.timestamp) {
+            const dateMatch = String(entry.timestamp).match(/Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/);
+            let dateObj;
+            if (dateMatch) {
+                dateObj = new Date(
+                    parseInt(dateMatch[1]), parseInt(dateMatch[2]), parseInt(dateMatch[3]),
+                    parseInt(dateMatch[4]), parseInt(dateMatch[5]), parseInt(dateMatch[6])
+                );
+            } else {
+                dateObj = new Date(entry.timestamp);
+            }
+            if (!isNaN(dateObj)) {
+                timeLabel = dateObj.toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric'
+                }) + ' at ' + dateObj.toLocaleTimeString('en-US', {
+                    hour: 'numeric', minute: '2-digit'
+                });
+            }
+        }
+        return `<div class="chris-says-entry">
+            ${timeLabel ? `<span class="chris-timestamp">${timeLabel}</span>` : ''}
+            <span class="chris-message">${entry.message}</span>
+        </div>`;
+    }).join('');
+}
+
+// ==================== BUILD CUSTOM BUBBLES ====================
+
+function buildCustomBubbles(launchName) {
+    const { rocketTalk, viewingGuide, chrisSays } = getCustomContentForLaunch(launchName);
+    let html = '';
+
+    if (rocketTalk) {
+        html += `<div class="custom-bubble rocket-talk-bubble">
+            <button class="desc-toggle" onclick="toggleDescription(this)">▶ 🎬 Rocket Talk LIVE!</button>
+            <div class="desc-content">${formatRocketTalk(rocketTalk, launchName)}</div>
+        </div>`;
+    }
+
+    if (viewingGuide && viewingGuide.slidesUrl) {
+        html += `<div class="custom-bubble viewing-guide-bubble">
+            <button class="desc-toggle" onclick="toggleDescription(this)">▶ 👀 Launch Viewing Guide</button>
+            <div class="desc-content">
+                <a href="${viewingGuide.slidesUrl}" target="_blank" class="viewing-guide-link">📊 Open Launch Viewing Guide</a>
+            </div>
+        </div>`;
+    }
+
+    if (chrisSays.length > 0) {
+        html += `<div class="custom-bubble chris-says-bubble">
+            <button class="desc-toggle" onclick="toggleDescription(this)">▶ 💬 Chris Says</button>
+            <div class="desc-content chris-says-content">${formatChrisSays(chrisSays)}</div>
+        </div>`;
+    }
+
+    return html;
+}
 
 // ==================== STARLINK TRAJECTORY ====================
 
@@ -90,7 +295,7 @@ function buildLaunchCard(launch, index) {
             <span class="meta-value">${padName}</span>
         </div>`;
 
-if (orbit && !name.toLowerCase().includes('starlink')) {
+    if (orbit && !name.toLowerCase().includes('starlink')) {
         html += `<div class="meta-item">
             <span class="meta-label">Orbit</span>
             <span class="meta-value">${orbit}</span>
@@ -120,6 +325,9 @@ if (orbit && !name.toLowerCase().includes('starlink')) {
         </div>`;
     }
 
+    // Custom content bubbles
+    html += buildCustomBubbles(name);
+
     html += `</div></div>`;
     return html;
 }
@@ -130,10 +338,10 @@ function toggleDescription(button) {
     const content = button.nextElementSibling;
     if (content.style.display === 'block') {
         content.style.display = 'none';
-        button.textContent = '▶ Mission Details';
+        button.textContent = button.textContent.replace('▼', '▶');
     } else {
         content.style.display = 'block';
-        button.textContent = '▼ Mission Details';
+        button.textContent = button.textContent.replace('▶', '▼');
     }
 }
 
@@ -181,6 +389,9 @@ async function loadLaunches() {
     const loading = document.getElementById('loading');
 
     try {
+        // Load custom content first, then launches
+        await loadCustomContent();
+
         console.log("📡 Fetching launches...");
         const response = await fetch(API_URL, {
             headers: { 'Authorization': `Token ${API_KEY}` }
@@ -216,4 +427,4 @@ async function loadLaunches() {
 // ==================== INIT ====================
 
 loadLaunches();
-setInterval(loadLaunches, 300000); // refresh every 5 min
+setInterval(loadLaunches, 300000);
