@@ -15,7 +15,6 @@ async function fetchLaunches() {
     const futureISO = twoWeeks.toISOString().slice(0, -5) + 'Z';
 
     try {
-        // Try 14-day window first
         let url = `${BASE_URL}/launch/upcoming/?format=json&limit=20&net__gte=${nowISO}&net__lte=${futureISO}&ordering=net`;
         let response = await fetch(url, {
             headers: { 'Authorization': `Token ${API_KEY}` }
@@ -23,10 +22,8 @@ async function fetchLaunches() {
 
         if (!response.ok) throw new Error(`API returned ${response.status}`);
         let data = await response.json();
-
         let launches = filterFloridaLaunches(data.results || []);
 
-        // Fallback: get next available Florida launch
         if (launches.length === 0) {
             url = `${BASE_URL}/launch/upcoming/?format=json&limit=10&ordering=net`;
             response = await fetch(url, {
@@ -73,32 +70,31 @@ function displayLaunches(launches) {
     let html = `<div class="launch-count">${countText}</div><div class="launch-list">`;
 
     launches.forEach((launch, index) => {
-        html += buildLaunchCard(launch, index === 0);
+        html += buildLaunchCard(launch, index);
     });
 
     html += '</div>';
     container.innerHTML = html;
 
     launches.forEach((launch, index) => {
-        startCountdown(launch.net, `countdown-${index}`);
+        const net = launch.net ? new Date(launch.net) : null;
+        if (net && net > new Date()) {
+            startCountdown(launch.net, `countdown-${index}`);
+        }
     });
 }
 
-function buildLaunchCard(launch, isNext) {
+function buildLaunchCard(launch, index) {
+    const isNext = index === 0;
     const name = launch.name || 'Unknown Mission';
     const status = launch.status?.name || 'Unknown';
     const statusAbbrev = launch.status?.abbrev?.toLowerCase() || 'unknown';
     const net = launch.net ? new Date(launch.net) : null;
     const padName = launch.pad?.name || 'Unknown Pad';
-    const location = launch.pad?.location?.name || 'Florida';
     const provider = launch.launch_service_provider?.name || 'Unknown Provider';
     const rocketName = launch.rocket?.configuration?.name || 'Unknown Rocket';
     const description = launch.mission?.description || '';
     const imageUrl = launch.image || launch.rocket?.configuration?.image_url || '';
-    const orbit = launch.mission?.orbit?.name || '';
-    const cardIndex = isNext ? 0 : Math.random().toString(36).substr(2, 9);
-
-    // Trajectory from mission type or orbit
     const trajectory = launch.mission?.orbit?.name || launch.mission?.type || '';
 
     const dateStr = net ? net.toLocaleDateString('en-US', {
@@ -121,13 +117,11 @@ function buildLaunchCard(launch, isNext) {
 
     html += `<div class="launch-content">`;
 
-    // Header
     html += `<div class="launch-header">
         <div class="launch-name">${name}</div>
         <span class="status-badge status-${statusAbbrev}">${status}</span>
     </div>`;
 
-    // Meta grid
     html += `<div class="launch-meta">
         <div class="meta-item">
             <span class="meta-label">Date</span>
@@ -150,7 +144,6 @@ function buildLaunchCard(launch, isNext) {
             <span class="meta-value">${padName}</span>
         </div>`;
 
-    // Trajectory instead of Type
     if (trajectory) {
         html += `<div class="meta-item">
             <span class="meta-label">Trajectory</span>
@@ -158,17 +151,15 @@ function buildLaunchCard(launch, isNext) {
         </div>`;
     }
 
-    html += `</div>`; // close launch-meta
+    html += `</div>`;
 
-    // Countdown
     if (net && net > new Date()) {
         html += `<div class="countdown-container">
             <div class="countdown-label">T-Minus</div>
-            <div class="countdown-timer" id="countdown-${isNext ? 0 : cardIndex}">--:--:--:--</div>
+            <div class="countdown-timer" id="countdown-${index}">--:--:--:--</div>
         </div>`;
     }
 
-    // Description
     if (description) {
         html += `<div class="mission-description">
             <button class="desc-toggle" onclick="toggleDescription(this)">▶ Mission Details</button>
@@ -176,7 +167,7 @@ function buildLaunchCard(launch, isNext) {
         </div>`;
     }
 
-    html += `</div></div>`; // close launch-content, launch-card
+    html += `</div></div>`;
     return html;
 }
 
@@ -221,20 +212,26 @@ function clearCountdowns() {
 }
 
 function showLoading() {
-    document.getElementById('launch-container').innerHTML = `
-        <div class="loading">
-            <div class="spinner"></div>
-            <p>Loading Florida launches...</p>
-        </div>`;
+    const container = document.getElementById('launch-container');
+    if (container) {
+        container.innerHTML = `
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Loading Florida launches...</p>
+            </div>`;
+    }
 }
 
 function showError(message) {
-    document.getElementById('launch-container').innerHTML = `
-        <div class="error-message">
-            <h2>⚠️ Unable to Load Launches</h2>
-            <p>${message}</p>
-            <button class="retry-btn" onclick="fetchLaunches()">Try Again</button>
-        </div>`;
+    const container = document.getElementById('launch-container');
+    if (container) {
+        container.innerHTML = `
+            <div class="error-message">
+                <h2>⚠️ Unable to Load Launches</h2>
+                <p>${message}</p>
+                <button class="retry-btn" onclick="fetchLaunches()">Try Again</button>
+            </div>`;
+    }
 }
 
 function updateRefreshTime() {
@@ -244,6 +241,7 @@ function updateRefreshTime() {
     }
 }
 
-// Init
-fetchLaunches();
-setInterval(fetchLaunches, REFRESH_INTERVAL);
+document.addEventListener('DOMContentLoaded', function() {
+    fetchLaunches();
+    setInterval(fetchLaunches, REFRESH_INTERVAL);
+});
