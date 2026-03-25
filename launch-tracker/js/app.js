@@ -115,35 +115,57 @@ function getCustomContentForLaunch(launchName) {
 
 // ==================== FORMAT ROCKET TALK ====================
 
-function formatRocketTalk(entry, launchName) {
-    let dateStr = 'TBD';
-    let dayStr = 'TBD';
-
-    if (entry.eventDate) {
-        let dateObj;
-        // Handle Google Sheets date format: "Date(2025,0,27)" or regular string
-        const dateMatch = String(entry.eventDate).match(/Date\((\d+),(\d+),(\d+)\)/);
-        if (dateMatch) {
-            dateObj = new Date(parseInt(dateMatch[1]), parseInt(dateMatch[2]), parseInt(dateMatch[3]));
-        } else {
-            dateObj = new Date(entry.eventDate);
-        }
-
-        if (!isNaN(dateObj)) {
-            dayStr = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
-            dateStr = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-        }
+function formatRocketTalk(entry, launch) {
+    // Parse the gviz date strings
+    function parseGvizDate(str) {
+        if (!str) return null;
+        const match = str.match(/Date\((\d+),(\d+),(\d+)/);
+        if (!match) return null;
+        return new Date(parseInt(match[1]), parseInt(match[2]), parseInt(match[3]));
+    }
+    
+    function parseGvizTime(str) {
+        if (!str) return null;
+        const match = str.match(/Date\(\d+,\d+,\d+,(\d+),(\d+),(\d+)\)/);
+        if (!match) return null;
+        return { hours: parseInt(match[1]), minutes: parseInt(match[2]) };
     }
 
-    const timeStr = entry.eventTime || 'TBD';
+    const eventDate = parseGvizDate(entry.eventDate);
+    const eventTime = parseGvizTime(entry.eventTime);
 
-    // Extract mission name and vehicle from launch name
-    const missionName = launchName.replace(/^.*?\s*-\s*/, '').trim();
-    const vehicleMatch = launchName.match(/^(.*?)\s*-/);
-    const vehicle = vehicleMatch ? vehicleMatch[1].trim() : 'the rocket';
+    // Format the date like "Wednesday, March 26"
+    let dateStr = 'TBD';
+    if (eventDate) {
+        dateStr = eventDate.toLocaleDateString('en-US', { 
+            weekday: 'long', month: 'long', day: 'numeric' 
+        });
+    }
 
-    return `<strong>${dayStr}, ${dateStr} AT ${timeStr} IN THE MOVIE THEATER</strong>, I'll be profiling the SpaceX Falcon 9 rocket and the <strong>${missionName}</strong> mission. We'll look at pictures and video of <strong>${vehicle}</strong> for insights into what you'll be seeing. I'll also show you the best places to view the launch from, including balconies and other locations here on the property.<br><br>All ages are welcome, but parents of very young kids should be aware that this isn't really a kid-oriented program and it may not hold the attention of very young children.`;
+    // Format the time like "7:00 PM ET"
+    let timeStr = 'TBD';
+    if (eventTime) {
+        const tempDate = new Date(2000, 0, 1, eventTime.hours, eventTime.minutes);
+        timeStr = tempDate.toLocaleTimeString('en-US', { 
+            hour: 'numeric', minute: '2-digit', hour12: true 
+        }) + ' ET';
+    }
+
+    // Extract mission name and vehicle from the launch data
+    const missionName = launch?.name?.split('|')?.[1]?.trim() || launch?.name || 'Unknown Mission';
+    const vehicle = launch?.rocket?.configuration?.full_name || launch?.rocket?.configuration?.name || 'Unknown Vehicle';
+
+    return `
+        <div class="rocket-talk-content">
+            <p>🎙️ <strong>Join us LIVE on YouTube as we cover the launch of ${missionName} aboard a ${vehicle} rocket!</strong></p>
+            <p>📅 <strong>Date:</strong> ${dateStr}</p>
+            <p>🕐 <strong>Time:</strong> ${timeStr}</p>
+            <p>💬 Come hang out in the live chat, ask questions, and watch the rocket light up the sky over Florida's Space Coast!</p>
+            <p>🔔 <a href="https://www.youtube.com/@FloridaSpaceLaunchTracker" target="_blank" style="color: #ff4444;">Subscribe & turn on notifications</a> so you don't miss it!</p>
+        </div>
+    `;
 }
+
 
 // ==================== FORMAT CHRIS SAYS ====================
 
