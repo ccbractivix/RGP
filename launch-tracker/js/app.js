@@ -34,11 +34,16 @@ async function fetchLaunches() {
             launches = filterFloridaLaunches(data.results || []).slice(0, 1);
         }
 
+        const loading = document.getElementById('loading');
+        if (loading) loading.style.display = 'none';
+
         displayLaunches(launches);
         updateRefreshTime();
 
     } catch (error) {
         console.error('Fetch error:', error);
+        const loading = document.getElementById('loading');
+        if (loading) loading.style.display = 'none';
         showError(error.message);
     }
 }
@@ -51,9 +56,6 @@ function filterFloridaLaunches(launches) {
 }
 
 function displayLaunches(launches) {
-    const loading = document.getElementById('loading');
-    if (loading) loading.style.display = 'none';
-
     const container = document.getElementById('launch-container');
 
     if (!launches || launches.length === 0) {
@@ -215,6 +217,9 @@ function clearCountdowns() {
 }
 
 function showLoading() {
+    const htmlLoading = document.getElementById('loading');
+    if (htmlLoading) htmlLoading.style.display = 'none';
+
     const container = document.getElementById('launch-container');
     if (container) {
         container.innerHTML = `
@@ -226,6 +231,9 @@ function showLoading() {
 }
 
 function showError(message) {
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'none';
+
     const container = document.getElementById('launch-container');
     if (container) {
         container.innerHTML = `
