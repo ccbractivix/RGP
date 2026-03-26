@@ -1,411 +1,240 @@
-/* ============================================================
-   Florida Space Launch Tracker - styles.css
-   ============================================================ */
+// Florida Space Launch Tracker - app.js
 
-/* ---------- Base Reset ---------- */
-{
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+const API_KEY = "506485404eb785c1b7e1c3dac3ba394ba8fb6834";
+const SHEET_ID = "1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU";
+const SHEET_GID = "0";
+const FLORIDA_PAD_IDS = [12, 27];
+const REFRESH_INTERVAL = 300000;
+
+// ── Status badge helper ──
+function statusBadge(label) {
+  const key = (label || "").toLowerCase().trim();
+  const map = {
+    go: ["🟢", "#16a34a"],
+    tbd: ["🟡", "#ca8a04"],
+    tbc: ["🟡", "#ca8a04"],
+    hold: ["🟠", "#ea580c"],
+    "in flight": ["🔵", "#2563eb"],
+    success: ["✅", "#16a34a"],
+    failure: ["🔴", "#dc2626"],
+  };
+  const [icon, color] = map[key] || ["⚪", "#6b7280"];
+  return `<span style="
+    background:${color}22;color:${color};
+    padding:2px 10px;border-radius:12px;
+    font-size:0.78rem;font-weight:600;
+    display:inline-flex;align-items:center;gap:4px;
+    border:1px solid ${color}55;">${icon} ${label || "Unknown"}</span>`;
 }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #0b0f1a;
-  color: #e0e0e0;
-  line-height: 1.5;
-  padding: 12px;
+// ── Fuzzy match helper ──
+function fuzzyMatch(a, b) {
+  if (!a || !b) return false;
+  const normalize = s =>
+    s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const na = normalize(a),
+    nb = normalize(b);
+  if (na.includes(nb) || nb.includes(na)) return true;
+  const wordsA = a.toLowerCase().split(/\s+/);
+  const wordsB = b.toLowerCase().split(/\s+/);
+  let matches = 0;
+  wordsA.forEach(wa => {
+    if (wordsB.some(wb => wb.includes(wa) || wa.includes(wb))) matches++;
+  });
+  return matches >= 2;
 }
 
-/* ---------- Container ---------- */
-#launch-container {
-  max-width: 700px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+// ── Starlink trajectory helper ──
+function getStarlinkTrajectory(missionName) {
+  if (!missionName) return null;
+  const m = missionName.match(/starlink\s+(?:group\s+)?(\d+)[-–](\d+)/i);
+  if (!m) return null;
+  const group = parseInt(m[1], 10);
+  if ([8, 10].includes(group))
+    return { inclination: "53°", direction: "northeast", color: "#38bdf8" };
+  if ([6, 12].includes(group))
+    return { inclination: "43°", direction: "southeast", color: "#f472b6" };
+  return null;
 }
 
-/* ---------- Launch Card ---------- */
-.launch-card {
-  background: #1a1f2e;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid #2a2f3e;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+// ── Countdown timer ──
+let countdownInterval = null;
+function startCountdown(targetISO) {
+  if (countdownInterval) clearInterval(countdownInterval);
+  const el = document.getElementById("countdown-timer");
+  if (!el || !targetISO) return;
+  countdownInterval = setInterval(() => {
+    const diff = new Date(targetISO) - new Date();
+    if (diff <= 0) {
+      el.textContent = "T-0 LIFTOFF!";
+      clearInterval(countdownInterval);
+      return;
+    }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent =
+      (d > 0 ? `${d}d ` : "") +
+      `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }, 1000);
 }
 
-/* ---------- Card Image ---------- */
-.card-image-wrapper {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 7;
-  overflow: hidden;
-  background: #111;
-}
-
-.card-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center top;
-  display: block;
-}
-
-.card-image-overlay {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-}
-
-/* ---------- Card Content ---------- */
-.card-content {
-  padding: 14px;
-}
-
-/* ---------- Mission Name ---------- */
-.mission-name {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 8px;
-  line-height: 1.3;
-}
-
-/* ---------- Provider Row ---------- */
-.provider-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.provider-logo {
-  height: 22px;
-  width: auto;
-  max-width: 80px;
-  object-fit: contain;
-  border-radius: 3px;
-}
-
-.provider-name {
-  font-size: 0.85rem;
-  color: #9aa0b0;
-}
-
-/* ---------- Meta Grid ---------- */
-.meta-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.8rem;
-  color: #b0b8c8;
-}
-
-.meta-icon {
-  font-size: 0.85rem;
-  flex-shrink: 0;
-}
-
-.meta-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ---------- Launch Date ---------- */
-.launch-datetime {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: #252a3a;
-  border-radius: 6px;
-  margin-bottom: 10px;
-  font-size: 0.82rem;
-  color: #c0c8d8;
-}
-
-/* ---------- Status Badge ---------- */
-.status-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.status-go { background: #0d3b0d; color: #4cff4c; }
-.status-tbd { background: #3b370d; color: #ffd84c; }
-.status-tbc { background: #3b370d; color: #ffd84c; }
-.status-hold { background: #3b2a0d; color: #ff9f4c; }
-.status-fail { background: #3b0d0d; color: #ff4c4c; }
-.status-success { background: #0d3b0d; color: #4cff4c; }
-.status-inflight { background: #0d2a3b; color: #4cb8ff; }
-.status-unknown { background: #2a2a2a; color: #888; }
-
-/* ---------- Countdown ---------- */
-.countdown {
-  margin-bottom: 10px;
-}
-
-.countdown-grid {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-
-.countdown-block {
-  background: #252a3a;
-  border-radius: 6px;
-  padding: 6px 10px;
-  text-align: center;
-  min-width: 48px;
-}
-
-.countdown-num {
-  display: block;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #4cb8ff;
-  font-variant-numeric: tabular-nums;
-}
-
-.countdown-label {
-  display: block;
-  font-size: 0.55rem;
-  color: #7a8090;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.countdown-launched {
-  display: block;
-  text-align: center;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #ff6b35;
-  padding: 6px;
-}
-
-/* ---------- Trajectory Box ---------- */
-.trajectory-box {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: #1a2a1a;
-  border: 1px solid #2a4a2a;
-  border-radius: 6px;
-  margin-bottom: 10px;
-  font-size: 0.8rem;
-  color: #80d080;
-}
-
-/* ---------- Weather Box ---------- */
-.weather-box {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: #1a2030;
-  border: 1px solid #2a3a50;
-  border-radius: 6px;
-  margin-bottom: 10px;
-  font-size: 0.8rem;
-  color: #80a0c0;
-}
-
-/* ---------- Mission Description ---------- */
-.mission-description {
-  margin-bottom: 10px;
-}
-
-.mission-description p {
-  font-size: 0.8rem;
-  color: #9aa0b0;
-  line-height: 1.5;
-}
-
-/* ---------- Custom Bubbles ---------- */
-.custom-bubble {
-  border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 8px;
-}
-
-.bubble-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
-}
-
-.bubble-logo {
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.bubble-status {
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.bubble-body {
-  font-size: 0.8rem;
-  line-height: 1.5;
-}
-
-/* Rocket Talk */
-.rocket-talk {
-  background: #1a1028;
-  border: 1px solid #3a2060;
-}
-
-.rocket-talk .bubble-logo { color: #c084fc; }
-
-.rocket-talk-live .bubble-status {
-  background: #3b0d0d;
-  color: #ff4c4c;
-  animation: pulse 1.5s infinite;
-}
-
-.rocket-talk-pending .bubble-status {
-  background: #3b370d;
-  color: #ffd84c;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-/* Viewing Guide */
-.viewing-guide {
-  background: #0d1a2a;
-  border: 1px solid #1a3a5a;
-}
-
-.viewing-guide .bubble-logo { color: #60a5fa; }
-
-/* Chris Says */
-.chris-says {
-  background: #1a2a1a;
-  border: 1px solid #2a4a2a;
-}
-
-.chris-says .bubble-logo { color: #4ade80; }
-
-/* ---------- Video Links ---------- */
-.video-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.video-link {
-  display: inline-block;
-  padding: 4px 10px;
-  background: #2a1a1a;
-  border: 1px solid #5a2a2a;
-  border-radius: 6px;
-  color: #ff8080;
-  text-decoration: none;
-  font-size: 0.75rem;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-
-.video-link:hover {
-  background: #3a2020;
-}
-
-/* ---------- Detail Link ---------- */
-.detail-link {
-  display: inline-block;
-  padding: 4px 10px;
-  background: #1a2030;
-  border: 1px solid #2a3a50;
-  border-radius: 6px;
-  color: #80b0d0;
-  text-decoration: none;
-  font-size: 0.75rem;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-
-.detail-link:hover {
-  background: #253045;
-}
-
-/* ---------- No Launches / Error ---------- */
-.no-launches,
-.error-box {
-  text-align: center;
-  padding: 30px 16px;
-  background: #1a1f2e;
-  border-radius: 10px;
-  border: 1px solid #2a2f3e;
-}
-
-.no-launches h2,
-.error-box h2 {
-  font-size: 1.1rem;
-  margin-bottom: 6px;
-}
-
-.no-launches p,
-.error-box p {
-  font-size: 0.85rem;
-  color: #9aa0b0;
-}
-
-/* ---------- Force all images small ---------- */
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-/* ---------- Responsive ---------- */
-@media (max-width: 480px) {
-  body {
-    padding: 8px;
-  }
-
-  .card-image-wrapper {
-    aspect-ratio: 16 / 6;
-  }
-
-  .card-content {
-    padding: 10px;
-  }
-
-  .mission-name {
-    font-size: 1rem;
-  }
-
-  .meta-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .countdown-block {
-    min-width: 40px;
-    padding: 5px 6px;
-  }
-
-  .countdown-num {
-    font-size: 1rem;
+// ── Fetch Google Sheet data ──
+async function fetchSheetData() {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${SHEET_GID}`;
+    const resp = await fetch(url);
+    const text = await resp.text();
+    const rows = text.split("\n").slice(1);
+    return rows
+      .map(row => {
+        const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+        if (!cols || cols.length < 3) return null;
+        const clean = s => (s || "").replace(/^"|"$/g, "").trim();
+        return {
+          mission: clean(cols[0]),
+          rocketTalk: clean(cols[1]),
+          chrisSays: clean(cols[2]),
+          viewingGuide: cols[3] ? clean(cols[3]) : "",
+        };
+      })
+      .filter(Boolean);
+  } catch (e) {
+    console.error("Sheet fetch failed:", e);
+    return [];
   }
 }
+
+// ── Build launch card HTML ──
+function buildCard(launch, sheetData) {
+  const name = launch.name || "Unknown Mission";
+  const status = launch.status?.abbrev || "Unknown";
+  const net = launch.net ? new Date(launch.net) : null;
+  const padName = launch.pad?.name || "Unknown Pad";
+  const locName = launch.pad?.location?.name || "";
+  const imgUrl =
+    launch.image?.image_url ||
+    launch.image ||
+    launch.rocket?.configuration?.image_url ||
+    "";
+  const missionDesc =
+    launch.mission?.description || "No mission description available.";
+  const rocketName = launch.rocket?.configuration?.full_name || "";
+
+  // Sheet enrichment
+  const sheetRow = sheetData.find(r => fuzzyMatch(r.mission, name));
+  const rocketTalk = sheetRow?.rocketTalk || "";
+  const chrisSays = sheetRow?.chrisSays || "";
+  const viewingGuide = sheetRow?.viewingGuide || "";
+
+  // Starlink trajectory
+  const trajectory = getStarlinkTrajectory(name);
+
+  // Date formatting
+  const dateStr = net
+    ? net.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "TBD";
+  const timeStr = net
+    ? net.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short",
+      })
+    : "";
+
+  return `
+    <div class="launch-card">
+      ${imgUrl ? `<img class="card-image" src="${imgUrl}" alt="${name}" onerror="this.style.display='none'">` : ""}
+      <div class="card-body">
+        <h2 class="card-title">${name}</h2>
+        ${statusBadge(status)}
+        ${rocketName ? `<div style="font-size:0.82rem;color:#94a3b8;margin-top:6px;">🚀 ${rocketName}</div>` : ""}
+        <div style="margin-top:8px;font-size:0.85rem;color:#b0b8c8;">
+          📅 ${dateStr} ${timeStr ? `&nbsp;🕐 ${timeStr}` : ""}
+        </div>
+        <div style="font-size:0.82rem;color:#7a8a9e;margin-top:2px;">📍 ${padName}${locName ? ", " + locName : ""}</div>
+        <p style="margin-top:10px;font-size:0.85rem;color:#a0a8b8;line-height:1.5;">${missionDesc}</p>
+
+        ${trajectory ? `
+          <div style="margin-top:10px;padding:8px 12px;background:${trajectory.color}15;border:1px solid ${trajectory.color}40;border-radius:8px;font-size:0.82rem;">
+            🛰️ <strong style="color:${trajectory.color}">Trajectory:</strong>
+            ${trajectory.inclination} inclination, heading <strong>${trajectory.direction}</strong>
+          </div>` : ""}
+
+        ${rocketTalk ? `
+          <div style="margin-top:10px;padding:8px 12px;background:#1e293b;border-left:3px solid #38bdf8;border-radius:6px;font-size:0.85rem;">
+            🎙️ <strong style="color:#38bdf8;">Rocket Talk:</strong> ${rocketTalk}
+          </div>` : ""}
+
+        ${chrisSays ? `
+          <div style="margin-top:8px;padding:8px 12px;background:#1a1a2e;border-left:3px solid #f472b6;border-radius:6px;font-size:0.85rem;">
+            🧑‍🚀 <strong style="color:#f472b6;">Chris Says:</strong> ${chrisSays}
+          </div>` : ""}
+
+        ${viewingGuide ? `
+          <div style="margin-top:8px;padding:8px 12px;background:#0f2027;border-left:3px solid #16a34a;border-radius:6px;font-size:0.85rem;">
+            👀 <strong style="color:#16a34a;">Viewing Guide:</strong> ${viewingGuide}
+          </div>` : ""}
+      </div>
+    </div>`;
+}
+
+// ── Main fetch & render ──
+async function fetchAndRender() {
+  const container = document.getElementById("launch-container");
+  const spinner = document.getElementById("loading-spinner");
+  const refreshEl = document.getElementById("last-refresh");
+  const countdownEl = document.getElementById("countdown-timer");
+
+  try {
+    if (spinner) spinner.style.display = "flex";
+
+    const [apiResp, sheetData] = await Promise.all([
+      fetch(
+        `https://ll.thespacedevs.com/2.3.0/launches/upcoming/?format=json&limit=10&location__ids=${FLORIDA_PAD_IDS.join(",")}&mode=detailed`,
+        { headers: { Authorization: `Token ${API_KEY}` } }
+      ),
+      fetchSheetData(),
+    ]);
+
+    const data = await apiResp.json();
+    const launches = data.results || [];
+
+    if (spinner) spinner.style.display = "none";
+
+    if (!launches.length) {
+      container.innerHTML =
+        '<p style="text-align:center;color:#7a8a9e;padding:40px;">No upcoming Florida launches found.</p>';
+      return;
+    }
+
+    container.innerHTML = launches.map(l => buildCard(l, sheetData)).join("");
+
+    // Start countdown for first launch
+    const firstNet = launches[0]?.net;
+    if (firstNet && countdownEl) {
+      startCountdown(firstNet);
+    }
+
+    if (refreshEl) {
+      refreshEl.textContent = `Last refresh: ${new Date().toLocaleTimeString()}`;
+    }
+  } catch (err) {
+    console.error("Fetch error:", err);
+    if (spinner) spinner.style.display = "none";
+    container.innerHTML =
+      '<p style="text-align:center;color:#ef4444;padding:40px;">Failed to load launch data. Will retry shortly.</p>';
+  }
+}
+
+// ── Init ──
+document.addEventListener("DOMContentLoaded", () => {
+  fetchAndRender();
+  setInterval(fetchAndRender, REFRESH_INTERVAL);
+});
