@@ -5,52 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Florida Space Launch Tracker</title>
     <link rel="stylesheet" href="css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-header">
-        <h1>🚀 Florida Space Launch Tracker</h1>
-        <p id="last-refresh">Loading launches...</p>
+    <div class="container">
+        <header class="header">
+            <h1>🚀 Florida Space Launch Tracker</h1>
+            <p class="subtitle">Live launch updates from Cape Canaveral & Kennedy Space Center</p>
+        </header>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Loading launch data...</p>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="launch-container" class="launch-container"></div>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <p class="footer-disclaimer">
+                    This launch tracker is provided for informational and entertainment purposes for guests of
+                    Holiday Inn Club Vacations Cape Canaveral Beach Resort. Launch schedules are subject to change
+                    without notice. All launch data is sourced from public APIs and may not reflect real-time
+                    mission status.
+                </p>
+                <p class="footer-disclaimer">
+                    Holiday Inn Club Vacations Cape Canaveral Beach Resort is not affiliated with NASA,
+                    SpaceX, United Launch Alliance, Blue Origin, or any launch provider. Rocket launch viewing
+                    opportunities depend on weather, trajectory, and other factors beyond our control.
+                </p>
+                <div class="footer-links">
+                    <a href="https://www.hiclubvacations.com/resorts/cape-canaveral-beach-resort" target="_blank">Cape Canaveral Beach Resort</a>
+                    <span class="footer-divider">|</span>
+                    <a href="https://www.kennedyspacecenter.com" target="_blank">Kennedy Space Center</a>
+                    <span class="footer-divider">|</span>
+                    <a href="https://www.patrick.spaceforce.mil" target="_blank">Patrick Space Force Base</a>
+                </div>
+                <p class="footer-branding">
+                    Made with ❤️ for space enthusiasts at HICV Cape Canaveral
+                </p>
+            </div>
+        </footer>
     </div>
-    <div id="loading" class="loading-container">
-        <div class="loading-spinner"></div>
-        <p>Fetching upcoming launches...</p>
-    </div>
-    <div id="launch-container"></div>
+
     <script src="js/app.js"></script>
-    <div class="footer-link">
-   <div class="gallery-showcase">
-    <div class="filmstrip">
-        <img src="images/657591947_10236579828047963_3877674169551986825_n.jpg" alt="Launch Photo">
-        <img src="images/646124411_10233474379503117_3264279362825464558_n.jpg" alt="Launch Photo">
-        <img src="images/656360055_1241533304626817_560685406664806422_n.jpg" alt="Launch Photo">
-        <img src="images/647299550_909669271872917_1450571377461876289_n.jpg" alt="Launch Photo">
-        <img src="images/649529285_10233432151086956_5601623681360915381_n.jpg" alt="Launch Photo">
-        <img src="images/650734228_1235189385261209_4997741153186167191_n.jpg" alt="Launch Photo">
-        <img src="images/654863159_10233828227109086_6004663556452030600_n.jpg" alt="Launch Photo">
-    </div>
-    <a href="https://sites.google.com/view/holidayinnclubcape/home/rocket-talk/galleries" target="_blank" class="gallery-link">
-        📷 Launch Image Galleries By Local Photographers
-    </a>
-</div>
-
-</div>
-<div class="site-footer">
-    <hr class="footer-divider">
-    <a href="https://sites.google.com/view/holidayinnclubcape/home" target="_blank" class="footer-nav-link">
-        Cape Canaveral Main Site Menu
-    </a>
-    <hr class="footer-divider">
-    <a href="https://holidayinnclub.com/explore-resorts/cape-canaveral-resort/portal" target="_blank" class="footer-nav-link">
-        Return to HICV Resort Guest Portal Home Page
-    </a>
-    <div class="footer-legal">
-        <p>The Holiday Inn Club® program and Holiday Inn Club Vacations® resorts are independently owned, operated and marketed and are not owned, operated or marketed by IHG® Hotels and Resorts or by the owner or the licensor of the Holiday Inn® brand. Copyright © 2022 Holiday Inn Club Vacations Incorporated. All rights reserved.</p>
-        <p>THIS MATERIAL IS BEING USED FOR THE PURPOSE OF SOLICITING SALES OF TIMESHARE INTERESTS</p>
-        <p>Holiday Inn Club Vacations Incorporated, 9271 S John Young Parkway, Orlando, FL 32819</p>
-    </div>
-    <img src="images/hicvfooter.png" alt="HICV Footer" class="footer-logo">
-</div>
-
 </body>
 </html>
