@@ -1,500 +1,476 @@
-console.log("🟢 SCRIPT STARTED");
+// ─────────────────────────────────────────────
+// Florida Space Launch Tracker – app.js (Phase 2)
+// ─────────────────────────────────────────────
 
-const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
+// ── API & Sheet Configuration ──────────────
+const LL2_API_KEY  = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
+const LL2_BASE     = 'https://ll.thespacedevs.com/2.3.0';
+const LOCATION_IDS = [12, 27];
+const SHEET_ID     = '1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU';
+const SHEET_GID    = '0';
+const SHEET_URL    = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${SHEET_GID}`;
 
-function getFutureDate(days) {
-    const now = new Date();
-    now.setDate(now.getDate() + days);
-    return now.toISOString();
-}
+// ── Timing Constants ───────────────────────
+const REFRESH_INTERVAL   = 300000;   // 5 min full refresh
+const COUNTDOWN_INTERVAL = 1000;     // 1 s countdown tick
 
-const API_URL = `https://ll.thespacedevs.com/2.2.0/launch/upcoming/?format=json&limit=10&location__ids=12,27&mode=detailed&ordering=net&net__lte=${getFutureDate(14)}`;
-const SHEET_ID = '1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU';
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+// ── State ──────────────────────────────────
+let launches      = [];
+let sheetRows     = [];
+let countdownTimer = null;
 
+// ── Provider Prefixes (fuzzy match) ────────
+const PROVIDER_PREFIXES = [
+    'SpaceX', 'ULA', 'Blue Origin', 'Rocket Lab',
+    'Northrop Grumman', 'Astra', 'Relativity Space',
+    'Firefly Aerospace', 'Boeing'
+];
 
-let customContent = [];
+// ── Starlink Trajectory Map ────────────────
+const STARLINK_TRAJECTORIES = {
+    'Group 6':  { direction: 'Southeast', inclination: '43°' },
+    'Group 12': { direction: 'Southeast', inclination: '43°' },
+    'Group 8':  { direction: 'Northeast', inclination: '53°' },
+    'Group 10': { direction: 'Northeast', inclination: '53°' }
+};
 
-// ==================== FETCH GOOGLE SHEET ====================
+// ════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+    fetchAllData();
+    setInterval(fetchAllData, REFRESH_INTERVAL);
+});
 
-async function loadCustomContent() {
+// ════════════════════════════════════════════
+//  DATA FETCHING
+// ════════════════════════════════════════════
+async function fetchAllData() {
     try {
-        console.log("📋 Fetching custom content from Google Sheet...");
-        const response = await fetch(SHEET_URL);
-        const text = await response.text();
-
-        const jsonString = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);/);
-        if (!jsonString) {
-            console.warn("⚠️ Could not parse sheet response");
-            customContent = [];
-            return;
-        }
-
-        const json = JSON.parse(jsonString[1]);
-        const rows = json.table.rows;
-        const cols = json.table.cols;
-
-        console.log(`📋 Sheet has ${rows.length} rows, ${cols.length} columns`);
-
-        customContent = rows.map(row => {
-            const cells = row.c;
-            return {
-                timestamp: cells[0] ? cells[0].v : '',
-                launchName: cells[1] ? String(cells[1].v || '') : '',
-                contentType: cells[2] ? String(cells[2].v || '') : '',
-                message: cells[3] ? String(cells[3].v || '') : '',
-                eventDate: cells[4] ? cells[4].v : '',
-                eventTime: cells[5] ? String(cells[5].v || '') : '',
-                slidesUrl: cells[6] ? String(cells[6].v || '') : ''
-            };
-        }).filter(entry => entry.launchName && entry.contentType);
-
-        console.log(`✅ Loaded ${customContent.length} custom content entries`);
-
-    } catch (error) {
-        console.error("❌ Error loading custom content:", error);
-        customContent = [];
+        const [apiLaunches, sheet] = await Promise.all([
+            fetchLaunches(),
+            fetchSheetData()
+        ]);
+        launches = apiLaunches;
+        sheetRows = sheet;
+        processSheetData();
+        renderLaunches();
+        startCountdowns();
+    } catch (err) {
+        console.error('Data fetch error:', err);
+        document.getElementById('launches-container').innerHTML =
+            '<p class="error-message">Unable to load launch data. Will retry shortly.</p>';
     }
 }
 
-// ==================== FUZZY MATCH ====================
+// ── Launch Library 2 ───────────────────────
+async function fetchLaunches() {
+    const now   = new Date();
+    const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const end   = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
 
-function fuzzyMatch(formInput, launchName) {
-    const clean = str => str.toLowerCase()
-        .replace(/spacex\s*-?\s*/i, '')
-        .replace(/firefly\s*-?\s*/i, '')
-        .replace(/rocket\s*lab\s*-?\s*/i, '')
-        .replace(/ula\s*-?\s*/i, '')
-        .replace(/blue\s*origin\s*-?\s*/i, '')
-        .replace(/northrop\s*grumman\s*-?\s*/i, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+    const params = new URLSearchParams({
+        location__ids: LOCATION_IDS.join(','),
+        window_start__gte: start.toISOString(),
+        window_start__lte: end.toISOString(),
+        ordering: 'window_start',
+        limit: 25
+    });
 
-    const input = clean(formInput);
-    const name = clean(launchName);
-
-    if (name.includes(input)) return true;
-    if (input.includes(name)) return true;
-
-    const inputWords = input.split(' ');
-    return inputWords.every(word => name.includes(word));
+    const res  = await fetch(`${LL2_BASE}/launches/upcoming/?${params}`, {
+        headers: { Authorization: `Token ${LL2_API_KEY}` }
+    });
+    if (!res.ok) throw new Error(`LL2 ${res.status}`);
+    const data = await res.json();
+    return data.results || [];
 }
 
-// ==================== GET CUSTOM CONTENT FOR A LAUNCH ====================
-
-function getCustomContentForLaunch(launchName) {
-    const matched = customContent.filter(entry => fuzzyMatch(entry.launchName, launchName));
-
-    const rocketTalkEntries = matched.filter(e => e.contentType === 'Rocket Talk LIVE!');
-    let rocketTalk = null;
-    if (rocketTalkEntries.length > 0) {
-        const latest = rocketTalkEntries[rocketTalkEntries.length - 1];
-        if (latest.message && latest.message.trim().toUpperCase() === 'CANCEL') {
-            rocketTalk = null;
-        } else {
-            rocketTalk = latest;
-        }
-    }
-
-    const viewingEntries = matched.filter(e => e.contentType === 'Launch Viewing Guide');
-    let viewingGuide = null;
-    if (viewingEntries.length > 0) {
-        const latest = viewingEntries[viewingEntries.length - 1];
-        if (latest.slidesUrl && latest.slidesUrl.trim().toUpperCase() === 'CANCEL') {
-            viewingGuide = null;
-        } else {
-            viewingGuide = latest;
-        }
-    }
-
-    const chrisSays = matched
-        .filter(e => e.contentType === 'Chris Says')
-        .filter(e => e.message && e.message.trim().toUpperCase() !== 'CANCEL')
-        .reverse();
-
-    return { rocketTalk, viewingGuide, chrisSays };
+// ── Google Sheet CSV ───────────────────────
+async function fetchSheetData() {
+    const res  = await fetch(SHEET_URL);
+    if (!res.ok) throw new Error(`Sheet ${res.status}`);
+    const text = await res.text();
+    return parseCSV(text);
 }
 
-// ==================== PARSE GVIZ DATES ====================
+function parseCSV(text) {
+    const rows = [];
+    let current = '';
+    let inQuotes = false;
 
-function parseGvizDate(str) {
-    if (!str) return null;
-    const match = String(str).match(/Date\((\d+),(\d+),(\d+)/);
-    if (!match) return null;
-    return new Date(parseInt(match[1]), parseInt(match[2]), parseInt(match[3]));
-}
-
-function parseGvizTime(str) {
-    if (!str) return null;
-    const match = String(str).match(/Date\(\d+,\d+,\d+,(\d+),(\d+),(\d+)\)/);
-    if (!match) return null;
-    return { hours: parseInt(match[1]), minutes: parseInt(match[2]) };
-}
-
-// ==================== FORMAT ROCKET TALK ====================
-
-function formatRocketTalk(entry, launchName) {
-    const eventDate = parseGvizDate(entry.eventDate);
-    const eventTime = parseGvizTime(entry.eventTime);
-
-    let dayStr = 'TBD';
-    let dateStr = 'TBD';
-    if (eventDate) {
-        dayStr = eventDate.toLocaleDateString('en-US', { weekday: 'long' });
-        dateStr = eventDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-    }
-
-    let timeStr = 'TBD';
-    if (eventTime) {
-        const tempDate = new Date(2000, 0, 1, eventTime.hours, eventTime.minutes);
-        timeStr = tempDate.toLocaleTimeString('en-US', {
-            hour: 'numeric', minute: '2-digit', hour12: true
-        }) + ' ET';
-    }
-
-    let vehicle = 'the rocket';
-    let missionName = 'the mission';
-    if (launchName && launchName.includes('|')) {
-        vehicle = launchName.split('|')[0].trim();
-        missionName = launchName.split('|')[1].trim();
-    } else if (launchName) {
-        missionName = launchName;
-    }
-
-    return `
-        <div class="rocket-talk-content">
-            <p>🎬 <strong>${dayStr}, ${dateStr} at ${timeStr} in the Movie Theater</strong>, I'll be profiling the ${vehicle} rocket and the <strong>${missionName}</strong> mission. We'll look at pictures and video of ${vehicle} for insights into what you'll be seeing. I'll also show you the best places to view the launch from, including balconies and other locations here on the property.</p>
-            <p>Come see what the launch is all about, stick around for Q & A with Chris, and then get ready to make some memories as a rocket lights up the sky over Florida's Space Coast!</p>
-            <p style="font-size: 0.85em; opacity: 0.8;">🎯 All ages are welcome, but parents of very young kids should be aware that this isn't really a kid-oriented program and it may not hold the attention of very young children.</p>
-        </div>
-    `;
-}
-
-// ==================== FORMAT CHRIS SAYS ====================
-
-function formatChrisSays(entries) {
-    return entries.map(entry => {
-        let timeLabel = '';
-        if (entry.timestamp) {
-            const dateMatch = String(entry.timestamp).match(/Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/);
-            let dateObj;
-            if (dateMatch) {
-                dateObj = new Date(
-                    parseInt(dateMatch[1]), parseInt(dateMatch[2]), parseInt(dateMatch[3]),
-                    parseInt(dateMatch[4]), parseInt(dateMatch[5]), parseInt(dateMatch[6])
-                );
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '"') {
+            if (inQuotes && text[i + 1] === '"') {
+                current += '"';
+                i++;
             } else {
-                dateObj = new Date(entry.timestamp);
+                inQuotes = !inQuotes;
             }
-            if (!isNaN(dateObj)) {
-                timeLabel = dateObj.toLocaleDateString('en-US', {
-                    month: 'short', day: 'numeric'
-                }) + ' at ' + dateObj.toLocaleTimeString('en-US', {
-                    hour: 'numeric', minute: '2-digit'
-                });
+        } else if (ch === ',' && !inQuotes) {
+            rows.push(current);
+            current = '';
+        } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+            if (current || rows.length) {
+                rows.push(current);
+                current = '';
             }
+            if (rows.length) {
+                if (!rows._parsed) rows._parsed = [];
+                rows._parsed.push([...rows]);
+                rows.length = 0;
+            }
+            if (ch === '\r' && text[i + 1] === '\n') i++;
+        } else {
+            current += ch;
         }
-        return `<div class="chris-says-entry">
-            ${timeLabel ? `<span class="chris-timestamp">${timeLabel}</span>` : ''}
-            <span class="chris-message">${entry.message}</span>
-        </div>`;
-    }).join('');
+    }
+    if (current || rows.length) {
+        rows.push(current);
+        if (!rows._parsed) rows._parsed = [];
+        rows._parsed.push([...rows]);
+    }
+
+    const parsed = rows._parsed || [];
+    // Skip header row
+    return parsed.length > 1 ? parsed.slice(1) : [];
 }
 
-// ==================== BUILD CUSTOM BUBBLES ====================
+// ════════════════════════════════════════════
+//  SHEET ↔ LAUNCH MATCHING
+// ════════════════════════════════════════════
+function processSheetData() {
+    // Reset all entries
+    launches.forEach(l => {
+        l.sheetDataEntries = [];
+        l.chrisSays = null;
+        l.viewingGuide = null;
+        l.galleryLink = null;
+    });
 
-function buildCustomBubbles(launchName) {
-    const { rocketTalk, viewingGuide, chrisSays } = getCustomContentForLaunch(launchName);
-    let html = '';
+    sheetRows.forEach(row => {
+        const sheetName   = (row[1] || '').trim().toLowerCase();
+        const contentType = (row[2] || '').trim();
+        const message     = (row[3] || '').trim();
+        const eventDate   = (row[4] || '').trim();
+        const eventTime   = (row[5] || '').trim();
+        const slidesURL   = (row[6] || '').trim();
+        const cancel      = (row[7] || '').trim().toLowerCase();
+        const galleryLink = (row[8] || '').trim();
 
-    if (rocketTalk) {
-        html += `<div class="custom-bubble rocket-talk-bubble">
-            <button class="desc-toggle" onclick="toggleDescription(this)">
-                <span>🎬 Rocket Talk LIVE!</span>
-                <span class="toggle-icon">▼</span>
-            </button>
-            <div class="desc-body">
-                <div class="desc-content">${formatRocketTalk(rocketTalk, launchName)}</div>
-            </div>
-        </div>`;
-    }
+        if (!sheetName) return;
 
-    if (viewingGuide && viewingGuide.slidesUrl) {
-        html += `<div class="custom-bubble viewing-guide-bubble">
-            <button class="desc-toggle" onclick="toggleDescription(this)">
-                <span>👀 Launch Viewing Guide</span>
-                <span class="toggle-icon">▼</span>
-            </button>
-            <div class="desc-body">
-                <div class="desc-content">
-                    <a href="${viewingGuide.slidesUrl}" target="_blank" class="viewing-guide-link">📊 Open Launch Viewing Guide</a>
-                </div>
-            </div>
-        </div>`;
-    }
+        launches.forEach(launch => {
+            const launchName = launch.name.toLowerCase();
+            let stripped = launchName;
+            PROVIDER_PREFIXES.forEach(prefix => {
+                const lower = prefix.toLowerCase();
+                if (stripped.startsWith(lower + ' | ')) {
+                    stripped = stripped.substring(lower.length + 3).trim();
+                }
+            });
 
-    if (chrisSays.length > 0) {
-        html += `<div class="custom-bubble chris-says-bubble">
-            <button class="desc-toggle" onclick="toggleDescription(this)">
-                <span>💬 Chris Says</span>
-                <span class="toggle-icon">▼</span>
-            </button>
-            <div class="desc-body">
-                <div class="desc-content chris-says-content">${formatChrisSays(chrisSays)}</div>
-            </div>
-        </div>`;
-    }
+            const matched = launchName.includes(sheetName) ||
+                            stripped.includes(sheetName);
 
-    return html;
+            if (!matched) return;
+
+            // ── Rocket Talk ────────────────────────
+            if (contentType === 'Rocket Talk') {
+                if (cancel === 'cancel') {
+                    // Remove any previously added episode with same date+time
+                    launch.sheetDataEntries = launch.sheetDataEntries.filter(entry =>
+                        !(entry.eventDate === eventDate && entry.eventTime === eventTime)
+                    );
+                } else if (eventDate && eventTime) {
+                    // Check for duplicate date+time before adding
+                    const exists = launch.sheetDataEntries.some(entry =>
+                        entry.eventDate === eventDate && entry.eventTime === eventTime
+                    );
+                    if (!exists) {
+                        launch.sheetDataEntries.push({
+                            message,
+                            eventDate,
+                            eventTime
+                        });
+                    }
+                }
+            }
+
+            // ── Chris Says (last entry wins) ──────
+            if (contentType === 'Chris Says' && message) {
+                launch.chrisSays = {
+                    message,
+                    eventDate,
+                    eventTime
+                };
+            }
+
+            // ── Viewing Guide (last entry wins) ───
+            if (contentType === 'Viewing Guide') {
+                launch.viewingGuide = {
+                    message,
+                    slidesURL
+                };
+            }
+
+            // ── Gallery Link (last entry wins) ────
+            if (galleryLink) {
+                launch.galleryLink = galleryLink;
+            }
+        });
+    });
+
+    // Sort Rocket Talk entries chronologically
+    launches.forEach(launch => {
+        launch.sheetDataEntries.sort((a, b) => {
+            const dateA = new Date(`${a.eventDate} ${a.eventTime}`);
+            const dateB = new Date(`${b.eventDate} ${b.eventTime}`);
+            return dateA - dateB;
+        });
+    });
 }
 
-// ==================== STARLINK TRAJECTORY ====================
-
-function getStarlinkTrajectory(launch) {
-    const name = launch.name || '';
-    if (!name.toLowerCase().includes('starlink')) return null;
-
-    const match = name.match(/Starlink\s+Group\s+(\d+)-(\d+)/i);
-    if (!match) return null;
-
-    const group = parseInt(match[1]);
-
-    const northeast = [8, 10];
-    const southeast = [6, 12];
-
-    if (northeast.includes(group)) {
-        return { direction: 'Northeast', angle: '53°' };
-    } else if (southeast.includes(group)) {
-        return { direction: 'Southeast', angle: '43°' };
-    }
-
-    return { direction: 'Unknown Path', angle: 'N/A' };
-}
-
-// ==================== STATUS CLASS ====================
-
-function getStatusClass(abbrev) {
+// ════════════════════════════════════════════
+//  STATUS HELPERS
+// ════════════════════════════════════════════
+function getStatusInfo(launch) {
+    const abbrev = launch.status?.abbrev?.toLowerCase() || '';
     const map = {
-        'go': 'status-go',
-        'tbd': 'status-tbd',
-        'hold': 'status-hold',
-        'tbc': 'status-tbc',
-        'success': 'status-success',
-        'failure': 'status-failure'
+        go:      { label: 'GO',      className: 'status-go' },
+        tbd:     { label: 'TBD',     className: 'status-tbd' },
+        hold:    { label: 'HOLD',    className: 'status-hold' },
+        tbc:     { label: 'TBC',     className: 'status-tbc' },
+        success: { label: 'SUCCESS', className: 'status-success' },
+        failure: { label: 'FAILURE', className: 'status-failure' }
     };
-    return map[abbrev] || 'status-other';
+    return map[abbrev] || { label: abbrev.toUpperCase() || 'UNKNOWN', className: 'status-tbd' };
 }
 
-// ==================== BUILD LAUNCH CARD ====================
+function formatCountdown(ms) {
+    if (ms <= 0) return 'T-0';
+    const totalSec = Math.floor(ms / 1000);
+    const d = Math.floor(totalSec / 86400);
+    const h = Math.floor((totalSec % 86400) / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    const parts = [];
+    if (d > 0) parts.push(`${d}d`);
+    parts.push(`${h}h`, `${String(m).padStart(2, '0')}m`, `${String(s).padStart(2, '0')}s`);
+    return 'T- ' + parts.join(' ');
+}
 
-function buildLaunchCard(launch, index) {
-    const isNext = index === 0;
-    const name = launch.name || 'Unknown Mission';
-    const status = launch.status?.name || 'Unknown';
-    const statusAbbrev = launch.status?.abbrev?.toLowerCase() || 'unknown';
-    const net = launch.net ? new Date(launch.net) : null;
-    const padName = launch.pad?.name || 'Unknown Pad';
-    const provider = launch.launch_service_provider?.name || 'Unknown Provider';
-    const rocketName = launch.rocket?.configuration?.name || 'Unknown Rocket';
-    const description = launch.mission?.description || '';
-    const imageUrl = launch.image || launch.rocket?.configuration?.image_url || '';
-    const orbit = launch.mission?.orbit?.name || launch.mission?.type || '';
-    const starlink = getStarlinkTrajectory(launch);
-    const statusClass = getStatusClass(statusAbbrev);
+// ── Starlink Trajectory Detection ──────────
+function getStarlinkTrajectory(launchName) {
+    for (const [group, info] of Object.entries(STARLINK_TRAJECTORIES)) {
+        if (launchName.includes(group)) return info;
+    }
+    return null;
+}
 
-    const dateStr = net ? net.toLocaleDateString('en-US', {
-        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
-    }) : 'TBD';
+// ════════════════════════════════════════════
+//  RENDERING
+// ════════════════════════════════════════════
+function renderLaunches() {
+    const container = document.getElementById('launches-container');
+    if (!launches.length) {
+        container.innerHTML = '<p class="no-launches">No Florida launches in the next 14 days.</p>';
+        return;
+    }
+    container.innerHTML = launches.map(createLaunchCard).join('');
+}
 
-    const timeStr = net ? net.toLocaleTimeString('en-US', {
-        hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
-    }) : 'TBD';
+function createLaunchCard(launch) {
+    const status   = getStatusInfo(launch);
+    const NET      = launch.net ? new Date(launch.net) : null;
+    const imageUrl = launch.image?.image_url ||
+                     launch.image?.thumbnail_url || '';
 
-    let html = `<div class="launch-card">`;
+    // ── Mission description ────────────────
+    const missionDesc = launch.mission?.description || '';
 
-    // Image with status badge overlay
+    // ── Pad & location ─────────────────────
+    const padName  = launch.pad?.name || 'Unknown Pad';
+    const locName  = launch.pad?.location?.name || '';
+
+    // ── Starlink trajectory ────────────────
+    const trajectory = getStarlinkTrajectory(launch.name);
+
+    // ── Window ─────────────────────────────
+    const wStart = launch.window_start ? new Date(launch.window_start) : null;
+    const wEnd   = launch.window_end   ? new Date(launch.window_end)   : null;
+
+    // ── Build HTML ─────────────────────────
+    let html = `<div class="launch-card" data-net="${launch.net || ''}">`;
+
+    // Image
     if (imageUrl) {
-        html += `<div class="launch-image-wrapper">
-            <img class="launch-image" src="${imageUrl}" alt="${name}" loading="lazy">
-            <span class="status-badge ${statusClass}">${status}</span>
-        </div>`;
+        html += `
+            <div class="launch-image-wrapper">
+                <img class="launch-image" src="${imageUrl}"
+                     alt="${launch.name}" loading="lazy">
+            </div>`;
     }
 
     html += `<div class="launch-content">`;
 
-    // Header
-    html += `<div class="launch-header">
-        <h2>${name}</h2>
-        <span class="launch-vehicle">${provider} · ${rocketName}</span>
-    </div>`;
-
-    // Meta items
-    html += `<div class="launch-meta">
-        <div class="meta-item">
-            <span class="meta-icon">📅</span> ${dateStr}
-        </div>
-        <div class="meta-item">
-            <span class="meta-icon">🕐</span> ${timeStr}
-        </div>
-        <div class="meta-item">
-            <span class="meta-icon">📍</span> ${padName}
+    // Header: status + name
+    html += `
+        <div class="launch-header">
+            <span class="status-badge ${status.className}">${status.label}</span>
+            <h2 class="launch-name">${launch.name}</h2>
         </div>`;
-
-    if (orbit && !name.toLowerCase().includes('starlink')) {
-        html += `<div class="meta-item">
-            <span class="meta-icon">🌍</span> ${orbit}
-        </div>`;
-    }
-
-    if (starlink) {
-        html += `<div class="meta-item">
-            <span class="meta-icon">🧭</span> ${starlink.direction} (${starlink.angle})
-        </div>`;
-    }
-
-    html += `</div>`; // close launch-meta
 
     // Countdown
-    if (net && net > new Date()) {
-        html += `<div class="countdown-container">
-            <div class="countdown-label">T-Minus</div>
-            <div class="countdown-timer" id="countdown-${index}">
-                <div class="countdown-segment">
-                    <span class="countdown-value" id="cd-days-${index}">--</span>
-                    <span class="countdown-unit">Days</span>
+    if (NET && status.label !== 'SUCCESS' && status.label !== 'FAILURE') {
+        html += `<div class="countdown" data-net="${launch.net}">Calculating…</div>`;
+    }
+
+    // Meta rows
+    html += `<div class="launch-meta">`;
+    if (NET) {
+        html += `<div class="meta-row"><span class="meta-label">NET</span>
+                  <span class="meta-value">${NET.toLocaleString('en-US', {
+                      weekday: 'short', month: 'short', day: 'numeric',
+                      hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+                  })}</span></div>`;
+    }
+    html += `<div class="meta-row"><span class="meta-label">Pad</span>
+              <span class="meta-value">${padName}</span></div>`;
+    if (locName) {
+        html += `<div class="meta-row"><span class="meta-label">Location</span>
+                  <span class="meta-value">${locName}</span></div>`;
+    }
+    if (wStart && wEnd && wStart.getTime() !== wEnd.getTime()) {
+        html += `<div class="meta-row"><span class="meta-label">Window</span>
+                  <span class="meta-value">${wStart.toLocaleTimeString('en-US', {
+                      hour: 'numeric', minute: '2-digit'
+                  })} – ${wEnd.toLocaleTimeString('en-US', {
+                      hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+                  })}</span></div>`;
+    }
+    if (trajectory) {
+        html += `<div class="meta-row"><span class="meta-label">Trajectory</span>
+                  <span class="meta-value">${trajectory.direction} (${trajectory.inclination})</span></div>`;
+    }
+    html += `</div>`; // end .launch-meta
+
+    // ── Bubbles ────────────────────────────
+
+    // Rocket Talk LIVE! — multiple entries
+    if (launch.sheetDataEntries && launch.sheetDataEntries.length > 0) {
+        launch.sheetDataEntries.forEach(entry => {
+            const rtDate = new Date(`${entry.eventDate} ${entry.eventTime}`);
+            const dateStr = rtDate.toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric'
+            });
+            const timeStr = rtDate.toLocaleTimeString('en-US', {
+                hour: 'numeric', minute: '2-digit'
+            });
+            html += `
+                <div class="info-bubble rocket-talk-bubble">
+                    <div class="bubble-header">
+                        <span class="bubble-icon">🎤</span>
+                        <span class="bubble-title">Rocket Talk LIVE!</span>
+                    </div>
+                    <div class="bubble-body">
+                        <div class="bubble-datetime">${dateStr} · ${timeStr}</div>
+                        ${entry.message ? `<div class="bubble-message">${entry.message}</div>` : ''}
+                        <div class="bubble-template">Join us at the HICV Theater for a live pre-launch presentation covering this mission, what to expect, and the best viewing tips.</div>
+                    </div>
+                </div>`;
+        });
+    }
+
+    // Chris Says — single entry, last wins
+    if (launch.chrisSays && launch.chrisSays.message) {
+        let csTimestamp = '';
+        if (launch.chrisSays.eventDate) {
+            const csDate = new Date(
+                launch.chrisSays.eventTime
+                    ? `${launch.chrisSays.eventDate} ${launch.chrisSays.eventTime}`
+                    : launch.chrisSays.eventDate
+            );
+            if (!isNaN(csDate.getTime())) {
+                csTimestamp = csDate.toLocaleDateString('en-US', {
+                    month: 'short', day: 'numeric'
+                });
+                if (launch.chrisSays.eventTime) {
+                    csTimestamp += ' · ' + csDate.toLocaleTimeString('en-US', {
+                        hour: 'numeric', minute: '2-digit'
+                    });
+                }
+            }
+        }
+        html += `
+            <div class="info-bubble chris-says-bubble">
+                <div class="bubble-header">
+                    <span class="bubble-icon">💬</span>
+                    <span class="bubble-title">Chris Says</span>
                 </div>
-                <div class="countdown-segment">
-                    <span class="countdown-value" id="cd-hrs-${index}">--</span>
-                    <span class="countdown-unit">Hrs</span>
+                <div class="bubble-body">
+                    ${csTimestamp ? `<div class="bubble-datetime">${csTimestamp}</div>` : ''}
+                    <div class="bubble-message">${launch.chrisSays.message}</div>
                 </div>
-                <div class="countdown-segment">
-                    <span class="countdown-value" id="cd-min-${index}">--</span>
-                    <span class="countdown-unit">Min</span>
+            </div>`;
+    }
+
+    // Viewing Guide — single entry, last wins
+    if (launch.viewingGuide && launch.viewingGuide.slidesURL) {
+        html += `
+            <div class="info-bubble viewing-guide-bubble">
+                <div class="bubble-header">
+                    <span class="bubble-icon">🔭</span>
+                    <span class="bubble-title">Viewing Guide</span>
                 </div>
-                <div class="countdown-segment">
-                    <span class="countdown-value" id="cd-sec-${index}">--</span>
-                    <span class="countdown-unit">Sec</span>
+                <div class="bubble-body">
+                    ${launch.viewingGuide.message ? `<div class="bubble-message">${launch.viewingGuide.message}</div>` : ''}
+                    <a class="bubble-link" href="${launch.viewingGuide.slidesURL}" target="_blank" rel="noopener noreferrer">Open Viewing Guide ↗</a>
                 </div>
-            </div>
-        </div>`;
+            </div>`;
+    }
+
+    // Gallery — single entry, last wins
+    if (launch.galleryLink) {
+        html += `
+            <div class="info-bubble gallery-bubble">
+                <div class="bubble-header">
+                    <span class="bubble-icon">📸</span>
+                    <span class="bubble-title">Gallery</span>
+                </div>
+                <div class="bubble-body">
+                    <a class="bubble-link" href="${launch.galleryLink}" target="_blank" rel="noopener noreferrer">View Launch Photos ↗</a>
+                </div>
+            </div>`;
     }
 
     // Mission description
-    if (description) {
-        html += `<button class="desc-toggle" onclick="toggleDescription(this)">
-            <span>Mission Details</span>
-            <span class="toggle-icon">▼</span>
-        </button>
-        <div class="desc-body">
-            <div class="desc-content">${description}</div>
-        </div>`;
+    if (missionDesc) {
+        html += `
+            <details class="mission-details">
+                <summary>Mission Details</summary>
+                <p>${missionDesc}</p>
+            </details>`;
     }
 
-    // Custom content bubbles
-    html += buildCustomBubbles(name);
-
-    html += `</div></div>`; // close launch-content, launch-card
+    html += `</div></div>`; // end .launch-content, .launch-card
     return html;
 }
 
-// ==================== TOGGLE DESCRIPTION ====================
-
-function toggleDescription(button) {
-    const body = button.nextElementSibling;
-    button.classList.toggle('active');
-    body.classList.toggle('open');
+// ════════════════════════════════════════════
+//  COUNTDOWNS
+// ════════════════════════════════════════════
+function startCountdowns() {
+    if (countdownTimer) clearInterval(countdownTimer);
+    countdownTimer = setInterval(updateCountdowns, COUNTDOWN_INTERVAL);
+    updateCountdowns();
 }
 
-// ==================== COUNTDOWN TIMERS ====================
-
-let countdownIntervals = [];
-
-function startCountdowns(launches) {
-    countdownIntervals.forEach(id => clearInterval(id));
-    countdownIntervals = [];
-
-    launches.forEach((launch, index) => {
-        const net = launch.net ? new Date(launch.net) : null;
-        if (!net || net <= new Date()) return;
-
-        const update = () => {
-            const now = new Date();
-            const diff = net - now;
-
-            if (diff <= 0) {
-                const el = document.getElementById(`cd-days-${index}`);
-                if (el) el.parentElement.parentElement.innerHTML = '<span class="countdown-value" style="font-size:1.2rem;">🚀 LIFTOFF!</span>';
-                clearInterval(intervalId);
-                return;
-            }
-
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-            const dEl = document.getElementById(`cd-days-${index}`);
-            const hEl = document.getElementById(`cd-hrs-${index}`);
-            const mEl = document.getElementById(`cd-min-${index}`);
-            const sEl = document.getElementById(`cd-sec-${index}`);
-
-            if (dEl) dEl.textContent = String(days).padStart(2, '0');
-            if (hEl) hEl.textContent = String(hours).padStart(2, '0');
-            if (mEl) mEl.textContent = String(minutes).padStart(2, '0');
-            if (sEl) sEl.textContent = String(seconds).padStart(2, '0');
-        };
-
-        update();
-        const intervalId = setInterval(update, 1000);
-        countdownIntervals.push(intervalId);
+function updateCountdowns() {
+    document.querySelectorAll('.countdown[data-net]').forEach(el => {
+        const net = new Date(el.dataset.net);
+        const diff = net - new Date();
+        el.textContent = diff > 0 ? formatCountdown(diff) : 'T-0 — Launch!';
+        el.classList.toggle('countdown-urgent', diff > 0 && diff <= 3600000);
     });
 }
-
-// ==================== FETCH & RENDER ====================
-
-async function loadLaunches() {
-    const container = document.getElementById('launch-container');
-    const loading = document.getElementById('loading');
-
-    try {
-        await loadCustomContent();
-
-        console.log("📡 Fetching launches...");
-        const response = await fetch(API_URL, {
-            headers: { 'Authorization': `Token ${API_KEY}` }
-        });
-
-        if (!response.ok) {
-            throw new Error(`API returned ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log(`✅ Got ${data.results.length} launches`);
-
-        loading.style.display = 'none';
-
-        if (!data.results || data.results.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:#888; padding:40px;">No upcoming Florida launches found.</p>';
-            return;
-        }
-
-        container.innerHTML = data.results.map((launch, i) => buildLaunchCard(launch, i)).join('');
-
-        startCountdowns(data.results);
-
-        const refreshEl = document.getElementById('last-refresh');
-        if (refreshEl) {
-            refreshEl.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
-        }
-
-    } catch (error) {
-        console.error("❌ Error:", error);
-        loading.style.display = 'none';
-        container.innerHTML = `<p style="text-align:center; color:#ff6b6b; padding:40px;">Failed to load launches. ${error.message}</p>`;
-    }
-}
-
-// ==================== INIT ====================
-
-loadLaunches();
-setInterval(loadLaunches, 300000);
