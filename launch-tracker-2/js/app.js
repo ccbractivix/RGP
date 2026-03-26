@@ -178,12 +178,10 @@ function processSheetData() {
             // ── Rocket Talk ────────────────────────
             if (contentType === 'Rocket Talk') {
                 if (cancel === 'cancel') {
-                    // Remove any previously added episode with same date+time
                     launch.sheetDataEntries = launch.sheetDataEntries.filter(entry =>
                         !(entry.eventDate === eventDate && entry.eventTime === eventTime)
                     );
                 } else if (eventDate && eventTime) {
-                    // Check for duplicate date+time before adding
                     const exists = launch.sheetDataEntries.some(entry =>
                         entry.eventDate === eventDate && entry.eventTime === eventTime
                     );
@@ -269,6 +267,30 @@ function getStarlinkTrajectory(launchName) {
 }
 
 // ════════════════════════════════════════════
+//  CUSTOM LAUNCH IMAGE MAPPING
+// ════════════════════════════════════════════
+function getLaunchImage(launch) {
+    const name   = launch.name.toLowerCase();
+    const rocket = launch.rocket?.configuration?.name?.toLowerCase() || '';
+
+    // Artemis / SLS
+    if (name.includes('artemis') || rocket.includes('sls') || rocket.includes('space launch system')) {
+        return 'images/artemisr.jpg';
+    }
+    // Vulcan Centaur
+    if (name.includes('vulcan') || rocket.includes('vulcan')) {
+        return 'images/vulcan.jpg';
+    }
+    // Falcon 9, Falcon Heavy, Starlink, SpaceX missions
+    if (name.includes('falcon') || name.includes('starlink') || name.includes('crew') ||
+        rocket.includes('falcon') || name.includes('spacex')) {
+        return 'images/falconr.jpg';
+    }
+    // Fallback — majority of FL launches are SpaceX
+    return 'images/falconr.jpg';
+}
+
+// ════════════════════════════════════════════
 //  RENDERING
 // ════════════════════════════════════════════
 function renderLaunches() {
@@ -283,8 +305,7 @@ function renderLaunches() {
 function createLaunchCard(launch) {
     const status   = getStatusInfo(launch);
     const NET      = launch.net ? new Date(launch.net) : null;
-    const imageUrl = launch.image?.image_url ||
-                     launch.image?.thumbnail_url || '';
+    const imageUrl = getLaunchImage(launch);
 
     // ── Mission description ────────────────
     const missionDesc = launch.mission?.description || '';
@@ -303,14 +324,13 @@ function createLaunchCard(launch) {
     // ── Build HTML ─────────────────────────
     let html = `<div class="launch-card" data-net="${launch.net || ''}">`;
 
-    // Image
-    if (imageUrl) {
-        html += `
-            <div class="launch-image-wrapper">
-                <img class="launch-image" src="${imageUrl}"
-                     alt="${launch.name}" loading="lazy">
-            </div>`;
-    }
+    // Image — always render since we have a fallback
+    html += `
+        <div class="launch-image-wrapper">
+            <img class="launch-image" src="${imageUrl}"
+                 alt="${launch.name}" loading="lazy"
+                 onerror="this.src='images/falconr.jpg'">
+        </div>`;
 
     html += `<div class="launch-content">`;
 
