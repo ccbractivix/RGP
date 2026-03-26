@@ -103,19 +103,21 @@ function getVal(cell) {
 }
 
 function normalizeName(name) {
-    // Strip everything BEFORE the pipe (rocket | mission)
     var cleaned = name;
     if (cleaned.indexOf('|') !== -1) {
         cleaned = cleaned.substring(cleaned.indexOf('|') + 1);
     }
-    return cleaned
+    var result = cleaned
         .toLowerCase()
         .replace(/spacex|ula|blue\s*origin|rocket\s*lab|northrop\s*grumman|boeing|nasa|relativity/gi, '')
         .replace(/falcon\s*(9|heavy)|atlas\s*v\s*\d*|vulcan\s*(centaur)?|new\s*glenn|electron|antares|delta\s*(iv|4)\s*heavy|starship|sls|terran/gi, '')
         .replace(/[^a-z0-9\s]/g, '')
         .replace(/\s+/g, ' ')
         .trim();
+    console.log('NORMALIZE: "' + name + '" => "' + result + '"');
+    return result;
 }
+
 
 
 function isMatch(launchName, sheetName) {
@@ -134,9 +136,17 @@ function isMatch(launchName, sheetName) {
 }
 
 function getMatchedContent(launchName) {
+    console.log('=== MATCHING FOR: "' + launchName + '" ===');
+    console.log('Sheet data rows: ' + sheetData.length);
+    for (var d = 0; d < sheetData.length; d++) {
+        console.log('  Row ' + d + ': name="' + sheetData[d].launchName + '", type="' + sheetData[d].contentType + '", traj="' + sheetData[d].trajectory + '"');
+        console.log('  Match result: ' + isMatch(launchName, sheetData[d].launchName));
+    }
+
     var matched = sheetData.filter(function(row) {
         return isMatch(launchName, row.launchName);
     });
+    console.log('Matched rows: ' + matched.length);
 
     var content = {
         messages: [],
