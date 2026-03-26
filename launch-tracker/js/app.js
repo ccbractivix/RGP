@@ -2,11 +2,11 @@
 // Florida Space Launch Tracker - app.js (Full Featured)
 // ============================================================
 
+const API_KEY = "506485404eb785c1b7e1c3dac3ba394ba8fb6834";
 const API_URL =
   "https://ll.thespacedevs.com/2.2.0/launch/upcoming/?format=json&limit=10&location__ids=12,27&ordering=net&mode=detailed";
 const SHEET_ID = "1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU";
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1`;
-const API_KEY = "506485404eb785c1b7e1c3dac3ba394ba8fb6834";
 
 let customContentMap = {};
 
@@ -38,7 +38,7 @@ function loadSheetData() {
 }
 
 // ============================================================
-// Fuzzy Match — connects Sheet mission names to API launches
+// Fuzzy Match
 // ============================================================
 function fuzzyMatch(apiMissionName) {
   const apiName = apiMissionName.toLowerCase();
@@ -48,7 +48,6 @@ function fuzzyMatch(apiMissionName) {
       return customContentMap[keys[i]];
     }
   }
-  // Try partial word matching
   for (let i = 0; i < keys.length; i++) {
     const words = keys[i].split(/\s+/);
     let matchCount = 0;
@@ -90,7 +89,7 @@ function updateCountdowns() {
 }
 
 // ============================================================
-// Starlink Trajectory Calculator
+// Starlink Trajectory
 // ============================================================
 function getStarlinkTrajectory(missionName) {
   const name = missionName.toLowerCase();
@@ -131,7 +130,7 @@ function getStatusBadge(status) {
 }
 
 // ============================================================
-// Weather Placeholder (expandable later)
+// Weather Placeholder
 // ============================================================
 function getWeatherHTML() {
   return `
@@ -142,7 +141,7 @@ function getWeatherHTML() {
 }
 
 // ============================================================
-// Custom Content Bubbles (Rocket Talk, Viewing Guide, Chris Says)
+// Custom Content Bubbles
 // ============================================================
 function getCustomBubbles(missionName) {
   const content = fuzzyMatch(missionName);
@@ -150,7 +149,6 @@ function getCustomBubbles(missionName) {
 
   let html = "";
 
-  // Rocket Talk
   if (content.rocketTalk && content.rocketTalk.toUpperCase() !== "CANCEL") {
     const statusClass = content.rocketTalkStatus === "live" ? "rocket-talk-live" : "rocket-talk-pending";
     const statusLabel = content.rocketTalkStatus === "live" ? "🔴 LIVE" : "⏳ Pending";
@@ -164,7 +162,6 @@ function getCustomBubbles(missionName) {
       </div>`;
   }
 
-  // Viewing Guide
   if (content.viewingGuide && content.viewingGuide.toUpperCase() !== "CANCEL") {
     html += `
       <div class="custom-bubble viewing-guide">
@@ -175,7 +172,6 @@ function getCustomBubbles(missionName) {
       </div>`;
   }
 
-  // Chris Says
   if (content.chrisSays && content.chrisSays.toUpperCase() !== "CANCEL") {
     html += `
       <div class="custom-bubble chris-says">
@@ -190,16 +186,15 @@ function getCustomBubbles(missionName) {
 }
 
 // ============================================================
-// Build Launch Card HTML
+// Build Launch Card
 // ============================================================
 function buildLaunchCard(launch) {
   const name = launch.name || "Unknown Mission";
   const net = launch.net || "";
-  const img = (launch.image) || "https://via.placeholder.com/400x200?text=No+Image";
+  const img = launch.image || "https://via.placeholder.com/400x200?text=No+Image";
   const provider = launch.launch_service_provider?.name || "Unknown Provider";
   const providerLogo = launch.launch_service_provider?.logo_url || "";
   const padName = launch.pad?.name || "Unknown Pad";
-  const location = launch.pad?.location?.name || "";
   const rocketName = launch.rocket?.configuration?.name || "";
   const orbit = launch.mission?.orbit?.name || "Unknown Orbit";
   const missionDesc = launch.mission?.description || "No mission details available.";
@@ -207,7 +202,6 @@ function buildLaunchCard(launch) {
   const vidURLs = launch.vidURLs || launch.vid_urls || [];
   const slug = launch.slug || "";
 
-  // Format launch date/time
   const launchDate = net
     ? new Date(net).toLocaleString("en-US", {
         weekday: "short",
@@ -220,15 +214,12 @@ function buildLaunchCard(launch) {
       })
     : "TBD";
 
-  // Status badge
   const statusBadge = getStatusBadge(launch.status);
 
-  // Provider logo
   const providerLogoHTML = providerLogo
     ? `<img src="${providerLogo}" alt="${provider}" class="provider-logo" />`
     : "";
 
-  // Starlink trajectory
   const trajectory = getStarlinkTrajectory(name);
   const trajectoryHTML = trajectory
     ? `<div class="trajectory-box">
@@ -237,7 +228,6 @@ function buildLaunchCard(launch) {
        </div>`
     : "";
 
-  // Video links
   let videoHTML = "";
   if (vidURLs.length > 0) {
     const links = vidURLs.map(v => {
@@ -248,10 +238,8 @@ function buildLaunchCard(launch) {
     videoHTML = `<div class="video-links">${links}</div>`;
   }
 
-  // Custom content bubbles
   const customBubbles = getCustomBubbles(name);
 
-  // LL2 detail link
   const detailLink = slug
     ? `<a href="https://spacelaunchnow.me/launch/${slug}" target="_blank" class="detail-link">📋 Full Details</a>`
     : "";
@@ -321,7 +309,14 @@ function fetchAndRender() {
   console.log("Fetching launches...");
 
   Promise.all([
-    fetch(`${API_URL}&authorization=${API_KEY}`).then(r => r.json()),
+    fetch(API_URL, {
+      headers: {
+        "Authorization": "Token " + API_KEY
+      }
+    }).then(r => {
+      console.log("API response status:", r.status);
+      return r.json();
+    }),
     loadSheetData()
   ])
     .then(([data]) => {
@@ -365,5 +360,5 @@ function fetchAndRender() {
 document.addEventListener("DOMContentLoaded", () => {
   fetchAndRender();
   setInterval(updateCountdowns, 1000);
-  setInterval(fetchAndRender, 300000); // Refresh every 5 minutes
+  setInterval(fetchAndRender, 300000);
 });
