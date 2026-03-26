@@ -4,56 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Florida Space Launch Tracker</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-
-<header class="app-header">
-    <h1>🚀 Florida Space Launch Tracker</h1>
-    <p>Live launch data for Florida's Space Coast</p>
-    <p id="last-refresh" style="font-size: 0.8rem; color: #666; margin-top: 8px;"></p>
-</header>
-
-<main id="launches-container">
+    <div class="app-header">
+        <h1>🚀 Florida Space Launch Tracker</h1>
+        <p id="last-refresh">Loading launches...</p>
+    </div>
     <div id="loading" class="loading-container">
         <div class="loading-spinner"></div>
-        <p>Loading upcoming launches...</p>
+        <p>Fetching upcoming launches...</p>
     </div>
     <div id="launch-container"></div>
-</main>
-
-<!-- ==================== GALLERY SHOWCASE ==================== -->
-<section class="gallery-showcase">
-    <a class="gallery-link" href="https://www.flickr.com/photos/spacex" target="_blank" rel="noopener noreferrer">
-        📸 Launch Photo Gallery
-    </a>
+    <script src="js/app.js"></script>
+    <div class="footer-link">
+   <div class="gallery-showcase">
     <div class="filmstrip">
-        <img src="https://live.staticflickr.com/65535/54513501538_f813b0d717_z.jpg" alt="Launch 1" loading="lazy">
-        <img src="https://live.staticflickr.com/65535/54219881498_89a38d6070_z.jpg" alt="Launch 2" loading="lazy">
-        <img src="https://live.staticflickr.com/65535/54275592498_e3c4e61272_z.jpg" alt="Launch 3" loading="lazy">
-        <img src="https://live.staticflickr.com/65535/54258562858_54b0e741b6_z.jpg" alt="Launch 4" loading="lazy">
-        <img src="https://live.staticflickr.com/65535/54513501538_f813b0d717_z.jpg" alt="Launch 5" loading="lazy">
-        <img src="https://live.staticflickr.com/65535/54219881498_89a38d6070_z.jpg" alt="Launch 6" loading="lazy">
+        <img src="images/657591947_10236579828047963_3877674169551986825_n.jpg" alt="Launch Photo">
+        <img src="images/646124411_10233474379503117_3264279362825464558_n.jpg" alt="Launch Photo">
+        <img src="images/656360055_1241533304626817_560685406664806422_n.jpg" alt="Launch Photo">
+        <img src="images/647299550_909669271872917_1450571377461876289_n.jpg" alt="Launch Photo">
+        <img src="images/649529285_10233432151086956_5601623681360915381_n.jpg" alt="Launch Photo">
+        <img src="images/650734228_1235189385261209_4997741153186167191_n.jpg" alt="Launch Photo">
+        <img src="images/654863159_10233828227109086_6004663556452030600_n.jpg" alt="Launch Photo">
     </div>
-</section>
+    <a href="https://sites.google.com/view/holidayinnclubcape/home/rocket-talk/galleries" target="_blank" class="gallery-link">
+        📷 Launch Image Galleries By Local Photographers
+    </a>
+</div>
 
-<!-- ==================== FOOTER ==================== -->
-<footer class="site-footer">
-    <a class="footer-nav-link" href="https://sites.google.com/view/hfrlaunch/home" target="_blank" rel="noopener noreferrer">
-        🏠 Back to Main Site
+</div>
+<div class="site-footer">
+    <hr class="footer-divider">
+    <a href="https://sites.google.com/view/holidayinnclubcape/home" target="_blank" class="footer-nav-link">
+        Cape Canaveral Main Site Menu
     </a>
     <hr class="footer-divider">
+    <a href="https://holidayinnclub.com/explore-resorts/cape-canaveral-resort/portal" target="_blank" class="footer-nav-link">
+        Return to HICV Resort Guest Portal Home Page
+    </a>
     <div class="footer-legal">
-        <p>This site is not affiliated with, endorsed by, or sponsored by Holiday Inn Club Vacations Incorporated, Orange Lake Resorts, or any of their subsidiaries or affiliates. All opinions are those of the site operator.</p>
-        <p>Holiday Inn Club Vacations® is a registered trademark of Holiday Inn Club Vacations Incorporated.</p>
-        <p>Launch data provided by Launch Library 2 API · Content curated for Cape Canaveral viewing</p>
-        <p>Made with ❤️ for space fans at Holiday Inn Club Vacations – Cape Canaveral Beach Resort</p>
+        <p>The Holiday Inn Club® program and Holiday Inn Club Vacations® resorts are independently owned, operated and marketed and are not owned, operated or marketed by IHG® Hotels and Resorts or by the owner or the licensor of the Holiday Inn® brand. Copyright © 2022 Holiday Inn Club Vacations Incorporated. All rights reserved.</p>
+        <p>THIS MATERIAL IS BEING USED FOR THE PURPOSE OF SOLICITING SALES OF TIMESHARE INTERESTS</p>
+        <p>Holiday Inn Club Vacations Incorporated, 9271 S John Young Parkway, Orlando, FL 32819</p>
     </div>
-    <img class="footer-logo" src="https://lh3.googleusercontent.com/d/1zb2T3gaXBBVbFf3mN9jYPjLkJFEVPmDO" alt="HICV Cape Canaveral Beach Resort" loading="lazy">
-</footer>
+    <img src="images/hicvfooter.png" alt="HICV Footer" class="footer-logo">
+</div>
 
-<script src="js/app.js"></script>
 </body>
 </html>
