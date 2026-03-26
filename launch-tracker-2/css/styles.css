@@ -1,0 +1,506 @@
+/* ==================== BASE / RESET ==================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    min-height: 100vh;
+}
+
+/* ==================== HEADER ==================== */
+.app-header {
+    text-align: center;
+    padding: 40px 20px 20px;
+    background: linear-gradient(180deg, rgba(102, 126, 234, 0.15) 0%, transparent 100%);
+}
+
+.app-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+}
+
+.app-header p {
+    color: #888;
+    font-size: 0.95rem;
+}
+
+/* ==================== LOADING / ERROR ==================== */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+}
+
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid rgba(102, 126, 234, 0.2);
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-container p {
+    color: #888;
+    font-size: 0.95rem;
+}
+
+.error-container {
+    text-align: center;
+    padding: 80px 20px;
+}
+
+.error-container h2 {
+    color: #ff6b6b;
+    margin-bottom: 8px;
+}
+
+.error-container p {
+    color: #888;
+}
+
+/* ==================== LAUNCH LIST ==================== */
+#launches-container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ==================== LAUNCH CARD ==================== */
+.launch-card {
+    background: #141414;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.launch-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* ==================== LAUNCH IMAGE ==================== */
+.launch-image-wrapper {
+    position: relative;
+    width: 100%;
+    border-radius: 16px 16px 0 0;
+    overflow: hidden;
+}
+
+.launch-image {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    display: block;
+}
+
+
+.launch-image-wrapper .status-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+}
+
+/* ==================== LAUNCH CONTENT ==================== */
+.launch-content {
+    padding: 20px;
+}
+
+.launch-header {
+    margin-bottom: 12px;
+}
+
+.launch-header h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+    line-height: 1.3;
+}
+
+.launch-vehicle {
+    font-size: 0.9rem;
+    color: #888;
+}
+
+/* ==================== STATUS BADGE ==================== */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.status-go {
+    background: rgba(76, 175, 80, 0.2);
+    color: #66bb6a;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.status-badge.status-tbd {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffd54f;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.status-badge.status-hold {
+    background: rgba(255, 152, 0, 0.2);
+    color: #ffb74d;
+    border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.status-badge.status-tbc {
+    background: rgba(33, 150, 243, 0.2);
+    color: #64b5f6;
+    border: 1px solid rgba(33, 150, 243, 0.3);
+}
+
+.status-badge.status-success {
+    background: rgba(76, 175, 80, 0.2);
+    color: #66bb6a;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.status-badge.status-failure {
+    background: rgba(244, 67, 54, 0.2);
+    color: #ef5350;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.status-badge.status-other {
+    background: rgba(158, 158, 158, 0.2);
+    color: #bdbdbd;
+    border: 1px solid rgba(158, 158, 158, 0.3);
+}
+
+/* ==================== LAUNCH META ==================== */
+.launch-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: #aaa;
+}
+
+.meta-item .meta-icon {
+    font-size: 1rem;
+    width: 20px;
+    text-align: center;
+}
+
+/* ==================== COUNTDOWN ==================== */
+.countdown-container {
+    background: rgba(102, 126, 234, 0.08);
+    border: 1px solid rgba(102, 126, 234, 0.15);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+
+.countdown-label {
+    font-size: 0.8rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.countdown-timer {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+
+.countdown-segment {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.countdown-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #667eea;
+    font-variant-numeric: tabular-nums;
+}
+
+.countdown-unit {
+    font-size: 0.7rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ==================== DESCRIPTION TOGGLE ==================== */
+.desc-toggle {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: #aaa;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.2s, color 0.2s;
+}
+
+.desc-toggle:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.desc-toggle .toggle-icon {
+    transition: transform 0.3s;
+    font-size: 0.75rem;
+}
+
+.desc-toggle.active .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.desc-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+.desc-body.open {
+    max-height: 2000px;
+    opacity: 1;
+}
+
+.desc-content {
+    padding: 16px 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #bbb;
+}
+
+/* ==================== CUSTOM BUBBLES ==================== */
+.custom-bubble {
+    margin-top: 12px;
+}
+
+.rocket-talk-bubble .desc-content,
+.viewing-guide-bubble .desc-content,
+.chris-says-bubble .desc-content {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 8px;
+    line-height: 1.6;
+    font-size: 0.95rem;
+    color: #ccc;
+}
+
+.rocket-talk-bubble .desc-content strong {
+    color: #fff;
+}
+
+.viewing-guide-link {
+    display: inline-block;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.viewing-guide-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.chris-says-entry {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chris-says-entry:last-child {
+    border-bottom: none;
+}
+
+.chris-timestamp {
+    display: block;
+    font-size: 0.8rem;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+.chris-message {
+    color: #ddd;
+    line-height: 1.5;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 480px) {
+    .app-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .launch-content {
+        padding: 16px;
+    }
+
+    .launch-header h2 {
+        font-size: 1.05rem;
+    }
+
+    .countdown-value {
+        font-size: 1.25rem;
+    }
+
+    .countdown-timer {
+        gap: 12px;
+    }
+}
+.gallery-showcase {
+    margin-top: 40px;
+    padding: 30px 0;
+    background: linear-gradient(135deg, rgba(255,152,0,0.1), rgba(79,195,247,0.1));
+    border-top: 2px solid rgba(255,152,0,0.3);
+    border-bottom: 2px solid rgba(255,152,0,0.3);
+    overflow: hidden;
+}
+
+.filmstrip {
+    display: flex;
+    gap: 12px;
+    padding: 0 20px 20px 20px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+
+.filmstrip::-webkit-scrollbar {
+    height: 6px;
+}
+
+.filmstrip::-webkit-scrollbar-thumb {
+    background: rgba(255,152,0,0.4);
+    border-radius: 3px;
+}
+
+.filmstrip img {
+    height: 180px;
+    width: auto;
+    border-radius: 10px;
+    scroll-snap-align: start;
+    flex-shrink: 0;
+    object-fit: cover;
+    border: 2px solid rgba(255,152,0,0.3);
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.filmstrip img:hover {
+    transform: scale(1.05);
+    border-color: #ff9800;
+}
+
+.gallery-link {
+    display: block;
+    text-align: center;
+    padding: 15px 20px 0 20px;
+    color: #ff9800;
+    font-size: 1.4rem;
+    font-weight: 700;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(255,152,0,0.3);
+}
+
+.gallery-link:hover {
+    color: #ffb74d;
+    text-shadow: 0 0 20px rgba(255,152,0,0.5);
+}
+.site-footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.footer-divider {
+    border: none;
+    border-top: 1px solid rgba(200,200,200,0.3);
+    margin: 20px auto;
+    width: 80%;
+}
+
+.footer-nav-link {
+    display: inline-block;
+    color: #4fc3f7;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 12px 30px;
+    margin: 5px 0;
+    border: 2px solid rgba(79,195,247,0.4);
+    border-radius: 30px;
+    background: rgba(79,195,247,0.1);
+    transition: all 0.3s ease;
+}
+
+.footer-nav-link:hover {
+    background: rgba(79,195,247,0.2);
+    border-color: #4fc3f7;
+    color: #81d4fa;
+    text-decoration: none;
+}
+
+.footer-legal {
+    margin-top: 20px;
+    color: rgba(150,150,150,0.4);
+    font-size: 0.7rem;
+    line-height: 1.6;
+}
+
+.footer-logo {
+    margin-top: 20px;
+    max-width: 300px;
+    height: auto;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
