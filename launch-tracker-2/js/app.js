@@ -58,7 +58,7 @@ async function fetchAllData() {
         startCountdowns();
     } catch (err) {
         console.error('Data fetch error:', err);
-        document.getElementById('launches-container').innerHTML =
+        document.getElementById('launch-container').innerHTML =
             '<p class="error-message">Unable to load launch data. Will retry shortly.</p>';
     }
 }
@@ -272,7 +272,7 @@ function getStarlinkTrajectory(launchName) {
 //  RENDERING
 // ════════════════════════════════════════════
 function renderLaunches() {
-    const container = document.getElementById('launches-container');
+    const container = document.getElementById('launch-container');
     if (!launches.length) {
         container.innerHTML = '<p class="no-launches">No Florida launches in the next 14 days.</p>';
         return;
