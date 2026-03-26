@@ -1,0 +1,562 @@
+/* css/styles.css - Florida Space Launch Tracker */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-primary: #0a0a0a;
+    --bg-card: #141414;
+    --bg-section: #1a1a1a;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+    --text-muted: #606060;
+    --accent-blue: #64b5f6;
+    --accent-orange: #ff9800;
+    --accent-yellow: #ffd54f;
+    --accent-green: #66bb6a;
+    --accent-red: #ef5350;
+    --border-subtle: rgba(255, 255, 255, 0.06);
+    --border-light: rgba(255, 255, 255, 0.1);
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+.site-header {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.site-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.site-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.launches-container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 1.5rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.launch-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+}
+
+.launch-card:hover {
+    border-color: var(--border-light);
+}
+
+.launch-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.launch-designator {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.status-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 100px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.status-go, .status-goforlaunch {
+    background: rgba(102, 187, 106, 0.15);
+    color: var(--accent-green);
+    border: 1px solid rgba(102, 187, 106, 0.3);
+}
+
+.status-tbd, .status-tobedetermined {
+    background: rgba(255, 213, 79, 0.15);
+    color: var(--accent-yellow);
+    border: 1px solid rgba(255, 213, 79, 0.3);
+}
+
+.status-hold {
+    background: rgba(255, 183, 77, 0.15);
+    color: #ffb74d;
+    border: 1px solid rgba(255, 183, 77, 0.3);
+}
+
+.status-tbc, .status-tobeconfirmed {
+    background: rgba(255, 183, 77, 0.15);
+    color: #ffb74d;
+    border: 1px solid rgba(255, 183, 77, 0.3);
+}
+
+.status-success {
+    background: rgba(102, 187, 106, 0.15);
+    color: var(--accent-green);
+    border: 1px solid rgba(102, 187, 106, 0.3);
+}
+
+.status-failure {
+    background: rgba(239, 83, 80, 0.15);
+    color: var(--accent-red);
+    border: 1px solid rgba(239, 83, 80, 0.3);
+}
+
+.status-inflight {
+    background: rgba(100, 181, 246, 0.15);
+    color: var(--accent-blue);
+    border: 1px solid rgba(100, 181, 246, 0.3);
+}
+
+.rocket-image-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    background: linear-gradient(180deg, rgba(20,20,20,0) 0%, rgba(20,20,20,0.8) 100%);
+}
+
+.rocket-image {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+}
+
+.mission-info {
+    padding: 1.25rem 1.25rem 0.75rem;
+    text-align: center;
+}
+
+.mission-name {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 0.5rem;
+}
+
+.rocket-provider {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.launch-site {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.orbit-info {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+.net-section {
+    text-align: center;
+    padding: 1rem 1.25rem;
+}
+
+.net-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.net-date {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.net-time {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.countdown-section {
+    padding: 1rem 1.25rem 1.25rem;
+}
+
+.countdown-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.countdown-segment {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 3.5rem;
+}
+
+.countdown-value {
+    font-size: 2rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.countdown-unit {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    margin-top: 0.25rem;
+}
+
+.countdown-separator {
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: var(--text-muted);
+    padding-bottom: 1rem;
+}
+
+.countdown-liftoff {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--accent-orange);
+    letter-spacing: 0.1em;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+/* Message Alert - standalone bubble */
+.supplemental-message {
+    margin: 0 1.25rem 1rem;
+    padding: 0.85rem 1rem;
+    background: rgba(255, 213, 79, 0.08);
+    border: 1px solid rgba(255, 213, 79, 0.25);
+    border-radius: 10px;
+    text-align: center;
+}
+
+.message-glow {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--accent-yellow);
+    animation: messageGlow 3s ease-in-out infinite;
+}
+
+@keyframes messageGlow {
+    0%, 100% { text-shadow: 0 0 4px rgba(255, 213, 79, 0.3); }
+    50% { text-shadow: 0 0 16px rgba(255, 213, 79, 0.6), 0 0 32px rgba(255, 213, 79, 0.2); }
+}
+
+/* Collapsible Sections */
+.supplemental-section {
+    margin: 0 1.25rem 0.75rem;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+}
+
+.supplemental-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-section);
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: background 0.2s ease;
+}
+
+.supplemental-toggle:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.supplemental-icon {
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.supplemental-title {
+    flex: 1;
+    text-align: left;
+}
+
+.toggle-arrow {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+}
+
+.supplemental-body {
+    padding: 0.75rem 1rem;
+    background: rgba(26, 26, 26, 0.5);
+}
+
+.supplemental-section.collapsed .supplemental-body {
+    display: none;
+}
+
+/* Rocket Talk LIVE! */
+.rocket-talk-section .supplemental-toggle {
+    border-left: 3px solid var(--accent-orange);
+}
+
+.rocket-talk-section .supplemental-title {
+    color: var(--accent-orange);
+}
+
+.rocket-talk-entry {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.rocket-talk-entry:last-child {
+    border-bottom: none;
+}
+
+.rocket-talk-datetime {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.talk-date {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent-orange);
+}
+
+.talk-time {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.rocket-talk-headline {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+/* Trajectory */
+.trajectory-section {
+    border: none;
+}
+
+.trajectory-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    background: var(--bg-section);
+    border-radius: 10px;
+    border: 1px solid var(--border-subtle);
+}
+
+.trajectory-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.trajectory-label strong {
+    color: var(--text-primary);
+}
+
+/* Launch Viewing Guide */
+.viewing-guide-section .supplemental-toggle {
+    border-left: 3px solid var(--accent-yellow);
+}
+
+.viewing-guide-section .supplemental-title {
+    color: var(--accent-yellow);
+}
+
+.viewing-guide-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 213, 79, 0.1);
+    border: 1px solid rgba(255, 213, 79, 0.25);
+    border-radius: 8px;
+    color: var(--accent-yellow);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: background 0.2s ease;
+}
+
+.viewing-guide-link:hover {
+    background: rgba(255, 213, 79, 0.2);
+}
+
+.viewing-guide-note {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    line-height: 1.5;
+}
+
+/* Chris Says */
+.chris-says-section .supplemental-toggle {
+    border-left: 3px solid var(--accent-blue);
+}
+
+.chris-says-section .supplemental-title {
+    color: var(--accent-blue);
+}
+
+.chris-says-entry {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.chris-says-entry:last-child {
+    border-bottom: none;
+}
+
+.chris-says-time {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 0.2rem;
+}
+
+.chris-says-text {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* Mission Info - collapsible LL2 description */
+.mission-description-section .supplemental-toggle {
+    border-left: 3px solid var(--accent-blue);
+}
+
+.mission-description-section .supplemental-title {
+    color: var(--accent-blue);
+}
+
+.mission-description-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+/* Gallery */
+.gallery-section .supplemental-toggle {
+    border-left: 3px solid #ab47bc;
+}
+
+.gallery-section .supplemental-title {
+    color: #ab47bc;
+}
+
+.gallery-filmstrip {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.25rem 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-muted) transparent;
+}
+
+.gallery-thumb {
+    flex-shrink: 0;
+    width: 120px;
+    height: 90px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border-subtle);
+}
+
+.gallery-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.no-launches {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-secondary);
+}
+
+.no-launches h2 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.site-footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    border-top: 1px solid var(--border-subtle);
+    margin-top: 2rem;
+}
+
+.footer-brand {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.footer-disclaimer {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+    .mission-name {
+        font-size: 1.15rem;
+    }
+    .countdown-value {
+        font-size: 1.5rem;
+    }
+    .countdown-segment {
+        min-width: 2.75rem;
+    }
+    .launches-container {
+        padding: 1rem 0.75rem;
+    }
+}
