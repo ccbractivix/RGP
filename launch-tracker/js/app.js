@@ -1,251 +1,369 @@
-const API_URL = "https://ll.thespacedevs.com/2.2.0/launch/upcoming/?format=json&limit=10&location__ids=12,27&ordering=net&mode=detailed";
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU/gviz/tq?tqx=out:json";
-const REFRESH_INTERVAL = 300000;
+// ============================================================
+// Florida Space Launch Tracker - app.js (Full Featured)
+// ============================================================
 
-function fuzzyMatch(apiName, sheetName) {
-    if (!apiName || !sheetName) return false;
-    var a = apiName.toLowerCase().trim();
-    var s = sheetName.toLowerCase().trim();
-    if (a === s) return true;
-    if (a.includes(s) || s.includes(a)) return true;
-    var aWords = a.split(/[\s\-\|\/]+/);
-    var sWords = s.split(/[\s\-\|\/]+/);
-    var matchCount = 0;
-    for (var i = 0; i < sWords.length; i++) {
-        for (var j = 0; j < aWords.length; j++) {
-            if (sWords[i] === aWords[j] && sWords[i].length > 2) {
-                matchCount++;
-                break;
-            }
-        }
-    }
-    if (matchCount >= 2) return true;
-    if (sWords.length > 0 && aWords.length > 0) {
-        var lastWordS = sWords[sWords.length - 1];
-        var lastWordA = aWords[aWords.length - 1];
-        if (lastWordS.length > 3 && lastWordA.length > 3 && lastWordS === lastWordA) return true;
-    }
-    return false;
-}
+const API_URL =
+  "https://ll.thespacedevs.com/2.2.0/launch/upcoming/?format=json&limit=10&location__ids=12,27&ordering=net&mode=detailed";
+const SHEET_ID = "1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU";
+const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1`;
+const API_KEY = "506485404eb785c1b7e1c3dac3ba394ba8fb6834";
 
-function getStarlinkViewingInfo(missionName) {
-    if (!missionName) return null;
-    var name = missionName.toLowerCase();
-    if (name.indexOf("starlink") === -1) return null;
-    var groupMatch = name.match(/group\s*(\d+)[\s\-]*(\d+)/i);
-    if (!groupMatch) return null;
-    var groupNum = parseInt(groupMatch[1]);
-    if (groupNum === 8 || groupNum === 10) {
-        return {
-            inclination: "53 degrees",
-            direction: "northeast",
-            trajectory: "Launches on a northeast trajectory over the Atlantic. Visible along the eastern seaboard shortly after launch.",
-            icon: "🧭"
+let customContentMap = {};
+
+// ============================================================
+// Google Sheet Loader
+// ============================================================
+function loadSheetData() {
+  return fetch(SHEET_URL)
+    .then(response => response.text())
+    .then(csv => {
+      const rows = csv.split("\n").slice(1);
+      console.log(`Sheet data rows: ${rows.length}`);
+      customContentMap = {};
+      rows.forEach(row => {
+        const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
+        if (!cols || cols.length < 2) return;
+        const clean = cols.map(c => c.replace(/^"|"$/g, "").trim());
+        const missionKey = clean[0].toLowerCase();
+        if (!missionKey) return;
+        customContentMap[missionKey] = {
+          rocketTalk: clean[1] || "",
+          rocketTalkStatus: (clean[2] || "pending").toLowerCase(),
+          viewingGuide: clean[3] || "",
+          chrisSays: clean[4] || ""
         };
-    }
-    if (groupNum === 6 || groupNum === 12) {
-        return {
-            inclination: "43 degrees",
-            direction: "southeast",
-            trajectory: "Launches on a southeast trajectory. Visible from Florida's east coast heading toward the Caribbean.",
-            icon: "🧭"
-        };
-    }
-    return null;
-}
-
-function formatLaunchDateTime(netStr) {
-    if (!netStr) return { date: "TBD", time: "TBD", countdown: "" };
-    var launchDate = new Date(netStr);
-    if (isNaN(launchDate.getTime())) return { date: "TBD", time: "TBD", countdown: "" };
-    var optDate = { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "America/New_York" };
-    var optTime = { hour: "numeric", minute: "2-digit", second: "2-digit", timeZone: "America/New_York", hour12: true };
-    var dateStr = launchDate.toLocaleDateString("en-US", optDate);
-    var timeStr = launchDate.toLocaleTimeString("en-US", optTime) + " ET";
-    var now = new Date();
-    var diff = launchDate - now;
-    var countdown = "";
-    if (diff > 0) {
-        var days = Math.floor(diff / 86400000);
-        var hours = Math.floor((diff % 86400000) / 3600000);
-        var mins = Math.floor((diff % 3600000) / 60000);
-        if (days > 0) {
-            countdown = "T- " + days + "d " + hours + "h " + mins + "m";
-        } else {
-            countdown = "T- " + hours + "h " + mins + "m";
-        }
-    }
-    return { date: dateStr, time: timeStr, countdown: countdown };
-}
-
-function getStatusInfo(status) {
-    if (!status) return { label: "Unknown", className: "status-unknown" };
-    var abbrev = (status.abbrev || "").toLowerCase();
-    var name = status.name || "Unknown";
-    if (abbrev === "go") return { label: name, className: "status-go" };
-    if (abbrev === "tbd") return { label: name, className: "status-tbd" };
-    if (abbrev === "tbc") return { label: name, className: "status-tbc" };
-    if (abbrev === "hold") return { label: name, className: "status-hold" };
-    if (abbrev === "success") return { label: name, className: "status-success" };
-    if (abbrev === "failure") return { label: name, className: "status-failure" };
-    return { label: name, className: "status-unknown" };
-}
-
-function buildLaunchCard(launch, sheetData) {
-    var dt = formatLaunchDateTime(launch.net);
-    var statusInfo = getStatusInfo(launch.status);
-    var missionName = launch.mission ? launch.mission.name : "Unknown Mission";
-    var missionDesc = launch.mission ? (launch.mission.description || "No description available.") : "No description available.";
-    var rocketName = launch.rocket && launch.rocket.configuration ? launch.rocket.configuration.full_name : "Unknown Rocket";
-    var padName = launch.pad ? launch.pad.name : "Unknown Pad";
-    var locationName = launch.pad && launch.pad.location ? launch.pad.location.name : "";
-    var imageUrl = "";
-    if (launch.image) {
-        imageUrl = launch.image;
-    } else if (launch.rocket && launch.rocket.configuration && launch.rocket.configuration.image_url) {
-        imageUrl = launch.rocket.configuration.image_url;
-    }
-    var matchedRow = null;
-    if (sheetData && sheetData.length > 0) {
-        for (var i = 0; i < sheetData.length; i++) {
-            if (fuzzyMatch(missionName, sheetData[i].missionName)) {
-                matchedRow = sheetData[i];
-                break;
-            }
-        }
-    }
-    var html = "";
-    html += '<div class="launch-card">';
-    if (imageUrl) {
-        html += '<div class="launch-image-container">';
-        html += '<img src="' + imageUrl + '" alt="' + missionName + '" class="launch-image" onerror="this.style.display=\'none\'">';
-        html += '</div>';
-    }
-    html += '<div class="launch-info">';
-    html += '<div class="launch-header">';
-    html += '<h2 class="mission-name">' + missionName + '</h2>';
-    html += '<span class="launch-status ' + statusInfo.className + '">' + statusInfo.label + '</span>';
-    html += '</div>';
-    html += '<div class="launch-details">';
-    html += '<div class="detail-row"><span class="detail-label">🚀 Rocket:</span> ' + rocketName + '</div>';
-    html += '<div class="detail-row"><span class="detail-label">📅 Date:</span> ' + dt.date + '</div>';
-    html += '<div class="detail-row"><span class="detail-label">🕐 Time:</span> ' + dt.time + '</div>';
-    if (dt.countdown) {
-        html += '<div class="detail-row countdown"><span class="detail-label">⏱️ Countdown:</span> ' + dt.countdown + '</div>';
-    }
-    html += '<div class="detail-row"><span class="detail-label">📍 Pad:</span> ' + padName + '</div>';
-    if (locationName) {
-        html += '<div class="detail-row"><span class="detail-label">🌎 Location:</span> ' + locationName + '</div>';
-    }
-    html += '</div>';
-    html += '<div class="mission-description"><p>' + missionDesc + '</p></div>';
-    var starlinkInfo = getStarlinkViewingInfo(missionName);
-    if (starlinkInfo) {
-        html += '<div class="starlink-info">';
-        html += '<h3>' + starlinkInfo.icon + ' Starlink Trajectory</h3>';
-        html += '<p><strong>Inclination:</strong> ' + starlinkInfo.inclination + '</p>';
-        html += '<p><strong>Direction:</strong> ' + starlinkInfo.direction + '</p>';
-        html += '<p>' + starlinkInfo.trajectory + '</p>';
-        html += '</div>';
-    }
-    if (matchedRow) {
-        if (matchedRow.rocketTalk && matchedRow.rocketTalk.toUpperCase() !== "CANCEL") {
-            html += '<div class="custom-bubble rocket-talk-bubble">';
-            if (matchedRow.rocketTalkStatus === "live") {
-                html += '<div class="rocket-talk-live">🎙️ ROCKET TALK LIVE</div>';
-            } else {
-                html += '<div class="rocket-talk-pending">🎙️ Rocket Talk</div>';
-            }
-            html += '<p>' + matchedRow.rocketTalk + '</p>';
-            html += '</div>';
-        }
-        if (matchedRow.viewingGuide && matchedRow.viewingGuide.toUpperCase() !== "CANCEL") {
-            html += '<div class="custom-bubble viewing-guide-bubble">';
-            html += '<h3>👀 Viewing Guide</h3>';
-            html += '<p>' + matchedRow.viewingGuide + '</p>';
-            html += '</div>';
-        }
-        if (matchedRow.chrisSays && matchedRow.chrisSays.toUpperCase() !== "CANCEL") {
-            html += '<div class="custom-bubble chris-says-bubble">';
-            html += '<h3>🗣️ Chris Says</h3>';
-            html += '<p>' + matchedRow.chrisSays + '</p>';
-            html += '</div>';
-        }
-    }
-    html += '</div>';
-    html += '</div>';
-    return html;
-}
-
-function fetchSheetData() {
-    return fetch(SHEET_URL)
-        .then(function(response) {
-            return response.text();
-        })
-        .then(function(text) {
-            var jsonStr = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\)/);
-            if (!jsonStr || !jsonStr[1]) return [];
-            var json = JSON.parse(jsonStr[1]);
-            var rows = json.table.rows;
-            var data = [];
-            for (var i = 0; i < rows.length; i++) {
-                var row = rows[i];
-                var cells = row.c;
-                data.push({
-                    missionName: cells[0] ? (cells[0].v || "") : "",
-                    rocketTalk: cells[1] ? (cells[1].v || "") : "",
-                    rocketTalkStatus: cells[2] ? (cells[2].v || "").toLowerCase().trim() : "",
-                    viewingGuide: cells[3] ? (cells[3].v || "") : "",
-                    chrisSays: cells[4] ? (cells[4].v || "") : ""
-                });
-            }
-            return data;
-        })
-        .catch(function(err) {
-            console.error("Sheet fetch error:", err);
-            return [];
-        });
-}
-
-function fetchLaunches() {
-    var container = document.getElementById("launch-container");
-    var loading = document.getElementById("loading");
-    var lastRefresh = document.getElementById("last-refresh");
-    if (loading) loading.style.display = "flex";
-    if (container) container.innerHTML = "";
-    Promise.all([
-        fetch(API_URL).then(function(r) { return r.json(); }),
-        fetchSheetData()
-    ])
-    .then(function(results) {
-        var apiData = results[0];
-        var sheetData = results[1];
-        if (loading) loading.style.display = "none";
-        var launches = apiData.results || [];
-        console.log("Fetched " + launches.length + " launches");
-        console.log("Sheet data rows: " + sheetData.length);
-        if (launches.length === 0) {
-            container.innerHTML = '<div class="no-launches"><p>No upcoming launches found for Florida launch sites.</p></div>';
-            return;
-        }
-        var allCards = "";
-        for (var i = 0; i < launches.length; i++) {
-            allCards += buildLaunchCard(launches[i], sheetData);
-        }
-        container.innerHTML = allCards;
-        if (lastRefresh) {
-            var now = new Date();
-            lastRefresh.textContent = "Last updated: " + now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" }) + " ET";
-        }
+      });
     })
-    .catch(function(err) {
-        console.error("Fetch error:", err);
-        if (loading) loading.style.display = "none";
-        if (container) {
-            container.innerHTML = '<div class="no-launches"><p>Error loading launch data. Will retry automatically.</p></div>';
-        }
+    .catch(err => console.error("Sheet load error:", err));
+}
+
+// ============================================================
+// Fuzzy Match — connects Sheet mission names to API launches
+// ============================================================
+function fuzzyMatch(apiMissionName) {
+  const apiName = apiMissionName.toLowerCase();
+  const keys = Object.keys(customContentMap);
+  for (let i = 0; i < keys.length; i++) {
+    if (apiName.includes(keys[i]) || keys[i].includes(apiName)) {
+      return customContentMap[keys[i]];
+    }
+  }
+  // Try partial word matching
+  for (let i = 0; i < keys.length; i++) {
+    const words = keys[i].split(/\s+/);
+    let matchCount = 0;
+    words.forEach(w => {
+      if (w.length > 3 && apiName.includes(w)) matchCount++;
+    });
+    if (matchCount >= 2) return customContentMap[keys[i]];
+  }
+  return null;
+}
+
+// ============================================================
+// Countdown Timer
+// ============================================================
+function updateCountdowns() {
+  document.querySelectorAll(".countdown").forEach(el => {
+    const launch = new Date(el.dataset.net);
+    const now = new Date();
+    const diff = launch - now;
+
+    if (diff <= 0) {
+      el.innerHTML = `<span class="countdown-launched">🚀 LAUNCHED!</span>`;
+      return;
+    }
+
+    const days = Math.floor(diff / 86400000);
+    const hrs = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+
+    el.innerHTML = `
+      <div class="countdown-grid">
+        <div class="countdown-block"><span class="countdown-num">${days}</span><span class="countdown-label">DAYS</span></div>
+        <div class="countdown-block"><span class="countdown-num">${hrs}</span><span class="countdown-label">HRS</span></div>
+        <div class="countdown-block"><span class="countdown-num">${mins}</span><span class="countdown-label">MIN</span></div>
+        <div class="countdown-block"><span class="countdown-num">${secs}</span><span class="countdown-label">SEC</span></div>
+      </div>`;
+  });
+}
+
+// ============================================================
+// Starlink Trajectory Calculator
+// ============================================================
+function getStarlinkTrajectory(missionName) {
+  const name = missionName.toLowerCase();
+  if (!name.includes("starlink")) return null;
+
+  const groupMatch = name.match(/group\s*(\d+)/i);
+  if (!groupMatch) return { direction: "Northeast", azimuth: "~53°", icon: "🧭" };
+
+  const group = parseInt(groupMatch[1]);
+  if (group === 8 || group === 10) {
+    return { direction: "Northeast", azimuth: "~53°", icon: "🧭" };
+  } else if (group === 6 || group === 12) {
+    return { direction: "Southeast", azimuth: "~43°", icon: "🧭" };
+  }
+  return { direction: "Northeast", azimuth: "~53°", icon: "🧭" };
+}
+
+// ============================================================
+// Status Badge
+// ============================================================
+function getStatusBadge(status) {
+  if (!status) return `<span class="status-badge status-unknown">Unknown</span>`;
+  const name = status.name || "Unknown";
+  const abbrev = (status.abbrev || "").toLowerCase();
+
+  const map = {
+    go: { cls: "status-go", icon: "🟢" },
+    tbd: { cls: "status-tbd", icon: "🟡" },
+    tbc: { cls: "status-tbc", icon: "🟡" },
+    hold: { cls: "status-hold", icon: "🟠" },
+    failure: { cls: "status-fail", icon: "🔴" },
+    success: { cls: "status-success", icon: "✅" },
+    "in flight": { cls: "status-inflight", icon: "🚀" }
+  };
+
+  const s = map[abbrev] || { cls: "status-unknown", icon: "⚪" };
+  return `<span class="status-badge ${s.cls}">${s.icon} ${name}</span>`;
+}
+
+// ============================================================
+// Weather Placeholder (expandable later)
+// ============================================================
+function getWeatherHTML() {
+  return `
+    <div class="weather-box">
+      <span class="weather-icon">🌤️</span>
+      <span class="weather-text">Weather data coming soon</span>
+    </div>`;
+}
+
+// ============================================================
+// Custom Content Bubbles (Rocket Talk, Viewing Guide, Chris Says)
+// ============================================================
+function getCustomBubbles(missionName) {
+  const content = fuzzyMatch(missionName);
+  if (!content) return "";
+
+  let html = "";
+
+  // Rocket Talk
+  if (content.rocketTalk && content.rocketTalk.toUpperCase() !== "CANCEL") {
+    const statusClass = content.rocketTalkStatus === "live" ? "rocket-talk-live" : "rocket-talk-pending";
+    const statusLabel = content.rocketTalkStatus === "live" ? "🔴 LIVE" : "⏳ Pending";
+    html += `
+      <div class="custom-bubble rocket-talk ${statusClass}">
+        <div class="bubble-header">
+          <span class="bubble-logo">🎙️ Rocket Talk</span>
+          <span class="bubble-status">${statusLabel}</span>
+        </div>
+        <div class="bubble-body">${content.rocketTalk}</div>
+      </div>`;
+  }
+
+  // Viewing Guide
+  if (content.viewingGuide && content.viewingGuide.toUpperCase() !== "CANCEL") {
+    html += `
+      <div class="custom-bubble viewing-guide">
+        <div class="bubble-header">
+          <span class="bubble-logo">👀 Viewing Guide</span>
+        </div>
+        <div class="bubble-body">${content.viewingGuide}</div>
+      </div>`;
+  }
+
+  // Chris Says
+  if (content.chrisSays && content.chrisSays.toUpperCase() !== "CANCEL") {
+    html += `
+      <div class="custom-bubble chris-says">
+        <div class="bubble-header">
+          <span class="bubble-logo">🧑‍🚀 Chris Says</span>
+        </div>
+        <div class="bubble-body">${content.chrisSays}</div>
+      </div>`;
+  }
+
+  return html;
+}
+
+// ============================================================
+// Build Launch Card HTML
+// ============================================================
+function buildLaunchCard(launch) {
+  const name = launch.name || "Unknown Mission";
+  const net = launch.net || "";
+  const img = (launch.image) || "https://via.placeholder.com/400x200?text=No+Image";
+  const provider = launch.launch_service_provider?.name || "Unknown Provider";
+  const providerLogo = launch.launch_service_provider?.logo_url || "";
+  const padName = launch.pad?.name || "Unknown Pad";
+  const location = launch.pad?.location?.name || "";
+  const rocketName = launch.rocket?.configuration?.name || "";
+  const orbit = launch.mission?.orbit?.name || "Unknown Orbit";
+  const missionDesc = launch.mission?.description || "No mission details available.";
+  const missionType = launch.mission?.type || "";
+  const vidURLs = launch.vidURLs || launch.vid_urls || [];
+  const slug = launch.slug || "";
+
+  // Format launch date/time
+  const launchDate = net
+    ? new Date(net).toLocaleString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short"
+      })
+    : "TBD";
+
+  // Status badge
+  const statusBadge = getStatusBadge(launch.status);
+
+  // Provider logo
+  const providerLogoHTML = providerLogo
+    ? `<img src="${providerLogo}" alt="${provider}" class="provider-logo" />`
+    : "";
+
+  // Starlink trajectory
+  const trajectory = getStarlinkTrajectory(name);
+  const trajectoryHTML = trajectory
+    ? `<div class="trajectory-box">
+        <span class="trajectory-icon">${trajectory.icon}</span>
+        <span class="trajectory-text">Trajectory: ${trajectory.direction} at ${trajectory.azimuth}</span>
+       </div>`
+    : "";
+
+  // Video links
+  let videoHTML = "";
+  if (vidURLs.length > 0) {
+    const links = vidURLs.map(v => {
+      const title = v.title || v.name || "Watch";
+      const url = v.url || v;
+      return `<a href="${url}" target="_blank" class="video-link">🎥 ${title}</a>`;
+    }).join("");
+    videoHTML = `<div class="video-links">${links}</div>`;
+  }
+
+  // Custom content bubbles
+  const customBubbles = getCustomBubbles(name);
+
+  // LL2 detail link
+  const detailLink = slug
+    ? `<a href="https://spacelaunchnow.me/launch/${slug}" target="_blank" class="detail-link">📋 Full Details</a>`
+    : "";
+
+  return `
+    <div class="launch-card">
+      <div class="card-image-wrapper">
+        <img src="${img}" alt="${name}" class="card-image" loading="lazy" />
+        <div class="card-image-overlay">
+          ${statusBadge}
+        </div>
+      </div>
+
+      <div class="card-content">
+        <h2 class="mission-name">${name}</h2>
+
+        <div class="provider-row">
+          ${providerLogoHTML}
+          <span class="provider-name">${provider}</span>
+        </div>
+
+        <div class="meta-grid">
+          <div class="meta-item">
+            <span class="meta-icon">🚀</span>
+            <span class="meta-text">${rocketName}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-icon">📍</span>
+            <span class="meta-text">${padName}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-icon">🌍</span>
+            <span class="meta-text">${orbit}</span>
+          </div>
+          ${missionType ? `
+          <div class="meta-item">
+            <span class="meta-icon">📡</span>
+            <span class="meta-text">${missionType}</span>
+          </div>` : ""}
+        </div>
+
+        <div class="launch-datetime">
+          <span class="datetime-icon">📅</span>
+          <span class="datetime-text">${launchDate}</span>
+        </div>
+
+        <div class="countdown" data-net="${net}"></div>
+
+        ${trajectoryHTML}
+        ${getWeatherHTML()}
+
+        <div class="mission-description">
+          <p>${missionDesc}</p>
+        </div>
+
+        ${customBubbles}
+        ${videoHTML}
+        ${detailLink}
+      </div>
+    </div>`;
+}
+
+// ============================================================
+// Main Fetch & Render
+// ============================================================
+function fetchAndRender() {
+  console.log("Fetching launches...");
+
+  Promise.all([
+    fetch(`${API_URL}&authorization=${API_KEY}`).then(r => r.json()),
+    loadSheetData()
+  ])
+    .then(([data]) => {
+      const launches = data.results || [];
+      console.log(`Fetched ${launches.length} launches`);
+
+      const container = document.getElementById("launch-container");
+      if (!container) {
+        console.error("No #launch-container found in HTML");
+        return;
+      }
+
+      if (launches.length === 0) {
+        container.innerHTML = `
+          <div class="no-launches">
+            <h2>🚀 No upcoming Florida launches found</h2>
+            <p>Check back soon!</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = launches.map(buildLaunchCard).join("");
+      updateCountdowns();
+    })
+    .catch(err => {
+      console.error("Fetch error:", err);
+      const container = document.getElementById("launch-container");
+      if (container) {
+        container.innerHTML = `
+          <div class="error-box">
+            <h2>⚠️ Unable to load launches</h2>
+            <p>Please try again later.</p>
+          </div>`;
+      }
     });
 }
 
-fetchLaunches();
-setInterval(fetchLaunches, REFRESH_INTERVAL);
+// ============================================================
+// Initialize
+// ============================================================
+document.addEventListener("DOMContentLoaded", () => {
+  fetchAndRender();
+  setInterval(updateCountdowns, 1000);
+  setInterval(fetchAndRender, 300000); // Refresh every 5 minutes
+});
