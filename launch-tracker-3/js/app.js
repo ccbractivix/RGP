@@ -18,23 +18,53 @@ let sheetData = [];
 let countdownIntervals = [];
 
 document.addEventListener('DOMContentLoaded', () => {
-    fetchAllData();
-    setInterval(fetchAllData, CONFIG.REFRESH_INTERVAL);
-});
-
 async function fetchAllData() {
     try {
         const [launchData, cmsData] = await Promise.all([
             fetchLaunches(),
             fetchSheetData()
         ]);
-        launches = launchData;
-        sheetData = cmsData;
+        launches = launchData.length > 0 ? launchData : launches;
+        sheetData = cmsData.length > 0 ? cmsData : sheetData;
+        console.log('Launches: ' + launches.length + ', Sheet rows: ' + sheetData.length);
         renderLaunches();
     } catch (error) {
         console.error('Error fetching data:', error);
+        if (launches.length > 0) {
+            renderLaunches();
+        }
     }
 }
+
+async function fetchLaunches() {
+    var now = new Date().toISOString();
+    var future = new Date(Date.now() + CONFIG.LOOKAHEAD_DAYS * 86400000).toISOString();
+    var url = CONFIG.API_URL +
+        '?location__ids=' + CONFIG.LOCATION_IDS +
+        '&net__gte=' + now +
+        '&net__lte=' + future +
+        '&limit=25&mode=detailed' +
+        '&api_key=' + CONFIG.API_KEY;
+
+    var maxRetries = 3;
+    for (var attempt = 0; attempt < maxRetries; attempt++) {
+        var response = await fetch(url);
+        if (response.ok) {
+            var data = await response.json();
+            return data.results || [];
+        }
+        if (response.status === 429) {
+            var wait = Math.pow(2, attempt) * 5000;
+            console.warn('Rate limited (429). Retry ' + (attempt + 1) + ' in ' + (wait / 1000) + 's...');
+            await new Promise(function(resolve) { setTimeout(resolve, wait); });
+        } else {
+            throw new Error('API error: ' + response.status);
+        }
+    }
+    console.warn('All retries exhausted. Using cached data.');
+    return [];
+}
+
 
 async function fetchLaunches() {
     const now = new Date().toISOString();
