@@ -1,364 +1,411 @@
-// ============================================================
-// Florida Space Launch Tracker - app.js (Full Featured)
-// ============================================================
+/* ============================================================
+   Florida Space Launch Tracker - styles.css
+   ============================================================ */
 
-const API_KEY = "506485404eb785c1b7e1c3dac3ba394ba8fb6834";
-const API_URL =
-  "https://ll.thespacedevs.com/2.2.0/launch/upcoming/?format=json&limit=10&location__ids=12,27&ordering=net&mode=detailed";
-const SHEET_ID = "1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU";
-const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1`;
-
-let customContentMap = {};
-
-// ============================================================
-// Google Sheet Loader
-// ============================================================
-function loadSheetData() {
-  return fetch(SHEET_URL)
-    .then(response => response.text())
-    .then(csv => {
-      const rows = csv.split("\n").slice(1);
-      console.log(`Sheet data rows: ${rows.length}`);
-      customContentMap = {};
-      rows.forEach(row => {
-        const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g);
-        if (!cols || cols.length < 2) return;
-        const clean = cols.map(c => c.replace(/^"|"$/g, "").trim());
-        const missionKey = clean[0].toLowerCase();
-        if (!missionKey) return;
-        customContentMap[missionKey] = {
-          rocketTalk: clean[1] || "",
-          rocketTalkStatus: (clean[2] || "pending").toLowerCase(),
-          viewingGuide: clean[3] || "",
-          chrisSays: clean[4] || ""
-        };
-      });
-    })
-    .catch(err => console.error("Sheet load error:", err));
+/* ---------- Base Reset ---------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-// ============================================================
-// Fuzzy Match
-// ============================================================
-function fuzzyMatch(apiMissionName) {
-  const apiName = apiMissionName.toLowerCase();
-  const keys = Object.keys(customContentMap);
-  for (let i = 0; i < keys.length; i++) {
-    if (apiName.includes(keys[i]) || keys[i].includes(apiName)) {
-      return customContentMap[keys[i]];
-    }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0b0f1a;
+  color: #e0e0e0;
+  line-height: 1.5;
+  padding: 12px;
+}
+
+/* ---------- Container ---------- */
+#launch-container {
+  max-width: 700px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ---------- Launch Card ---------- */
+.launch-card {
+  background: #1a1f2e;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #2a2f3e;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+
+/* ---------- Card Image ---------- */
+.card-image-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  overflow: hidden;
+  background: #111;
+}
+
+.card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+
+.card-image-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+/* ---------- Card Content ---------- */
+.card-content {
+  padding: 14px;
+}
+
+/* ---------- Mission Name ---------- */
+.mission-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+/* ---------- Provider Row ---------- */
+.provider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.provider-logo {
+  height: 22px;
+  width: auto;
+  max-width: 80px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+
+.provider-name {
+  font-size: 0.85rem;
+  color: #9aa0b0;
+}
+
+/* ---------- Meta Grid ---------- */
+.meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  color: #b0b8c8;
+}
+
+.meta-icon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.meta-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Launch Date ---------- */
+.launch-datetime {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #252a3a;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+  color: #c0c8d8;
+}
+
+/* ---------- Status Badge ---------- */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.status-go { background: #0d3b0d; color: #4cff4c; }
+.status-tbd { background: #3b370d; color: #ffd84c; }
+.status-tbc { background: #3b370d; color: #ffd84c; }
+.status-hold { background: #3b2a0d; color: #ff9f4c; }
+.status-fail { background: #3b0d0d; color: #ff4c4c; }
+.status-success { background: #0d3b0d; color: #4cff4c; }
+.status-inflight { background: #0d2a3b; color: #4cb8ff; }
+.status-unknown { background: #2a2a2a; color: #888; }
+
+/* ---------- Countdown ---------- */
+.countdown {
+  margin-bottom: 10px;
+}
+
+.countdown-grid {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.countdown-block {
+  background: #252a3a;
+  border-radius: 6px;
+  padding: 6px 10px;
+  text-align: center;
+  min-width: 48px;
+}
+
+.countdown-num {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #4cb8ff;
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-label {
+  display: block;
+  font-size: 0.55rem;
+  color: #7a8090;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.countdown-launched {
+  display: block;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ff6b35;
+  padding: 6px;
+}
+
+/* ---------- Trajectory Box ---------- */
+.trajectory-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #1a2a1a;
+  border: 1px solid #2a4a2a;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+  color: #80d080;
+}
+
+/* ---------- Weather Box ---------- */
+.weather-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #1a2030;
+  border: 1px solid #2a3a50;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 0.8rem;
+  color: #80a0c0;
+}
+
+/* ---------- Mission Description ---------- */
+.mission-description {
+  margin-bottom: 10px;
+}
+
+.mission-description p {
+  font-size: 0.8rem;
+  color: #9aa0b0;
+  line-height: 1.5;
+}
+
+/* ---------- Custom Bubbles ---------- */
+.custom-bubble {
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.bubble-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.bubble-logo {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.bubble-status {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.bubble-body {
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+/* Rocket Talk */
+.rocket-talk {
+  background: #1a1028;
+  border: 1px solid #3a2060;
+}
+
+.rocket-talk .bubble-logo { color: #c084fc; }
+
+.rocket-talk-live .bubble-status {
+  background: #3b0d0d;
+  color: #ff4c4c;
+  animation: pulse 1.5s infinite;
+}
+
+.rocket-talk-pending .bubble-status {
+  background: #3b370d;
+  color: #ffd84c;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Viewing Guide */
+.viewing-guide {
+  background: #0d1a2a;
+  border: 1px solid #1a3a5a;
+}
+
+.viewing-guide .bubble-logo { color: #60a5fa; }
+
+/* Chris Says */
+.chris-says {
+  background: #1a2a1a;
+  border: 1px solid #2a4a2a;
+}
+
+.chris-says .bubble-logo { color: #4ade80; }
+
+/* ---------- Video Links ---------- */
+.video-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.video-link {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #2a1a1a;
+  border: 1px solid #5a2a2a;
+  border-radius: 6px;
+  color: #ff8080;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.video-link:hover {
+  background: #3a2020;
+}
+
+/* ---------- Detail Link ---------- */
+.detail-link {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #1a2030;
+  border: 1px solid #2a3a50;
+  border-radius: 6px;
+  color: #80b0d0;
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.detail-link:hover {
+  background: #253045;
+}
+
+/* ---------- No Launches / Error ---------- */
+.no-launches,
+.error-box {
+  text-align: center;
+  padding: 30px 16px;
+  background: #1a1f2e;
+  border-radius: 10px;
+  border: 1px solid #2a2f3e;
+}
+
+.no-launches h2,
+.error-box h2 {
+  font-size: 1.1rem;
+  margin-bottom: 6px;
+}
+
+.no-launches p,
+.error-box p {
+  font-size: 0.85rem;
+  color: #9aa0b0;
+}
+
+/* ---------- Force all images small ---------- */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 480px) {
+  body {
+    padding: 8px;
   }
-  for (let i = 0; i < keys.length; i++) {
-    const words = keys[i].split(/\s+/);
-    let matchCount = 0;
-    words.forEach(w => {
-      if (w.length > 3 && apiName.includes(w)) matchCount++;
-    });
-    if (matchCount >= 2) return customContentMap[keys[i]];
-  }
-  return null;
-}
 
-// ============================================================
-// Countdown Timer
-// ============================================================
-function updateCountdowns() {
-  document.querySelectorAll(".countdown").forEach(el => {
-    const launch = new Date(el.dataset.net);
-    const now = new Date();
-    const diff = launch - now;
-
-    if (diff <= 0) {
-      el.innerHTML = `<span class="countdown-launched">🚀 LAUNCHED!</span>`;
-      return;
-    }
-
-    const days = Math.floor(diff / 86400000);
-    const hrs = Math.floor((diff % 86400000) / 3600000);
-    const mins = Math.floor((diff % 3600000) / 60000);
-    const secs = Math.floor((diff % 60000) / 1000);
-
-    el.innerHTML = `
-      <div class="countdown-grid">
-        <div class="countdown-block"><span class="countdown-num">${days}</span><span class="countdown-label">DAYS</span></div>
-        <div class="countdown-block"><span class="countdown-num">${hrs}</span><span class="countdown-label">HRS</span></div>
-        <div class="countdown-block"><span class="countdown-num">${mins}</span><span class="countdown-label">MIN</span></div>
-        <div class="countdown-block"><span class="countdown-num">${secs}</span><span class="countdown-label">SEC</span></div>
-      </div>`;
-  });
-}
-
-// ============================================================
-// Starlink Trajectory
-// ============================================================
-function getStarlinkTrajectory(missionName) {
-  const name = missionName.toLowerCase();
-  if (!name.includes("starlink")) return null;
-
-  const groupMatch = name.match(/group\s*(\d+)/i);
-  if (!groupMatch) return { direction: "Northeast", azimuth: "~53°", icon: "🧭" };
-
-  const group = parseInt(groupMatch[1]);
-  if (group === 8 || group === 10) {
-    return { direction: "Northeast", azimuth: "~53°", icon: "🧭" };
-  } else if (group === 6 || group === 12) {
-    return { direction: "Southeast", azimuth: "~43°", icon: "🧭" };
-  }
-  return { direction: "Northeast", azimuth: "~53°", icon: "🧭" };
-}
-
-// ============================================================
-// Status Badge
-// ============================================================
-function getStatusBadge(status) {
-  if (!status) return `<span class="status-badge status-unknown">Unknown</span>`;
-  const name = status.name || "Unknown";
-  const abbrev = (status.abbrev || "").toLowerCase();
-
-  const map = {
-    go: { cls: "status-go", icon: "🟢" },
-    tbd: { cls: "status-tbd", icon: "🟡" },
-    tbc: { cls: "status-tbc", icon: "🟡" },
-    hold: { cls: "status-hold", icon: "🟠" },
-    failure: { cls: "status-fail", icon: "🔴" },
-    success: { cls: "status-success", icon: "✅" },
-    "in flight": { cls: "status-inflight", icon: "🚀" }
-  };
-
-  const s = map[abbrev] || { cls: "status-unknown", icon: "⚪" };
-  return `<span class="status-badge ${s.cls}">${s.icon} ${name}</span>`;
-}
-
-// ============================================================
-// Weather Placeholder
-// ============================================================
-function getWeatherHTML() {
-  return `
-    <div class="weather-box">
-      <span class="weather-icon">🌤️</span>
-      <span class="weather-text">Weather data coming soon</span>
-    </div>`;
-}
-
-// ============================================================
-// Custom Content Bubbles
-// ============================================================
-function getCustomBubbles(missionName) {
-  const content = fuzzyMatch(missionName);
-  if (!content) return "";
-
-  let html = "";
-
-  if (content.rocketTalk && content.rocketTalk.toUpperCase() !== "CANCEL") {
-    const statusClass = content.rocketTalkStatus === "live" ? "rocket-talk-live" : "rocket-talk-pending";
-    const statusLabel = content.rocketTalkStatus === "live" ? "🔴 LIVE" : "⏳ Pending";
-    html += `
-      <div class="custom-bubble rocket-talk ${statusClass}">
-        <div class="bubble-header">
-          <span class="bubble-logo">🎙️ Rocket Talk</span>
-          <span class="bubble-status">${statusLabel}</span>
-        </div>
-        <div class="bubble-body">${content.rocketTalk}</div>
-      </div>`;
+  .card-image-wrapper {
+    aspect-ratio: 16 / 6;
   }
 
-  if (content.viewingGuide && content.viewingGuide.toUpperCase() !== "CANCEL") {
-    html += `
-      <div class="custom-bubble viewing-guide">
-        <div class="bubble-header">
-          <span class="bubble-logo">👀 Viewing Guide</span>
-        </div>
-        <div class="bubble-body">${content.viewingGuide}</div>
-      </div>`;
+  .card-content {
+    padding: 10px;
   }
 
-  if (content.chrisSays && content.chrisSays.toUpperCase() !== "CANCEL") {
-    html += `
-      <div class="custom-bubble chris-says">
-        <div class="bubble-header">
-          <span class="bubble-logo">🧑‍🚀 Chris Says</span>
-        </div>
-        <div class="bubble-body">${content.chrisSays}</div>
-      </div>`;
+  .mission-name {
+    font-size: 1rem;
   }
 
-  return html;
-}
-
-// ============================================================
-// Build Launch Card
-// ============================================================
-function buildLaunchCard(launch) {
-  const name = launch.name || "Unknown Mission";
-  const net = launch.net || "";
-  const img = launch.image || "https://via.placeholder.com/400x200?text=No+Image";
-  const provider = launch.launch_service_provider?.name || "Unknown Provider";
-  const providerLogo = launch.launch_service_provider?.logo_url || "";
-  const padName = launch.pad?.name || "Unknown Pad";
-  const rocketName = launch.rocket?.configuration?.name || "";
-  const orbit = launch.mission?.orbit?.name || "Unknown Orbit";
-  const missionDesc = launch.mission?.description || "No mission details available.";
-  const missionType = launch.mission?.type || "";
-  const vidURLs = launch.vidURLs || launch.vid_urls || [];
-  const slug = launch.slug || "";
-
-  const launchDate = net
-    ? new Date(net).toLocaleString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        timeZoneName: "short"
-      })
-    : "TBD";
-
-  const statusBadge = getStatusBadge(launch.status);
-
-  const providerLogoHTML = providerLogo
-    ? `<img src="${providerLogo}" alt="${provider}" class="provider-logo" />`
-    : "";
-
-  const trajectory = getStarlinkTrajectory(name);
-  const trajectoryHTML = trajectory
-    ? `<div class="trajectory-box">
-        <span class="trajectory-icon">${trajectory.icon}</span>
-        <span class="trajectory-text">Trajectory: ${trajectory.direction} at ${trajectory.azimuth}</span>
-       </div>`
-    : "";
-
-  let videoHTML = "";
-  if (vidURLs.length > 0) {
-    const links = vidURLs.map(v => {
-      const title = v.title || v.name || "Watch";
-      const url = v.url || v;
-      return `<a href="${url}" target="_blank" class="video-link">🎥 ${title}</a>`;
-    }).join("");
-    videoHTML = `<div class="video-links">${links}</div>`;
+  .meta-grid {
+    grid-template-columns: 1fr;
   }
 
-  const customBubbles = getCustomBubbles(name);
+  .countdown-block {
+    min-width: 40px;
+    padding: 5px 6px;
+  }
 
-  const detailLink = slug
-    ? `<a href="https://spacelaunchnow.me/launch/${slug}" target="_blank" class="detail-link">📋 Full Details</a>`
-    : "";
-
-  return `
-    <div class="launch-card">
-      <div class="card-image-wrapper">
-        <img src="${img}" alt="${name}" class="card-image" loading="lazy" />
-        <div class="card-image-overlay">
-          ${statusBadge}
-        </div>
-      </div>
-
-      <div class="card-content">
-        <h2 class="mission-name">${name}</h2>
-
-        <div class="provider-row">
-          ${providerLogoHTML}
-          <span class="provider-name">${provider}</span>
-        </div>
-
-        <div class="meta-grid">
-          <div class="meta-item">
-            <span class="meta-icon">🚀</span>
-            <span class="meta-text">${rocketName}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-icon">📍</span>
-            <span class="meta-text">${padName}</span>
-          </div>
-          <div class="meta-item">
-            <span class="meta-icon">🌍</span>
-            <span class="meta-text">${orbit}</span>
-          </div>
-          ${missionType ? `
-          <div class="meta-item">
-            <span class="meta-icon">📡</span>
-            <span class="meta-text">${missionType}</span>
-          </div>` : ""}
-        </div>
-
-        <div class="launch-datetime">
-          <span class="datetime-icon">📅</span>
-          <span class="datetime-text">${launchDate}</span>
-        </div>
-
-        <div class="countdown" data-net="${net}"></div>
-
-        ${trajectoryHTML}
-        ${getWeatherHTML()}
-
-        <div class="mission-description">
-          <p>${missionDesc}</p>
-        </div>
-
-        ${customBubbles}
-        ${videoHTML}
-        ${detailLink}
-      </div>
-    </div>`;
+  .countdown-num {
+    font-size: 1rem;
+  }
 }
-
-// ============================================================
-// Main Fetch & Render
-// ============================================================
-function fetchAndRender() {
-  console.log("Fetching launches...");
-
-  Promise.all([
-    fetch(API_URL, {
-      headers: {
-        "Authorization": "Token " + API_KEY
-      }
-    }).then(r => {
-      console.log("API response status:", r.status);
-      return r.json();
-    }),
-    loadSheetData()
-  ])
-    .then(([data]) => {
-      const launches = data.results || [];
-      console.log(`Fetched ${launches.length} launches`);
-
-      const container = document.getElementById("launch-container");
-      if (!container) {
-        console.error("No #launch-container found in HTML");
-        return;
-      }
-
-      if (launches.length === 0) {
-        container.innerHTML = `
-          <div class="no-launches">
-            <h2>🚀 No upcoming Florida launches found</h2>
-            <p>Check back soon!</p>
-          </div>`;
-        return;
-      }
-
-      container.innerHTML = launches.map(buildLaunchCard).join("");
-      updateCountdowns();
-    })
-    .catch(err => {
-      console.error("Fetch error:", err);
-      const container = document.getElementById("launch-container");
-      if (container) {
-        container.innerHTML = `
-          <div class="error-box">
-            <h2>⚠️ Unable to load launches</h2>
-            <p>Please try again later.</p>
-          </div>`;
-      }
-    });
-}
-
-// ============================================================
-// Initialize
-// ============================================================
-document.addEventListener("DOMContentLoaded", () => {
-  fetchAndRender();
-  setInterval(updateCountdowns, 1000);
-  setInterval(fetchAndRender, 300000);
-});
