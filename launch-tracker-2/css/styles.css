@@ -100,21 +100,20 @@ body {
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
-/* ==================== LAUNCH IMAGE ==================== */
+/* ==================== LAUNCH IMAGE (FIXED) ==================== */
 .launch-image-wrapper {
     position: relative;
     width: 100%;
-    border-radius: 16px 16px 0 0;
+    height: 200px;
     overflow: hidden;
 }
 
 .launch-image {
     width: 100%;
-    max-height: 400px;
-    object-fit: contain;
+    height: 100%;
+    object-fit: cover;
     display: block;
 }
-
 
 .launch-image-wrapper .status-badge {
     position: absolute;
@@ -370,28 +369,7 @@ body {
     line-height: 1.5;
 }
 
-/* ==================== RESPONSIVE ==================== */
-@media (max-width: 480px) {
-    .app-header h1 {
-        font-size: 1.5rem;
-    }
-
-    .launch-content {
-        padding: 16px;
-    }
-
-    .launch-header h2 {
-        font-size: 1.05rem;
-    }
-
-    .countdown-value {
-        font-size: 1.25rem;
-    }
-
-    .countdown-timer {
-        gap: 12px;
-    }
-}
+/* ==================== GALLERY SHOWCASE ==================== */
 .gallery-showcase {
     margin-top: 40px;
     padding: 30px 0;
@@ -452,6 +430,8 @@ body {
     color: #ffb74d;
     text-shadow: 0 0 20px rgba(255,152,0,0.5);
 }
+
+/* ==================== FOOTER ==================== */
 .site-footer {
     text-align: center;
     padding: 20px;
@@ -503,4 +483,31 @@ body {
     display: block;
     margin-left: auto;
     margin-right: auto;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 480px) {
+    .app-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .launch-content {
+        padding: 16px;
+    }
+
+    .launch-header h2 {
+        font-size: 1.05rem;
+    }
+
+    .countdown-value {
+        font-size: 1.25rem;
+    }
+
+    .countdown-timer {
+        gap: 12px;
+    }
+
+    .launch-image-wrapper {
+        height: 150px;
+    }
 }
