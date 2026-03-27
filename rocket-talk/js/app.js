@@ -143,7 +143,8 @@ function renderChrisSays() {
     const container = document.getElementById('chris-says-container');
     if (!container) return;
 
-    const entries = cmsData.chrisSays.entries || [];
+    const entries = Array.isArray(cmsData.chrisSays?.entries) ? cmsData.chrisSays.entries : [];
+
     if (entries.length === 0) {
         container.innerHTML = '';
         return;
