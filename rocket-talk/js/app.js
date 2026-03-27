@@ -40,7 +40,12 @@ async function loadCMSData() {
             console.log('CMS chris-says loaded');
         }
         if (templatesRes && templatesRes.ok) {
-            cmsData.templates = await templatesRes.json();
+           if (chrisSaysRes && chrisSaysRes.ok) {
+    const chrisSaysRaw = await chrisSaysRes.json();
+    cmsData.chrisSays = Array.isArray(chrisSaysRaw) ? chrisSaysRaw : chrisSaysRaw.entries || [];
+    console.log('CMS chris-says loaded');
+}
+
             console.log('CMS templates loaded');
         }
     } catch (e) {
@@ -308,7 +313,7 @@ function getRocketTalkContent(launchId, templateVars) {
 
 // ── Get Chris Says HTML for a specific launch ──
 function getChrisSaysHtml(launchId) {
-    const entries = cmsData.chrisSays?.entries;
+    const entries = cmsData.chrisSays;
     if (!Array.isArray(entries) || entries.length === 0) return '';
 
     // Filter: entries with matching launch_id, or entries with no launch_id (global)
