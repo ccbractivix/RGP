@@ -522,3 +522,179 @@ main {
 .cms-status-no {
     color: #999;
 }
+/* Rocket Talk Dropdown */
+.rocket-talk-dropdown {
+    margin-top: 1rem;
+    border: 2px solid #6a1b9a;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.rocket-talk-dropdown summary {
+    background: linear-gradient(135deg, #6a1b9a, #4a148c);
+    color: white;
+    padding: 0.75rem 1rem;
+    font-family: 'Calibri', sans-serif;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    list-style: none;
+}
+
+.rocket-talk-dropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+.rocket-talk-dropdown summary::before {
+    content: '▶ ';
+    font-size: 0.8rem;
+}
+
+.rocket-talk-dropdown[open] summary::before {
+    content: '▼ ';
+}
+
+.rocket-talk-content {
+    padding: 1rem;
+    background: #f3e5f5;
+    line-height: 1.6;
+}
+
+/* Chris Says Dropdown */
+.chris-says-dropdown {
+    margin-top: 1rem;
+    border: 2px solid #f57c00;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.chris-says-dropdown summary {
+    background: linear-gradient(135deg, #f57c00, #e65100);
+    color: white;
+    padding: 0.75rem 1rem;
+    font-family: 'Calibri', sans-serif;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    list-style: none;
+}
+
+.chris-says-dropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+.chris-says-dropdown summary::before {
+    content: '▶ ';
+    font-size: 0.8rem;
+}
+
+.chris-says-dropdown[open] summary::before {
+    content: '▼ ';
+}
+
+.chris-says-content {
+    padding: 1rem;
+    background: #fff8e1;
+}
+
+.chris-says-entry {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #ffe0b2;
+}
+
+.chris-says-entry:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.chris-says-date {
+    font-size: 0.85rem;
+    color: #e65100;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.chris-says-text {
+    line-height: 1.6;
+}
+
+/* Mission Info Dropdown */
+.mission-info-dropdown {
+    margin-top: 1rem;
+    border: 2px solid #1a1a2e;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.mission-info-dropdown summary {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    color: white;
+    padding: 0.75rem 1rem;
+    font-family: 'Calibri', sans-serif;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    list-style: none;
+}
+
+.mission-info-dropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+.mission-info-dropdown summary::before {
+    content: '▶ ';
+    font-size: 0.8rem;
+}
+
+.mission-info-dropdown[open] summary::before {
+    content: '▼ ';
+}
+
+.mission-info-content {
+    padding: 1rem;
+    background: #f5f5f5;
+    line-height: 1.6;
+}
+
+.mission-type,
+.mission-orbit {
+    margin-bottom: 0.5rem;
+}
+
+.mission-description {
+    margin-top: 0.5rem;
+}
+
+/* CMS Headline */
+.cms-headline {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: #e3f2fd;
+    border-left: 4px solid #1565c0;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    line-height: 1.5;
+}
+
+/* Viewing Guide */
+.cms-viewing-guide {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: #e8f5e9;
+    border-left: 4px solid #2e7d32;
+    border-radius: 4px;
+    line-height: 1.6;
+}
+
+/* Trajectory */
+.cms-trajectory {
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: #fce4ec;
+    border-left: 4px solid #c62828;
+    border-radius: 4px;
+    line-height: 1.6;
+}
