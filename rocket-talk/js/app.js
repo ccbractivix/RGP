@@ -62,7 +62,12 @@ async function fetchLaunches() {
         const url = `${API_BASE}?${params}`;
         console.log('Fetching:', url);
 
-        const response = await fetch(url);
+        const response = await fetch(apiUrl, {
+    headers: {
+        'Authorization': 'Token 506485404eb785c1b7e1c3dac3ba394ba8fb6834'
+    }
+});
+
 
         if (!response.ok) {
             throw new Error(`API error: ${response.status}`);
