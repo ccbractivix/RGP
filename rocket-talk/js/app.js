@@ -1,463 +1,390 @@
-// app.js — Rocket Talk
+// ── Rocket Talk · app.js ──
 
+const API_BASE = 'https://ll.thespacedevs.com/2.3.0';
 const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
-const API_BASE = 'https://ll.thespacedevs.com/2.3.0/launches/upcoming/';
-const LOCATION_IDS = '12,27';
-const REFRESH_STANDARD = 6 * 60 * 60 * 1000;
-const REFRESH_6H = 60 * 60 * 1000;
-const REFRESH_2H = 5 * 60 * 1000;
-const REFRESH_30M = 60 * 1000;
-const INFLIGHT_REMOVAL_DELAY = 60 * 60 * 1000;
+const PAD_LOCATION_IDS = [12, 27];
 const WINDOW_DAYS = 14;
+const COUNTDOWN_ACTIVATE_HOURS = 48;
 
-let cmsData = { launches: {}, chrisSays: [], templates: {} };
-let refreshTimer = null;
+let cmsLaunches = {};
+let cmsChrisSays = [];
+let cmsTemplates = {};
+let countdownInterval = null;
 
-// ── Initialization ──
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, starting app...');
-    loadCMSData().then(() => {
-        console.log('CMS data loaded, fetching launches...');
-        fetchLaunches();
-    });
-});
-
-// ── CMS Loading ──
+// ── CMS Loader ──
 async function loadCMSData() {
-    try {
-        const [launchesRes, chrisSaysRes, templatesRes] = await Promise.all([
-            fetch('cms/launches.json').catch(() => null),
-            fetch('cms/chris-says.json').catch(() => null),
-            fetch('cms/templates.json').catch(() => null)
-        ]);
+  try {
+    const [launchRes, chrisSaysRes, templatesRes] = await Promise.all([
+      fetch('cms/launches.json?v=' + Date.now()).then(r => r.json()).catch(() => ({ launches: {} })),
+      fetch('cms/chris-says.json?v=' + Date.now()).then(r => r.json()).catch(() => []),
+      fetch('cms/templates.json?v=' + Date.now()).then(r => r.json()).catch(() => ({ templates: {} }))
+    ]);
 
-        if (launchesRes && launchesRes.ok) {
-            cmsData.launches = await launchesRes.json();
-            console.log('CMS launches loaded');
-        }
-        if (chrisSaysRes && chrisSaysRes.ok) {
-            const chrisSaysRaw = await chrisSaysRes.json();
-            cmsData.chrisSays = Array.isArray(chrisSaysRaw) ? chrisSaysRaw : chrisSaysRaw.entries || [];
-            console.log('CMS chris-says loaded:', cmsData.chrisSays.length, 'entries');
-        }
-        if (templatesRes && templatesRes.ok) {
-            cmsData.templates = await templatesRes.json();
-            console.log('CMS templates loaded');
-        }
-    } catch (e) {
-        console.warn('CMS load warning:', e);
-    }
+    cmsLaunches = launchRes.launches || {};
+    cmsChrisSays = Array.isArray(chrisSaysRes) ? chrisSaysRes : (chrisSaysRes.entries || []);
+    cmsTemplates = templatesRes.templates || {};
+
+    console.log('[CMS] Launches loaded:', Object.keys(cmsLaunches).length);
+    console.log('[CMS] Chris Says entries:', cmsChrisSays.length);
+    console.log('[CMS] Templates loaded:', Object.keys(cmsTemplates).length);
+  } catch (err) {
+    console.error('[CMS] Load error:', err);
+  }
 }
 
-// ── API Fetch ──
+// ── Template Processor ──
+function processTemplate(templateText, variables) {
+  let result = templateText;
+  for (const [key, value] of Object.entries(variables)) {
+    const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+    result = result.replace(regex, value || '');
+  }
+  // Clean up any remaining unreplaced variables
+  result = result.replace(/\{\{[^}]+\}\}/g, '');
+  return result;
+}
+
+// ── Rocket Talk Content Builder ──
+function getRocketTalkContent(launch) {
+  const cms = cmsLaunches[launch.id];
+  if (!cms || !cms.rocket_talk) return null;
+
+  const rt = cms.rocket_talk;
+  const templateName = rt.template || 'rocket_talk_default';
+  const template = cmsTemplates[templateName];
+  if (!template) {
+    console.warn(`[CMS] Template "${templateName}" not found`);
+    return null;
+  }
+
+  // Build defaults from API data (snake_case keys)
+  const launchDate = launch.net ? new Date(launch.net) : null;
+  const defaults = {
+    mission_name: launch.mission?.name || launch.name || 'TBD',
+    launch_vehicle: launch.rocket?.configuration?.full_name || launch.rocket?.configuration?.name || 'TBD',
+    launch_provider: launch.launch_service_provider?.name || 'TBD',
+    launch_pad: launch.pad?.name || 'TBD',
+    launch_site: launch.pad?.location?.name || 'TBD',
+    launch_date: launchDate
+      ? launchDate.toLocaleDateString('en-US', { timeZone: 'America/New_York', weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+      : 'TBD',
+    launch_time: launchDate
+      ? launchDate.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true })
+      : 'TBD',
+    orbit: launch.mission?.orbit?.name || 'TBD',
+    mission_type: launch.mission?.type || 'TBD',
+    mission_description: launch.mission?.description || ''
+  };
+
+  // Merge CMS overrides (CMS variables win)
+  const variables = { ...defaults, ...(rt.variables || {}) };
+
+  return processTemplate(template, variables);
+}
+
+// ── Chris Says Builder ──
+function getChrisSaysContent(launchId) {
+  const entries = cmsChrisSays.filter(e => e.launch_id === launchId || !e.launch_id);
+  if (entries.length === 0) return null;
+
+  const sorted = entries.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+  return sorted.map(e => {
+    const d = new Date(e.date).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
+    return `<div class="chris-says-entry"><span class="chris-says-date">${d}</span> ${e.text}</div>`;
+  }).join('');
+}
+
+// ── Status Badge ──
+function getStatusBadge(status) {
+  if (!status) return '';
+  const id = status.id || 0;
+  const name = status.name || 'Unknown';
+  let cls = 'status-tbd';
+  if (id === 1) cls = 'status-go';
+  else if (id === 2) cls = 'status-tbd';
+  else if (id === 3) cls = 'status-go'; // Success
+  else if (id === 4) cls = 'status-hold'; // Failure
+  else if (id === 5) cls = 'status-hold'; // Hold
+  else if (id === 6) cls = 'status-inflight';
+  else if (id === 8) cls = 'status-tbc';
+  return `<span class="status-badge ${cls}">${name}</span>`;
+}
+
+// ── Countdown Logic ──
+function initCountdowns() {
+  if (countdownInterval) clearInterval(countdownInterval);
+
+  function updateAll() {
+    document.querySelectorAll('.countdown-timer').forEach(el => {
+      const target = new Date(el.dataset.launchTime);
+      const now = new Date();
+      const diff = target - now;
+      const hoursUntil = diff / (1000 * 60 * 60);
+
+      if (diff <= 0) {
+        el.textContent = '🚀 LAUNCHED';
+        el.classList.add('countdown-launched');
+        return;
+      }
+
+      if (hoursUntil > COUNTDOWN_ACTIVATE_HOURS) {
+        // Static display — countdown not yet active
+        const days = Math.floor(hoursUntil / 24);
+        if (days > 1) {
+          el.textContent = `T- ${days} days`;
+        } else {
+          el.textContent = 'T- ~2 days';
+        }
+        el.classList.add('countdown-dormant');
+        el.classList.remove('countdown-active');
+        return;
+      }
+
+      // Live countdown — within 48 hours
+      el.classList.remove('countdown-dormant');
+      el.classList.add('countdown-active');
+
+      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+      el.textContent = `T- ${String(d).padStart(2, '0')}:${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    });
+  }
+
+  updateAll();
+  countdownInterval = setInterval(updateAll, 1000);
+}
+
+// ── Refresh Interval Calculator ──
+function getRefreshInterval(launches) {
+  const now = new Date();
+  let shortest = 6 * 60 * 60 * 1000; // 6 hours default
+
+  launches.forEach(l => {
+    const net = new Date(l.net);
+    const diff = net - now;
+    const statusId = l.status?.id || 0;
+
+    if (statusId === 6 || diff <= 30 * 60 * 1000) {
+      shortest = Math.min(shortest, 60 * 1000); // 1 minute
+    } else if (diff <= 2 * 60 * 60 * 1000) {
+      shortest = Math.min(shortest, 5 * 60 * 1000); // 5 minutes
+    } else if (diff <= 6 * 60 * 60 * 1000) {
+      shortest = Math.min(shortest, 60 * 60 * 1000); // 1 hour
+    }
+  });
+
+  return shortest;
+}
+
+// ── Build Launch Card HTML ──
+function buildLaunchCard(launch) {
+  const cms = cmsLaunches[launch.id] || {};
+
+  // Image
+  let imageUrl = '';
+  if (typeof launch.image === 'string' && launch.image) {
+    imageUrl = launch.image;
+  } else if (launch.image?.image_url) {
+    imageUrl = launch.image.image_url;
+  } else if (launch.image?.thumbnail_url) {
+    imageUrl = launch.image.thumbnail_url;
+  }
+
+  const imageHtml = imageUrl
+    ? `<img class="launch-image" src="${imageUrl}" alt="${launch.name || 'Launch'}" loading="lazy">`
+    : '';
+
+  // Launch time
+  const launchDate = launch.net ? new Date(launch.net) : null;
+  const timeStr = launchDate
+    ? launchDate.toLocaleString('en-US', {
+        timeZone: 'America/New_York',
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit', hour12: true
+      }) + ' ET'
+    : 'TBD';
+
+  // Vehicle name
+  const vehicle = launch.rocket?.configuration?.full_name || launch.rocket?.configuration?.name || '';
+
+  // Status badge
+  const badge = getStatusBadge(launch.status);
+
+  // Countdown
+  const countdownHtml = launchDate
+    ? `<div class="countdown-timer" data-launch-time="${launchDate.toISOString()}"></div>`
+    : '';
+
+  // Rocket Talk Live button
+  let liveButtonHtml = '';
+  if (cms.rocket_talk_live?.enabled) {
+    const liveUrl = cms.rocket_talk_live.url || '#';
+    const liveLabel = cms.rocket_talk_live.label || '🔴 Rocket Talk LIVE!';
+    liveButtonHtml = `<a href="${liveUrl}" target="_blank" class="rocket-talk-live-btn">${liveLabel}</a>`;
+  }
+
+  // CMS Content sections
+  const headline = cms.headline ? `<div class="cms-headline">${cms.headline}</div>` : '';
+  const viewingGuide = cms.viewing_guide ? `<div class="cms-viewing-guide">${cms.viewing_guide}</div>` : '';
+  const trajectory = cms.trajectory ? `<div class="cms-trajectory">${cms.trajectory}</div>` : '';
+
+  // Rocket Talk (collapsible)
+  const rocketTalkContent = getRocketTalkContent(launch);
+  const rocketTalkHtml = rocketTalkContent
+    ? `<details class="dropdown dropdown-rocket-talk">
+         <summary>🎙️ Rocket Talk</summary>
+         <div class="dropdown-content">${rocketTalkContent}</div>
+       </details>`
+    : '';
+
+  // Chris Says (collapsible)
+  const chrisSaysContent = getChrisSaysContent(launch.id);
+  const chrisSaysHtml = chrisSaysContent
+    ? `<details class="dropdown dropdown-chris-says">
+         <summary>💬 Chris Says</summary>
+         <div class="dropdown-content">${chrisSaysContent}</div>
+       </details>`
+    : '';
+
+  // Mission Info (collapsible, always last)
+  let missionInfoParts = [];
+  if (launch.mission?.description) missionInfoParts.push(`<p>${launch.mission.description}</p>`);
+  if (launch.mission?.type) missionInfoParts.push(`<p><strong>Type:</strong> ${launch.mission.type}</p>`);
+  if (launch.mission?.orbit?.name) missionInfoParts.push(`<p><strong>Orbit:</strong> ${launch.mission.orbit.name}</p>`);
+
+  const missionInfoHtml = missionInfoParts.length > 0
+    ? `<details class="dropdown dropdown-mission-info">
+         <summary>ℹ️ Mission Info</summary>
+         <div class="dropdown-content">${missionInfoParts.join('')}</div>
+       </details>`
+    : '';
+
+  return `
+    <div class="launch-card">
+      ${imageHtml}
+      <div class="launch-content">
+        <h2 class="launch-name">${launch.name || 'Unknown Mission'}</h2>
+        <div class="launch-vehicle">${vehicle}</div>
+        <div class="launch-meta">
+          <span class="launch-time">${timeStr}</span>
+          ${badge}
+        </div>
+        ${countdownHtml}
+        ${liveButtonHtml}
+        ${headline}
+        ${viewingGuide}
+        ${trajectory}
+        ${rocketTalkHtml}
+        ${chrisSaysHtml}
+        ${missionInfoHtml}
+      </div>
+    </div>
+  `;
+}
+
+// ── Main Fetch & Render ──
 async function fetchLaunches() {
-    console.log('fetchLaunches() called');
-    showLoading(true);
+  const container = document.getElementById('launches-container');
+  const loading = document.getElementById('loading');
 
-    try {
-        const now = new Date();
-        const futureDate = new Date(now.getTime() + WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  try {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const cutoffISO = cutoff.toISOString();
 
-        const params = new URLSearchParams({
-            location__ids: LOCATION_IDS,
-            net__lte: futureDate.toISOString(),
-            limit: '20',
-            mode: 'detailed'
-        });
+    const allLaunches = [];
+    for (const locId of PAD_LOCATION_IDS) {
+      const url = `${API_BASE}/launches/upcoming/?` + new URLSearchParams({
+        location__ids: locId,
+        net__lte: cutoffISO,
+        limit: 20,
+        mode: 'detailed',
+        format: 'json'
+      });
+      const resp = await fetch(url, {
+        headers: { 'Authorization': `Token ${API_KEY}` }
+      });
 
-        const apiUrl = `${API_BASE}?${params}`;
-        console.log('Fetching URL:', apiUrl);
-
-        const response = await fetch(apiUrl, {
-            headers: {
-                'Authorization': 'Token ' + API_KEY
-            }
-        });
-
-        console.log('Response status:', response.status);
-
-        if (response.status === 429) {
-            console.warn('Rate limited (429). Trying localStorage fallback.');
-            const cached = localStorage.getItem('rocketTalkLaunches');
-            if (cached) {
-                console.log('Using cached data from localStorage');
-                const launches = filterLaunches(JSON.parse(cached));
-                renderLaunches(launches);
-                scheduleNextRefresh(launches);
-            } else {
-                document.getElementById('launches-container').innerHTML =
-                    '<div class="error-message">API rate limit reached. Please try again in a few minutes.</div>';
-            }
-            setTimeout(fetchLaunches, 5 * 60 * 1000);
-            return;
-        }
-
-        if (!response.ok) {
-            throw new Error('API error: ' + response.status);
-        }
-
-        const data = await response.json();
-        console.log('API returned', data.count, 'launches');
-
-        localStorage.setItem('rocketTalkLaunches', JSON.stringify(data.results));
-
-        const launches = filterLaunches(data.results || []);
-        console.log('After filtering:', launches.length, 'launches');
-        renderLaunches(launches);
-        scheduleNextRefresh(launches);
-    } catch (error) {
-        console.error('Fetch error:', error);
-
+      if (resp.status === 429) {
+        console.warn('[API] Rate limited — retrying in 5 minutes');
+        setTimeout(fetchLaunches, 5 * 60 * 1000);
         const cached = localStorage.getItem('rocketTalkLaunches');
         if (cached) {
-            console.log('Error occurred, using cached data');
-            const launches = filterLaunches(JSON.parse(cached));
-            renderLaunches(launches);
-            scheduleNextRefresh(launches);
-            return;
+          renderLaunches(JSON.parse(cached), container, loading);
         }
-
-        document.getElementById('launches-container').innerHTML =
-            '<div class="error-message">Unable to load launches. Will retry shortly.<br><small>' + error.message + '</small></div>';
-        setTimeout(fetchLaunches, 60000);
-    } finally {
-        showLoading(false);
-    }
-}
-
-// ── Filter Launches ──
-function filterLaunches(launches) {
-    const now = new Date();
-    return launches.filter(launch => {
-        if (launch.status?.abbrev === 'In Flight') {
-            const netDate = new Date(launch.net);
-            if (now - netDate > INFLIGHT_REMOVAL_DELAY) return false;
-        }
-        return true;
-    });
-}
-
-// ── Render Launches ──
-function renderLaunches(launches) {
-    console.log('renderLaunches() called with', launches?.length, 'launches');
-    const container = document.getElementById('launches-container');
-
-    if (!launches || launches.length === 0) {
-        container.innerHTML = '<div class="no-launches">No launches scheduled in the next 14 days from the Space Coast.</div>';
         return;
+      }
+
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.results) allLaunches.push(...data.results);
+      }
     }
 
-    container.innerHTML = launches.map(launch => createLaunchCard(launch)).join('');
-    initCountdowns(launches);
-}
-
-// ── Create Launch Card ──
-function createLaunchCard(launch) {
-    const cms = cmsData.launches?.[launch.id] || {};
-    const status = getStatusInfo(launch.status);
-    const netDate = new Date(launch.net);
-    const dateStr = formatDateET(netDate);
-    const timeStr = formatTimeET(netDate);
-    const missionName = launch.mission?.name || launch.name || 'Unknown Mission';
-    const vehicleName = launch.rocket?.configuration?.full_name || launch.rocket?.configuration?.name || 'Unknown Vehicle';
-    const padName = launch.pad?.name || 'Unknown Pad';
-    const locationName = launch.pad?.location?.name || '';
-    const missionDesc = launch.mission?.description || '';
-    const missionType = launch.mission?.type || '';
-    const orbit = launch.mission?.orbit?.name || '';
-
-    // Handle image
-    let imageUrl = '';
-    if (typeof launch.image === 'string') {
-        imageUrl = launch.image;
-    } else if (launch.image?.image_url) {
-        imageUrl = launch.image.image_url;
-    } else if (launch.image?.thumbnail_url) {
-        imageUrl = launch.image.thumbnail_url;
-    }
-
-    // CMS template vars for headline/viewing guide/trajectory
-    const templateVars = {
-        mission_name: missionName,
-        launch_vehicle: vehicleName,
-        event_date: dateStr,
-        event_time: timeStr,
-        launch_date: dateStr
-    };
-
-    const headline = cms.headline ? processTemplate(cms.headline, templateVars) : '';
-    const viewingGuide = cms.viewing_guide ? processTemplate(cms.viewing_guide, templateVars) : '';
-    const trajectory = cms.trajectory ? processTemplate(cms.trajectory, templateVars) : '';
-
-    // Rocket Talk content from CMS (pass full launch object)
-    const rocketTalkContent = getRocketTalkContent(launch);
-
-    // Chris Says entries for this launch
-    const chrisSaysHtml = getChrisSaysHtml(launch.id);
-
-    // Rocket Talk Live badge
-    const liveBadge = cms.rocket_talk_live?.enabled
-        ? '<a href="' + (cms.rocket_talk_live.url || '#') + '" target="_blank" class="live-badge">🔴 ' + (cms.rocket_talk_live.label || 'LIVE') + '</a>'
-        : '';
-
-    // ── Build Card HTML ──
-    let html = '<div class="launch-card" data-launch-id="' + launch.id + '">';
-
-    if (imageUrl) {
-        html += '<img class="launch-image" src="' + imageUrl + '" alt="' + missionName + '" loading="lazy">';
-    }
-
-    html += '<div class="launch-content">';
-
-    // Status badge and live badge
-    html += '<div class="status-badge status-' + status.class + '">' + status.text + '</div>';
-    html += liveBadge;
-
-    // Launch header info
-    html += '<h2 class="mission-name">' + missionName + '</h2>';
-    html += '<div class="vehicle-name">🚀 ' + vehicleName + '</div>';
-    html += '<div class="launch-datetime">';
-    html += '<div class="launch-date">📅 ' + dateStr + '</div>';
-    html += '<div class="launch-time">🕐 ' + timeStr + ' ET</div>';
-    html += '</div>';
-    html += '<div class="countdown-clock" data-net="' + launch.net + '">';
-    html += '<div class="countdown-label">T-minus</div>';
-    html += '<div class="countdown-timer" id="countdown-' + launch.id + '">--:--:--:--</div>';
-    html += '</div>';
-    html += '<div class="launch-location">📍 ' + padName + (locationName ? ', ' + locationName : '') + '</div>';
-
-    // ── CMS Sections in Order ──
-
-    // 1. Headline (always visible)
-    if (headline) {
-        html += '<div class="cms-headline">' + headline + '</div>';
-    }
-
-    // 2. Viewing Guide (always visible)
-    if (viewingGuide) {
-        html += '<div class="cms-viewing-guide"><strong>👀 Viewing Guide:</strong> ' + viewingGuide + '</div>';
-    }
-
-    // 3. Trajectory (always visible)
-    if (trajectory) {
-        html += '<div class="cms-trajectory"><strong>📐 Trajectory:</strong> ' + trajectory + '</div>';
-    }
-
-    // 4. Rocket Talk (collapsible dropdown)
-    if (rocketTalkContent) {
-        html += '<details class="rocket-talk-dropdown">';
-        html += '<summary>🎙️ Rocket Talk</summary>';
-        html += '<div class="rocket-talk-content">' + rocketTalkContent + '</div>';
-        html += '</details>';
-    }
-
-    // 5. Chris Says (collapsible dropdown)
-    if (chrisSaysHtml) {
-        html += '<details class="chris-says-dropdown">';
-        html += '<summary>💬 Chris Says</summary>';
-        html += '<div class="chris-says-content">' + chrisSaysHtml + '</div>';
-        html += '</details>';
-    }
-
-    // 6. Mission Info (collapsible dropdown — always last)
-    html += '<details class="mission-info-dropdown">';
-    html += '<summary>ℹ️ Mission Info</summary>';
-    html += '<div class="mission-info-content">';
-    if (missionType) {
-        html += '<p><strong>Type:</strong> ' + missionType + '</p>';
-    }
-    if (orbit) {
-        html += '<p><strong>Orbit:</strong> ' + orbit + '</p>';
-    }
-    if (missionDesc) {
-        html += '<p>' + missionDesc + '</p>';
-    } else {
-        html += '<p>No additional mission details available.</p>';
-    }
-    html += '</div></details>';
-
-    html += '</div></div>';
-
-    return html;
-}
-
-// ── Get Rocket Talk Content from CMS ──
-function getRocketTalkContent(launch) {
-    const launchId = launch.id;
-    const cms = cmsData.launches?.[launchId]?.rocket_talk;
-    if (!cms) return '';
-
-    const net = new Date(launch.net);
-    const dateStr = net.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
-    const timeStr = net.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
-
-    // Default vars use template placeholder names (snake_case)
-    const defaults = {
-        mission_name: launch.mission?.name || launch.name || '',
-        launch_vehicle: launch.rocket?.configuration?.full_name || '',
-        event_date: dateStr,
-        event_time: timeStr,
-        launch_date: dateStr
-    };
-
-    // CMS custom variables override defaults
-    const merged = Object.assign({}, defaults, cms.variables || {});
-
-    // Template reference
-    if (cms.template && cmsData.templates?.[cms.template]) {
-        return processTemplate(cmsData.templates[cms.template], merged);
-    }
-
-    // Plain string
-    if (typeof cms === 'string') {
-        return processTemplate(cms, merged);
-    }
-
-    return '';
-}
-
-// ── Get Chris Says HTML for a specific launch ──
-function getChrisSaysHtml(launchId) {
-    const entries = cmsData.chrisSays;
-    if (!Array.isArray(entries) || entries.length === 0) return '';
-
-    const filtered = entries
-        .filter(entry => !entry.launch_id || entry.launch_id === launchId)
-        .sort((a, b) => new Date(b.date) - new Date(a.date))
-        .slice(0, 5);
-
-    if (filtered.length === 0) return '';
-
-    let html = '';
-    filtered.forEach(entry => {
-        const dateFormatted = new Date(entry.date).toLocaleDateString('en-US', {
-            timeZone: 'America/New_York',
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric'
-        });
-        html += '<div class="chris-says-entry">';
-        html += '<div class="chris-says-date">' + dateFormatted + '</div>';
-        html += '<div class="chris-says-text">' + entry.text + '</div>';
-        html += '</div>';
+    // Deduplicate
+    const seen = new Set();
+    const launches = allLaunches.filter(l => {
+      if (seen.has(l.id)) return false;
+      seen.add(l.id);
+      return true;
     });
 
-    return html;
-}
-
-// ── Status Mapping ──
-function getStatusInfo(status) {
-    if (!status) return { text: 'Unknown', class: 'unknown' };
-    const abbrev = status.abbrev || '';
-    const map = {
-        'Go': { text: '✅ GO for Launch', class: 'go' },
-        'TBD': { text: '🟡 Date/Time TBD', class: 'tbd' },
-        'TBC': { text: '🟠 To Be Confirmed', class: 'tbc' },
-        'Hold': { text: '⏸️ HOLD', class: 'hold' },
-        'In Flight': { text: '🚀 IN FLIGHT', class: 'inflight' },
-        'Success': { text: '✅ Launch Successful', class: 'success' },
-        'Failure': { text: '❌ Launch Failure', class: 'failure' }
-    };
-    return map[abbrev] || { text: status.name || abbrev, class: 'unknown' };
-}
-
-// ── Date/Time Formatting (Eastern Time) ──
-function formatDateET(date) {
-    return date.toLocaleDateString('en-US', {
-        timeZone: 'America/New_York',
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+    // Filter out In-Flight launches older than 60 minutes
+    const filtered = launches.filter(l => {
+      if (l.status?.id === 6) {
+        const net = new Date(l.net);
+        const elapsed = now - net;
+        return elapsed < 60 * 60 * 1000;
+      }
+      return true;
     });
-}
 
-function formatTimeET(date) {
-    return date.toLocaleTimeString('en-US', {
-        timeZone: 'America/New_York',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
+    // Sort chronologically
+    filtered.sort((a, b) => {
+      const aD = a.net ? new Date(a.net) : new Date('2099-01-01');
+      const bD = b.net ? new Date(b.net) : new Date('2099-01-01');
+      return aD - bD;
     });
-}
 
-// ── Template Processing ──
-function processTemplate(text, vars) {
-    if (!text) return '';
+    // Cache
+    localStorage.setItem('rocketTalkLaunches', JSON.stringify(filtered));
 
-    let result = text;
-    for (const [key, value] of Object.entries(vars)) {
-        const regex = new RegExp('\\{\\{' + key + '\\}\\}', 'g');
-        result = result.replace(regex, value || '');
+    renderLaunches(filtered, container, loading);
+
+    // Schedule next refresh
+    const interval = getRefreshInterval(filtered);
+    console.log(`[Refresh] Next update in ${Math.round(interval / 60000)} minutes`);
+    setTimeout(fetchLaunches, interval);
+
+  } catch (err) {
+    console.error('[API] Fetch error:', err);
+    const cached = localStorage.getItem('rocketTalkLaunches');
+    if (cached) {
+      renderLaunches(JSON.parse(cached), container, loading);
     }
-
-    return result;
+    setTimeout(fetchLaunches, 60 * 1000);
+  }
 }
 
-// ── Countdown Timers ──
-function initCountdowns(launches) {
-    if (window.countdownInterval) clearInterval(window.countdownInterval);
+function renderLaunches(launches, container, loading) {
+  if (loading) loading.style.display = 'none';
 
-    window.countdownInterval = setInterval(function () {
-        launches.forEach(function (launch) {
-            var el = document.getElementById('countdown-' + launch.id);
-            if (!el) return;
+  if (launches.length === 0) {
+    container.innerHTML = '<p style="text-align:center; padding:2rem; color:#999;">No upcoming launches in the next 14 days.</p>';
+    return;
+  }
 
-            var now = new Date();
-            var net = new Date(launch.net);
-            var diff = net - now;
-
-            if (diff <= 0) {
-                el.textContent = launch.status?.abbrev === 'In Flight' ? '🚀 LAUNCHED' : '00:00:00:00';
-                el.classList.add('countdown-zero');
-                return;
-            }
-
-            var days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            var hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            var minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            var seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-            el.textContent = String(days).padStart(2, '0') + ':' + String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-        });
-    }, 1000);
+  container.innerHTML = launches.map(buildLaunchCard).join('');
+  initCountdowns();
 }
 
-// ── Smart Refresh Scheduling ──
-function scheduleNextRefresh(launches) {
-    if (refreshTimer) clearTimeout(refreshTimer);
-
-    var now = new Date();
-    var interval = REFRESH_STANDARD;
-
-    if (launches && launches.length > 0) {
-        for (var i = 0; i < launches.length; i++) {
-            var launch = launches[i];
-            var net = new Date(launch.net);
-            var diff = net - now;
-
-            if (launch.status?.abbrev === 'In Flight') {
-                interval = Math.min(interval, REFRESH_30M);
-                break;
-            }
-            if (diff > 0 && diff <= 30 * 60 * 1000) {
-                interval = Math.min(interval, REFRESH_30M);
-            } else if (diff > 0 && diff <= 2 * 60 * 60 * 1000) {
-                interval = Math.min(interval, REFRESH_2H);
-            } else if (diff > 0 && diff <= 6 * 60 * 60 * 1000) {
-                interval = Math.min(interval, REFRESH_6H);
-            }
-        }
-    }
-
-    console.log('Next refresh in ' + (interval / 1000) + 's');
-    refreshTimer = setTimeout(fetchLaunches, interval);
+// ── Initialize ──
+async function initApp() {
+  await loadCMSData();
+  await fetchLaunches();
 }
 
-// ── Loading Animation ──
-function showLoading(show) {
-    var loader = document.getElementById('loading');
-    if (loader) {
-        loader.style.display = show ? 'flex' : 'none';
-    }
-}
+initApp();
