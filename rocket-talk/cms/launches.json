@@ -45,7 +45,26 @@
     "rocket_talk_live": {
       "enabled": true,
       "url": "",
-      "label": "🎙️ Rocket Talk LIVE - Tuesday 7:00 PM"
+      "label": "🎙️ Rocket Talk LIVE - Tuesday, April  7:00 PM"
+    }
+    },
+  "41699701-2ef4-4b0c-ac9d-6757820cde87": {
+    "headline": "Astronauts going to the Moon!",
+    "viewing_guide": "",
+    "trajectory": "East by northeast",
+    "rocket_talk": {
+      "template": "rocket_talk_default",
+      "variables": {
+        "mission_name": "Artemis II",
+        "launch_vehicle": "NASA SLS Block I",
+        "event_date": "Tuesday, April 7",
+        "event_time": "7:00 PM"
+      }
+    },
+    "rocket_talk_live": {
+      "enabled": true,
+      "url": "",
+      "label": "🎙️ Rocket Talk LIVE - Tuesday, March 31 5:00 & 7:00 PM"
     }
   }
 }
