@@ -149,7 +149,7 @@ function createLaunchCard(launch) {
 
     return `
         <div class="launch-card" data-launch-id="${launch.id}">
-            ${imageUrl ? `<div class="launch-image"><img src="${imageUrl}" alt="${missionName}" loading="lazy"></div>` : ''}
+            ${imageUrl ? `<img class="launch-image" src="${imageUrl}" alt="${missionName}" loading="lazy">` : ''}
             <div class="launch-content">
                 <div class="status-badge status-${status.class}">${status.text}</div>
                 ${liveBadge}
