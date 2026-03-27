@@ -15,7 +15,7 @@ body {
 }
 
 /* ===== LOADING SCREEN ===== */
-#loading-screen {
+#loading {
     position: fixed;
     top: 0;
     left: 0;
@@ -30,7 +30,7 @@ body {
     transition: opacity 0.5s ease;
 }
 
-#loading-screen.fade-out {
+#loading.fade-out {
     opacity: 0;
     pointer-events: none;
 }
@@ -146,6 +146,22 @@ main {
     font-size: 1.2rem;
     color: #444;
     margin-bottom: 0.5rem;
+}
+
+/* ===== LAUNCH CARD IMAGE ===== */
+.launch-image {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
+}
+
+.launch-card img:not(.launch-image) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
 }
 
 .launch-headline {
@@ -348,24 +364,27 @@ main {
 }
 
 .filmstrip-container {
-    display: flex;
     overflow-x: auto;
-    gap: 10px;
-    padding: 0.5rem 1rem;
-    scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
+    padding: 0.5rem 1rem;
 }
 
-.filmstrip-container::-webkit-scrollbar {
+.filmstrip {
+    display: flex;
+    gap: 10px;
+    scroll-snap-type: x mandatory;
+}
+
+.filmstrip::-webkit-scrollbar {
     height: 4px;
 }
 
-.filmstrip-container::-webkit-scrollbar-thumb {
+.filmstrip::-webkit-scrollbar-thumb {
     background: #ccc;
     border-radius: 4px;
 }
 
-.filmstrip-container img {
+.filmstrip img {
     height: 120px;
     width: auto;
     border-radius: 8px;
