@@ -287,21 +287,36 @@ function createLaunchCard(launch) {
 }
 
 // ── Get Rocket Talk Content from CMS ──
-function getRocketTalkContent(launchId, templateVars) {
-    const cms = cmsData.launches?.[launchId];
-    if (!cms || !cms.rocket_talk) return '';
+function getRocketTalkContent(launch) {
+    const launchId = launch.id;
+    const cms = cmsData.launches?.[launchId]?.rocket_talk;
+    if (!cms) return '';
 
-    const rt = cms.rocket_talk;
+    const net = new Date(launch.net);
+    const dateStr = net.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
+    const timeStr = net.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
 
-    // Template reference with custom variables
-    if (typeof rt === 'object' && rt.template) {
-        const templateText = cmsData.templates[rt.template];
-        if (!templateText) return '';
+    // Default vars use template placeholder names (snake_case)
+    const defaults = {
+        mission_name: launch.mission?.name || launch.name || '',
+        launch_vehicle: launch.rocket?.configuration?.full_name || '',
+        event_date: dateStr,
+        event_time: timeStr,
+        launch_date: dateStr
+    };
 
-        // Merge standard template vars with custom event vars
-        const mergedVars = Object.assign({}, templateVars, rt.variables || {});
-        return processTemplate(templateText, mergedVars);
+    // CMS custom variables override defaults
+    const merged = Object.assign({}, defaults, cms.variables || {});
+
+    if (cms.template && cmsData.templates?.[cms.template]) {
+        return processTemplate(cmsData.templates[cms.template], merged);
+    } else if (typeof cms === 'string') {
+        return processTemplate(cms, merged);
     }
+
+    return '';
+}
+
 
     // Plain string
     if (typeof rt === 'string') {
