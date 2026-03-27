@@ -51,12 +51,20 @@ async function fetchLaunches() {
         const now = new Date();
         const futureDate = new Date(now.getTime() + WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
-        const params = new URLSearchParams({
+                const params = new URLSearchParams({
             location__ids: LOCATION_IDS,
             net__lte: futureDate.toISOString(),
             limit: '20',
-            mode: 'detailed',
-            token: API_KEY
+            mode: 'detailed'
+        });
+
+        const url = `${API_BASE}?${params}`;
+        console.log('Fetching:', url);
+
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': 'Token ' + API_KEY
+            }
         });
 
         const url = `${API_BASE}?${params}`;
