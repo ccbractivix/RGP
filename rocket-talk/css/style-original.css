@@ -1,0 +1,524 @@
+/* ===== BASE STYLES ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #ffffff;
+    color: #333;
+    line-height: 1.6;
+    max-width: 100vw;
+    overflow-x: hidden;
+}
+
+/* ===== LOADING SCREEN ===== */
+#loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease;
+}
+
+#loading.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.rocket-icon {
+    font-size: 3rem;
+    animation: bounce 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-20px); }
+}
+
+.loading-text {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+    color: #666;
+}
+
+/* ===== HEADER ===== */
+header {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    color: white;
+    text-align: center;
+    padding: 1.2rem 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.header-top-line {
+    font-size: 0.85rem;
+    font-weight: 300;
+    letter-spacing: 1px;
+    opacity: 0.9;
+    margin-bottom: 0.2rem;
+}
+
+.header-main-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+/* ===== MAIN CONTENT ===== */
+main {
+    padding: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* ===== CHRIS SAYS SECTION ===== */
+.chris-says-section {
+    background: #fff8e1;
+    border-left: 4px solid #ff8f00;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.2rem;
+}
+
+.chris-says-section h2 {
+    font-size: 1.1rem;
+    color: 
+        #e65100;
+    margin-bottom: 0.5rem;
+}
+
+.chris-says-entry {
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid #ffe0b2;
+}
+
+.chris-says-entry:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.chris-says-date {
+    font-size: 0.75rem;
+    color: #999;
+    margin-bottom: 0.2rem;
+}
+
+.chris-says-text {
+    font-size: 0.95rem;
+    color: #444;
+}
+
+/* ===== LAUNCH CARDS ===== */
+.launch-card {
+    background: #f5f5f5;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+    border: 2px solid #1a1a2e;
+    position: relative;
+}
+
+.launch-card-header {
+    font-family: 'Calibri', 'Gill Sans', 'Trebuchet MS', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 0.3rem;
+    line-height: 1.3;
+}
+
+.launch-vehicle {
+    font-family: 'Calibri', 'Gill Sans', 'Trebuchet MS', sans-serif;
+    font-size: 1.2rem;
+    color: #444;
+    margin-bottom: 0.5rem;
+}
+
+/* ===== LAUNCH CARD IMAGE ===== */
+.launch-image {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 300px;
+    object-fit: contain;
+    background: #e0e0e0;
+    margin: 0;
+}
+
+.launch-content {
+    padding: 1.2rem;
+}
+
+
+.launch-card img:not(.launch-image) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
+}
+
+.launch-headline {
+    font-size: 1rem;
+    color: #e65100;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-style: italic;
+}
+
+.launch-detail {
+    font-size: 0.95rem;
+    color: #555;
+    margin-bottom: 0.3rem;
+}
+
+.launch-detail strong {
+    color: #333;
+}
+
+/* ===== COUNTDOWN ===== */
+.launch-countdown {
+    font-family: 'Calibri', 'Gill Sans', 'Trebuchet MS', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    text-align: center;
+    color: #1a1a2e;
+    background: #e8eaf6;
+    border-radius: 8px;
+    padding: 0.8rem;
+    margin: 0.8rem 0;
+    letter-spacing: 1px;
+}
+
+.countdown-tbd {
+    font-family: 'Calibri', 'Gill Sans', 'Trebuchet MS', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    text-align: center;
+    color: #888;
+    background: #f0f0f0;
+    border-radius: 8px;
+    padding: 0.8rem;
+    margin: 0.8rem 0;
+}
+
+/* ===== MISSION INFO DROPDOWN ===== */
+.mission-info-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #e0e0e0;
+    border: none;
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    margin-top: 0.8rem;
+    width: 100%;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #333;
+    transition: background 0.2s;
+}
+
+.mission-info-toggle:hover {
+    background: #d0d0d0;
+}
+
+.mission-info-toggle .arrow {
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+}
+
+.mission-info-toggle.open .arrow {
+    transform: rotate(180deg);
+}
+
+.mission-info-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, padding 0.3s ease;
+    background: #fafafa;
+    border-radius: 0 0 8px 8px;
+    padding: 0 1rem;
+}
+
+.mission-info-content.open {
+    max-height: 500px;
+    padding: 0.8rem 1rem;
+}
+
+.mission-info-content p {
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.5;
+}
+
+/* ===== STATUS BADGES ===== */
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.status-go {
+    background: #c8e6c9;
+    color: #2e7d32;
+}
+
+.status-tbd {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.status-hold {
+    background: #ffcdd2;
+    color: #c62828;
+}
+
+.status-tbc {
+    background: #e1f5fe;
+    color: #0277bd;
+}
+
+.status-inflight {
+    background: #e8eaf6;
+    color: #283593;
+}
+
+/* ===== TRAJECTORY ===== */
+.trajectory-info {
+    font-size: 0.9rem;
+    color: #555;
+    margin: 0.3rem 0;
+}
+
+/* ===== VIEWING GUIDE ===== */
+.viewing-guide {
+    background: #e8f5e9;
+    border-radius: 8px;
+    padding: 0.8rem;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+    color: #2e7d32;
+}
+
+.viewing-guide strong {
+    display: block;
+    margin-bottom: 0.3rem;
+}
+
+/* ===== ROCKET TALK LIVE BUTTON ===== */
+.rocket-talk-live-btn {
+    display: block;
+    text-align: center;
+    background: linear-gradient(135deg, #d32f2f, #b71c1c);
+    color: white;
+    text-decoration: none;
+    padding: 0.8rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-top: 0.8rem;
+    animation: pulse-live 2s ease-in-out infinite;
+}
+
+.rocket-talk-live-btn:hover {
+    opacity: 0.9;
+}
+
+@keyframes pulse-live {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.4); }
+    50% { box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
+}
+
+/* ===== NO LAUNCHES MESSAGE ===== */
+.no-launches {
+    text-align: center;
+    padding: 2rem;
+    color: #888;
+    font-size: 1.1rem;
+}
+
+/* ===== REFRESH BADGE ===== */
+.refresh-badge {
+    text-align: center;
+    font-size: 0.75rem;
+    color: #aaa;
+    padding: 0.5rem;
+    margin-top: 1rem;
+}
+
+/* ===== FILMSTRIP ===== */
+.filmstrip-section {
+    margin-top: 2rem;
+    padding: 1rem 0;
+}
+
+.filmstrip-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.5rem 1rem;
+}
+
+.filmstrip {
+    display: flex;
+    gap: 10px;
+    scroll-snap-type: x mandatory;
+}
+
+.filmstrip::-webkit-scrollbar {
+    height: 4px;
+}
+
+.filmstrip::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.filmstrip img {
+    height: 120px;
+    width: auto;
+    border-radius: 8px;
+    scroll-snap-align: start;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.gallery-link {
+    display: block;
+    text-align: center;
+    margin-top: 0.8rem;
+    color: #1565c0;
+    font-size: 0.9rem;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.gallery-link:hover {
+    text-decoration: underline;
+}
+
+/* ===== FOOTER DIVIDER ===== */
+.footer-divider {
+    height: 3px;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    margin: 1.5rem 0;
+    border: none;
+}
+
+/* ===== DISCLAIMER ===== */
+.disclaimer {
+    font-size: 0.7rem;
+    color: #999;
+    text-align: center;
+    padding: 0 1rem;
+    line-height: 1.4;
+    margin-bottom: 1rem;
+}
+
+/* ===== FOOTER BAR ===== */
+.footer-bar {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    padding: 1rem;
+    text-align: center;
+    margin-top: 1rem;
+}
+
+.footer-bar img {
+    max-width: 250px;
+    width: 80%;
+    height: auto;
+}
+
+/* ===== ADMIN PAGE ===== */
+.admin-container {
+    padding: 1rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.admin-container h2 {
+    margin: 1.5rem 0 0.5rem;
+    color: #1a1a2e;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+}
+
+.admin-table th,
+.admin-table td {
+    border: 1px solid #ddd;
+    padding: 0.5rem;
+    text-align: left;
+}
+
+.admin-table th {
+    background: #1a1a2e;
+    color: white;
+}
+
+.admin-table tr:nth-child(even) {
+    background: #f5f5f5;
+}
+
+.uuid-cell {
+    cursor: pointer;
+    color: #1565c0;
+    font-family: monospace;
+    font-size: 0.75rem;
+    word-break: break-all;
+}
+
+.uuid-cell:hover {
+    text-decoration: underline;
+}
+
+.copy-toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 1000;
+}
+
+.copy-toast.show {
+    opacity: 1;
+}
+
+.cms-status-yes {
+    color: #2e7d32;
+    font-weight: 600;
+}
+
+.cms-status-no {
+    color: #999;
+}
