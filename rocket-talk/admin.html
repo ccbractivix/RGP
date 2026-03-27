@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rocket Talk — CMS Reference</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      padding: 1rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+      color: #0b0d17;
+    }
+    .subtitle {
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 1.5rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      font-size: 0.8rem;
+    }
+    th {
+      background: #0b0d17;
+      color: #fff;
+      padding: 0.6rem 0.5rem;
+      text-align: left;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    td {
+      padding: 0.5rem;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    .uuid-cell {
+      font-family: 'Courier New', monospace;
+      font-size: 0.7rem;
+      word-break: break-all;
+      max-width: 200px;
+    }
+    .copy-btn {
+      background: #0288d1;
+      color: #fff;
+      border: none;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .copy-btn:active { opacity: 0.7; }
+    .copy-btn.copied { background: #00c853; }
+    .has-cms {
+      display: inline-block;
+      background: #00c853;
+      color: #fff;
+      font-size: 0.55rem;
+      padding: 0.1rem 0.3rem;
+      border-radius: 3px;
+      font-weight: 700;
+    }
+    .no-cms {
+      display: inline-block;
+      background: #e0e0e0;
+      color: #999;
+      font-size: 0.55rem;
+      padding: 0.1rem 0.3rem;
+      border-radius: 3px;
+    }
+    .loading { text-align: center; padding: 2rem; color: #999; }
+    .error { text-align: center; padding: 2rem; color: #d50000; }
+  </style>
+</head>
+<body>
+
+  <h1>🚀 Rocket Talk — CMS Reference</h1>
+  <p class="subtitle">Copy UUIDs to use in CMS JSON files. Green badge = CMS entry exists.</p>
+
+  <div id="table-container">
+    <div class="loading">Loading launches...</div>
+  </div>
+
+  <script>
+    const API_BASE = 'https://ll.thespacedevs.com/2.3.0';
+    const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
+    const PAD_LOCATION_IDS = [12, 27];
+
+    async function init() {
+      const container = document.getElementById('table-container');
+
+      try {
+        let cmsLaunches = {};
+        let cmsChrisSays = {};
+        try {
+          const lr = await fetch('cms/launches.json?v=' + Date.now());
+          const ld = await lr.json();
+          cmsLaunches = ld.launches || {};
+        } catch(e) {}
+        try {
+          const cr = await fetch('cms/chris-says.json?v=' + Date.now());
+          const cd = await cr.json();
+          cmsChrisSays = cd.entries || {};
+        } catch(e) {}
+
+        const allLaunches = [];
+        for (const locId of PAD_LOCATION_IDS) {
+          const url = `${API_BASE}/launches/upcoming/?` + new URLSearchParams({
+            location__ids: locId,
+            limit: 50,
+            mode: 'detailed',
+            format: 'json'
+          });
+          const resp = await fetch(url, {
+            headers: { 'Authorization': `Token ${API_KEY}` }
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.results) allLaunches.push(...data.results);
+          }
+        }
+
+        const seen = new Set();
+        const launches = allLaunches.filter(l => {
+          if (seen.has(l.id)) return false;
+          seen.add(l.id);
+          return true;
+        });
+
+        launches.sort((a, b) => {
+          const aD = a.window_start ? new Date(a.window_start) : new Date('2099-01-01');
+          const bD = b.window_start ? new Date(b.window_start) : new Date('2099-01-01');
+          return aD - bD;
+        });
+
+        if (launches.length === 0) {
+          container.innerHTML = '<div class="loading">No upcoming launches found.</div>';
+          return;
+        }
+
+        let html = '<table><thead><tr><th>Mission</th><th>Vehicle</th><th>Date</th><th>UUID</th><th>CMS</th><th></th></tr></thead><tbody>';
+
+        launches.forEach(l => {
+          const date = l.window_start
+            ? new Date(l.window_start).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' })
+            : 'TBD';
+          const vehicle = (l.rocket && l.rocket.configuration)
+            ? (l.rocket.configuration.full_name || l.rocket.configuration.name || '—')
+            : '—';
+          const hasCMS = cmsLaunches[l.id] || cmsChrisSays[l.id];
+          const badge = hasCMS ? '<span class="has-cms">CMS ✓</span>' : '<span class="no-cms">None</span>';
+
+          html += `<tr>
+            <td>${l.name || 'Unknown'}</td>
+            <td>${vehicle}</td>
+            <td>${date}</td>
+            <td class="uuid-cell">${l.id}</td>
+            <td>${badge}</td>
+            <td><button class="copy-btn" onclick="copyUUID(this, '${l.id}')">Copy</button></td>
+          </tr>`;
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+      } catch (err) {
+        container.innerHTML = `<div class="error">Error loading data: ${err.message}</div>`;
+      }
+    }
+
+    function copyUUID(btn, uuid) {
+      navigator.clipboard.writeText(uuid).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    init();
+  </script>
+
+</body>
+</html>
