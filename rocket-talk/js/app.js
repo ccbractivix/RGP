@@ -58,7 +58,7 @@ async function fetchLaunches() {
             mode: 'detailed'
         });
 
-        const url = `${API_BASE}?${params}`;
+        const apiurl = `${API_BASE}?${params}`;
         console.log('Fetching:', url);
 
         const response = await fetch(url, {
