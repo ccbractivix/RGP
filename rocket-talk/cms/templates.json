@@ -1,0 +1,8 @@
+{
+  "templates": {
+    "falcon9_standard": {
+      "name": "Falcon 9 — Standard Presentation",
+      "body": "Welcome to **Rocket Talk LIVE!**\n\nTonight we're watching **{{mission_name}}** launch aboard a **{{launch_vehicle}}** on **{{event_date}}** at **{{event_time}}** ET.\n\nJoin us for a guided viewing experience!"
+    }
+  }
+}
