@@ -380,14 +380,20 @@ function formatTimeET(date) {
 // ── Template Processing ──
 function processTemplate(text, vars) {
     if (!text) return '';
-    let result = text
-        .replace(/\{\{mission_name\}\}/g, vars.missionName || '')
-        .replace(/\{\{launch_vehicle\}\}/g, vars.vehicleName || '')
-        .replace(/\{\{event_date\}\}/g, vars.dateStr || '')
-        .replace(/\{\{event_time\}\}/g, vars.timeStr || '');
 
-    // Process any additional custom variables (e.g., launch_date from Rocket Talk events)
-    for (const [key, value] of Object.entries(vars)) {
+    // Build a single replacement map — custom vars override defaults
+    const defaults = {
+        mission_name: vars.missionName || '',
+        launch_vehicle: vars.vehicleName || '',
+        event_date: vars.dateStr || '',
+        event_time: vars.timeStr || ''
+    };
+
+    // Custom variables from CMS override defaults
+    const merged = Object.assign({}, defaults, vars);
+
+    let result = text;
+    for (const [key, value] of Object.entries(merged)) {
         const regex = new RegExp('\\{\\{' + key + '\\}\\}', 'g');
         result = result.replace(regex, value);
     }
