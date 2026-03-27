@@ -594,3 +594,25 @@ main {
 .cms-status-no {
     color: #999;
 }
+.countdown-dormant {
+  font-family: Calibri, sans-serif;
+  font-size: 1.2rem;
+  color: #888;
+  padding: 0.4rem 0;
+}
+
+.countdown-active {
+  font-family: Calibri, sans-serif;
+  font-size: 1.6rem;
+  color: #d32f2f;
+  font-weight: 700;
+  padding: 0.4rem 0;
+}
+
+.countdown-launched {
+  font-family: Calibri, sans-serif;
+  font-size: 1.4rem;
+  color: #00c853;
+  font-weight: 700;
+  padding: 0.4rem 0;
+}
