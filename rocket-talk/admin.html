@@ -85,12 +85,19 @@
     }
     .loading { text-align: center; padding: 2rem; color: #999; }
     .error { text-align: center; padding: 2rem; color: #d50000; }
+    .filter-note {
+      font-size: 0.7rem;
+      color: #666;
+      margin-bottom: 1rem;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
 
   <h1>🚀 Rocket Talk — CMS Reference</h1>
   <p class="subtitle">Copy UUIDs to use in CMS JSON files. Green badge = CMS entry exists.</p>
+  <p class="filter-note">Showing launches within the next 14 days from Kennedy Space Center &amp; Cape Canaveral SFS.</p>
 
   <div id="table-container">
     <div class="loading">Loading launches...</div>
@@ -100,13 +107,15 @@
     const API_BASE = 'https://ll.thespacedevs.com/2.3.0';
     const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
     const PAD_LOCATION_IDS = [12, 27];
+    const WINDOW_DAYS = 14;
 
     async function init() {
       const container = document.getElementById('table-container');
 
       try {
+        // Load CMS data
         let cmsLaunches = {};
-        let cmsChrisSays = {};
+        let cmsChrisSays = [];
         try {
           const lr = await fetch('cms/launches.json?v=' + Date.now());
           const ld = await lr.json();
@@ -115,13 +124,28 @@
         try {
           const cr = await fetch('cms/chris-says.json?v=' + Date.now());
           const cd = await cr.json();
-          cmsChrisSays = cd.entries || {};
+          cmsChrisSays = Array.isArray(cd) ? cd : (cd.entries || []);
         } catch(e) {}
 
+        // Build chris-says lookup by launch_id
+        const chrisSaysByLaunch = {};
+        cmsChrisSays.forEach(entry => {
+          if (entry.launch_id) {
+            chrisSaysByLaunch[entry.launch_id] = true;
+          }
+        });
+
+        // Calculate 14-day window
+        const now = new Date();
+        const cutoff = new Date(now.getTime() + WINDOW_DAYS * 24 * 60 * 60 * 1000);
+        const cutoffISO = cutoff.toISOString();
+
+        // Fetch launches with 14-day window
         const allLaunches = [];
         for (const locId of PAD_LOCATION_IDS) {
           const url = `${API_BASE}/launches/upcoming/?` + new URLSearchParams({
             location__ids: locId,
+            net__lte: cutoffISO,
             limit: 50,
             mode: 'detailed',
             format: 'json'
@@ -135,6 +159,7 @@
           }
         }
 
+        // Deduplicate
         const seen = new Set();
         const launches = allLaunches.filter(l => {
           if (seen.has(l.id)) return false;
@@ -142,6 +167,7 @@
           return true;
         });
 
+        // Sort chronologically
         launches.sort((a, b) => {
           const aD = a.window_start ? new Date(a.window_start) : new Date('2099-01-01');
           const bD = b.window_start ? new Date(b.window_start) : new Date('2099-01-01');
@@ -149,11 +175,11 @@
         });
 
         if (launches.length === 0) {
-          container.innerHTML = '<div class="loading">No upcoming launches found.</div>';
+          container.innerHTML = '<div class="loading">No launches found in the next 14 days.</div>';
           return;
         }
 
-        let html = '<table><thead><tr><th>Mission</th><th>Vehicle</th><th>Date</th><th>UUID</th><th>CMS</th><th></th></tr></thead><tbody>';
+        let html = '<table><thead><tr><th>Mission</th><th>Vehicle</th><th>Date (ET)</th><th>UUID</th><th>CMS</th><th></th></tr></thead><tbody>';
 
         launches.forEach(l => {
           const date = l.window_start
@@ -162,7 +188,7 @@
           const vehicle = (l.rocket && l.rocket.configuration)
             ? (l.rocket.configuration.full_name || l.rocket.configuration.name || '—')
             : '—';
-          const hasCMS = cmsLaunches[l.id] || cmsChrisSays[l.id];
+          const hasCMS = cmsLaunches[l.id] || chrisSaysByLaunch[l.id];
           const badge = hasCMS ? '<span class="has-cms">CMS ✓</span>' : '<span class="no-cms">None</span>';
 
           html += `<tr>
