@@ -108,7 +108,6 @@ async function fetchLaunches() {
     } catch (error) {
         console.error('Fetch error:', error);
 
-        // Try localStorage fallback
         const cached = localStorage.getItem('rocketTalkLaunches');
         if (cached) {
             console.log('Error occurred, using cached data');
@@ -143,9 +142,6 @@ function renderLaunches(launches) {
     console.log('renderLaunches() called with', launches?.length, 'launches');
     const container = document.getElementById('launches-container');
 
-    // Render Chris Says first
-    renderChrisSays();
-
     if (!launches || launches.length === 0) {
         container.innerHTML = '<div class="no-launches">No launches scheduled in the next 14 days from the Space Coast.</div>';
         return;
@@ -170,7 +166,7 @@ function createLaunchCard(launch) {
     const missionType = launch.mission?.type || '';
     const orbit = launch.mission?.orbit?.name || '';
 
-    // Handle image - could be string URL or object with image_url
+    // Handle image
     let imageUrl = '';
     if (typeof launch.image === 'string') {
         imageUrl = launch.image;
@@ -181,21 +177,30 @@ function createLaunchCard(launch) {
     }
     console.log('Launch:', missionName, '| Image:', imageUrl);
 
-    // CMS fields
-    const headline = cms.headline || '';
-    const viewingGuide = cms.viewing_guide || '';
-    const trajectory = cms.trajectory || '';
+    // CMS fields - standard template vars
+    const templateVars = {
+        missionName: missionName,
+        vehicleName: vehicleName,
+        dateStr: dateStr,
+        timeStr: timeStr
+    };
 
-    // Rocket Talk Live
+    const headline = cms.headline ? processTemplate(cms.headline, templateVars) : '';
+    const viewingGuide = cms.viewing_guide ? processTemplate(cms.viewing_guide, templateVars) : '';
+    const trajectory = cms.trajectory ? processTemplate(cms.trajectory, templateVars) : '';
+
+    // Rocket Talk content from CMS
+    const rocketTalkContent = getRocketTalkContent(launch.id, templateVars);
+
+    // Chris Says entries for this launch
+    const chrisSaysHtml = getChrisSaysHtml(launch.id);
+
+    // Rocket Talk Live badge
     const liveBadge = cms.rocket_talk_live?.enabled
         ? '<a href="' + cms.rocket_talk_live.url + '" target="_blank" class="live-badge">🔴 ' + (cms.rocket_talk_live.label || 'LIVE') + '</a>'
         : '';
 
-    // Template processing
-    const processedHeadline = processTemplate(headline, { missionName: missionName, vehicleName: vehicleName, dateStr: dateStr, timeStr: timeStr });
-    const processedViewing = processTemplate(viewingGuide, { missionName: missionName, vehicleName: vehicleName, dateStr: dateStr, timeStr: timeStr });
-    const processedTrajectory = processTemplate(trajectory, { missionName: missionName, vehicleName: vehicleName, dateStr: dateStr, timeStr: timeStr });
-
+    // ── Build Card HTML ──
     let html = '<div class="launch-card" data-launch-id="' + launch.id + '">';
 
     if (imageUrl) {
@@ -203,13 +208,12 @@ function createLaunchCard(launch) {
     }
 
     html += '<div class="launch-content">';
+
+    // Status badge and live badge
     html += '<div class="status-badge status-' + status.class + '">' + status.text + '</div>';
     html += liveBadge;
 
-    if (processedHeadline) {
-        html += '<div class="cms-headline">' + processedHeadline + '</div>';
-    }
-
+    // Launch header info
     html += '<h2 class="mission-name">' + missionName + '</h2>';
     html += '<div class="vehicle-name">🚀 ' + vehicleName + '</div>';
     html += '<div class="launch-datetime">';
@@ -222,15 +226,42 @@ function createLaunchCard(launch) {
     html += '</div>';
     html += '<div class="launch-location">📍 ' + padName + (locationName ? ', ' + locationName : '') + '</div>';
 
-    if (processedViewing) {
-        html += '<div class="viewing-guide"><strong>👀 Viewing Guide:</strong> ' + processedViewing + '</div>';
-    }
-    if (processedTrajectory) {
-        html += '<div class="trajectory-info"><strong>📐 Trajectory:</strong> ' + processedTrajectory + '</div>';
+    // ── CMS Sections in Order ──
+
+    // 1. Headline (always visible)
+    if (headline) {
+        html += '<div class="cms-headline">' + headline + '</div>';
     }
 
+    // 2. Viewing Guide (always visible)
+    if (viewingGuide) {
+        html += '<div class="cms-viewing-guide"><strong>👀 Viewing Guide:</strong> ' + viewingGuide + '</div>';
+    }
+
+    // 3. Trajectory (always visible)
+    if (trajectory) {
+        html += '<div class="cms-trajectory"><strong>📐 Trajectory:</strong> ' + trajectory + '</div>';
+    }
+
+    // 4. Rocket Talk (collapsible dropdown)
+    if (rocketTalkContent) {
+        html += '<details class="rocket-talk-dropdown">';
+        html += '<summary>🎙️ Rocket Talk</summary>';
+        html += '<div class="rocket-talk-content">' + rocketTalkContent + '</div>';
+        html += '</details>';
+    }
+
+    // 5. Chris Says (collapsible dropdown)
+    if (chrisSaysHtml) {
+        html += '<details class="chris-says-dropdown">';
+        html += '<summary>💬 Chris Says</summary>';
+        html += '<div class="chris-says-content">' + chrisSaysHtml + '</div>';
+        html += '</details>';
+    }
+
+    // 6. Mission Info (collapsible dropdown — always last)
     html += '<details class="mission-info-dropdown">';
-    html += '<summary>Mission Info</summary>';
+    html += '<summary>ℹ️ Mission Info</summary>';
     html += '<div class="mission-info-content">';
     if (missionType) {
         html += '<p><strong>Type:</strong> ' + missionType + '</p>';
@@ -244,7 +275,63 @@ function createLaunchCard(launch) {
         html += '<p>No additional mission details available.</p>';
     }
     html += '</div></details>';
+
     html += '</div></div>';
+
+    return html;
+}
+
+// ── Get Rocket Talk Content from CMS ──
+function getRocketTalkContent(launchId, templateVars) {
+    const cms = cmsData.launches?.[launchId];
+    if (!cms || !cms.rocket_talk) return '';
+
+    const rt = cms.rocket_talk;
+
+    // Template reference with custom variables
+    if (typeof rt === 'object' && rt.template) {
+        const templateText = cmsData.templates[rt.template];
+        if (!templateText) return '';
+
+        // Merge standard template vars with custom event vars
+        const mergedVars = Object.assign({}, templateVars, rt.variables || {});
+        return processTemplate(templateText, mergedVars);
+    }
+
+    // Plain string
+    if (typeof rt === 'string') {
+        return processTemplate(rt, templateVars);
+    }
+
+    return '';
+}
+
+// ── Get Chris Says HTML for a specific launch ──
+function getChrisSaysHtml(launchId) {
+    const entries = cmsData.chrisSays?.entries;
+    if (!Array.isArray(entries) || entries.length === 0) return '';
+
+    // Filter: entries with matching launch_id, or entries with no launch_id (global)
+    const filtered = entries
+        .filter(entry => !entry.launch_id || entry.launch_id === launchId)
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 5);
+
+    if (filtered.length === 0) return '';
+
+    let html = '';
+    filtered.forEach(entry => {
+        const dateFormatted = new Date(entry.date).toLocaleDateString('en-US', {
+            timeZone: 'America/New_York',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        });
+        html += '<div class="chris-says-entry">';
+        html += '<div class="chris-says-date">' + dateFormatted + '</div>';
+        html += '<div class="chris-says-text">' + entry.text + '</div>';
+        html += '</div>';
+    });
 
     return html;
 }
@@ -285,6 +372,24 @@ function formatTimeET(date) {
     });
 }
 
+// ── Template Processing ──
+function processTemplate(text, vars) {
+    if (!text) return '';
+    let result = text
+        .replace(/\{\{mission_name\}\}/g, vars.missionName || '')
+        .replace(/\{\{launch_vehicle\}\}/g, vars.vehicleName || '')
+        .replace(/\{\{event_date\}\}/g, vars.dateStr || '')
+        .replace(/\{\{event_time\}\}/g, vars.timeStr || '');
+
+    // Process any additional custom variables (e.g., launch_date from Rocket Talk events)
+    for (const [key, value] of Object.entries(vars)) {
+        const regex = new RegExp('\\{\\{' + key + '\\}\\}', 'g');
+        result = result.replace(regex, value);
+    }
+
+    return result;
+}
+
 // ── Countdown Timers ──
 function initCountdowns(launches) {
     if (window.countdownInterval) clearInterval(window.countdownInterval);
@@ -312,50 +417,6 @@ function initCountdowns(launches) {
             el.textContent = String(days).padStart(2, '0') + ':' + String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
         });
     }, 1000);
-}
-
-// ── Chris Says Section ──
-function renderChrisSays() {
-    var container = document.getElementById('chris-says-container');
-    if (!container) return;
-
-    if (!Array.isArray(cmsData.chrisSays?.entries) || cmsData.chrisSays.entries.length === 0) {
-        container.innerHTML = '';
-        return;
-    }
-
-    var entries = cmsData.chrisSays.entries
-        .sort(function (a, b) { return new Date(b.date) - new Date(a.date); })
-        .slice(0, 5);
-
-    var html = '<div class="chris-says-section">';
-    html += '<h3 class="chris-says-header">🎙️ Chris Says...</h3>';
-
-    entries.forEach(function (entry) {
-        var dateFormatted = new Date(entry.date).toLocaleDateString('en-US', {
-            timeZone: 'America/New_York',
-            month: 'long',
-            day: 'numeric',
-            year: 'numeric'
-        });
-        html += '<div class="chris-says-entry">';
-        html += '<div class="chris-says-date">' + dateFormatted + '</div>';
-        html += '<div class="chris-says-text">' + entry.text + '</div>';
-        html += '</div>';
-    });
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-// ── Template Processing ──
-function processTemplate(text, vars) {
-    if (!text) return '';
-    return text
-        .replace(/\{\{mission_name\}\}/g, vars.missionName || '')
-        .replace(/\{\{launch_vehicle\}\}/g, vars.vehicleName || '')
-        .replace(/\{\{event_date\}\}/g, vars.dateStr || '')
-        .replace(/\{\{event_time\}\}/g, vars.timeStr || '');
 }
 
 // ── Smart Refresh Scheduling ──
