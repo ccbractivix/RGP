@@ -1,88 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Rocket Talk</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rocket Talk</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <!-- LOADING SCREEN -->
-  <div id="loading-screen">
-    <div class="loading-rocket">🚀</div>
-    <p class="loading-text">Loading launches...</p>
-  </div>
-
-  <!-- MAIN CONTENT -->
-  <div id="app" class="hidden">
-
-    <!-- HEADER -->
-    <header id="site-header">
-      <div class="header-line1">Chris the Rocket Guy Presents</div>
-      <div class="header-line2">Rocket Talk</div>
-    </header>
-
-    <!-- LAUNCH CARDS CONTAINER -->
-    <main id="launch-container">
-      <!-- Cards injected by JS -->
-    </main>
-
-    <!-- NO LAUNCHES MESSAGE -->
-    <div id="no-launches" class="hidden">
-      <div class="no-launches-icon">🚀</div>
-      <p>No launches scheduled in the next 14 days from Kennedy Space Center or Cape Canaveral.</p>
-      <p class="check-back">Check back soon!</p>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="rocket-icon">🚀</div>
+        <div class="loading-text">Loading launch data...</div>
     </div>
 
-    <!-- FOOTER -->
-    <footer id="site-footer">
+    <!-- Header -->
+    <header>
+        <div class="header-top-line">Chris the Rocket Guy Presents</div>
+        <div class="header-main-title">ROCKET TALK</div>
+    </header>
 
-      <!-- FILMSTRIP -->
-      <div class="filmstrip-section">
-        <div class="filmstrip-track" id="filmstrip-track">
-          <!-- Images injected by JS -->
+    <!-- Main Content -->
+    <main>
+        <div id="chris-says-container"></div>
+        <div id="launches-container"></div>
+        <div id="refresh-badge" class="refresh-badge"></div>
+    </main>
+
+    <!-- Filmstrip -->
+    <section class="filmstrip-section">
+        <div class="filmstrip-container">
+            <img src="../launch-tracker-2/images/film1.jpg" alt="Launch photo 1">
+            <img src="../launch-tracker-2/images/film2.jpg" alt="Launch photo 2">
+            <img src="../launch-tracker-2/images/film3.jpg" alt="Launch photo 3">
+            <img src="../launch-tracker-2/images/film4.jpg" alt="Launch photo 4">
+            <img src="../launch-tracker-2/images/film5.jpg" alt="Launch photo 5">
+            <img src="../launch-tracker-2/images/film6.jpg" alt="Launch photo 6">
+            <img src="../launch-tracker-2/images/film7.jpg" alt="Launch photo 7">
         </div>
-      </div>
-      <a href="https://sites.google.com/view/holidayinnclubcape/home/rocket-talk/galleries"
-         target="_blank"
-         rel="noopener noreferrer"
-         class="gallery-link">
-        📸 Launch Image Galleries By Local Photographers
-      </a>
+        <a href="https://sites.google.com/view/launch-image-galleries" target="_blank" class="gallery-link">📸 Launch Image Galleries By Local Photographers</a>
+    </section>
 
-      <!-- DIVIDER -->
-      <hr class="footer-divider">
+    <!-- Footer Divider & Disclaimer -->
+    <hr class="footer-divider">
+    <div class="disclaimer">
+        This site is not affiliated with, endorsed by, or sponsored by IHG Hotels & Resorts or Holiday Inn Club Vacations Incorporated. All trademarks, service marks, and brand names are the property of their respective owners. Content related to IHG or Holiday Inn Club Vacations is provided for informational purposes only.
+    </div>
 
-      <!-- HICV FOOTER -->
-      <div class="hicv-footer">
-        <img src="../launch-tracker-2/images/hicvfooter.png" alt="Holiday Inn Club Vacations" class="hicv-logo">
-        <p class="hicv-disclaimer">
-          The Holiday Inn Club® program and Holiday Inn Club Vacations® resorts are independently owned, operated and marketed and are not owned, operated or marketed by IHG® Hotels and Resorts or by the owner or the licensor of the Holiday Inn® brand. Copyright © 2022 Holiday Inn Club Vacations Incorporated. All rights reserved.
-        </p>
-        <p class="hicv-solicitation">
-          THIS MATERIAL IS BEING USED FOR THE PURPOSE OF SOLICITING SALES OF TIMESHARE INTERESTS
-        </p>
-        <p class="hicv-address">
-          Holiday Inn Club Vacations Incorporated, 9271 S John Young Parkway, Orlando, FL 32819
-        </p>
-      </div>
+    <!-- Footer Bar -->
+    <div class="footer-bar">
+        <img src="../launch-tracker-2/images/hicvfooter.png" alt="Holiday Inn Club Vacations">
+    </div>
 
-    </footer>
-
-  </div>
-
-  <!-- LAST UPDATED BADGE -->
-  <div id="refresh-badge">
-    Last updated: <span id="last-updated-time">--</span>
-    <br>Next refresh: <span id="next-refresh-time">--</span>
-  </div>
-
-  <script src="js/templates.js"></script>
-  <script src="js/cms.js"></script>
-  <script src="js/app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
