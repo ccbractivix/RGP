@@ -252,10 +252,10 @@ function createLaunchCard(launch) {
         html += '</details>';
     }
 
-    // 5. Chris Says (collapsible dropdown)
+  // 5. Chris Says (collapsible dropdown)
     if (chrisSaysHtml) {
         html += '<details class="chris-says-dropdown">';
-        html += '<summary>💬 Chris Says</summary>';
+        html += '<summary><img src="images/Chris icon.png" alt="Chris" style="height: 1.4em; vertical-align: middle; margin-right: 4px; border-radius: 50%;"> Chris Says</summary>';
         html += '<div class="chris-says-content">' + chrisSaysHtml + '</div>';
         html += '</details>';
     }
