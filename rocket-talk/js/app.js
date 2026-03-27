@@ -91,8 +91,13 @@ async function fetchLaunches() {
 
     for (const locId of CONFIG.LOCATION_IDS) {
         try {
-            const url = `${CONFIG.API_BASE}/launch/?location__ids=${locId}&net__gte=${startStr}&net__lte=${endStr}&limit=20&mode=detailed&token=${CONFIG.API_KEY}`;
-            const response = await fetch(url);
+            const url = `${CONFIG.API_BASE}/launch/?location__ids=${locId}&net__gte=${startStr}&net__lte=${endStr}&limit=20&mode=detailed`;
+const response = await fetch(url, {
+    headers: {
+        'Authorization': 'Token ' + CONFIG.API_KEY
+    }
+});
+
             if (response.ok) {
                 const data = await response.json();
                 allLaunches = allLaunches.concat(data.results || []);
