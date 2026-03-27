@@ -10,7 +10,7 @@ const REFRESH_30M = 60 * 1000;
 const INFLIGHT_REMOVAL_DELAY = 60 * 60 * 1000;
 const WINDOW_DAYS = 14;
 
-let cmsData = { launches: {}, chrisSays: { entries: [] }, templates: {} };
+let cmsData = { launches: {}, chrisSays: [], templates: {} };
 let refreshTimer = null;
 
 // ── Initialization ──
@@ -36,16 +36,12 @@ async function loadCMSData() {
             console.log('CMS launches loaded');
         }
         if (chrisSaysRes && chrisSaysRes.ok) {
-            cmsData.chrisSays = await chrisSaysRes.json();
-            console.log('CMS chris-says loaded');
+            const chrisSaysRaw = await chrisSaysRes.json();
+            cmsData.chrisSays = Array.isArray(chrisSaysRaw) ? chrisSaysRaw : chrisSaysRaw.entries || [];
+            console.log('CMS chris-says loaded:', cmsData.chrisSays.length, 'entries');
         }
         if (templatesRes && templatesRes.ok) {
-           if (chrisSaysRes && chrisSaysRes.ok) {
-    const chrisSaysRaw = await chrisSaysRes.json();
-    cmsData.chrisSays = Array.isArray(chrisSaysRaw) ? chrisSaysRaw : chrisSaysRaw.entries || [];
-    console.log('CMS chris-says loaded');
-}
-
+            cmsData.templates = await templatesRes.json();
             console.log('CMS templates loaded');
         }
     } catch (e) {
@@ -102,7 +98,6 @@ async function fetchLaunches() {
 
         const data = await response.json();
         console.log('API returned', data.count, 'launches');
-        console.log('First launch raw data:', JSON.stringify(data.results?.[0], null, 2));
 
         localStorage.setItem('rocketTalkLaunches', JSON.stringify(data.results));
 
@@ -180,29 +175,29 @@ function createLaunchCard(launch) {
     } else if (launch.image?.thumbnail_url) {
         imageUrl = launch.image.thumbnail_url;
     }
-    console.log('Launch:', missionName, '| Image:', imageUrl);
 
-    // CMS fields - standard template vars
+    // CMS template vars for headline/viewing guide/trajectory
     const templateVars = {
-        missionName: missionName,
-        vehicleName: vehicleName,
-        dateStr: dateStr,
-        timeStr: timeStr
+        mission_name: missionName,
+        launch_vehicle: vehicleName,
+        event_date: dateStr,
+        event_time: timeStr,
+        launch_date: dateStr
     };
 
     const headline = cms.headline ? processTemplate(cms.headline, templateVars) : '';
     const viewingGuide = cms.viewing_guide ? processTemplate(cms.viewing_guide, templateVars) : '';
     const trajectory = cms.trajectory ? processTemplate(cms.trajectory, templateVars) : '';
 
-    // Rocket Talk content from CMS
-    const rocketTalkContent = getRocketTalkContent(launch.id, templateVars);
+    // Rocket Talk content from CMS (pass full launch object)
+    const rocketTalkContent = getRocketTalkContent(launch);
 
     // Chris Says entries for this launch
     const chrisSaysHtml = getChrisSaysHtml(launch.id);
 
     // Rocket Talk Live badge
     const liveBadge = cms.rocket_talk_live?.enabled
-        ? '<a href="' + cms.rocket_talk_live.url + '" target="_blank" class="live-badge">🔴 ' + (cms.rocket_talk_live.label || 'LIVE') + '</a>'
+        ? '<a href="' + (cms.rocket_talk_live.url || '#') + '" target="_blank" class="live-badge">🔴 ' + (cms.rocket_talk_live.label || 'LIVE') + '</a>'
         : '';
 
     // ── Build Card HTML ──
@@ -308,19 +303,14 @@ function getRocketTalkContent(launch) {
     // CMS custom variables override defaults
     const merged = Object.assign({}, defaults, cms.variables || {});
 
+    // Template reference
     if (cms.template && cmsData.templates?.[cms.template]) {
         return processTemplate(cmsData.templates[cms.template], merged);
-    } else if (typeof cms === 'string') {
-        return processTemplate(cms, merged);
     }
 
-    return '';
-}
-
-
     // Plain string
-    if (typeof rt === 'string') {
-        return processTemplate(rt, templateVars);
+    if (typeof cms === 'string') {
+        return processTemplate(cms, merged);
     }
 
     return '';
@@ -331,7 +321,6 @@ function getChrisSaysHtml(launchId) {
     const entries = cmsData.chrisSays;
     if (!Array.isArray(entries) || entries.length === 0) return '';
 
-    // Filter: entries with matching launch_id, or entries with no launch_id (global)
     const filtered = entries
         .filter(entry => !entry.launch_id || entry.launch_id === launchId)
         .sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -396,21 +385,10 @@ function formatTimeET(date) {
 function processTemplate(text, vars) {
     if (!text) return '';
 
-    // Build a single replacement map — custom vars override defaults
-    const defaults = {
-        mission_name: vars.missionName || '',
-        launch_vehicle: vars.vehicleName || '',
-        event_date: vars.dateStr || '',
-        event_time: vars.timeStr || ''
-    };
-
-    // Custom variables from CMS override defaults
-    const merged = Object.assign({}, defaults, vars);
-
     let result = text;
-    for (const [key, value] of Object.entries(merged)) {
+    for (const [key, value] of Object.entries(vars)) {
         const regex = new RegExp('\\{\\{' + key + '\\}\\}', 'g');
-        result = result.replace(regex, value);
+        result = result.replace(regex, value || '');
     }
 
     return result;
