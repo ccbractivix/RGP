@@ -1,8 +1,8 @@
 var CONFIG = {
-    API_URL: 'https://ll.thespacedevs.com/2.3.0/launches/upcoming/',
+    API_URL: 'https://ll.thespacedevs.com/2.2.0/launch/upcoming/',
     API_KEY: '506485404eb785c1b7e1c3dac3ba394ba8fb6834',
-    SHEET_ID: '1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU',
     LOCATION_IDS: '12,27',
+    SHEET_ID: '1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU',
     REFRESH_INTERVAL: 300000,
     LOOKAHEAD_DAYS: 14
 };
@@ -18,18 +18,14 @@ function init() {
 
 async function fetchAllData() {
     try {
-        var results = await Promise.all([
-            fetchLaunches(),
-            fetchSheetData()
-        ]);
-        var launchData = results[0];
-        var cmsData = results[1];
+        var launchData = await fetchLaunches();
+        var cmsData = await fetchSheetData();
         launches = launchData.length > 0 ? launchData : launches;
         sheetData = cmsData.length > 0 ? cmsData : sheetData;
-        console.log('Launches: ' + launches.length + ', Sheet rows: ' + sheetData.length);
+        console.log('Active launches: ' + launches.length + ', Sheet rows: ' + sheetData.length);
         renderLaunches();
     } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Unexpected error in fetchAllData:', error);
         if (launches.length > 0) {
             renderLaunches();
         }
@@ -43,472 +39,524 @@ async function fetchLaunches() {
         '?location__ids=' + CONFIG.LOCATION_IDS +
         '&net__gte=' + now +
         '&net__lte=' + future +
-        '&limit=25&mode=detailed' +
-        '&api_key=' + CONFIG.API_KEY;
+        '&limit=25&mode=detailed';
 
     var maxRetries = 3;
     for (var attempt = 0; attempt < maxRetries; attempt++) {
         try {
-            var response = await fetch(url);
+            var response = await fetch(url, {
+                headers: {
+                    'Authorization': 'Token ' + CONFIG.API_KEY
+                }
+            });
             if (response.ok) {
                 var data = await response.json();
+                console.log('API returned ' + (data.results ? data.results.length : 0) + ' launches');
                 return data.results || [];
             }
             if (response.status === 429) {
                 var wait = Math.pow(2, attempt) * 5000;
-                console.warn('Rate limited (429). Retry ' + (attempt + 1) + ' in ' + (wait / 1000) + 's...');
+                console.warn('Rate limited (429). Retry ' + (attempt + 1) + '/' + maxRetries + ' in ' + (wait / 1000) + 's...');
                 await new Promise(function(resolve) { setTimeout(resolve, wait); });
-            } else {
-                throw new Error('API error: ' + response.status);
+                continue;
             }
+            console.warn('API returned status ' + response.status + '. Retry ' + (attempt + 1) + '/' + maxRetries);
+            var wait2 = Math.pow(2, attempt) * 5000;
+            await new Promise(function(resolve) { setTimeout(resolve, wait2); });
         } catch (error) {
-            if (attempt === maxRetries - 1) {
-                console.error('Fetch failed after retries:', error);
+            console.warn('Fetch attempt ' + (attempt + 1) + ' failed: ' + error.message);
+            if (attempt < maxRetries - 1) {
+                var wait3 = Math.pow(2, attempt) * 5000;
+                await new Promise(function(resolve) { setTimeout(resolve, wait3); });
             }
         }
     }
-    console.warn('All retries exhausted. Using cached data.');
+    console.warn('All ' + maxRetries + ' retries exhausted. Using cached launch data.');
     return [];
 }
 
 async function fetchSheetData() {
-    var url = 'https://docs.google.com/spreadsheets/d/' + CONFIG.SHEET_ID +
-        '/gviz/tq?tqx=out:json&sheet=Sheet1';
     try {
+        var url = 'https://docs.google.com/spreadsheets/d/' + CONFIG.SHEET_ID + '/gviz/tq?tqx=out:json';
         var response = await fetch(url);
         var text = await response.text();
-        var jsonString = text.substring(text.indexOf('(') + 1, text.lastIndexOf(')'));
-        var json = JSON.parse(jsonString);
-
-        if (!json.table || !json.table.rows) {
-            console.warn('No sheet data found');
-            return [];
-        }
-
+        var json = JSON.parse(text.substring(47, text.length - 2));
         var rows = json.table.rows;
-        var parsed = [];
-
+        var result = [];
         for (var i = 0; i < rows.length; i++) {
-            var row = rows[i];
-            if (!row.c) continue;
-
-            var launchName = getCellValue(row.c, 1);
-            if (!launchName) continue;
-
-            var contentType = getCellValue(row.c, 2);
-            var trajectory = getCellValue(row.c, 9);
-            var gallery = getCellValue(row.c, 8);
-
-            if (!contentType && !trajectory && !gallery) continue;
-
+            var c = rows[i].c;
             var entry = {
-                timestamp: getCellValue(row.c, 0),
-                launchName: launchName,
-                contentType: contentType || '',
-                message: getCellValue(row.c, 3),
-                eventDate: getCellValue(row.c, 4),
-                eventTime: getCellValue(row.c, 5),
-                slidesUrl: getCellValue(row.c, 6),
-                cancel: getCellValue(row.c, 7),
-                gallery: gallery || '',
-                trajectory: trajectory || '',
-                column10: getCellValue(row.c, 10)
+                timestamp: c[0] ? c[0].v : '',
+                launchName: c[1] ? (c[1].v || '') : '',
+                contentType: c[2] ? (c[2].v || '') : '',
+                message: c[3] ? (c[3].v || '') : '',
+                eventDate: c[4] ? (c[4].v || '') : '',
+                eventTime: c[5] ? (c[5].v || '') : '',
+                slidesUrl: c[6] ? (c[6].v || '') : '',
+                cancel: c[7] ? (c[7].v || '') : '',
+                galleryLink: c[8] ? (c[8].v || '') : '',
+                trajectory: c[9] ? (c[9].v || '') : ''
             };
-
-            console.log('Sheet row ' + i + ': name="' + entry.launchName + '", type="' + entry.contentType + '", traj="' + entry.trajectory + '", gallery="' + entry.gallery + '"');
-            parsed.push(entry);
+            console.log('Sheet row ' + i + ': name="' + entry.launchName + '", type="' + entry.contentType + '", trajectory="' + entry.trajectory + '", gallery="' + entry.galleryLink + '"');
+            result.push(entry);
         }
-
-        console.log('Total parsed sheet rows: ' + parsed.length);
-        return parsed;
+        return result;
     } catch (error) {
         console.error('Error fetching sheet data:', error);
         return [];
     }
 }
 
-function getCellValue(cells, index) {
-    if (!cells || !cells[index]) return '';
-    var cell = cells[index];
-    if (cell.f) return cell.f;
-    if (cell.v === null || cell.v === undefined) return '';
-    return String(cell.v);
+function normalizeName(name) {
+    if (!name) return '';
+    var normalized = name.toLowerCase().trim();
+
+    // Strip everything before pipe
+    if (normalized.indexOf('|') !== -1) {
+        normalized = normalized.substring(normalized.indexOf('|') + 1).trim();
+    }
+
+    // Normalize Atlas V variants
+    normalized = normalized.replace(/atlas\s*v\s*\d*/gi, 'atlas v');
+
+    // Remove extra whitespace
+    normalized = normalized.replace(/\s+/g, ' ');
+
+    console.log('normalizeName: "' + name + '" → "' + normalized + '"');
+    return normalized;
+}
+
+function isMatch(apiName, sheetName) {
+    var a = normalizeName(apiName);
+    var b = normalizeName(sheetName);
+    if (!a || !b) return false;
+    if (a === b) return true;
+    if (a.indexOf(b) !== -1 || b.indexOf(a) !== -1) return true;
+
+    var wordsA = a.split(' ');
+    var wordsB = b.split(' ');
+    var matches = 0;
+    var total = 0;
+    for (var i = 0; i < wordsB.length; i++) {
+        if (wordsB[i].length > 2) {
+            total++;
+            for (var j = 0; j < wordsA.length; j++) {
+                if (wordsA[j].indexOf(wordsB[i]) !== -1 || wordsB[i].indexOf(wordsA[j]) !== -1) {
+                    matches++;
+                    break;
+                }
+            }
+        }
+    }
+    var result = total > 0 && (matches / total) >= 0.5;
+    if (result) {
+        console.log('isMatch: "' + apiName + '" ≈ "' + sheetName + '" (' + matches + '/' + total + ' words)');
+    }
+    return result;
+}
+
+function getMatchedContent(launch) {
+    var matched = {
+        messages: [],
+        rocketTalk: [],
+        missionInfo: [],
+        viewingGuide: [],
+        chrisSays: [],
+        trajectory: [],
+        gallery: []
+    };
+    var launchName = launch.name || '';
+    console.log('getMatchedContent for: "' + launchName + '"');
+
+    for (var i = 0; i < sheetData.length; i++) {
+        var entry = sheetData[i];
+
+        // Check trajectory independently of content type
+        if (entry.trajectory && isMatch(launchName, entry.launchName)) {
+            matched.trajectory.push(entry);
+        }
+
+        // Check gallery independently of content type
+        if (entry.galleryLink && isMatch(launchName, entry.launchName)) {
+            matched.gallery.push(entry);
+        }
+
+        if (!isMatch(launchName, entry.launchName)) continue;
+
+        var type = (entry.contentType || '').toLowerCase().trim();
+        if (type === 'message') {
+            matched.messages.push(entry);
+        } else if (type === 'rocket talk live!') {
+            matched.rocketTalk.push(entry);
+        } else if (type === 'mission info') {
+            matched.missionInfo.push(entry);
+        } else if (type === 'launch viewing guide') {
+            matched.viewingGuide.push(entry);
+        } else if (type === 'chris says') {
+            matched.chrisSays.push(entry);
+        }
+    }
+
+    console.log('Matched content for "' + launchName + '":', 
+        'messages=' + matched.messages.length,
+        'rocketTalk=' + matched.rocketTalk.length,
+        'missionInfo=' + matched.missionInfo.length,
+        'viewingGuide=' + matched.viewingGuide.length,
+        'chrisSays=' + matched.chrisSays.length,
+        'trajectory=' + matched.trajectory.length,
+        'gallery=' + matched.gallery.length
+    );
+    return matched;
 }
 
 function parseSheetDate(dateStr) {
     if (!dateStr) return null;
-    var match = dateStr.match(/Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/);
-    if (match) {
+    var str = String(dateStr);
+    var dateMatch = str.match(/Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/);
+    if (dateMatch) {
         return new Date(
-            parseInt(match[1]),
-            parseInt(match[2]),
-            parseInt(match[3]),
-            parseInt(match[4]),
-            parseInt(match[5]),
-            parseInt(match[6])
+            parseInt(dateMatch[1]),
+            parseInt(dateMatch[2]),
+            parseInt(dateMatch[3]),
+            parseInt(dateMatch[4]),
+            parseInt(dateMatch[5]),
+            parseInt(dateMatch[6])
         );
     }
-    var d = new Date(dateStr);
+    var d = new Date(str);
     return isNaN(d.getTime()) ? null : d;
 }
 
-function normalizeName(name) {
-    if (!name) return '';
-    var cleaned = name;
-    if (cleaned.indexOf('|') !== -1) {
-        cleaned = cleaned.substring(cleaned.indexOf('|') + 1);
-    }
-    var result = cleaned
-        .toLowerCase()
-        .replace(/spacex|ula|blue\s*origin|rocket\s*lab|northrop\s*grumman|boeing|nasa|relativity/gi, '')
-        .replace(/falcon\s*(9|heavy)|atlas\s*v\s*\d*|vulcan\s*(centaur)?|new\s*glenn|electron|antares|delta\s*(iv|4)\s*heavy|starship|sls|terran/gi, '')
-        .replace(/[^a-z0-9\s]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-    console.log('NORMALIZE: "' + name + '" => "' + result + '"');
-    return result;
-}
-
-function isMatch(apiName, sheetName) {
-    var normApi = normalizeName(apiName);
-    var normSheet = normalizeName(sheetName);
-    if (!normApi || !normSheet) return false;
-    if (normApi === normSheet) return true;
-    if (normApi.indexOf(normSheet) !== -1 || normSheet.indexOf(normApi) !== -1) return true;
-
-    var apiWords = normApi.split(' ');
-    var sheetWords = normSheet.split(' ');
-    var matchCount = 0;
-    for (var i = 0; i < sheetWords.length; i++) {
-        for (var j = 0; j < apiWords.length; j++) {
-            if (sheetWords[i] === apiWords[j] && sheetWords[i].length > 2) {
-                matchCount++;
-                break;
-            }
-        }
-    }
-    var threshold = Math.min(sheetWords.length, apiWords.length) * 0.5;
-    return matchCount >= Math.max(threshold, 1);
-}
-
-function getMatchedContent(launchName) {
-    console.log('=== MATCHING FOR: "' + launchName + '" ===');
-    console.log('Sheet data rows: ' + sheetData.length);
-    for (var d = 0; d < sheetData.length; d++) {
-        console.log('  Row ' + d + ': name="' + sheetData[d].launchName + '", type="' + sheetData[d].contentType + '", traj="' + sheetData[d].trajectory + '"');
-        console.log('  Match result: ' + isMatch(launchName, sheetData[d].launchName));
-    }
-
-    var matched = sheetData.filter(function(row) {
-        return isMatch(launchName, row.launchName);
-    });
-    console.log('Matched rows: ' + matched.length);
-
-    var content = {
-        message: null,
-        rocketTalk: [],
-        missionInfo: null,
-        viewingGuide: null,
-        chrisSays: [],
-        trajectory: null,
-        gallery: null
-    };
-
-    for (var i = 0; i < matched.length; i++) {
-        var row = matched[i];
-        var type = row.contentType.toLowerCase().trim();
-
-        if (row.trajectory && !content.trajectory) {
-            content.trajectory = row.trajectory;
-        }
-
-        if (row.gallery && !content.gallery) {
-            content.gallery = row.gallery;
-        }
-
-        if (type === 'message') {
-            if (!content.message || (row.timestamp > content.message.timestamp)) {
-                content.message = row;
-            }
-        } else if (type === 'rocket talk live!' || type === 'rocket talk live') {
-            var isCancelled = false;
-            if (row.cancel && row.cancel.toLowerCase() === 'yes') {
-                isCancelled = true;
-            }
-            if (!isCancelled) {
-                content.rocketTalk.push(row);
-            }
-        } else if (type === 'mission info') {
-            content.missionInfo = row;
-        } else if (type === 'launch viewing guide') {
-            content.viewingGuide = row;
-        } else if (type === 'chris says') {
-            content.chrisSays.push(row);
-        }
-    }
-
-    content.rocketTalk.sort(function(a, b) {
-        var dateA = parseSheetDate(a.eventDate);
-        var dateB = parseSheetDate(b.eventDate);
-        if (dateA && dateB) return dateA.getTime() - dateB.getTime();
-        return 0;
-    });
-
-    content.chrisSays.sort(function(a, b) {
-        var tA = parseSheetDate(a.timestamp);
-        var tB = parseSheetDate(b.timestamp);
-        if (tA && tB) return tB.getTime() - tA.getTime();
-        return 0;
-    });
-
-    return content;
-}
-
-function getStatusBadge(status) {
-    if (!status) return '';
-    var name = status.name || '';
-    var abbrev = status.abbrev || '';
-    var colorMap = {
-        'Go': 'rgba(76, 175, 80, 0.2)',
-        'TBD': 'rgba(158, 158, 158, 0.2)',
-        'TBC': 'rgba(255, 193, 7, 0.2)',
-        'Hold': 'rgba(255, 152, 0, 0.2)',
-        'Failure': 'rgba(244, 67, 54, 0.2)',
-        'Success': 'rgba(76, 175, 80, 0.2)',
-        'In Flight': 'rgba(33, 150, 243, 0.2)'
-    };
-    var borderMap = {
-        'Go': 'rgba(76, 175, 80, 0.6)',
-        'TBD': 'rgba(158, 158, 158, 0.6)',
-        'TBC': 'rgba(255, 193, 7, 0.6)',
-        'Hold': 'rgba(255, 152, 0, 0.6)',
-        'Failure': 'rgba(244, 67, 54, 0.6)',
-        'Success': 'rgba(76, 175, 80, 0.6)',
-        'In Flight': 'rgba(33, 150, 243, 0.6)'
-    };
-    var bg = colorMap[abbrev] || 'rgba(158, 158, 158, 0.2)';
-    var border = borderMap[abbrev] || 'rgba(158, 158, 158, 0.6)';
-    return '<span class="status-badge" style="background:' + bg + ';border:1px solid ' + border + ';">' + name + '</span>';
-}
-
-function getRelativeTime(dateStr) {
-    var date = parseSheetDate(dateStr);
+function getRelativeTime(date) {
     if (!date) return '';
     var now = new Date();
-    var diff = now.getTime() - date.getTime();
+    var diff = now - date;
     var minutes = Math.floor(diff / 60000);
     var hours = Math.floor(diff / 3600000);
     var days = Math.floor(diff / 86400000);
-
     if (minutes < 1) return 'just now';
     if (minutes < 60) return minutes + 'm ago';
     if (hours < 24) return hours + 'h ago';
-    if (days < 7) return days + 'd ago';
-    return date.toLocaleDateString();
+    return days + 'd ago';
 }
 
-function formatEventDate(dateStr, timeStr) {
-    var date = parseSheetDate(dateStr);
-    if (!date) return dateStr || '';
-    var options = { weekday: 'short', month: 'short', day: 'numeric' };
-    var formatted = date.toLocaleDateString('en-US', options);
-    if (timeStr) {
-        formatted += ' at ' + timeStr;
+function formatCountdown(diff) {
+    if (diff <= 0) return null;
+    var days = Math.floor(diff / 86400000);
+    var hours = Math.floor((diff % 86400000) / 3600000);
+    var minutes = Math.floor((diff % 3600000) / 60000);
+    var seconds = Math.floor((diff % 60000) / 1000);
+    var parts = [];
+    if (days > 0) parts.push(days + 'd');
+    if (hours > 0) parts.push(hours + 'h');
+    parts.push(minutes + 'm');
+    parts.push(seconds + 's');
+    return 'T-' + parts.join(' ');
+}
+
+function getStatusColor(status) {
+    if (!status) return 'rgba(255,255,255,0.1)';
+    var abbrev = status.abbrev || '';
+    switch (abbrev) {
+        case 'Go': return 'rgba(76,175,80,0.2)';
+        case 'TBC': return 'rgba(255,193,7,0.2)';
+        case 'TBD': return 'rgba(255,152,0,0.2)';
+        case 'Hold': return 'rgba(244,67,54,0.2)';
+        case 'Success': return 'rgba(76,175,80,0.2)';
+        case 'Failure': return 'rgba(244,67,54,0.2)';
+        default: return 'rgba(255,255,255,0.1)';
     }
-    return formatted;
+}
+
+function getTrajectoryForLaunch(launch, matched) {
+    // Priority 1: Form submission
+    if (matched.trajectory.length > 0) {
+        var latest = matched.trajectory[matched.trajectory.length - 1];
+        return latest.trajectory;
+    }
+
+    // Priority 2: Hardcoded Starlink map
+    var name = (launch.name || '').toLowerCase();
+    if (name.indexOf('starlink') !== -1) {
+        var groupMatch = name.match(/group\s*(\d+)/i);
+        if (groupMatch) {
+            var group = parseInt(groupMatch[1]);
+            if (group === 6 || group === 8 || group === 10 || group === 12) {
+                return 'Northeast';
+            }
+        }
+    }
+
+    // Priority 3: LL2 API data (pad location)
+    if (launch.pad && launch.pad.name) {
+        return launch.pad.name;
+    }
+
+    return '';
+}
+
+function isCancelled(entry, allEntries) {
+    for (var i = 0; i < allEntries.length; i++) {
+        var other = allEntries[i];
+        if ((other.cancel || '').toLowerCase() === 'yes' &&
+            other.eventDate === entry.eventDate &&
+            other.eventTime === entry.eventTime &&
+            (other.contentType || '').toLowerCase() === (entry.contentType || '').toLowerCase()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function toggleSection(id) {
+    var el = document.getElementById(id);
+    var arrow = document.getElementById(id + '-arrow');
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+        if (arrow) arrow.textContent = '▼';
+    } else {
+        el.style.display = 'none';
+        if (arrow) arrow.textContent = '▶';
+    }
 }
 
 function renderLaunches() {
-    countdownIntervals.forEach(function(interval) {
-        clearInterval(interval);
-    });
+    // Clear existing countdowns
+    for (var i = 0; i < countdownIntervals.length; i++) {
+        clearInterval(countdownIntervals[i]);
+    }
     countdownIntervals = [];
 
     var container = document.getElementById('launches-container');
     if (!container) return;
 
     var now = new Date();
-    var filtered = launches.filter(function(launch) {
-        var net = new Date(launch.net);
-        return net.getTime() > now.getTime() - 3600000;
-    });
+    var activeLaunches = [];
 
-    if (filtered.length === 0) {
-        container.innerHTML = '<div class="no-launches">' +
-            '<h2>No Upcoming Launches</h2>' +
-            '<p>No launches from Florida are currently scheduled in the next ' + CONFIG.LOOKAHEAD_DAYS + ' days.</p>' +
-            '</div>';
+    for (var i = 0; i < launches.length; i++) {
+        var net = new Date(launches[i].net);
+        var hourAfter = new Date(net.getTime() + 3600000);
+        if (now < hourAfter) {
+            activeLaunches.push(launches[i]);
+        }
+    }
+
+    if (activeLaunches.length === 0) {
+        container.innerHTML = '<div class="no-launches">No upcoming launches from Florida in the next ' + CONFIG.LOOKAHEAD_DAYS + ' days.</div>';
         return;
     }
 
     var html = '';
-    for (var i = 0; i < filtered.length; i++) {
-        html += renderLaunchCard(filtered[i], i);
+    for (var i = 0; i < activeLaunches.length; i++) {
+        html += renderLaunchCard(activeLaunches[i], i);
     }
     container.innerHTML = html;
 
-    for (var j = 0; j < filtered.length; j++) {
-        startCountdown(filtered[j], j);
+    // Start countdowns
+    for (var i = 0; i < activeLaunches.length; i++) {
+        startCountdown(activeLaunches[i], i);
     }
 }
 
 function renderLaunchCard(launch, index) {
-    var name = launch.name || 'Unknown Mission';
-    var net = launch.net ? new Date(launch.net) : null;
+    var matched = getMatchedContent(launch);
+    var net = new Date(launch.net);
     var status = launch.status || {};
-    var pad = launch.pad || {};
-    var location = pad.location || {};
-    var rocket = launch.rocket || {};
-    var rocketConfig = rocket.configuration || {};
+    var statusColor = getStatusColor(status);
     var mission = launch.mission || {};
-    var image = launch.image || (rocketConfig.image_url || '');
-
-    var content = getMatchedContent(name);
+    var rocketName = launch.rocket && launch.rocket.configuration ? launch.rocket.configuration.full_name || launch.rocket.configuration.name || '' : '';
+    var padName = launch.pad ? launch.pad.name || '' : '';
+    var locationName = launch.pad && launch.pad.location ? launch.pad.location.name || '' : '';
+    var imageUrl = launch.image || (launch.rocket && launch.rocket.configuration ? launch.rocket.configuration.image_url : '') || '';
+    var trajectory = getTrajectoryForLaunch(launch, matched);
 
     var html = '<div class="launch-card">';
 
-    if (image) {
-        html += '<div class="launch-image-container">' +
-            '<img src="' + image + '" alt="' + name + '" class="launch-image" onerror="this.style.display=\'none\'">' +
-            '</div>';
+    // Rocket image
+    if (imageUrl) {
+        html += '<div class="rocket-image"><img src="' + imageUrl + '" alt="' + rocketName + '"></div>';
     }
 
-    html += '<div class="launch-details">';
-
-    var missionName = name;
-    if (name.indexOf('|') !== -1) {
-        missionName = name.substring(name.indexOf('|') + 1).trim();
+    // Mission details
+    html += '<div class="mission-header">';
+    html += '<h2 class="mission-name">' + (launch.name || 'Unknown Mission') + '</h2>';
+    if (rocketName) {
+        html += '<div class="rocket-name">' + rocketName + '</div>';
     }
-    html += '<h2 class="mission-name">' + missionName + '</h2>';
-
-    html += '<div class="provider-rocket">' +
-        (rocketConfig.full_name || rocketConfig.name || 'Unknown Rocket') +
-        ' • ' + (launch.launch_service_provider ? launch.launch_service_provider.name : 'Unknown Provider') +
-        '</div>';
-
-    if (net) {
-        var netOptions = {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-            timeZoneName: 'short'
-        };
-        html += '<div class="net-time">NET: ' + net.toLocaleDateString('en-US', netOptions) + '</div>';
-    }
-
-    html += '<div class="countdown" id="countdown-' + index + '"></div>';
-
-    html += '<div class="status-row">' + getStatusBadge(status) + '</div>';
-
-    if (pad.name) {
-        html += '<div class="pad-info">📍 ' + pad.name + (location.name ? ', ' + location.name : '') + '</div>';
-    }
-
     html += '</div>';
 
-    if (content.message) {
-        html += '<div class="cms-section message-section">' +
-            '<div class="cms-bubble message-bubble">' +
-            '<span class="cms-icon">📢</span> ' + content.message.message +
-            '</div></div>';
+    // NET and status
+    html += '<div class="net-status">';
+    html += '<div class="net-time">';
+    html += '<span class="label">NET</span> ';
+    html += '<span class="value">' + net.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + net.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }) + '</span>';
+    html += '</div>';
+    html += '<div class="status-badge" style="background:' + statusColor + '">' + (status.name || 'Unknown') + '</div>';
+    html += '</div>';
+
+    // Countdown
+    html += '<div class="countdown" id="countdown-' + index + '"></div>';
+
+    // Location
+    if (padName || locationName) {
+        html += '<div class="location">';
+        html += '<span class="label">📍</span> ' + padName;
+        if (locationName) html += ', ' + locationName;
+        html += '</div>';
     }
 
-    if (content.rocketTalk.length > 0) {
-        html += '<div class="cms-section">' +
-            '<div class="section-header" onclick="toggleSection(\'rockettalk-' + index + '\')">' +
-            '<span class="cms-icon">🎙️</span> Rocket Talk LIVE!' +
-            '<span class="toggle-arrow" id="arrow-rockettalk-' + index + '">▼</span></div>' +
-            '<div class="section-content" id="rockettalk-' + index + '">';
-        for (var rt = 0; rt < content.rocketTalk.length; rt++) {
-            var rtItem = content.rocketTalk[rt];
-            html += '<div class="cms-entry rockettalk-entry">' +
-                '<div class="entry-date">' + formatEventDate(rtItem.eventDate, rtItem.eventTime) + '</div>' +
-                '<div class="entry-message">' + rtItem.message + '</div>' +
-                '</div>';
+    // --- CMS Sections ---
+
+    // Message (newest wins)
+    if (matched.messages.length > 0) {
+        var latestMsg = matched.messages[matched.messages.length - 1];
+        html += '<div class="cms-section message-section">';
+        html += '<div class="cms-bubble message-bubble">';
+        html += '<div class="cms-message">' + latestMsg.message + '</div>';
+        html += '</div></div>';
+    }
+
+    // Rocket Talk LIVE!
+    var activeRocketTalks = [];
+    for (var r = 0; r < matched.rocketTalk.length; r++) {
+        if (!isCancelled(matched.rocketTalk[r], sheetData)) {
+            activeRocketTalks.push(matched.rocketTalk[r]);
+        }
+    }
+    if (activeRocketTalks.length > 0) {
+        var rtId = 'rt-' + index;
+        html += '<div class="cms-section">';
+        html += '<div class="section-header" onclick="toggleSection(\'' + rtId + '\')">';
+        html += '<span class="section-icon">🎙️</span>';
+        html += '<span class="section-title" style="color:#ff9800">Rocket Talk LIVE!</span>';
+        html += '<span class="section-arrow" id="' + rtId + '-arrow">▼</span>';
+        html += '</div>';
+        html += '<div class="section-content" id="' + rtId + '">';
+        for (var r = 0; r < activeRocketTalks.length; r++) {
+            var rt = activeRocketTalks[r];
+            html += '<div class="cms-entry rocket-talk-entry">';
+            if (rt.eventDate || rt.eventTime) {
+                html += '<div class="entry-datetime">';
+                if (rt.eventDate) {
+                    var ed = parseSheetDate(rt.eventDate);
+                    if (ed) html += ed.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                }
+                if (rt.eventTime) html += ' at ' + rt.eventTime;
+                html += '</div>';
+            }
+            if (rt.message) {
+                html += '<div class="entry-message">' + rt.message + '</div>';
+            }
+            html += '</div>';
         }
         html += '</div></div>';
     }
 
-    if (content.trajectory) {
-        html += '<div class="cms-section">' +
-            '<div class="section-header" onclick="toggleSection(\'trajectory-' + index + '\')">' +
-            '<span class="cms-icon">🗺️</span> Trajectory' +
-            '<span class="toggle-arrow" id="arrow-trajectory-' + index + '">▼</span></div>' +
-            '<div class="section-content" id="trajectory-' + index + '">' +
-            '<div class="cms-entry trajectory-entry">' + content.trajectory + '</div>' +
-            '</div></div>';
-    } else {
-        var trajectoryFromAPI = getTrajectoryFromAPI(launch);
-        if (trajectoryFromAPI) {
-            html += '<div class="cms-section">' +
-                '<div class="section-header" onclick="toggleSection(\'trajectory-' + index + '\')">' +
-                '<span class="cms-icon">🗺️</span> Trajectory' +
-                '<span class="toggle-arrow" id="arrow-trajectory-' + index + '">▼</span></div>' +
-                '<div class="section-content" id="trajectory-' + index + '">' +
-                '<div class="cms-entry trajectory-entry">' + trajectoryFromAPI + '</div>' +
-                '</div></div>';
-        }
+    // Trajectory
+    if (trajectory) {
+        var trajId = 'traj-' + index;
+        html += '<div class="cms-section">';
+        html += '<div class="section-header" onclick="toggleSection(\'' + trajId + '\')">';
+        html += '<span class="section-icon">🚀</span>';
+        html += '<span class="section-title">Trajectory</span>';
+        html += '<span class="section-arrow" id="' + trajId + '-arrow">▼</span>';
+        html += '</div>';
+        html += '<div class="section-content" id="' + trajId + '">';
+        html += '<div class="trajectory-label">' + trajectory + '</div>';
+        html += '</div></div>';
     }
 
-    if (content.missionInfo || (mission && mission.description)) {
-        var desc = content.missionInfo ? content.missionInfo.message : mission.description;
-        html += '<div class="cms-section">' +
-            '<div class="section-header" onclick="toggleSection(\'missioninfo-' + index + '\')">' +
-            '<span class="cms-icon">ℹ️</span> Mission Info' +
-            '<span class="toggle-arrow" id="arrow-missioninfo-' + index + '">▶</span></div>' +
-            '<div class="section-content collapsed" id="missioninfo-' + index + '">' +
-            '<div class="cms-entry mission-info-entry">' + desc + '</div>' +
-            '</div></div>';
-    }
-
-    if (content.viewingGuide) {
-        html += '<div class="cms-section">' +
-            '<div class="section-header" onclick="toggleSection(\'viewing-' + index + '\')">' +
-            '<span class="cms-icon">🔭</span> Launch Viewing Guide' +
-            '<span class="toggle-arrow" id="arrow-viewing-' + index + '">▼</span></div>' +
-            '<div class="section-content" id="viewing-' + index + '">';
-        if (content.viewingGuide.slidesUrl) {
-            html += '<div class="cms-entry viewing-entry">' +
-                '<iframe src="' + content.viewingGuide.slidesUrl + '" frameborder="0" class="slides-embed" allowfullscreen></iframe>' +
-                '</div>';
+    // Mission Info
+    if (matched.missionInfo.length > 0 || (mission.description && mission.description.length > 0)) {
+        var miId = 'mi-' + index;
+        html += '<div class="cms-section">';
+        html += '<div class="section-header" onclick="toggleSection(\'' + miId + '\')">';
+        html += '<span class="section-icon">ℹ️</span>';
+        html += '<span class="section-title" style="color:#64b5f6">Mission Info</span>';
+        html += '<span class="section-arrow" id="' + miId + '-arrow">▶</span>';
+        html += '</div>';
+        html += '<div class="section-content" id="' + miId + '" style="display:none">';
+        for (var m = 0; m < matched.missionInfo.length; m++) {
+            if (matched.missionInfo[m].message) {
+                html += '<div class="cms-entry">' + matched.missionInfo[m].message + '</div>';
+            }
         }
-        if (content.viewingGuide.message) {
-            html += '<div class="cms-entry viewing-entry">' + content.viewingGuide.message + '</div>';
+        if (mission.description) {
+            html += '<div class="cms-entry mission-description">' + mission.description + '</div>';
         }
         html += '</div></div>';
     }
 
-    if (content.chrisSays.length > 0) {
-        html += '<div class="cms-section">' +
-            '<div class="section-header" onclick="toggleSection(\'chrissays-' + index + '\')">' +
-            '<span class="cms-icon">📋</span> Chris Says' +
-            '<span class="toggle-arrow" id="arrow-chrissays-' + index + '">▼</span></div>' +
-            '<div class="section-content" id="chrissays-' + index + '">';
-        for (var cs = 0; cs < content.chrisSays.length; cs++) {
-            var csItem = content.chrisSays[cs];
-            html += '<div class="cms-entry chrissays-entry">' +
-                '<div class="entry-time">' + getRelativeTime(csItem.timestamp) + '</div>' +
-                '<div class="entry-message">' + csItem.message + '</div>' +
-                '</div>';
+    // Launch Viewing Guide
+    if (matched.viewingGuide.length > 0) {
+        var vgId = 'vg-' + index;
+        var latestGuide = matched.viewingGuide[matched.viewingGuide.length - 1];
+        html += '<div class="cms-section">';
+        html += '<div class="section-header" onclick="toggleSection(\'' + vgId + '\')">';
+        html += '<span class="section-icon">🔭</span>';
+        html += '<span class="section-title" style="color:#ffd54f">Launch Viewing Guide</span>';
+        html += '<span class="section-arrow" id="' + vgId + '-arrow">▶</span>';
+        html += '</div>';
+        html += '<div class="section-content" id="' + vgId + '" style="display:none">';
+        if (latestGuide.slidesUrl) {
+            html += '<div class="slides-embed"><iframe src="' + latestGuide.slidesUrl + '" frameborder="0" allowfullscreen></iframe></div>';
+        }
+        if (latestGuide.message) {
+            html += '<div class="cms-entry">' + latestGuide.message + '</div>';
         }
         html += '</div></div>';
     }
 
-    if (content.gallery) {
-        html += '<div class="cms-section">' +
-            '<div class="section-header" onclick="toggleSection(\'gallery-' + index + '\')">' +
-            '<span class="cms-icon">📸</span> Gallery' +
-            '<span class="toggle-arrow" id="arrow-gallery-' + index + '">▼</span></div>' +
-            '<div class="section-content" id="gallery-' + index + '">' +
-            '<div class="gallery-strip">';
-        var images = content.gallery.split(',');
-        for (var g = 0; g < images.length; g++) {
-            var imgUrl = images[g].trim();
-            if (imgUrl) {
-                html += '<img src="' + imgUrl + '" alt="Gallery image" class="gallery-thumb" onclick="window.open(\'' + imgUrl + '\', \'_blank\')">';
+    // Chris Says
+    if (matched.chrisSays.length > 0) {
+        var csId = 'cs-' + index;
+        var sortedCS = matched.chrisSays.slice().sort(function(a, b) {
+            var da = parseSheetDate(a.timestamp);
+            var db = parseSheetDate(b.timestamp);
+            return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+        });
+        html += '<div class="cms-section">';
+        html += '<div class="section-header" onclick="toggleSection(\'' + csId + '\')">';
+        html += '<span class="section-icon">📋</span>';
+        html += '<span class="section-title" style="color:#64b5f6">Chris Says</span>';
+        html += '<span class="section-arrow" id="' + csId + '-arrow">▼</span>';
+        html += '</div>';
+        html += '<div class="section-content" id="' + csId + '">';
+        for (var c = 0; c < sortedCS.length; c++) {
+            var cs = sortedCS[c];
+            var csDate = parseSheetDate(cs.timestamp);
+            html += '<div class="cms-entry chris-says-entry">';
+            if (csDate) {
+                html += '<div class="entry-time">' + getRelativeTime(csDate) + '</div>';
+            }
+            if (cs.message) {
+                html += '<div class="entry-message">' + cs.message + '</div>';
+            }
+            html += '</div>';
+        }
+        html += '</div></div>';
+    }
+
+    // Gallery
+    if (matched.gallery.length > 0) {
+        var galId = 'gal-' + index;
+        html += '<div class="cms-section">';
+        html += '<div class="section-header" onclick="toggleSection(\'' + galId + '\')">';
+        html += '<span class="section-icon">📸</span>';
+        html += '<span class="section-title" style="color:#ab47bc">Gallery</span>';
+        html += '<span class="section-arrow" id="' + galId + '-arrow">▶</span>';
+        html += '</div>';
+        html += '<div class="section-content" id="' + galId + '" style="display:none">';
+        html += '<div class="gallery-filmstrip">';
+        for (var g = 0; g < matched.gallery.length; g++) {
+            if (matched.gallery[g].galleryLink) {
+                var links = matched.gallery[g].galleryLink.split(',');
+                for (var l = 0; l < links.length; l++) {
+                    var link = links[l].trim();
+                    if (link) {
+                        html += '<div class="gallery-item"><img src="' + link + '" alt="Gallery image" loading="lazy"></div>';
+                    }
+                }
             }
         }
         html += '</div></div></div>';
@@ -518,78 +566,24 @@ function renderLaunchCard(launch, index) {
     return html;
 }
 
-function getTrajectoryFromAPI(launch) {
-    var name = (launch.name || '').toLowerCase();
-    var missionName = (launch.mission && launch.mission.name) ? launch.mission.name.toLowerCase() : '';
-
-    var starlinkGroups = {
-        'group 6': 'Northeast',
-        'group 8': 'Northeast',
-        'group 10': 'Northeast',
-        'group 12': 'Northeast'
-    };
-
-    var combined = name + ' ' + missionName;
-    if (combined.indexOf('starlink') !== -1) {
-        var keys = Object.keys(starlinkGroups);
-        for (var i = 0; i < keys.length; i++) {
-            if (combined.indexOf(keys[i]) !== -1) {
-                return 'Starlink ' + keys[i].charAt(0).toUpperCase() + keys[i].slice(1) + ' — ' + starlinkGroups[keys[i]] + ' trajectory';
-            }
-        }
-    }
-
-    if (launch.mission && launch.mission.orbit && launch.mission.orbit.name) {
-        return 'Orbit: ' + launch.mission.orbit.name;
-    }
-
-    return null;
-}
-
 function startCountdown(launch, index) {
+    var net = new Date(launch.net);
     var el = document.getElementById('countdown-' + index);
-    if (!el || !launch.net) return;
+    if (!el) return;
 
     function update() {
-        var now = new Date().getTime();
-        var net = new Date(launch.net).getTime();
+        var now = new Date();
         var diff = net - now;
-
         if (diff <= 0) {
-            el.innerHTML = '<span class="liftoff-pulse">🚀 LIFTOFF!</span>';
-            return;
+            el.innerHTML = '<span class="liftoff-pulse">LIFTOFF!</span>';
+        } else {
+            el.textContent = formatCountdown(diff);
         }
-
-        var days = Math.floor(diff / 86400000);
-        var hours = Math.floor((diff % 86400000) / 3600000);
-        var minutes = Math.floor((diff % 3600000) / 60000);
-        var seconds = Math.floor((diff % 60000) / 1000);
-
-        var parts = [];
-        if (days > 0) parts.push('<span class="countdown-segment"><span class="countdown-value">' + days + '</span><span class="countdown-label">D</span></span>');
-        parts.push('<span class="countdown-segment"><span class="countdown-value">' + String(hours).padStart(2, '0') + '</span><span class="countdown-label">H</span></span>');
-        parts.push('<span class="countdown-segment"><span class="countdown-value">' + String(minutes).padStart(2, '0') + '</span><span class="countdown-label">M</span></span>');
-        parts.push('<span class="countdown-segment"><span class="countdown-value">' + String(seconds).padStart(2, '0') + '</span><span class="countdown-label">S</span></span>');
-
-        el.innerHTML = 'T- ' + parts.join(' ');
     }
 
     update();
     var interval = setInterval(update, 1000);
     countdownIntervals.push(interval);
-}
-
-function toggleSection(id) {
-    var el = document.getElementById(id);
-    var arrow = document.getElementById('arrow-' + id);
-    if (!el) return;
-    if (el.classList.contains('collapsed')) {
-        el.classList.remove('collapsed');
-        if (arrow) arrow.textContent = '▼';
-    } else {
-        el.classList.add('collapsed');
-        if (arrow) arrow.textContent = '▶';
-    }
 }
 
 document.addEventListener('DOMContentLoaded', init);
