@@ -35,7 +35,13 @@ function createLaunchCard(launch) {
 
     // 2. Viewing Guide (always visible)
     if (cms.viewing_guide) {
-        html += '<div class="cms-viewing-guide">' + cms.viewing_guide + '</div>';
+        if (cms.viewing_guide.startsWith('http')) {
+            html += '<div class="cms-viewing-guide">';
+            html += '<a href="' + cms.viewing_guide + '" target="_blank" class="viewing-guide-link">🔭 Viewing Guide</a>';
+            html += '</div>';
+        } else {
+            html += '<div class="cms-viewing-guide">' + cms.viewing_guide + '</div>';
+        }
     }
 
     // 3. Trajectory (collapsible dropdown, green)
