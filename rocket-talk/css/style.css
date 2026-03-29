@@ -231,6 +231,59 @@ main {
     font-size: 1.1rem;
     line-height: 1.5;
 }
+.livestream-dropdown summary {
+    display: block;
+    padding: 0.75rem 1rem;
+    font-family: Calibri, sans-serif;
+    font-weight: bold;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+}
+
+.livestream-dropdown summary::after {
+    content: '▼';
+    position: absolute;
+    right: 1rem;
+    font-size: 0.8em;
+}
+
+.livestream-dropdown .livestream-content {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    padding: 1rem;
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.livestream-btn {
+    display: block;
+    padding: 0.6rem 1rem;
+    background: linear-gradient(135deg, #c62828, #b71c1c);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-family: Calibri, sans-serif;
+    font-weight: bold;
+    font-size: 0.95rem;
+    text-align: center;
+    transition: opacity 0.2s;
+}
+
+.livestream-btn:active {
+    opacity: 0.8;
+}
+
+.livestream-pending {
+    margin: 0;
+    color: #666;
+    font-style: italic;
+    font-family: Calibri, sans-serif;
+}
 
 /* Viewing Guide */
 .cms-viewing-guide {
