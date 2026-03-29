@@ -243,6 +243,38 @@ function createLaunchCard(launch) {
     if (trajectory) {
         html += '<div class="cms-trajectory"><strong>📐 Trajectory:</strong> ' + trajectory + '</div>';
     }
+    // 3.5 Livestream Links (collapsible dropdown)
+    html += '<details class="livestream-dropdown">';
+    html += '<summary>📺 Livestream Links</summary>';
+    html += '<div class="livestream-content">';
+
+    let streamLinks = [];
+    if (launch.vid_urls && launch.vid_urls.length > 0) {
+        streamLinks = launch.vid_urls.filter(vid => {
+            const title = (vid.title || '').toLowerCase();
+            const publisher = (vid.publisher?.name || '').toLowerCase();
+            const url = (vid.url || '').toLowerCase();
+            return title.includes('nasaspaceflight') || 
+                   publisher.includes('nasaspaceflight') ||
+                   url.includes('nasaspaceflight') ||
+                   title.includes('spaceflight now') || 
+                   title.includes('spaceflightnow') ||
+                   publisher.includes('spaceflight now') ||
+                   publisher.includes('spaceflightnow') ||
+                   url.includes('spaceflightnow');
+        });
+    }
+
+    if (streamLinks.length > 0) {
+        streamLinks.forEach(vid => {
+            const label = vid.title || 'Livestream';
+            html += '<a href="' + vid.url + '" target="_blank" class="livestream-btn">📺 ' + label + '</a>';
+        });
+    } else {
+        html += '<p class="livestream-pending">Links will be available when livestreams for this launch start.</p>';
+    }
+
+    html += '</div></details>';
 
     // 4. Rocket Talk (collapsible dropdown)
     if (rocketTalkContent) {
