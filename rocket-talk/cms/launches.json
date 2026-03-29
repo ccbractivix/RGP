@@ -30,12 +30,6 @@
         "event_date": "",
         "event_time": ""
       }
-    },
-    "rocket_talk_live": {
-      "enabled": true,
-      "url": "",
-      "label": "🎙️ Rocket Talk LIVE - Saturday 7:00 PM"
-    }
   },
   "63aa7636-d2b7-457f-a3e6-27e564e42941": {
     "headline": "",
