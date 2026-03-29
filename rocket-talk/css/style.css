@@ -265,7 +265,19 @@ main {
     border-radius: 4px;
     line-height: 1.6;
 }
+.viewing-guide-link {
+    display: block;
+    text-align: center;
+    color: #2e7d32;
+    font-family: 'Calibri', sans-serif;
+    font-weight: bold;
+    font-size: 1.1rem;
+    text-decoration: none;
+}
 
+.viewing-guide-link:hover {
+    text-decoration: underline;
+}
 /* Trajectory — Green Dropdown Bubble */
 .cms-trajectory {
     margin-top: 0.75rem;
