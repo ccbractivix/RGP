@@ -178,9 +178,12 @@ function createLaunchCard(launch) {
         html += '<div class="cms-viewing-guide">' + cms.viewing_guide + '</div>';
     }
 
-    // 3. Trajectory (always visible, green bubble)
+    // 3. Trajectory (collapsible dropdown, green)
     if (cms.trajectory) {
-        html += '<div class="cms-trajectory">📐 ' + cms.trajectory + '</div>';
+        html += '<details class="cms-trajectory">';
+        html += '<summary>📐 Trajectory</summary>';
+        html += '<div class="trajectory-content">' + cms.trajectory + '</div>';
+        html += '</details>';
     }
 
     // 4. Rocket Talk Live button
