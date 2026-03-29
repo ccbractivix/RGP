@@ -173,6 +173,29 @@ main {
     color: #d32f2f;
 }
 
+.countdown-dormant {
+    font-family: Calibri, sans-serif;
+    font-size: 1.2rem;
+    color: #888;
+    padding: 0.4rem 0;
+}
+
+.countdown-active {
+    font-family: Calibri, sans-serif;
+    font-size: 1.6rem;
+    color: #d32f2f;
+    font-weight: 700;
+    padding: 0.4rem 0;
+}
+
+.countdown-launched {
+    font-family: Calibri, sans-serif;
+    font-size: 1.4rem;
+    color: #00c853;
+    font-weight: 700;
+    padding: 0.4rem 0;
+}
+
 /* ===== STATUS BADGES ===== */
 .status-badge {
     display: inline-block;
@@ -231,63 +254,10 @@ main {
     font-size: 1.1rem;
     line-height: 1.5;
 }
-.livestream-dropdown summary {
-    display: block;
-    padding: 0.75rem 1rem;
-    font-family: Calibri, sans-serif;
-    font-weight: bold;
-    color: white;
-    border-radius: 8px;
-    cursor: pointer;
-    position: relative;
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
-}
-
-.livestream-dropdown summary::after {
-    content: '▼';
-    position: absolute;
-    right: 1rem;
-    font-size: 0.8em;
-}
-
-.livestream-dropdown .livestream-content {
-    background: #f8f9fa;
-    border: 1px solid #e0e0e0;
-    padding: 1rem;
-    border-radius: 0 0 8px 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.livestream-btn {
-    display: block;
-    padding: 0.6rem 1rem;
-    background: linear-gradient(135deg, #c62828, #b71c1c);
-    color: white;
-    text-decoration: none;
-    border-radius: 8px;
-    font-family: Calibri, sans-serif;
-    font-weight: bold;
-    font-size: 0.95rem;
-    text-align: center;
-    transition: opacity 0.2s;
-}
-
-.livestream-btn:active {
-    opacity: 0.8;
-}
-
-.livestream-pending {
-    margin: 0;
-    color: #666;
-    font-style: italic;
-    font-family: Calibri, sans-serif;
-}
 
 /* Viewing Guide */
 .cms-viewing-guide {
-    margin-top: 1rem;
+    margin-top: 0.75rem;
     padding: 0.75rem 1rem;
     background: #e8f5e9;
     border-left: 4px solid #2e7d32;
@@ -295,28 +265,79 @@ main {
     line-height: 1.6;
 }
 
-/* Trajectory */
+/* Trajectory — Green Dropdown Bubble */
 .cms-trajectory {
     margin-top: 0.75rem;
+}
+
+.cms-trajectory summary {
+    display: block;
     padding: 0.75rem 1rem;
-    background: #fce4ec;
-    border-left: 4px solid #c62828;
-    border-radius: 4px;
+    font-family: 'Calibri', sans-serif;
+    font-weight: bold;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+    background: linear-gradient(135deg, #2e7d32, #1b5e20);
+    list-style: none;
+}
+
+.cms-trajectory summary::-webkit-details-marker {
+    display: none;
+}
+
+.cms-trajectory summary::after {
+    content: '▼';
+    position: absolute;
+    right: 1rem;
+    font-size: 0.8em;
+}
+
+.cms-trajectory .trajectory-content {
+    background: #e8f5e9;
+    border: 1px solid #c8e6c9;
+    padding: 1rem;
+    border-radius: 0 0 8px 8px;
     line-height: 1.6;
+}
+
+/* ===== LIVE BADGE (Rocket Talk Live Button) ===== */
+.live-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #d32f2f, #b71c1c);
+    color: white;
+    text-decoration: none;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
+    margin-bottom: 0;
+    animation: pulse-live 2s ease-in-out infinite;
+}
+
+.live-badge:hover {
+    opacity: 0.9;
+}
+
+@keyframes pulse-live {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.4); }
+    50% { box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
 }
 
 /* ===== COLLAPSIBLE DROPDOWNS (details/summary) ===== */
 
-/* Rocket Talk Dropdown */
+/* Rocket Talk Dropdown — Purple */
 .rocket-talk-dropdown {
-    margin-top: 1rem;
+    margin-top: 0.75rem;
     border: 2px solid #6a1b9a;
     border-radius: 8px;
     overflow: hidden;
 }
 
 .rocket-talk-dropdown summary {
-    background: linear-gradient(135deg, #6a1b9a, #4a148c);
+    background: linear-gradient(135deg, #7b1fa2, #4a148c);
     color: white;
     padding: 0.75rem 1rem;
     font-family: 'Calibri', sans-serif;
@@ -345,9 +366,9 @@ main {
     line-height: 1.6;
 }
 
-/* Chris Says Dropdown */
+/* Chris Says Dropdown — Orange */
 .chris-says-dropdown {
-    margin-top: 1rem;
+    margin-top: 0.75rem;
     border: 2px solid #f57c00;
     border-radius: 8px;
     overflow: hidden;
@@ -362,6 +383,13 @@ main {
     font-weight: bold;
     cursor: pointer;
     list-style: none;
+}
+
+.chris-icon {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+    margin-right: 6px;
 }
 
 .chris-says-dropdown summary::-webkit-details-marker {
@@ -405,16 +433,16 @@ main {
     line-height: 1.6;
 }
 
-/* Mission Info Dropdown */
+/* Mission Info Dropdown — Blue */
 .mission-info-dropdown {
-    margin-top: 1rem;
-    border: 2px solid #1a1a2e;
+    margin-top: 0.75rem;
+    border: 2px solid #1565c0;
     border-radius: 8px;
     overflow: hidden;
 }
 
 .mission-info-dropdown summary {
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    background: linear-gradient(135deg, #1565c0, #0d47a1);
     color: white;
     padding: 0.75rem 1rem;
     font-family: 'Calibri', sans-serif;
@@ -439,7 +467,7 @@ main {
 
 .mission-info-content {
     padding: 1rem;
-    background: #f5f5f5;
+    background: #e3f2fd;
     line-height: 1.6;
 }
 
@@ -454,28 +482,68 @@ main {
     margin-bottom: 0;
 }
 
-/* ===== LIVE BADGE ===== */
-.live-badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #d32f2f, #b71c1c);
+/* Livestream Links Dropdown — Red (Always Last) */
+.livestream-dropdown {
+    margin-top: 0.75rem;
+}
+
+.livestream-dropdown summary {
+    display: block;
+    padding: 0.75rem 1rem;
+    font-family: 'Calibri', sans-serif;
+    font-weight: bold;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    position: relative;
+    background: linear-gradient(135deg, #c62828, #b71c1c);
+    list-style: none;
+}
+
+.livestream-dropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+.livestream-dropdown summary::after {
+    content: '▼';
+    position: absolute;
+    right: 1rem;
+    font-size: 0.8em;
+}
+
+.livestream-dropdown .livestream-content {
+    background: #ffebee;
+    border: 1px solid #ffcdd2;
+    padding: 1rem;
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.livestream-btn {
+    display: block;
+    padding: 0.6rem 1rem;
+    background: linear-gradient(135deg, #c62828, #b71c1c);
     color: white;
     text-decoration: none;
-    padding: 0.4rem 1rem;
-    border-radius: 20px;
-    font-weight: 700;
-    font-size: 0.85rem;
-    margin-left: 0.5rem;
-    margin-bottom: 0.5rem;
-    animation: pulse-live 2s ease-in-out infinite;
+    border-radius: 8px;
+    font-family: 'Calibri', sans-serif;
+    font-weight: bold;
+    font-size: 0.95rem;
+    text-align: center;
+    transition: opacity 0.2s;
 }
 
-.live-badge:hover {
-    opacity: 0.9;
+.livestream-btn:active {
+    opacity: 0.8;
 }
 
-@keyframes pulse-live {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.4); }
-    50% { box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
+.livestream-pending {
+    margin: 0;
+    color: #666;
+    font-style: italic;
+    font-family: 'Calibri', sans-serif;
 }
 
 /* ===== NO LAUNCHES / ERROR ===== */
@@ -646,26 +714,4 @@ main {
 
 .cms-status-no {
     color: #999;
-}
-.countdown-dormant {
-  font-family: Calibri, sans-serif;
-  font-size: 1.2rem;
-  color: #888;
-  padding: 0.4rem 0;
-}
-
-.countdown-active {
-  font-family: Calibri, sans-serif;
-  font-size: 1.6rem;
-  color: #d32f2f;
-  font-weight: 700;
-  padding: 0.4rem 0;
-}
-
-.countdown-launched {
-  font-family: Calibri, sans-serif;
-  font-size: 1.4rem;
-  color: #00c853;
-  font-weight: 700;
-  padding: 0.4rem 0;
 }
