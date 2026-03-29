@@ -106,7 +106,7 @@ async function fetchLaunches() {
         const allLaunches = [];
 
         for (const locId of PAD_LOCATION_IDS) {
-            const url = `${API_BASE}/launch/upcoming/?location__ids=${locId}&limit=10&mode=detailed`;
+            const url = `${API_BASE}/launches/upcoming/?location__ids=${locId}&limit=10&mode=detailed`;
             console.log('Fetching:', url);
             const response = await fetch(url, {
                 headers: {
