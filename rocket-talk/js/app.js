@@ -106,9 +106,13 @@ async function fetchLaunches() {
         const allLaunches = [];
 
         for (const locId of PAD_LOCATION_IDS) {
-            const url = `${API_BASE}/launch/upcoming/?location__ids=${locId}&limit=10&mode=detailed&token=${API_KEY}`;
+            const url = `${API_BASE}/launch/upcoming/?location__ids=${locId}&limit=10&mode=detailed`;
             console.log('Fetching:', url);
-            const response = await fetch(url);
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': 'Token ' + API_KEY
+                }
+            });
 
             if (!response.ok) {
                 console.error('API error for location', locId, ':', response.status);
