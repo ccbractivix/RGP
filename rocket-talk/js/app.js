@@ -45,7 +45,22 @@ async function loadCMSData() {
             }
             cmsData.launches = normalized;
         }
-        if (chrisSaysRes.ok) cmsData.chrisSays = await chrisSaysRes.json();
+        if (chrisSaysRes.ok) {
+            const chrisSaysRaw = await chrisSaysRes.json();
+            const chrisSaysMap = {};
+            if (Array.isArray(chrisSaysRaw)) {
+                for (const entry of chrisSaysRaw) {
+                    if (entry.launch_id) {
+                        if (!chrisSaysMap[entry.launch_id] || entry.date > chrisSaysMap[entry.launch_id].date) {
+                            chrisSaysMap[entry.launch_id] = entry;
+                        }
+                    }
+                }
+            } else {
+                Object.assign(chrisSaysMap, chrisSaysRaw);
+            }
+            cmsData.chrisSays = chrisSaysMap;
+        }
         if (templatesRes.ok) cmsData.templates = await templatesRes.json();
     } catch (e) {
         console.warn('CMS load failed:', e);
@@ -357,24 +372,33 @@ function renderViewingGuide(launch) {
 
 function renderRocketTalkLive(launch) {
     const cms = cmsData.launches?.[launch.id];
-    if (!cms?.rocketTalkLive?.enabled) return '';
 
-    const rtl = cms.rocketTalkLive;
-    let content = '';
-
-    if (rtl.url && rtl.text) {
-        content = `<a href="${escapeHTML(rtl.url)}" target="_blank" rel="noopener noreferrer" class="livestream-link">${escapeHTML(rtl.text)}</a>`;
-    } else if (rtl.url) {
-        content = `<a href="${escapeHTML(rtl.url)}" target="_blank" rel="noopener noreferrer" class="livestream-link">Join Rocket Talk LIVE!</a>`;
-    } else if (rtl.text) {
-        content = `<div class="rocket-talk-live-info">${escapeHTML(rtl.text)}</div>`;
-    } else {
-        return '';
+    // Build template content if available
+    let templateContent = '';
+    if (cms?.rocketTalk?.template) {
+        const rendered = processTemplate(cms.rocketTalk.template, cms.rocketTalk.variables, launch);
+        if (rendered) templateContent = `<div class="rocket-talk-info">${rendered}</div>`;
     }
+
+    // Build live link/info if available
+    let liveContent = '';
+    if (cms?.rocketTalkLive?.enabled) {
+        const rtl = cms.rocketTalkLive;
+        if (rtl.url && rtl.text) {
+            liveContent = `<a href="${escapeHTML(rtl.url)}" target="_blank" rel="noopener noreferrer" class="livestream-link">${escapeHTML(rtl.text)}</a>`;
+        } else if (rtl.url) {
+            liveContent = `<a href="${escapeHTML(rtl.url)}" target="_blank" rel="noopener noreferrer" class="livestream-link">Join Rocket Talk LIVE!</a>`;
+        } else if (rtl.text) {
+            liveContent = `<div class="rocket-talk-live-info">${escapeHTML(rtl.text)}</div>`;
+        }
+    }
+
+    // Only render if we have something to show
+    if (!templateContent && !liveContent) return '';
 
     return `<details class="dropdown rocket-talk-dropdown">
         <summary>🎙️ Rocket Talk LIVE!</summary>
-        <div class="dropdown-content">${content}</div>
+        <div class="dropdown-content">${templateContent}${liveContent}</div>
     </details>`;
 }
 
@@ -394,13 +418,6 @@ function renderChrisSays(launch) {
 
 function renderMissionInfo(launch) {
     let content = '';
-
-    // Rocket Talk (CMS template-based content)
-    const cms = cmsData.launches?.[launch.id];
-    if (cms?.rocketTalk?.template) {
-        const rendered = processTemplate(cms.rocketTalk.template, cms.rocketTalk.variables, launch);
-        if (rendered) content += rendered;
-    }
 
     // API-sourced mission description
     const description = launch.mission?.description;
