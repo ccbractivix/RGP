@@ -611,8 +611,6 @@ function renderPageFooter() {
 
     // Site footer
     const siteFooterHtml = `<div class="site-footer">
-        <p>🚀 Rocket Talk — Space Coast Launch Guide</p>
-        <p>Data provided by <a href="https://thespacedevs.com" target="_blank" rel="noopener noreferrer">The Space Devs</a></p>
     </div>`;
 
     footer.innerHTML = filmstripHtml + galleryHtml + dividerHtml + disclaimerHtml + footerBarHtml + siteFooterHtml;
