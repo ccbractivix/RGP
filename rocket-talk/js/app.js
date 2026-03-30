@@ -572,16 +572,8 @@ function renderPageFooter() {
     }
     filmstripHtml += '</div></div>';
 
-    // Gallery link
-    const galleryHtml = '<div class="gallery-link"><a href="https://www.instagram.com/rockettalkpodcast/" target="_blank" rel="noopener noreferrer">📸 Follow @rockettalkpodcast on Instagram</a></div>';
-
     // Divider
     const dividerHtml = '<div class="footer-divider"></div>';
-
-    // Disclaimer
-    const disclaimerHtml = `<div class="disclaimer">
-        <p>Rocket Talk is not affiliated with, endorsed by, or connected to Holiday Inn Club Vacations®, IHG®, or any of their subsidiaries or affiliates. All trademarks and brand names are the property of their respective owners.</p>
-    </div>`;
 
     // Footer bar with image
     const footerBarHtml = `<div class="footer-bar">
