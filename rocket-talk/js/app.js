@@ -256,18 +256,24 @@ async function loadLaunches() {
 function filterLaunches(launches) {
     const now = Date.now();
     const SIXTY_MINUTES = 60 * 60 * 1000;
+    const FOURTEEN_DAYS = 14 * 24 * 60 * 60 * 1000;
 
     return launches.filter(launch => {
         const statusId = launch.status?.id;
+        const net = new Date(launch.net).getTime();
 
         // Exclude Success (3), Failure (4), Partial Failure (7)
         if ([3, 4, 7].includes(statusId)) return false;
 
         // Exclude In-Flight (6) if more than 60 minutes past NET
         if (statusId === 6) {
-            const net = new Date(launch.net).getTime();
             if (now - net > SIXTY_MINUTES) return false;
+            // In-Flight within 60 min is still shown regardless of 14-day window
+            return true;
         }
+
+        // Exclude launches more than 14 days from now
+        if (net - now > FOURTEEN_DAYS) return false;
 
         return true;
     });
