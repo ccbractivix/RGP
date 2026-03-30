@@ -594,12 +594,12 @@ function buildLivestreamDropdown(launch) {
     const linksHTML = links.map(vid => {
         const title = vid.title || vid.source || 'Watch';
         const url = vid.url || '';
-        return `<a class="viewing-guide-link" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer" style="color: #c62828;">${escapeHTML(title)}</a>`;
+        return `<a class="livestream-link" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(title)}</a>`;
     }).join('');
 
     return `
         <details class="dropdown livestream-dropdown">
-            <summary>Livestream Links</summary>
+            <summary>📡 Livestream Links</summary>
             <div class="dropdown-content">${linksHTML}</div>
         </details>
     `;
