@@ -350,6 +350,8 @@ function buildLaunchCard(launch) {
 
     const launchCMS = cmsData.launches?.[launch.id] || {};
     const chrisSaysEntry = cmsData.chrisSays?.[launch.id] || null;
+const launchCMS = cmsData.launches?.[launch.id] || {};
+console.log('Launch ID:', launch.id, 'CMS match:', JSON.stringify(launchCMS));
 
     card.innerHTML = `
         ${buildHeadlineBanner(launchCMS)}
