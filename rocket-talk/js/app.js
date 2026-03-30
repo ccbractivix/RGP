@@ -1,512 +1,637 @@
-// app.js - Rocket Talk Launch Viewer
-// Uses The Space Devs Launch Library 2 API
+// ============================================================
+// Rocket Talk - app.js
+// ============================================================
 
-const API_BASE = 'https://lldev.thespacedevs.com/2.3.0';
-const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
-const LOCATION_IDS = [12, 27]; // KSC and Cape Canaveral
-const CACHE_KEY = 'rocketTalkLaunches';
-const CACHE_TIME_KEY = 'rocketTalkCacheTime';
+// --- State ---
+let cmsData = { launches: {}, chrisSays: {}, templates: {} };
+let countdownTimer = null;
+let refreshTimer = null;
 
-let cmsData = {
-    launches: {},
-    chrisSays: {},
-    templates: {}
-};
-
-// Initialize the app
+// --- Initialization ---
 async function init() {
     try {
-        // Show cached data immediately while fetching fresh data
-        const cachedData = getCachedData();
-        if (cachedData) {
-            renderLaunchesProgressive(cachedData);
-        }
-
-        // Load CMS data and API data in parallel
-        const [, launches] = await Promise.all([
+        // Load CMS and API data in parallel
+        const [cms, launches] = await Promise.all([
             loadCMSData(),
-            fetchLaunches()
+            loadLaunches()
         ]);
+
+        if (cms) cmsData = cms;
 
         if (launches && launches.length > 0) {
-            cacheData(launches);
             renderLaunchesProgressive(launches);
-        } else if (!cachedData) {
-            document.getElementById('launches-container').innerHTML =
-                '<p class="no-launches">No upcoming launches found for the Space Coast.</p>';
-        }
-    } catch (error) {
-        console.error('Init error:', error);
-        const cachedData = getCachedData();
-        if (cachedData) {
-            renderLaunchesProgressive(cachedData);
         } else {
-            document.getElementById('launches-container').innerHTML =
-                '<p class="no-launches">Unable to load launches. Please try again later.</p>';
+            showNoLaunches();
         }
+
+        scheduleNextRefresh();
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showError();
     } finally {
         hideLoadingScreen();
-        scheduleNextRefresh();
     }
 }
 
-// Load CMS data from JSON files
+// --- Loading Screen ---
+function hideLoadingScreen() {
+    const screen = document.querySelector('.loading-screen');
+    if (screen) {
+        screen.classList.add('fade-out');
+        setTimeout(() => screen.remove(), 500);
+    }
+}
+
+// --- CMS Data ---
 async function loadCMSData() {
     try {
-        const [launchesRes, chrisSaysRes, templatesRes] = await Promise.all([
-            fetch('cms/launches.json').catch(() => null),
-            fetch('cms/chris-says.json').catch(() => null),
-            fetch('cms/templates.json').catch(() => null)
+        const [launches, chrisSays, templates] = await Promise.all([
+            fetch('cms/launches.json').then(r => r.ok ? r.json() : {}),
+            fetch('cms/chris-says.json').then(r => r.ok ? r.json() : {}),
+            fetch('cms/templates.json').then(r => r.ok ? r.json() : {})
         ]);
-
-        if (launchesRes?.ok) cmsData.launches = await launchesRes.json();
-        if (chrisSaysRes?.ok) cmsData.chrisSays = await chrisSaysRes.json();
-        if (templatesRes?.ok) cmsData.templates = await templatesRes.json();
+        return { launches, chrisSays, templates };
     } catch (error) {
-        console.error('CMS load error:', error);
+        console.warn('CMS data load failed, using defaults:', error);
+        return { launches: {}, chrisSays: {}, templates: {} };
     }
 }
 
-// Fetch launches from API
+// --- API Fetching ---
 async function fetchLaunches() {
+    const API_BASE = 'https://lldev.thespacedevs.com/2.3.0';
+    const headers = { 'Authorization': 'Token 506485404eb785c1b7e1c3dac3ba394ba8fb6834' };
+
     try {
-        const locationParam = LOCATION_IDS.join(',');
-        const response = await fetch(
-            `${API_BASE}/launches/upcoming/?location__ids=${locationParam}&limit=15`,
-            {
-                headers: {
-                    'Authorization': `Token ${API_KEY}`
-                }
+        const [kscResponse, ccafsResponse] = await Promise.all([
+            fetch(`${API_BASE}/launches/upcoming/?location__ids=12&limit=10`, { headers }),
+            fetch(`${API_BASE}/launches/upcoming/?location__ids=27&limit=10`, { headers })
+        ]);
+
+        if (!kscResponse.ok || !ccafsResponse.ok) {
+            throw new Error('API response not OK');
+        }
+
+        const kscData = await kscResponse.json();
+        const ccafsData = await ccafsResponse.json();
+
+        // Combine and deduplicate by ID
+        const allLaunches = [...(kscData.results || []), ...(ccafsData.results || [])];
+        const unique = new Map();
+        allLaunches.forEach(launch => {
+            if (!unique.has(launch.id)) {
+                unique.set(launch.id, launch);
             }
-        );
-
-        if (!response.ok) throw new Error(`API error: ${response.status}`);
-
-        const data = await response.json();
-        let launches = data.results || [];
-
-        // Deduplicate by ID
-        const seen = new Set();
-        launches = launches.filter(launch => {
-            if (seen.has(launch.id)) return false;
-            seen.add(launch.id);
-            return true;
         });
 
-        // Sort by NET
-        launches.sort((a, b) => new Date(a.net) - new Date(b.net));
+        // Sort by NET date
+        const sorted = Array.from(unique.values()).sort((a, b) => {
+            return new Date(a.net) - new Date(b.net);
+        });
 
-        // Filter out completed launches
-        launches = filterLaunches(launches);
-
-        return launches;
+        return sorted;
     } catch (error) {
-        console.error('Fetch error:', error);
+        console.error('API fetch error:', error);
         return null;
     }
 }
 
-// Filter out completed/irrelevant launches
+// --- Caching ---
+function cacheData(launches) {
+    try {
+        localStorage.setItem('rocketTalkLaunches', JSON.stringify(launches));
+        localStorage.setItem('rocketTalkCacheTime', Date.now().toString());
+    } catch (error) {
+        console.warn('Cache write failed:', error);
+    }
+}
+
+function getCachedData() {
+    try {
+        const data = localStorage.getItem('rocketTalkLaunches');
+        const time = localStorage.getItem('rocketTalkCacheTime');
+        if (data && time) {
+            return { launches: JSON.parse(data), cacheTime: parseInt(time) };
+        }
+    } catch (error) {
+        console.warn('Cache read failed:', error);
+    }
+    return null;
+}
+
+function isCacheValid() {
+    const cached = getCachedData();
+    if (!cached) return false;
+    const SIX_HOURS = 6 * 60 * 60 * 1000;
+    return (Date.now() - cached.cacheTime) < SIX_HOURS;
+}
+
+async function loadLaunches() {
+    // Cache-first strategy: render cached data immediately
+    const cached = getCachedData();
+
+    if (cached && isCacheValid()) {
+        // Use cache, but fetch fresh data in background
+        fetchLaunches().then(fresh => {
+            if (fresh && fresh.length > 0) {
+                cacheData(fresh);
+                renderLaunchesProgressive(fresh);
+            }
+        });
+        return filterLaunches(cached.launches);
+    }
+
+    // No valid cache — fetch fresh
+    const launches = await fetchLaunches();
+    if (launches && launches.length > 0) {
+        cacheData(launches);
+        return filterLaunches(launches);
+    }
+
+    // Fallback to stale cache
+    if (cached) {
+        return filterLaunches(cached.launches);
+    }
+
+    return null;
+}
+
+// --- Filtering ---
 function filterLaunches(launches) {
-    const now = new Date();
+    const now = Date.now();
+    const SIXTY_MINUTES = 60 * 60 * 1000;
+
     return launches.filter(launch => {
         const statusId = launch.status?.id;
 
-        // Remove Success (3), Failure (4), Partial Failure (7)
+        // Exclude Success (3), Failure (4), Partial Failure (7)
         if ([3, 4, 7].includes(statusId)) return false;
 
-        // Remove In-Flight (6) if more than 60 minutes past NET
+        // Exclude In-Flight (6) if more than 60 minutes past NET
         if (statusId === 6) {
-            const net = new Date(launch.net);
-            const minutesSinceNet = (now - net) / (1000 * 60);
-            if (minutesSinceNet > 60) return false;
+            const net = new Date(launch.net).getTime();
+            if (now - net > SIXTY_MINUTES) return false;
         }
 
         return true;
     });
 }
 
-// Cache management
-function cacheData(launches) {
-    try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(launches));
-        localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
-    } catch (e) {
-        console.warn('Cache write failed:', e);
-    }
-}
-
-function getCachedData() {
-    try {
-        const data = localStorage.getItem(CACHE_KEY);
-        const time = localStorage.getItem(CACHE_TIME_KEY);
-        if (data && time) {
-            // Use cache if less than 6 hours old
-            if (Date.now() - parseInt(time) < 6 * 60 * 60 * 1000) {
-                return JSON.parse(data);
-            }
-        }
-    } catch (e) {
-        console.warn('Cache read failed:', e);
-    }
-    return null;
-}
-
-// Render launches progressively - first card immediately, rest in background
-function renderLaunchesProgressive(launches) {
-    const container = document.getElementById('launches-container');
-    container.innerHTML = '';
-
-    if (launches.length === 0) {
-        container.innerHTML = '<p class="no-launches">No upcoming launches found for the Space Coast.</p>';
-        return;
-    }
-
-    // Render first card immediately
-    const firstCard = createLaunchCard(launches[0]);
-    container.appendChild(firstCard);
-
-    // Render remaining cards in background
-    if (launches.length > 1) {
-        requestAnimationFrame(() => {
-            const fragment = document.createDocumentFragment();
-            for (let i = 1; i < launches.length; i++) {
-                fragment.appendChild(createLaunchCard(launches[i]));
-            }
-            container.appendChild(fragment);
-        });
-    }
-
-    // Start countdown timers
-    updateCountdowns();
-}
-
-// Create a launch card element
-function createLaunchCard(launch) {
-    const card = document.createElement('div');
-    card.className = 'launch-card';
-    card.dataset.launchId = launch.id;
-
-    const net = new Date(launch.net);
-    const statusClass = getStatusClass(launch.status);
-    const statusText = launch.status?.name || 'Unknown';
-
-    // Thumbnail-first for mobile performance
-    const imageUrl = launch.image?.thumbnail_url || launch.image?.image_url || '';
-
-    // Get CMS data for this launch
-    const launchCMS = getCMSForLaunch(launch);
-    const chrisSays = getChrisSaysForLaunch(launch);
-
-    let cardHTML = '';
-
-    // Launch Image
-    if (imageUrl) {
-        cardHTML += `<img class="launch-image" src="${imageUrl}" alt="${launch.name}" loading="lazy">`;
-    }
-
-    // CMS Headline Banner
-    if (launchCMS?.headline) {
-        cardHTML += `<div class="cms-headline">${launchCMS.headline}</div>`;
-    }
-
-    // Launch Content Container
-    cardHTML += '<div class="launch-content">';
-
-    // Launch Header
-    cardHTML += `
-        <div class="launch-header">
-            <h2 class="launch-name">${launch.name}</h2>
-            <p class="launch-vehicle">${launch.rocket?.configuration?.full_name || launch.rocket?.configuration?.name || 'Unknown Vehicle'}</p>
-            <p class="launch-pad">${launch.pad?.name || 'Unknown Pad'}${launch.pad?.location?.name ? ', ' + launch.pad.location.name : ''}</p>
-            <p class="launch-time">${formatLaunchTime(net)}</p>
-        </div>
-    `;
-
-    // Status Badge
-    cardHTML += `<span class="status-badge ${statusClass}">${statusText}</span>`;
-
-    // Countdown
-    cardHTML += `<div class="countdown-container" data-net="${launch.net}" data-status="${launch.status?.id || 0}"></div>`;
-
-    // Viewing Guide Dropdown (Green)
-    if (launchCMS?.viewingGuide) {
-        cardHTML += `
-            <details class="dropdown viewing-guide-dropdown">
-                <summary>👀 Viewing Guide</summary>
-                <div class="dropdown-content">
-                    ${processTemplate(launchCMS.viewingGuide, launch)}
-                </div>
-            </details>
-        `;
-    }
-
-    // Rocket Talk LIVE! Dropdown (Purple)
-    if (launchCMS?.rocketTalk) {
-        cardHTML += `
-            <details class="dropdown rocket-talk-dropdown">
-                <summary>🎙️ Rocket Talk LIVE!</summary>
-                <div class="dropdown-content">
-                    ${processTemplate(launchCMS.rocketTalk, launch)}
-                </div>
-            </details>
-        `;
-    }
-
-    // Chris Says Dropdown (Orange)
-    if (chrisSays) {
-        cardHTML += `
-            <details class="dropdown chris-says-dropdown">
-                <summary>🗣️ Chris Says</summary>
-                <div class="dropdown-content">
-                    <img class="chris-icon" src="images/chris-icon.png" alt="Chris" onerror="this.style.display='none'">
-                    ${chrisSays.content}
-                </div>
-            </details>
-        `;
-    }
-
-    // Mission Info Dropdown (Blue)
-    const missionDescription = launch.mission?.description;
-    if (missionDescription) {
-        cardHTML += `
-            <details class="dropdown mission-info-dropdown">
-                <summary>ℹ️ Mission Info</summary>
-                <div class="dropdown-content">
-                    ${launch.mission?.type ? `<p><strong>Type:</strong> ${launch.mission.type}</p>` : ''}
-                    ${launch.mission?.orbit?.name ? `<p><strong>Orbit:</strong> ${launch.mission.orbit.name}</p>` : ''}
-                    <p>${missionDescription}</p>
-                </div>
-            </details>
-        `;
-    }
-
-    // Livestream Links Dropdown (Red) - Always last
-    const livestreamLinks = getLivestreamLinks(launch);
-    if (livestreamLinks.length > 0) {
-        cardHTML += `
-            <details class="dropdown livestream-dropdown">
-                <summary>📺 Livestream Links</summary>
-                <div class="dropdown-content">
-                    ${livestreamLinks.map(link => `<a href="${link.url}" target="_blank" rel="noopener noreferrer">${link.title || link.url}</a>`).join('<br>')}
-                </div>
-            </details>
-        `;
-    }
-
-    // Filmstrip gallery
-    const galleryImages = getGalleryImages(launch);
-    if (galleryImages.length > 0) {
-        cardHTML += `
-            <div class="filmstrip-container">
-                ${galleryImages.map(img => `<img src="${img}" alt="Launch gallery" loading="lazy">`).join('')}
-            </div>
-            <a class="gallery-link" href="#" onclick="return false;">View More Photos</a>
-        `;
-    }
-
-    cardHTML += '</div>'; // Close launch-content
-
-    card.innerHTML = cardHTML;
-    return card;
-}
-
-// Get CMS data for a specific launch
-function getCMSForLaunch(launch) {
-    if (!cmsData.launches) return null;
-
-    // Try exact ID match first
-    if (cmsData.launches[launch.id]) return cmsData.launches[launch.id];
-
-    // Try slug match
-    if (launch.slug && cmsData.launches[launch.slug]) return cmsData.launches[launch.slug];
-
-    return null;
-}
-
-// Get Chris Says data for a launch
-function getChrisSaysForLaunch(launch) {
-    if (!cmsData.chrisSays) return null;
-
-    if (cmsData.chrisSays[launch.id]) return cmsData.chrisSays[launch.id];
-    if (launch.slug && cmsData.chrisSays[launch.slug]) return cmsData.chrisSays[launch.slug];
-
-    return null;
-}
-
-// Process template strings with launch data
-function processTemplate(template, launch) {
-    if (typeof template !== 'string') return template;
-
-    return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-        // Convert camelCase to nested path
-        const value = getNestedValue(launch, key);
-        return value !== undefined ? value : match;
-    });
-}
-
-// Get nested value from object using camelCase key
-function getNestedValue(obj, key) {
-    // Direct key match
-    if (obj[key] !== undefined) return obj[key];
-
-    // Try common mappings
-    const mappings = {
-        'missionName': () => obj.mission?.name,
-        'missionDescription': () => obj.mission?.description,
-        'rocketName': () => obj.rocket?.configuration?.name,
-        'rocketFullName': () => obj.rocket?.configuration?.full_name,
-        'padName': () => obj.pad?.name,
-        'locationName': () => obj.pad?.location?.name,
-        'orbitName': () => obj.mission?.orbit?.name,
-        'missionType': () => obj.mission?.type,
-        'launchName': () => obj.name,
-        'net': () => formatLaunchTime(new Date(obj.net)),
-        'statusName': () => obj.status?.name
-    };
-
-    if (mappings[key]) return mappings[key]();
-    return undefined;
-}
-
-// Get livestream links, filtering for preferred sources
-function getLivestreamLinks(launch) {
-    if (!launch.vid_urls || launch.vid_urls.length === 0) return [];
-
-    const preferred = ['nasaspaceflight', 'spaceflightnow'];
-    return launch.vid_urls.filter(vid => {
-        const url = (vid.url || '').toLowerCase();
-        const title = (vid.title || '').toLowerCase();
-        return preferred.some(keyword => url.includes(keyword) || title.includes(keyword));
-    });
-}
-
-// Get gallery images from launch
-function getGalleryImages(launch) {
-    // The API doesn't provide multiple gallery images directly
-    // This could be extended with CMS data
-    return [];
-}
-
-// Get status CSS class
-function getStatusClass(status) {
-    if (!status) return 'status-tbd';
-
-    switch (status.id) {
-        case 1: return 'status-go';       // Go for Launch
-        case 2: return 'status-tbd';      // TBD
-        case 3: return 'status-success';  // Success
-        case 4: return 'status-failure';  // Failure
-        case 5: return 'status-hold';     // Hold
-        case 6: return 'status-inflight'; // In Flight
-        case 7: return 'status-failure';  // Partial Failure
-        case 8: return 'status-tbc';      // TBC
-        default: return 'status-tbd';
-    }
-}
-
-// Format launch time in Eastern Time
-function formatLaunchTime(date) {
-    return date.toLocaleString('en-US', {
-        timeZone: 'America/New_York',
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZoneName: 'short'
-    });
-}
-
-// Update all countdown timers
-function updateCountdowns() {
-    const countdowns = document.querySelectorAll('.countdown-container');
-    const now = new Date();
-
-    countdowns.forEach(container => {
-        const net = new Date(container.dataset.net);
-        const statusId = parseInt(container.dataset.status) || 0;
-        const diff = net - now;
-
-        if (statusId === 6) {
-            // In Flight
-            container.className = 'countdown-container countdown-launched';
-            container.textContent = '🚀 IN FLIGHT';
-            return;
-        }
-
-        if (diff <= 0) {
-            // Past T-zero
-            container.className = 'countdown-container countdown-launched';
-            container.textContent = '🚀 LAUNCHED';
-            return;
-        }
-
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-        if (hours >= 48) {
-            // Dormant state
-            const days = Math.floor(hours / 24);
-            container.className = 'countdown-container countdown-dormant';
-            container.textContent = `T-${days}d ${hours % 24}h ${minutes}m`;
-        } else {
-            // Active state
-            container.className = 'countdown-container countdown-active';
-            container.textContent = `T-${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        }
-    });
-
-    // Schedule next update
-    setTimeout(updateCountdowns, 1000);
-}
-
-// Refresh scheduling
+// --- Refresh Logic ---
 function getRefreshInterval() {
-    const containers = document.querySelectorAll('.countdown-container');
-    let minInterval = 6 * 60 * 60 * 1000; // Default 6 hours
+    const cached = getCachedData();
+    if (!cached || !cached.launches.length) return 6 * 60 * 60 * 1000; // 6 hours
 
-    containers.forEach(container => {
-        const net = new Date(container.dataset.net);
-        const statusId = parseInt(container.dataset.status) || 0;
-        const diff = net - new Date();
+    const now = Date.now();
+    const filtered = filterLaunches(cached.launches);
 
-        if (statusId === 6 || diff < 30 * 60 * 1000) {
-            minInterval = Math.min(minInterval, 60 * 1000); // 1 minute
-        } else if (diff < 2 * 60 * 60 * 1000) {
-            minInterval = Math.min(minInterval, 5 * 60 * 1000); // 5 minutes
-        } else if (diff < 6 * 60 * 60 * 1000) {
-            minInterval = Math.min(minInterval, 60 * 60 * 1000); // 1 hour
+    for (const launch of filtered) {
+        const net = new Date(launch.net).getTime();
+        const diff = net - now;
+        const statusId = launch.status?.id;
+
+        // In-Flight or within 30 minutes — refresh every 1 minute
+        if (statusId === 6 || (diff > 0 && diff <= 30 * 60 * 1000)) {
+            return 1 * 60 * 1000;
         }
-    });
 
-    return minInterval;
+        // Within 2 hours — refresh every 5 minutes
+        if (diff > 0 && diff <= 2 * 60 * 60 * 1000) {
+            return 5 * 60 * 1000;
+        }
+
+        // Within 6 hours — refresh every 1 hour
+        if (diff > 0 && diff <= 6 * 60 * 60 * 1000) {
+            return 60 * 60 * 1000;
+        }
+    }
+
+    return 6 * 60 * 60 * 1000; // Default: 6 hours
 }
 
 function scheduleNextRefresh() {
+    if (refreshTimer) clearTimeout(refreshTimer);
+
     const interval = getRefreshInterval();
-    setTimeout(async () => {
+    console.log(`Next refresh in ${Math.round(interval / 60000)} minutes`);
+
+    refreshTimer = setTimeout(async () => {
         const launches = await fetchLaunches();
         if (launches && launches.length > 0) {
             cacheData(launches);
-            renderLaunchesProgressive(launches);
+            const filtered = filterLaunches(launches);
+            renderLaunchesProgressive(filtered);
         }
         scheduleNextRefresh();
     }, interval);
 }
 
-// Loading screen
-function hideLoadingScreen() {
-    const loadingScreen = document.getElementById('loading-screen');
-    if (loadingScreen) {
-        loadingScreen.classList.add('fade-out');
-        setTimeout(() => {
-            loadingScreen.style.display = 'none';
-        }, 500);
+// --- Rendering ---
+function renderLaunchesProgressive(launches) {
+    const container = document.getElementById('launches-container');
+    if (!container) return;
+
+    // Clear existing countdown timer
+    if (countdownTimer) clearTimeout(countdownTimer);
+
+    // Clear container
+    container.innerHTML = '';
+
+    if (!launches || launches.length === 0) {
+        showNoLaunches();
+        return;
+    }
+
+    // Render first card immediately for fast paint
+    const firstCard = buildLaunchCard(launches[0]);
+    container.appendChild(firstCard);
+
+    // Render remaining cards progressively
+    if (launches.length > 1) {
+        requestAnimationFrame(() => {
+            const fragment = document.createDocumentFragment();
+            for (let i = 1; i < launches.length; i++) {
+                fragment.appendChild(buildLaunchCard(launches[i]));
+            }
+            container.appendChild(fragment);
+        });
+    }
+
+    // Start countdowns
+    updateCountdowns();
+}
+
+function buildLaunchCard(launch) {
+    const card = document.createElement('div');
+    card.className = 'launch-card';
+    card.dataset.launchId = launch.id;
+    card.dataset.net = launch.net;
+
+    const statusClass = getStatusClass(launch.status?.id);
+    const statusName = launch.status?.name || 'Unknown';
+    const missionName = launch.mission?.name || launch.name || 'Unknown Mission';
+    const rocketName = launch.rocket?.configuration?.full_name || launch.rocket?.configuration?.name || '';
+    const padName = launch.pad?.name || '';
+    const locationName = launch.pad?.location?.name || '';
+    const netDate = formatNET(launch.net);
+
+    // Image URL — handle both string and object formats
+    const imageUrl = getImageUrl(launch);
+
+    // CMS data for this launch
+    const launchCMS = cmsData.launches?.[launch.id] || {};
+    const chrisSaysEntry = cmsData.chrisSays?.[launch.id] || null;
+
+    card.innerHTML = `
+        ${buildHeadlineBanner(launchCMS)}
+        ${buildLaunchImage(imageUrl, missionName)}
+        <div class="launch-card-content">
+            <h2 class="mission-name">${escapeHTML(missionName)}</h2>
+            <p class="rocket-name">${escapeHTML(rocketName)}</p>
+            <span class="status-badge ${statusClass}">${escapeHTML(statusName)}</span>
+            <div class="launch-detail"><strong>NET:</strong> ${escapeHTML(netDate)}</div>
+            <div class="launch-detail"><strong>Pad:</strong> ${escapeHTML(padName)}</div>
+            <div class="launch-detail"><strong>Location:</strong> ${escapeHTML(locationName)}</div>
+            <div class="countdown-container" data-net="${launch.net}">
+                <span class="countdown-label">T-minus</span>
+                <span class="countdown-value">--:--:--:--</span>
+            </div>
+            ${buildViewingGuideDropdown(launchCMS)}
+            ${buildRocketTalkLiveDropdown(launchCMS)}
+            ${buildChrisSaysDropdown(chrisSaysEntry)}
+            ${buildMissionInfoDropdown(launch)}
+            ${buildLivestreamDropdown(launch)}
+            ${buildFilmstrip(launchCMS)}
+        </div>
+    `;
+
+    return card;
+}
+
+// --- Image URL Helper ---
+function getImageUrl(launch) {
+    if (!launch.image) return '';
+
+    // Handle direct string URL
+    if (typeof launch.image === 'string') return launch.image;
+
+    // Handle object with thumbnail_url and image_url
+    return launch.image.thumbnail_url || launch.image.image_url || '';
+}
+
+// --- Status Badge ---
+function getStatusClass(statusId) {
+    switch (statusId) {
+        case 1: return 'status-go';       // Go for Launch
+        case 2: return 'status-tbd';      // To Be Determined
+        case 3: return 'status-success';  // Launch Successful
+        case 4: return 'status-failure';  // Launch Failure
+        case 5: return 'status-hold';     // On Hold
+        case 6: return 'status-inflight'; // In Flight
+        case 7: return 'status-failure';  // Partial Failure
+        case 8: return 'status-tbc';      // To Be Confirmed
+        default: return 'status-tbd';
     }
 }
 
-// Start the app
+// --- Date Formatting ---
+function formatNET(netString) {
+    if (!netString) return 'TBD';
+    try {
+        const date = new Date(netString);
+        return date.toLocaleString('en-US', {
+            timeZone: 'America/New_York',
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            timeZoneName: 'short'
+        });
+    } catch {
+        return 'TBD';
+    }
+}
+
+// --- Countdown ---
+function updateCountdowns() {
+    const containers = document.querySelectorAll('.countdown-container');
+    const now = Date.now();
+
+    containers.forEach(container => {
+        const net = new Date(container.dataset.net).getTime();
+        const diff = net - now;
+        const valueEl = container.querySelector('.countdown-value');
+        const labelEl = container.querySelector('.countdown-label');
+
+        if (!valueEl || !labelEl) return;
+
+        if (diff <= 0) {
+            // Launched
+            container.className = 'countdown-container countdown-launched';
+            labelEl.textContent = '';
+            valueEl.textContent = '🚀 LAUNCHED';
+        } else if (diff > 48 * 60 * 60 * 1000) {
+            // Dormant: more than 48 hours
+            container.className = 'countdown-container countdown-dormant';
+            const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+            const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+            labelEl.textContent = 'T-minus';
+            valueEl.textContent = `${days}d ${hours}h`;
+        } else {
+            // Active: within 48 hours
+            container.className = 'countdown-container countdown-active';
+            const hours = Math.floor(diff / (60 * 60 * 1000));
+            const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
+            const seconds = Math.floor((diff % (60 * 1000)) / 1000);
+            labelEl.textContent = 'T-minus';
+            valueEl.textContent = `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        }
+    });
+
+    countdownTimer = setTimeout(updateCountdowns, 1000);
+}
+
+function pad(num) {
+    return num.toString().padStart(2, '0');
+}
+
+// --- Card Component Builders ---
+
+function buildHeadlineBanner(launchCMS) {
+    if (!launchCMS.headline) return '';
+    return `<div class="cms-headline">${escapeHTML(launchCMS.headline)}</div>`;
+}
+
+function buildLaunchImage(imageUrl, altText) {
+    if (!imageUrl) return '';
+    return `<img class="launch-image" src="${escapeHTML(imageUrl)}" alt="${escapeHTML(altText)}" loading="lazy">`;
+}
+
+function buildViewingGuideDropdown(launchCMS) {
+    if (!launchCMS.viewingGuide) return '';
+
+    const guide = launchCMS.viewingGuide;
+    let content = '';
+
+    if (guide.text) {
+        content += `<p>${escapeHTML(guide.text)}</p>`;
+    }
+
+    if (guide.link) {
+        content += `<a class="viewing-guide-link" href="${escapeHTML(guide.link.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(guide.link.label || 'Viewing Guide')}</a>`;
+    }
+
+    if (!content) return '';
+
+    return `
+        <details class="dropdown viewing-guide-dropdown">
+            <summary>Viewing Guide</summary>
+            <div class="dropdown-content">${content}</div>
+        </details>
+    `;
+}
+
+function buildRocketTalkLiveDropdown(launchCMS) {
+    if (!launchCMS.rocketTalkLive) return '';
+
+    const rtl = launchCMS.rocketTalkLive;
+    let content = '';
+
+    if (rtl.text) {
+        content += `<p>${escapeHTML(rtl.text)}</p>`;
+    }
+
+    if (rtl.link) {
+        content += `<a class="viewing-guide-link" href="${escapeHTML(rtl.link.url)}" target="_blank" rel="noopener noreferrer" style="color: #7b1fa2;">${escapeHTML(rtl.link.label || 'Watch Live')}</a>`;
+    }
+
+    if (!content) return '';
+
+    return `
+        <details class="dropdown rocket-talk-dropdown">
+            <summary>Rocket Talk LIVE!</summary>
+            <div class="dropdown-content">${content}</div>
+        </details>
+    `;
+}
+
+function buildChrisSaysDropdown(entry) {
+    if (!entry || !entry.text) return '';
+
+    const iconHTML = entry.icon
+        ? `<img class="chris-icon" src="${escapeHTML(entry.icon)}" alt="Chris">`
+        : '';
+
+    return `
+        <details class="dropdown chris-says-dropdown">
+            <summary>${iconHTML}Chris Says</summary>
+            <div class="dropdown-content">
+                <p>${escapeHTML(entry.text)}</p>
+            </div>
+        </details>
+    `;
+}
+
+function buildMissionInfoDropdown(launch) {
+    const description = launch.mission?.description;
+    if (!description) return '';
+
+    // Check for CMS template override
+    const templateContent = processTemplate(launch);
+
+    return `
+        <details class="dropdown mission-info-dropdown">
+            <summary>Mission Info</summary>
+            <div class="dropdown-content">
+                ${templateContent || `<p>${escapeHTML(description)}</p>`}
+            </div>
+        </details>
+    `;
+}
+
+function buildLivestreamDropdown(launch) {
+    const links = getLivestreamLinks(launch);
+    if (links.length === 0) return '';
+
+    const linksHTML = links.map(vid => {
+        const title = vid.title || vid.source || 'Watch';
+        const url = vid.url || '';
+        return `<a class="viewing-guide-link" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer" style="color: #c62828;">${escapeHTML(title)}</a>`;
+    }).join('');
+
+    return `
+        <details class="dropdown livestream-dropdown">
+            <summary>Livestream Links</summary>
+            <div class="dropdown-content">${linksHTML}</div>
+        </details>
+    `;
+}
+
+function buildFilmstrip(launchCMS) {
+    if (!launchCMS.filmstrip || launchCMS.filmstrip.length === 0) return '';
+
+    const images = launchCMS.filmstrip.map(img => {
+        const imgTag = `<img src="${escapeHTML(img.thumbnail || img.url)}" alt="${escapeHTML(img.alt || '')}" loading="lazy">`;
+        if (img.fullUrl) {
+            return `<a class="gallery-link" href="${escapeHTML(img.fullUrl)}" target="_blank" rel="noopener noreferrer">${imgTag}</a>`;
+        }
+        return imgTag;
+    }).join('');
+
+    return `
+        <div class="filmstrip-container">
+            ${images}
+        </div>
+    `;
+}
+
+// --- Livestream Links ---
+function getLivestreamLinks(launch) {
+    if (!launch.vid_urls || launch.vid_urls.length === 0) return [];
+
+    const preferredKeywords = ['nasaspaceflight', 'spaceflightnow'];
+
+    // Separate preferred and other streams
+    const preferred = [];
+    const others = [];
+
+    launch.vid_urls.forEach(vid => {
+        const url = (vid.url || '').toLowerCase();
+        const title = (vid.title || '').toLowerCase();
+        const isPreferred = preferredKeywords.some(keyword =>
+            url.includes(keyword) || title.includes(keyword)
+        );
+
+        if (isPreferred) {
+            preferred.push(vid);
+        } else {
+            others.push(vid);
+        }
+    });
+
+    // Preferred sources always get top billing, followed by others
+    return [...preferred, ...others];
+}
+
+// --- Template Engine ---
+function processTemplate(launch) {
+    if (!cmsData.templates) return null;
+
+    // Check for launch-specific template
+    const launchCMS = cmsData.launches?.[launch.id];
+    const templateName = launchCMS?.template;
+
+    if (!templateName || !cmsData.templates[templateName]) return null;
+
+    let template = cmsData.templates[templateName];
+
+    // Replace {{variable}} placeholders with launch data
+    template = template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+        const value = getNestedValue(launch, key);
+        return value !== undefined ? escapeHTML(String(value)) : match;
+    });
+
+    return template;
+}
+
+function getNestedValue(obj, key) {
+    // Convert camelCase to dot notation path
+    // e.g., missionName → mission.name, rocketName → rocket.configuration.name
+    const mappings = {
+        'missionName': 'mission.name',
+        'missionDescription': 'mission.description',
+        'rocketName': 'rocket.configuration.full_name',
+        'padName': 'pad.name',
+        'locationName': 'pad.location.name',
+        'statusName': 'status.name',
+        'net': 'net',
+        'name': 'name',
+        'id': 'id'
+    };
+
+    const path = mappings[key] || key;
+    return path.split('.').reduce((current, part) => {
+        return current && current[part] !== undefined ? current[part] : undefined;
+    }, obj);
+}
+
+// --- Utility ---
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function showNoLaunches() {
+    const container = document.getElementById('launches-container');
+    if (container) {
+        container.innerHTML = `
+            <div class="launch-card">
+                <div class="launch-card-content" style="text-align: center; padding: 2rem;">
+                    <h2>No Upcoming Launches</h2>
+                    <p>Check back later for upcoming launches from the Space Coast!</p>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function showError() {
+    const container = document.getElementById('launches-container');
+    if (container) {
+        container.innerHTML = `
+            <div class="launch-card">
+                <div class="launch-card-content" style="text-align: center; padding: 2rem;">
+                    <h2>Unable to Load Launches</h2>
+                    <p>Please check your connection and try again.</p>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// --- Start ---
 document.addEventListener('DOMContentLoaded', init);
