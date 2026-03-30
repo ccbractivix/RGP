@@ -105,27 +105,6 @@ function normalizeLaunchCMS(entry) {
     return result;
 }
 
-    // Rocket Talk
-    if (entry.rocket_talk) {
-        result.rocketTalk = {
-            template: entry.rocket_talk.template || null,
-            variables: entry.rocket_talk.variables || {}
-        };
-    }
-
-    // Rocket Talk LIVE
-    if (entry.rocket_talk_live) {
-        const rtl = entry.rocket_talk_live;
-        result.rocketTalkLive = {
-            enabled: rtl.enabled || false,
-            url: rtl.url || '',
-            text: rtl.text || rtl.label || ''
-        };
-    }
-
-    return result;
-}
-
 // ============================================================
 // TEMPLATE ENGINE
 // ============================================================
@@ -628,7 +607,7 @@ function renderPageFooter() {
     const siteFooterHtml = `<div class="site-footer">
     </div>`;
 
-    footer.innerHTML = filmstripHtml + galleryHtml + dividerHtml + disclaimerHtml + footerBarHtml + siteFooterHtml;
+    footer.innerHTML = filmstripHtml + dividerHtml + footerBarHtml + siteFooterHtml;
 
     container.after(footer);
 }
