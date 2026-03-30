@@ -73,22 +73,37 @@ function normalizeLaunchCMS(entry) {
     // Headline
     if (entry.headline) result.headline = entry.headline;
 
-    // Viewing Guide
+    // Viewing Guide - keep as simple string URL
     if (entry.viewing_guide) {
-        if (typeof entry.viewing_guide === 'object') {
-            result.viewingGuide = {
-                text: entry.viewing_guide.text || '',
-                trajectory: entry.viewing_guide.trajectory || entry.trajectory || ''
-            };
-        } else {
-            result.viewingGuide = {
-                text: entry.viewing_guide,
-                trajectory: entry.trajectory || ''
-            };
-        }
-    } else if (entry.trajectory) {
-        result.viewingGuide = { text: '', trajectory: entry.trajectory };
+        result.viewingGuide = typeof entry.viewing_guide === 'string' 
+            ? entry.viewing_guide 
+            : entry.viewing_guide.text || '';
     }
+
+    // Trajectory - keep as its own field
+    if (entry.trajectory) {
+        result.trajectory = entry.trajectory;
+    }
+
+    // Rocket Talk
+    if (entry.rocket_talk) {
+        result.rocketTalk = {
+            template: entry.rocket_talk.template || '',
+            variables: entry.rocket_talk.variables || {}
+        };
+    }
+
+    // Rocket Talk Live
+    if (entry.rocket_talk_live) {
+        result.rocketTalkLive = {
+            enabled: entry.rocket_talk_live.enabled || false,
+            url: entry.rocket_talk_live.url || '',
+            label: entry.rocket_talk_live.label || ''
+        };
+    }
+
+    return result;
+}
 
     // Rocket Talk
     if (entry.rocket_talk) {
@@ -356,10 +371,8 @@ function renderCountdown(launch) {
 function renderViewingGuide(launch) {
     const cms = cmsData.launches?.[launch.id];
     if (!cms) return '';
-console.log('VG debug:', launch.id, cms);
 
-    // Check both camelCase and snake_case versions
-    const vg = cms.viewingGuide || cms.viewing_guide;
+    const vg = cms.viewingGuide;
 
     if (typeof vg === 'string' && vg.trim()) {
         return `<details class="dropdown viewing-guide-dropdown">
@@ -372,6 +385,7 @@ console.log('VG debug:', launch.id, cms);
 
     return '';
 }
+
 
 function renderRocketTalkLive(launch) {
     const cms = cmsData.launches?.[launch.id];
