@@ -355,11 +355,11 @@ function renderCountdown(launch) {
 
 function renderViewingGuide(launch) {
     const cms = cmsData.launches?.[launch.id];
-    if (!cms?.viewingGuide) return '';
+    if (!cms) return '';
 
-    const vg = cms.viewingGuide;
+    // Check both camelCase and snake_case versions
+    const vg = cms.viewingGuide || cms.viewing_guide;
 
-    // viewingGuide is a string (URL) from the JSON
     if (typeof vg === 'string' && vg.trim()) {
         return `<details class="dropdown viewing-guide-dropdown">
             <summary>📍 Viewing Guide</summary>
