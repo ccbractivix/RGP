@@ -47,14 +47,109 @@ async function loadCMSData() {
     try {
         const [launches, chrisSays, templates] = await Promise.all([
             fetch('cms/launches.json').then(r => r.ok ? r.json() : {}),
-            fetch('cms/chris-says.json').then(r => r.ok ? r.json() : {}),
+            fetch('cms/chris-says.json').then(r => r.ok ? r.json() : []),
             fetch('cms/templates.json').then(r => r.ok ? r.json() : {})
         ]);
-        return { launches, chrisSays, templates };
+
+        // Normalize launches.json: convert snake_case to camelCase
+        // and restructure flat values into the objects the renderer expects
+        const normalizedLaunches = {};
+        for (const [launchId, data] of Object.entries(launches)) {
+            normalizedLaunches[launchId] = normalizeLaunchCMS(data);
+        }
+
+        // Normalize chris-says.json: convert array to object keyed by launch_id
+        const normalizedChrisSays = {};
+        if (Array.isArray(chrisSays)) {
+            chrisSays.forEach(entry => {
+                if (entry.launch_id) {
+                    normalizedChrisSays[entry.launch_id] = {
+                        text: entry.text || '',
+                        date: entry.date || '',
+                        icon: entry.icon || ''
+                    };
+                }
+            });
+        } else if (typeof chrisSays === 'object') {
+            // Already keyed by launch_id
+            Object.assign(normalizedChrisSays, chrisSays);
+        }
+
+        return {
+            launches: normalizedLaunches,
+            chrisSays: normalizedChrisSays,
+            templates
+        };
     } catch (error) {
         console.warn('CMS data load failed, using defaults:', error);
         return { launches: {}, chrisSays: {}, templates: {} };
     }
+}
+
+function normalizeLaunchCMS(data) {
+    const normalized = {};
+
+    // Headline
+    if (data.headline) {
+        normalized.headline = data.headline;
+    }
+
+    // Viewing Guide — handle string URL or object
+    if (data.viewing_guide || data.viewingGuide) {
+        const vg = data.viewing_guide || data.viewingGuide;
+        if (typeof vg === 'string') {
+            normalized.viewingGuide = {
+                text: '',
+                link: { url: vg, label: '📍 Launch Viewing Guide' }
+            };
+        } else if (typeof vg === 'object') {
+            normalized.viewingGuide = {
+                text: vg.text || '',
+                link: vg.link || (vg.url ? { url: vg.url, label: vg.label || '📍 Launch Viewing Guide' } : null)
+            };
+        }
+    }
+
+    // Rocket Talk LIVE — handle various formats
+    if (data.rocket_talk_live || data.rocketTalkLive) {
+        const rtl = data.rocket_talk_live || data.rocketTalkLive;
+        if (typeof rtl === 'object') {
+            if (rtl.enabled !== false) {
+                normalized.rocketTalkLive = {
+                    text: rtl.text || '',
+                    link: rtl.url ? { url: rtl.url, label: rtl.label || '🎙️ Watch Rocket Talk LIVE!' } : null
+                };
+            }
+        } else if (typeof rtl === 'string') {
+            normalized.rocketTalkLive = {
+                text: '',
+                link: { url: rtl, label: '🎙️ Watch Rocket Talk LIVE!' }
+            };
+        }
+    }
+
+    // Rocket Talk template reference
+    if (data.rocket_talk || data.rocketTalk) {
+        const rt = data.rocket_talk || data.rocketTalk;
+        if (typeof rt === 'object' && rt.template) {
+            normalized.template = rt.template;
+            normalized.templateVars = rt.variables || {};
+        } else if (typeof rt === 'string') {
+            normalized.template = rt;
+        }
+    }
+
+    // Trajectory
+    if (data.trajectory) {
+        normalized.trajectory = data.trajectory;
+    }
+
+    // Filmstrip
+    if (data.filmstrip) {
+        normalized.filmstrip = data.filmstrip;
+    }
+
+    return normalized;
 }
 
 // --- API Fetching ---
@@ -135,7 +230,8 @@ async function loadLaunches() {
         fetchLaunches().then(fresh => {
             if (fresh && fresh.length > 0) {
                 cacheData(fresh);
-                renderLaunchesProgressive(fresh);
+                const filtered = filterLaunches(fresh);
+                renderLaunchesProgressive(filtered);
             }
         });
         return filterLaunches(cached.launches);
@@ -420,7 +516,7 @@ function buildViewingGuideDropdown(launchCMS) {
     }
 
     if (guide.link) {
-        content += `<a class="viewing-guide-link" href="${escapeHTML(guide.link.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(guide.link.label || 'Viewing Guide')}</a>`;
+        content += `<a class="viewing-guide-link" href="${escapeHTML(guide.link.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(guide.link.label || '📍 Launch Viewing Guide')}</a>`;
     }
 
     if (!content) return '';
@@ -444,7 +540,7 @@ function buildRocketTalkLiveDropdown(launchCMS) {
     }
 
     if (rtl.link) {
-        content += `<a class="viewing-guide-link" href="${escapeHTML(rtl.link.url)}" target="_blank" rel="noopener noreferrer" style="color: #7b1fa2;">${escapeHTML(rtl.link.label || 'Watch Live')}</a>`;
+        content += `<a class="viewing-guide-link" href="${escapeHTML(rtl.link.url)}" target="_blank" rel="noopener noreferrer" style="color: #7b1fa2;">${escapeHTML(rtl.link.label || '🎙️ Watch Rocket Talk LIVE!')}</a>`;
     }
 
     if (!content) return '';
@@ -559,7 +655,6 @@ function getLivestreamLinks(launch) {
 function processTemplate(launch) {
     if (!cmsData.templates) return null;
 
-    // Check for launch-specific template
     const launchCMS = cmsData.launches?.[launch.id];
     const templateName = launchCMS?.template;
 
@@ -567,8 +662,17 @@ function processTemplate(launch) {
 
     let template = cmsData.templates[templateName];
 
-    // Replace {{variable}} placeholders with launch data
+    // Get CMS-provided variable overrides
+    const cmsVars = launchCMS?.templateVars || {};
+
+    // Replace {{variable}} placeholders
     template = template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+        // First check CMS variables (these are already display-ready strings)
+        if (cmsVars[key] !== undefined) {
+            return escapeHTML(String(cmsVars[key]));
+        }
+
+        // Then fall back to API launch data
         const value = getNestedValue(launch, key);
         return value !== undefined ? escapeHTML(String(value)) : match;
     });
@@ -578,11 +682,11 @@ function processTemplate(launch) {
 
 function getNestedValue(obj, key) {
     // Convert camelCase to dot notation path
-    // e.g., missionName → mission.name, rocketName → rocket.configuration.name
     const mappings = {
         'missionName': 'mission.name',
         'missionDescription': 'mission.description',
         'rocketName': 'rocket.configuration.full_name',
+        'rocketFullName': 'rocket.configuration.full_name',
         'padName': 'pad.name',
         'locationName': 'pad.location.name',
         'statusName': 'status.name',
