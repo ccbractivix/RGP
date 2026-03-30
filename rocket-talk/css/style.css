@@ -326,16 +326,28 @@ body {
     margin-top: 0.5rem;
 }
 
+.livestream-link:first-child {
+    margin-top: 0;
+}
+
 .livestream-link:hover {
     text-decoration: underline;
 }
 
-/* --- Filmstrip --- */
+/* --- Filmstrip (Page Footer) --- */
 .filmstrip-section {
-    margin-top: 0.75rem;
+    width: 100%;
+    max-width: 700px;
+    margin-top: 2rem;
+    padding: 0 1rem;
 }
 
 .filmstrip-container {
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.filmstrip {
     display: flex;
     gap: 0.5rem;
     overflow-x: auto;
@@ -343,7 +355,7 @@ body {
     -webkit-overflow-scrolling: touch;
 }
 
-.filmstrip-container img {
+.filmstrip img {
     height: 120px;
     border-radius: 6px;
     object-fit: cover;
@@ -352,13 +364,23 @@ body {
     transition: transform 0.2s ease;
 }
 
-.filmstrip-container img:hover {
+.filmstrip img:hover {
     transform: scale(1.05);
 }
 
-.filmstrip-container a.gallery-link {
+.gallery-link {
     display: block;
-    flex-shrink: 0;
+    text-align: center;
+    color: #1565c0;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+}
+
+.gallery-link:hover {
+    text-decoration: underline;
 }
 
 /* --- Footer --- */
@@ -374,7 +396,7 @@ body {
     width: 100%;
     max-width: 700px;
     padding: 0 1rem;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #999;
     text-align: center;
     line-height: 1.4;
@@ -394,7 +416,7 @@ body {
 }
 
 .footer-bar img {
-    max-width: 240px;
+    max-width: 280px;
     height: auto;
 }
 
@@ -429,5 +451,9 @@ body {
     .dropdown summary {
         font-size: 0.9rem;
         padding: 0.5rem 0.85rem;
+    }
+
+    .filmstrip img {
+        height: 90px;
     }
 }
