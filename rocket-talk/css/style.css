@@ -378,17 +378,30 @@ body {
 .gallery-link {
     display: block;
     text-align: center;
-    color: #1565c0;
-    font-weight: 600;
-    font-size: 0.95rem;
+    padding: 12px 20px;
+    margin: 16px auto;
+    max-width: 700px;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    color: #ffd54f;
+    font-size: 1.1rem;
+    font-weight: 700;
     text-decoration: none;
-    margin-top: 0.75rem;
-    padding: 0.5rem;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .gallery-link:hover {
-    text-decoration: underline;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    color: #ffe082;
 }
+
+.gallery-link:active {
+    transform: translateY(0);
+}
+
 
 /* --- Footer --- */
 .footer-divider {
