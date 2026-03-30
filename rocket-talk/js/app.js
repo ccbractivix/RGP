@@ -373,6 +373,15 @@ function renderViewingGuide(launch) {
 function renderRocketTalkLive(launch) {
     const cms = cmsData.launches?.[launch.id];
 
+    // Skip if no CMS data at all
+    if (!cms) return '';
+
+    // Skip if no live event and no meaningful template variables
+    const hasLiveEvent = cms.rocketTalkLive?.enabled;
+    const hasTemplateContent = cms.rocketTalk?.variables && 
+        Object.keys(cms.rocketTalk.variables).length > 0;
+    if (!hasLiveEvent && !hasTemplateContent) return '';
+
     // Build template content if available
     let templateContent = '';
     if (cms?.rocketTalk?.template) {
@@ -392,6 +401,7 @@ function renderRocketTalkLive(launch) {
             liveContent = `<div class="rocket-talk-live-info">${escapeHTML(rtl.text)}</div>`;
         }
     }
+
 
     // Only render if we have something to show
     if (!templateContent && !liveContent) return '';
