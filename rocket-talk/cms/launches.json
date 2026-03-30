@@ -22,13 +22,6 @@
     "headline": "",
     "viewing_guide": "https://docs.google.com/presentation/d/e/2PACX-1vSuBT8Qh5loTXaaDM__KrK1W54FJbwtaetr1IphD7blI9mhl2GswsngHLgPBEZ2PieVniJXxcf4e6nz/pub?start=false&loop=false&delayms=3000",
     "trajectory": "Northeast",
-    "rocket_talk": {
-      "template": "rocket_talk_default",
-      "variables": {
-        "mission_name": "Starlink 10-44",
-        "launch_vehicle": "Falcon 9 Block 5",
-        "event_date": "Saturday, March 28",
-        "event_time": "7:00 PM"
       }
     },
     "rocket_talk_live": {
