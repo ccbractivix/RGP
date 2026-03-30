@@ -540,14 +540,14 @@ function buildRocketTalkLiveDropdown(launchCMS) {
     }
 
     if (rtl.link) {
-        content += `<a class="viewing-guide-link" href="${escapeHTML(rtl.link.url)}" target="_blank" rel="noopener noreferrer" style="color: #7b1fa2;">${escapeHTML(rtl.link.label || '🎙️ Watch Rocket Talk LIVE!')}</a>`;
+        content += `<a class="rocket-talk-link" href="${escapeHTML(rtl.link.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(rtl.link.label || '🎙️ Watch Rocket Talk LIVE!')}</a>`;
     }
 
     if (!content) return '';
 
     return `
         <details class="dropdown rocket-talk-dropdown">
-            <summary>Rocket Talk LIVE!</summary>
+            <summary>🎙️ Rocket Talk LIVE!</summary>
             <div class="dropdown-content">${content}</div>
         </details>
     `;
