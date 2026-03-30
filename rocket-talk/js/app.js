@@ -349,6 +349,7 @@ function buildLaunchCard(launch) {
     const imageUrl = getImageUrl(launch);
 
     const launchCMS = cmsData.launches?.[launch.id] || {};
+    console.log('Launch ID:', launch.id, 'CMS match:', JSON.stringify(launchCMS));
     const chrisSaysEntry = cmsData.chrisSays?.[launch.id] || null;
 
     card.innerHTML = `
