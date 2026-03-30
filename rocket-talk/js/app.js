@@ -358,16 +358,18 @@ function renderViewingGuide(launch) {
     if (!cms?.viewingGuide) return '';
 
     const vg = cms.viewingGuide;
-    if (!vg.text && !vg.trajectory) return '';
 
-    let content = '';
-    if (vg.text) content += `<div class="viewing-text">${escapeHTML(vg.text)}</div>`;
-    if (vg.trajectory) content += `<div class="trajectory-info">${escapeHTML(vg.trajectory)}</div>`;
+    // viewingGuide is a string (URL) from the JSON
+    if (typeof vg === 'string' && vg.trim()) {
+        return `<details class="dropdown viewing-guide-dropdown">
+            <summary>📍 Viewing Guide</summary>
+            <div class="dropdown-content">
+                <a href="${escapeHTML(vg)}" target="_blank" rel="noopener noreferrer" class="viewing-guide-link">Viewing Guide</a>
+            </div>
+        </details>`;
+    }
 
-    return `<details class="dropdown viewing-guide-dropdown">
-        <summary>📍 Viewing Guide</summary>
-        <div class="dropdown-content">${content}</div>
-    </details>`;
+    return '';
 }
 
 function renderRocketTalkLive(launch) {
