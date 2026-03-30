@@ -356,6 +356,7 @@ function renderCountdown(launch) {
 function renderViewingGuide(launch) {
     const cms = cmsData.launches?.[launch.id];
     if (!cms) return '';
+console.log('VG debug:', launch.id, cms);
 
     // Check both camelCase and snake_case versions
     const vg = cms.viewingGuide || cms.viewing_guide;
