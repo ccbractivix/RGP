@@ -10,7 +10,6 @@ let refreshTimer = null;
 // --- Initialization ---
 async function init() {
     try {
-        // Load CMS and API data in parallel
         const [cms, launches] = await Promise.all([
             loadCMSData(),
             loadLaunches()
@@ -24,6 +23,7 @@ async function init() {
             showNoLaunches();
         }
 
+        renderPageFooter();
         scheduleNextRefresh();
     } catch (error) {
         console.error('Initialization error:', error);
@@ -51,14 +51,11 @@ async function loadCMSData() {
             fetch('cms/templates.json').then(r => r.ok ? r.json() : {})
         ]);
 
-        // Normalize launches.json: convert snake_case to camelCase
-        // and restructure flat values into the objects the renderer expects
         const normalizedLaunches = {};
         for (const [launchId, data] of Object.entries(launches)) {
             normalizedLaunches[launchId] = normalizeLaunchCMS(data);
         }
 
-        // Normalize chris-says.json: convert array to object keyed by launch_id
         const normalizedChrisSays = {};
         if (Array.isArray(chrisSays)) {
             chrisSays.forEach(entry => {
@@ -71,7 +68,6 @@ async function loadCMSData() {
                 }
             });
         } else if (typeof chrisSays === 'object') {
-            // Already keyed by launch_id
             Object.assign(normalizedChrisSays, chrisSays);
         }
 
@@ -89,12 +85,10 @@ async function loadCMSData() {
 function normalizeLaunchCMS(data) {
     const normalized = {};
 
-    // Headline
     if (data.headline) {
         normalized.headline = data.headline;
     }
 
-    // Viewing Guide — handle string URL or object
     if (data.viewing_guide || data.viewingGuide) {
         const vg = data.viewing_guide || data.viewingGuide;
         if (typeof vg === 'string') {
@@ -110,7 +104,6 @@ function normalizeLaunchCMS(data) {
         }
     }
 
-    // Rocket Talk LIVE — handle various formats
     if (data.rocket_talk_live || data.rocketTalkLive) {
         const rtl = data.rocket_talk_live || data.rocketTalkLive;
         if (typeof rtl === 'object') {
@@ -128,7 +121,6 @@ function normalizeLaunchCMS(data) {
         }
     }
 
-    // Rocket Talk template reference
     if (data.rocket_talk || data.rocketTalk) {
         const rt = data.rocket_talk || data.rocketTalk;
         if (typeof rt === 'object' && rt.template) {
@@ -139,12 +131,10 @@ function normalizeLaunchCMS(data) {
         }
     }
 
-    // Trajectory
     if (data.trajectory) {
         normalized.trajectory = data.trajectory;
     }
 
-    // Filmstrip
     if (data.filmstrip) {
         normalized.filmstrip = data.filmstrip;
     }
@@ -170,7 +160,6 @@ async function fetchLaunches() {
         const kscData = await kscResponse.json();
         const ccafsData = await ccafsResponse.json();
 
-        // Combine and deduplicate by ID
         const allLaunches = [...(kscData.results || []), ...(ccafsData.results || [])];
         const unique = new Map();
         allLaunches.forEach(launch => {
@@ -179,12 +168,9 @@ async function fetchLaunches() {
             }
         });
 
-        // Sort by NET date
-        const sorted = Array.from(unique.values()).sort((a, b) => {
+        return Array.from(unique.values()).sort((a, b) => {
             return new Date(a.net) - new Date(b.net);
         });
-
-        return sorted;
     } catch (error) {
         console.error('API fetch error:', error);
         return null;
@@ -222,11 +208,9 @@ function isCacheValid() {
 }
 
 async function loadLaunches() {
-    // Cache-first strategy: render cached data immediately
     const cached = getCachedData();
 
     if (cached && isCacheValid()) {
-        // Use cache, but fetch fresh data in background
         fetchLaunches().then(fresh => {
             if (fresh && fresh.length > 0) {
                 cacheData(fresh);
@@ -237,14 +221,12 @@ async function loadLaunches() {
         return filterLaunches(cached.launches);
     }
 
-    // No valid cache — fetch fresh
     const launches = await fetchLaunches();
     if (launches && launches.length > 0) {
         cacheData(launches);
         return filterLaunches(launches);
     }
 
-    // Fallback to stale cache
     if (cached) {
         return filterLaunches(cached.launches);
     }
@@ -262,17 +244,13 @@ function filterLaunches(launches) {
         const statusId = launch.status?.id;
         const net = new Date(launch.net).getTime();
 
-        // Exclude Success (3), Failure (4), Partial Failure (7)
         if ([3, 4, 7].includes(statusId)) return false;
 
-        // Exclude In-Flight (6) if more than 60 minutes past NET
         if (statusId === 6) {
             if (now - net > SIXTY_MINUTES) return false;
-            // In-Flight within 60 min is still shown regardless of 14-day window
             return true;
         }
 
-        // Exclude launches more than 14 days from now
         if (net - now > FOURTEEN_DAYS) return false;
 
         return true;
@@ -282,7 +260,7 @@ function filterLaunches(launches) {
 // --- Refresh Logic ---
 function getRefreshInterval() {
     const cached = getCachedData();
-    if (!cached || !cached.launches.length) return 6 * 60 * 60 * 1000; // 6 hours
+    if (!cached || !cached.launches.length) return 6 * 60 * 60 * 1000;
 
     const now = Date.now();
     const filtered = filterLaunches(cached.launches);
@@ -292,23 +270,20 @@ function getRefreshInterval() {
         const diff = net - now;
         const statusId = launch.status?.id;
 
-        // In-Flight or within 30 minutes — refresh every 1 minute
         if (statusId === 6 || (diff > 0 && diff <= 30 * 60 * 1000)) {
             return 1 * 60 * 1000;
         }
 
-        // Within 2 hours — refresh every 5 minutes
         if (diff > 0 && diff <= 2 * 60 * 60 * 1000) {
             return 5 * 60 * 1000;
         }
 
-        // Within 6 hours — refresh every 1 hour
         if (diff > 0 && diff <= 6 * 60 * 60 * 1000) {
             return 60 * 60 * 1000;
         }
     }
 
-    return 6 * 60 * 60 * 1000; // Default: 6 hours
+    return 6 * 60 * 60 * 1000;
 }
 
 function scheduleNextRefresh() {
@@ -333,10 +308,8 @@ function renderLaunchesProgressive(launches) {
     const container = document.getElementById('launches-container');
     if (!container) return;
 
-    // Clear existing countdown timer
     if (countdownTimer) clearTimeout(countdownTimer);
 
-    // Clear container
     container.innerHTML = '';
 
     if (!launches || launches.length === 0) {
@@ -344,11 +317,9 @@ function renderLaunchesProgressive(launches) {
         return;
     }
 
-    // Render first card immediately for fast paint
     const firstCard = buildLaunchCard(launches[0]);
     container.appendChild(firstCard);
 
-    // Render remaining cards progressively
     if (launches.length > 1) {
         requestAnimationFrame(() => {
             const fragment = document.createDocumentFragment();
@@ -359,7 +330,6 @@ function renderLaunchesProgressive(launches) {
         });
     }
 
-    // Start countdowns
     updateCountdowns();
 }
 
@@ -376,11 +346,8 @@ function buildLaunchCard(launch) {
     const padName = launch.pad?.name || '';
     const locationName = launch.pad?.location?.name || '';
     const netDate = formatNET(launch.net);
-
-    // Image URL — handle both string and object formats
     const imageUrl = getImageUrl(launch);
 
-    // CMS data for this launch
     const launchCMS = cmsData.launches?.[launch.id] || {};
     const chrisSaysEntry = cmsData.chrisSays?.[launch.id] || null;
 
@@ -403,7 +370,6 @@ function buildLaunchCard(launch) {
             ${buildChrisSaysDropdown(chrisSaysEntry)}
             ${buildMissionInfoDropdown(launch)}
             ${buildLivestreamDropdown(launch)}
-            ${buildFilmstrip(launchCMS)}
         </div>
     `;
 
@@ -413,25 +379,21 @@ function buildLaunchCard(launch) {
 // --- Image URL Helper ---
 function getImageUrl(launch) {
     if (!launch.image) return '';
-
-    // Handle direct string URL
     if (typeof launch.image === 'string') return launch.image;
-
-    // Handle object with thumbnail_url and image_url
     return launch.image.thumbnail_url || launch.image.image_url || '';
 }
 
 // --- Status Badge ---
 function getStatusClass(statusId) {
     switch (statusId) {
-        case 1: return 'status-go';       // Go for Launch
-        case 2: return 'status-tbd';      // To Be Determined
-        case 3: return 'status-success';  // Launch Successful
-        case 4: return 'status-failure';  // Launch Failure
-        case 5: return 'status-hold';     // On Hold
-        case 6: return 'status-inflight'; // In Flight
-        case 7: return 'status-failure';  // Partial Failure
-        case 8: return 'status-tbc';      // To Be Confirmed
+        case 1: return 'status-go';
+        case 2: return 'status-tbd';
+        case 3: return 'status-success';
+        case 4: return 'status-failure';
+        case 5: return 'status-hold';
+        case 6: return 'status-inflight';
+        case 7: return 'status-failure';
+        case 8: return 'status-tbc';
         default: return 'status-tbd';
     }
 }
@@ -470,19 +432,16 @@ function updateCountdowns() {
         if (!valueEl || !labelEl) return;
 
         if (diff <= 0) {
-            // Launched
             container.className = 'countdown-container countdown-launched';
             labelEl.textContent = '';
             valueEl.textContent = '🚀 LAUNCHED';
         } else if (diff > 48 * 60 * 60 * 1000) {
-            // Dormant: more than 48 hours
             container.className = 'countdown-container countdown-dormant';
             const days = Math.floor(diff / (24 * 60 * 60 * 1000));
             const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
             labelEl.textContent = 'T-minus';
             valueEl.textContent = `${days}d ${hours}h`;
         } else {
-            // Active: within 48 hours
             container.className = 'countdown-container countdown-active';
             const hours = Math.floor(diff / (60 * 60 * 1000));
             const minutes = Math.floor((diff % (60 * 60 * 1000)) / (60 * 1000));
@@ -521,7 +480,7 @@ function buildViewingGuideDropdown(launchCMS) {
         content += `<p>${escapeHTML(guide.text)}</p>`;
     }
 
-    if (guide.link) {
+    if (guide.link && guide.link.url) {
         content += `<a class="viewing-guide-link" href="${escapeHTML(guide.link.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(guide.link.label || '📍 Launch Viewing Guide')}</a>`;
     }
 
@@ -529,7 +488,7 @@ function buildViewingGuideDropdown(launchCMS) {
 
     return `
         <details class="dropdown viewing-guide-dropdown">
-            <summary>Viewing Guide</summary>
+            <summary>📍 Viewing Guide</summary>
             <div class="dropdown-content">${content}</div>
         </details>
     `;
@@ -545,7 +504,7 @@ function buildRocketTalkLiveDropdown(launchCMS) {
         content += `<p>${escapeHTML(rtl.text)}</p>`;
     }
 
-    if (rtl.link) {
+    if (rtl.link && rtl.link.url) {
         content += `<a class="rocket-talk-link" href="${escapeHTML(rtl.link.url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(rtl.link.label || '🎙️ Watch Rocket Talk LIVE!')}</a>`;
     }
 
@@ -580,12 +539,11 @@ function buildMissionInfoDropdown(launch) {
     const description = launch.mission?.description;
     if (!description) return '';
 
-    // Check for CMS template override
     const templateContent = processTemplate(launch);
 
     return `
         <details class="dropdown mission-info-dropdown">
-            <summary>Mission Info</summary>
+            <summary>ℹ️ Mission Info</summary>
             <div class="dropdown-content">
                 ${templateContent || `<p>${escapeHTML(description)}</p>`}
             </div>
@@ -600,7 +558,7 @@ function buildLivestreamDropdown(launch) {
     const linksHTML = links.map(vid => {
         const title = vid.title || vid.source || 'Watch';
         const url = vid.url || '';
-        return `<a class="livestream-link" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">${escapeHTML(title)}</a>`;
+        return `<a class="livestream-link" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">📺 ${escapeHTML(title)}</a>`;
     }).join('');
 
     return `
@@ -611,22 +569,50 @@ function buildLivestreamDropdown(launch) {
     `;
 }
 
-function buildFilmstrip(launchCMS) {
-    if (!launchCMS.filmstrip || launchCMS.filmstrip.length === 0) return '';
+// --- Page Footer (Filmstrip + Disclaimer + Footer Bar + Site Footer) ---
+function renderPageFooter() {
+    const container = document.getElementById('launches-container');
+    if (!container) return;
 
-    const images = launchCMS.filmstrip.map(img => {
-        const imgTag = `<img src="${escapeHTML(img.thumbnail || img.url)}" alt="${escapeHTML(img.alt || '')}" loading="lazy">`;
-        if (img.fullUrl) {
-            return `<a class="gallery-link" href="${escapeHTML(img.fullUrl)}" target="_blank" rel="noopener noreferrer">${imgTag}</a>`;
-        }
-        return imgTag;
-    }).join('');
+    // Check if footer already exists to avoid duplicates
+    const existingFooter = document.querySelector('.filmstrip-section');
+    if (existingFooter) return;
 
-    return `
-        <div class="filmstrip-container">
-            ${images}
+    const footerHTML = `
+        <section class="filmstrip-section">
+            <div class="filmstrip-container">
+                <img src="images/filmstrip-1.jpg" alt="Space Coast launch photography" loading="lazy">
+                <img src="images/filmstrip-2.jpg" alt="Space Coast launch photography" loading="lazy">
+                <img src="images/filmstrip-3.jpg" alt="Space Coast launch photography" loading="lazy">
+                <img src="images/filmstrip-4.jpg" alt="Space Coast launch photography" loading="lazy">
+                <img src="images/filmstrip-5.jpg" alt="Space Coast launch photography" loading="lazy">
+                <img src="images/filmstrip-6.jpg" alt="Space Coast launch photography" loading="lazy">
+                <img src="images/filmstrip-7.jpg" alt="Space Coast launch photography" loading="lazy">
+            </div>
+            <a class="gallery-link" href="#" target="_blank" rel="noopener noreferrer">📸 View Photo Gallery</a>
+        </section>
+
+        <hr class="footer-divider">
+
+        <div class="disclaimer">
+            <p>This presentation is not an official activity of Holiday Inn Club Vacations® or IHG®. 
+            This is not a timeshare solicitation. Rocket Talk is an independent, unofficial activity 
+            organized by resort guests and is not endorsed, sponsored, or affiliated with Holiday Inn 
+            Club Vacations Incorporated, IHG Hotels & Resorts, or any of their subsidiaries or affiliates.</p>
         </div>
+
+        <div class="footer-bar">
+            <img src="images/hicvfooter.png" alt="Holiday Inn Club Vacations" loading="lazy">
+        </div>
+
+        <footer class="site-footer">
+            <p>Launch data provided by <a href="https://thespacedevs.com" target="_blank" rel="noopener noreferrer">The Space Devs</a> API</p>
+            <p>Rocket Talk © 2025</p>
+        </footer>
     `;
+
+    // Insert after the launches container
+    container.insertAdjacentHTML('afterend', footerHTML);
 }
 
 // --- Livestream Links ---
@@ -634,8 +620,6 @@ function getLivestreamLinks(launch) {
     if (!launch.vid_urls || launch.vid_urls.length === 0) return [];
 
     const preferredKeywords = ['nasaspaceflight', 'spaceflightnow'];
-
-    // Separate preferred and other streams
     const preferred = [];
     const others = [];
 
@@ -653,7 +637,6 @@ function getLivestreamLinks(launch) {
         }
     });
 
-    // Preferred sources always get top billing, followed by others
     return [...preferred, ...others];
 }
 
@@ -668,17 +651,13 @@ function processTemplate(launch) {
 
     let template = cmsData.templates[templateName];
 
-    // Get CMS-provided variable overrides
     const cmsVars = launchCMS?.templateVars || {};
 
-    // Replace {{variable}} placeholders
     template = template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-        // First check CMS variables (these are already display-ready strings)
         if (cmsVars[key] !== undefined) {
             return escapeHTML(String(cmsVars[key]));
         }
 
-        // Then fall back to API launch data
         const value = getNestedValue(launch, key);
         return value !== undefined ? escapeHTML(String(value)) : match;
     });
@@ -687,7 +666,6 @@ function processTemplate(launch) {
 }
 
 function getNestedValue(obj, key) {
-    // Convert camelCase to dot notation path
     const mappings = {
         'missionName': 'mission.name',
         'missionDescription': 'mission.description',
