@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NAVAREA Notice Visualizer</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #1a1a2e; color: #e0e0e0; }
+.container { display: flex; height: 100vh; }
+.sidebar {
+  width: 480px; min-width: 480px; background: #16213e; display: flex; flex-direction: column;
+  border-right: 2px solid #0f3460;
+}
+.sidebar-header {
+  padding: 16px 20px; background: #0f3460; border-bottom: 2px solid #e94560;
+}
+.sidebar-header h1 { font-size: 18px; color: #e94560; margin-bottom: 4px; }
+.sidebar-header p { font-size: 12px; color: #888; }
+.textarea-wrapper { padding: 12px 16px; flex-shrink: 0; }
+textarea {
+  width: 100%; height: 320px; background: #0d1b2a; color: #00ff88; border: 1px solid #0f3460;
+  border-radius: 6px; padding: 12px; font-family: 'Courier New', monospace; font-size: 12px;
+  resize: vertical; line-height: 1.5;
+}
+textarea:focus { outline: none; border-color: #e94560; }
+.btn-row { padding: 0 16px 12px; display: flex; gap: 8px; }
+button {
+  padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;
+  font-weight: 600; font-size: 13px; transition: all 0.2s;
+}
+.btn-parse { background: #e94560; color: white; flex: 1; }
+.btn-parse:hover { background: #ff6b81; }
+.btn-clear { background: #333; color: #aaa; }
+.btn-clear:hover { background: #444; color: #fff; }
+.btn-sample { background: #0f3460; color: #5dade2; }
+.btn-sample:hover { background: #1a4a8a; }
+.results {
+  flex: 1; overflow-y: auto; padding: 12px 16px;
+  border-top: 1px solid #0f3460;
+}
+.results h3 { font-size: 14px; color: #e94560; margin-bottom: 10px; }
+.notice-info { background: #0d1b2a; border-radius: 6px; padding: 12px; margin-bottom: 10px; font-size: 12px; }
+.notice-info .label { color: #888; }
+.notice-info .value { color: #5dade2; font-weight: 600; }
+.time-window {
+  background: #0d1b2a; border-left: 3px solid #e94560; padding: 8px 12px;
+  margin-bottom: 6px; border-radius: 0 4px 4px 0; font-size: 11px;
+}
+.time-window.active { border-left-color: #00ff88; background: #0d2b1a; }
+.time-window .tw-label { color: #888; font-size: 10px; text-transform: uppercase; }
+.time-window .tw-time { color: #e0e0e0; font-family: 'Courier New', monospace; }
+.area-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+  background: #0d1b2a; border-radius: 4px; margin-bottom: 4px; font-size: 12px; cursor: pointer;
+}
+.area-item:hover { background: #1a2a4e; }
+.area-dot { width: 12px; height: 12px; border-radius: 2px; flex-shrink: 0; }
+.area-item span { color: #ccc; }
+.error-msg { color: #e94560; background: #2a0a10; padding: 10px; border-radius: 6px; font-size: 12px; }
+#map { flex: 1; }
+.status-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px;
+  font-weight: 700; text-transform: uppercase;
+}
+.status-active { background: #00ff8833; color: #00ff88; }
+.status-upcoming { background: #f39c1233; color: #f39c12; }
+.status-expired { background: #e9456033; color: #e94560; }
+.leaflet-popup-content-wrapper {
+  background: #16213e !important; color: #e0e0e0 !important; border: 1px solid #0f3460 !important;
+  border-radius: 8px !important;
+}
+.leaflet-popup-tip { background: #16213e !important; }
+.popup-title { color: #e94560; font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+.popup-detail { font-size: 11px; color: #aaa; margin: 2px 0; }
+.popup-detail strong { color: #5dade2; }
+.coord-count { color: #888; font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h1>⚓ NAVAREA Notice Visualizer</h1>
+      <p>Paste a NAVAREA notice below and click Parse</p>
+    </div>
+    <div class="textarea-wrapper">
+      <textarea id="noticeInput" placeholder="Paste NAVAREA notice here..."></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-parse" onclick="parseNotice()">🗺️ Parse & Map</button>
+      <button class="btn-sample" onclick="loadSample()">Sample</button>
+      <button class="btn-clear" onclick="clearAll()">Clear</button>
+    </div>
+    <div class="results" id="results"></div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script>
+const AREA_COLORS = ['#e94560','#5dade2','#00ff88','#f39c12','#9b59b6','#1abc9c','#e67e22','#3498db'];
+let map, drawnLayers = [];
+
+// Init map
+map = L.map('map', { zoomControl: true }).setView([28, -74], 5);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; OpenStreetMap &copy; CARTO', maxZoom: 19
+}).addTo(map);
+
+const SAMPLE = `271002Z MAR 26
+NAVAREA IV 289/26.
+NORTH ATLANTIC.
+FLORIDA.
+1. HAZARDOUS OPERATIONS, ROCKET LAUNCHING
+   012224Z TO 020312Z APR, ALTERNATE
+   022322Z TO 030410Z, 040001Z TO 040448Z
+   050053Z TO 050541Z, 060140Z TO 060628Z
+   AND 070236Z TO 070724Z APR
+   IN AREAS BOUND BY:
+   A. 28-46.77N 080-43.52W, 31-16.00N 075-48.00W,
+      33-04.00N 070-12.00W, 31-32.00N 068-52.00W,
+      28-00.00N 068-28.00W, 25-52.00N 069-20.00W,
+      27-44.00N 078-04.00W, 28-31.20N 080-33.38W.
+   B. 29-48.00N 078-39.00W, 31-41.00N 074-48.00W,
+      30-35.00N 073-36.00W, 27-51.00N 073-37.00W,
+      26-39.00N 074-09.00W, 28-04.00N 078-39.00W.
+2. CANCEL THIS MSG 070824Z APR 26.//`;
+
+function loadSample() { document.getElementById('noticeInput').value = SAMPLE; parseNotice(); }
+
+function clearAll() {
+  document.getElementById('noticeInput').value = '';
+  document.getElementById('results').innerHTML = '';
+  drawnLayers.forEach(l => map.removeLayer(l));
+  drawnLayers = [];
+}
+
+// Parse DTG: "271002Z MAR 26" -> Date
+function parseDTG(dtgStr) {
+  // Accepts formats like: 271002Z MAR 26, 012224Z APR, 012224Z APR 26
+  const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+  const m = dtgStr.trim().match(/(\d{2})(\d{2})(\d{2})Z\s+([A-Z]{3})(?:\s+(\d{2,4}))?/i);
+  if (!m) return null;
+  let day = parseInt(m[1]), hour = parseInt(m[2]), min = parseInt(m[3]);
+  let mon = months[m[4].toUpperCase()];
+  let year = m[5] ? parseInt(m[5]) : null;
+  if (year !== null && year < 100) year += 2000;
+  if (year === null) year = new Date().getFullYear();
+  return new Date(Date.UTC(year, mon, day, hour, min));
+}
+
+// Parse coordinate like "28-46.77N" -> decimal degrees
+function parseCoordComponent(str) {
+  // Formats: 28-46.77N, 080-43.52W
+  const m = str.trim().match(/(\d{2,3})-(\d{2}(?:\.\d+)?)([NSEW])/i);
+  if (!m) return null;
+  let deg = parseInt(m[1]);
+  let minutes = parseFloat(m[2]);
+  let decimal = deg + minutes / 60;
+  if (m[3] === 'S' || m[3] === 'W' || m[3] === 's' || m[3] === 'w') decimal = -decimal;
+  return decimal;
+}
+
+// Parse coordinate pair like "28-46.77N 080-43.52W"
+function parseCoordPair(str) {
+  const parts = str.trim().split(/\s+/);
+  if (parts.length < 2) return null;
+  const lat = parseCoordComponent(parts[0]);
+  const lon = parseCoordComponent(parts[1]);
+  if (lat === null || lon === null) return null;
+  return [lat, lon];
+}
+
+function parseNotice() {
+  const text = document.getElementById('noticeInput').value.trim();
+  if (!text) return;
+
+  drawnLayers.forEach(l => map.removeLayer(l));
+  drawnLayers = [];
+
+  const lines = text.split('\n').map(l => l.trim());
+  const result = {
+    dtg: null, navareaId: '', region: '', subregion: '', description: '',
+    timeWindows: [], areas: [], cancelDTG: null
+  };
+
+  // --- Parse header ---
+  // Line 1: DTG
+  if (lines[0]) result.dtg = parseDTG(lines[0]);
+
+  // Line 2: NAVAREA ID
+  const navareaMatch = text.match(/NAVAREA\s+[IVX]+\s+\d+\/\d+/i);
+  if (navareaMatch) result.navareaId = navareaMatch[0].replace('.', '');
+
+  // Region/subregion
+  for (let i = 1; i < Math.min(lines.length, 6); i++) {
+    if (/^NORTH|^SOUTH|^EAST|^WEST|^ATLANTIC|^PACIFIC|^INDIAN|^ARCTIC|^ANTARC|^MEDITERRANEAN|^CARIBBEAN|^GULF/i.test(lines[i]))
+      result.region = lines[i].replace('.', '');
+    if (/^[A-Z]{2,}\.$/i.test(lines[i]) && !lines[i].match(/NAVAREA|ATLANTIC|PACIFIC|CANCEL/i))
+      result.subregion = lines[i].replace('.', '');
+  }
+
+  // --- Parse description ---
+  const descMatch = text.match(/1\.\s+(.+?)(?:\n\s+\d{6}Z|\n\s+IN AREAS)/s);
+  if (descMatch) result.description = descMatch[1].replace(/\n\s+/g, ' ').trim();
+  else {
+    // Fallback: get the line after "1."
+    const dm = text.match(/1\.\s+([^\n]+)/);
+    if (dm) result.description = dm[1].trim();
+  }
+
+  // --- Parse time windows ---
+  // Extract the time block between description and "IN AREAS"
+  const timeBlockMatch = text.match(/1\.\s+[^\n]*\n([\s\S]*?)IN AREAS?\s+BOUND/i);
+  if (timeBlockMatch) {
+    let timeBlock = timeBlockMatch[1];
+    // Also include first line if it has times
+    const firstLineMatch = text.match(/1\.\s+.*?(\d{6}Z[\s\S]*?)IN AREAS?\s+BOUND/i);
+    if (firstLineMatch) timeBlock = firstLineMatch[1];
+
+    // Normalize: join lines, handle month context
+    let tb = timeBlock.replace(/\n\s+/g, ' ').replace(/AND\s+/gi, '').trim();
+
+    // We need to resolve month references. Find all months mentioned.
+    // Strategy: parse "DDHHMMZ TO DDHHMMZ [MON]" pairs, carrying forward the month.
+    // Split by comma to get individual windows
+    const segments = tb.split(/,\s*/);
+    let currentMonth = null;
+    let currentYear = null;
+
+    // Pre-scan for month+year from the header DTG
+    if (result.dtg) {
+      currentMonth = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][result.dtg.getUTCMonth()];
+      currentYear = result.dtg.getUTCFullYear();
+    }
+
+    // First pass: find any months in the time text to use as defaults
+    const allMonths = tb.match(/[A-Z]{3}(?=[\s,.]|$)/gi) || [];
+    // Last month mentioned applies retrospectively if needed
+
+    // Scan for the last month mentioned in each segment or carry forward
+    // Actually let's do a forward scan: check the LAST month and year in the text block
+    const monthYearInBlock = tb.match(/([A-Z]{3})(?:\s+(\d{2,4}))?/gi);
+
+    // We need a smarter approach. Let's find all "TO" pairs.
+    const pairRegex = /(\d{6}Z)\s+TO\s+(\d{6}Z)\s*([A-Z]{3})?(?:\s+(\d{2,4}))?/gi;
+    let pairMatch;
+    const rawPairs = [];
+    const fullText = tb;
+
+    while ((pairMatch = pairRegex.exec(fullText)) !== null) {
+      rawPairs.push({
+        start: pairMatch[1],
+        end: pairMatch[2],
+        month: pairMatch[3] || null,
+        year: pairMatch[4] || null
+      });
+    }
+
+    // Resolve months: the month at the END of a group applies to all in that group
+    // Forward pass: assign month where specified, then backward fill
+    // First forward fill
+    for (let i = 0; i < rawPairs.length; i++) {
+      if (rawPairs[i].month) {
+        currentMonth = rawPairs[i].month.toUpperCase();
+        if (rawPairs[i].year) currentYear = parseInt(rawPairs[i].year);
+      }
+      rawPairs[i]._resolvedMonth = currentMonth;
+      rawPairs[i]._resolvedYear = currentYear;
+    }
+
+    // But actually in NAVAREA convention, when they say "012224Z TO 020312Z APR, ALTERNATE 022322Z TO 030410Z"
+    // the "APR" applies to the PRECEDING pair AND subsequent ones until a new month.
+    // Also it's common for the month to appear after the LAST pair in a group.
+    // Let's try: backward fill from last known month first, then forward fill.
+
+    // Actually the safest: if a month appears right after a pair, it governs everything 
+    // before it (up to the previous month mention) and after it (until next month mention).
+    // Let's just use forward carry which should work for most cases since month typically 
+    // appears early or is consistent.
+
+    // If first pairs have no month, look ahead
+    if (rawPairs.length > 0 && !rawPairs[0]._resolvedMonth) {
+      // Find first pair with a month
+      for (let i = 0; i < rawPairs.length; i++) {
+        if (rawPairs[i].month) {
+          // Backfill
+          for (let j = 0; j < i; j++) {
+            rawPairs[j]._resolvedMonth = rawPairs[i].month.toUpperCase();
+            if (rawPairs[i].year) rawPairs[j]._resolvedYear = parseInt(rawPairs[i].year);
+          }
+          break;
+        }
+      }
+    }
+
+    // Build time windows
+    for (const rp of rawPairs) {
+      let mon = rp._resolvedMonth || 'JAN';
+      let yr = rp._resolvedYear || new Date().getFullYear();
+      if (yr < 100) yr += 2000;
+      const startDTG = rp.start.replace('Z', 'Z') + ' ' + mon + ' ' + yr;
+      const endDTG = rp.end.replace('Z', 'Z') + ' ' + mon + ' ' + yr;
+      const startDate = parseDTG(startDTG);
+      const endDate = parseDTG(endDTG);
+      if (startDate && endDate) {
+        result.timeWindows.push({ start: startDate, end: endDate, raw: rp.start + ' TO ' + rp.end });
+      }
+    }
+  }
+
+  // --- Parse CANCEL DTG ---
+  const cancelMatch = text.match(/CANCEL\s+THIS\s+MSG\s+(\d{6}Z\s+[A-Z]{3}\s+\d{2,4})/i);
+  if (cancelMatch) result.cancelDTG = parseDTG(cancelMatch[1]);
+
+  // --- Parse areas ---
+  // Find area blocks: "A. coords..." "B. coords..."
+  // Also handle single unlabeled area: "IN AREA BOUND BY: coords"
+  const areaRegex = /([A-Z])\.\s+([\d][\d\s\-\.NSEW,]+)/gi;
+  let areaMatch;
+  const areaText = text.replace(/\n\s+/g, ' '); // Join continuation lines
+
+  while ((areaMatch = areaRegex.exec(areaText)) !== null) {
+    const label = areaMatch[1];
+    const coordStr = areaMatch[2];
+
+    // Extract coordinate pairs
+    const coordPairRegex = /(\d{2,3}-\d{2}(?:\.\d+)?[NS])\s+(\d{2,3}-\d{2}(?:\.\d+)?[EW])/gi;
+    let cpMatch;
+    const coords = [];
+    while ((cpMatch = coordPairRegex.exec(coordStr)) !== null) {
+      const parsed = parseCoordPair(cpMatch[1] + ' ' + cpMatch[2]);
+      if (parsed) coords.push(parsed);
+    }
+
+    if (coords.length >= 3) {
+      result.areas.push({ label, coords });
+    }
+  }
+
+  // If no labeled areas found, try unlabeled
+  if (result.areas.length === 0) {
+    const unlabeledMatch = areaText.match(/BOUND\s+BY:?\s*([\d][\d\s\-\.NSEW,]+)/i);
+    if (unlabeledMatch) {
+      const coordPairRegex = /(\d{2,3}-\d{2}(?:\.\d+)?[NS])\s+(\d{2,3}-\d{2}(?:\.\d+)?[EW])/gi;
+      let cpMatch;
+      const coords = [];
+      while ((cpMatch = coordPairRegex.exec(unlabeledMatch[1])) !== null) {
+        const parsed = parseCoordPair(cpMatch[1] + ' ' + cpMatch[2]);
+        if (parsed) coords.push(parsed);
+      }
+      if (coords.length >= 3) result.areas.push({ label: 'A', coords });
+    }
+  }
+
+  // --- Render results ---
+  renderResults(result);
+  renderMap(result);
+}
+
+function getTimeStatus(tw) {
+  const now = new Date();
+  if (now >= tw.start && now <= tw.end) return 'active';
+  if (now < tw.start) return 'upcoming';
+  return 'expired';
+}
+
+function formatUTC(d) {
+  if (!d) return '—';
+  const pad = n => String(n).padStart(2, '0');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${pad(d.getUTCDate())} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}Z`;
+}
+
+function renderResults(result) {
+  const el = document.getElementById('results');
+  let html = '';
+
+  html += `<div class="notice-info">
+    <div><span class="label">Notice: </span><span class="value">${result.navareaId}</span></div>
+    <div><span class="label">DTG: </span><span class="value">${formatUTC(result.dtg)}</span></div>
+    <div><span class="label">Region: </span><span class="value">${result.region} ${result.subregion ? '— ' + result.subregion : ''}</span></div>
+    <div><span class="label">Type: </span><span class="value">${result.description}</span></div>
+    ${result.cancelDTG ? `<div><span class="label">Cancels: </span><span class="value">${formatUTC(result.cancelDTG)}</span></div>` : ''}
+  </div>`;
+
+  if (result.timeWindows.length > 0) {
+    html += `<h3>⏱ Time Windows (${result.timeWindows.length})</h3>`;
+    for (const tw of result.timeWindows) {
+      const status = getTimeStatus(tw);
+      html += `<div class="time-window ${status}">
+        <div class="tw-label">Window <span class="status-badge status-${status}">${status}</span></div>
+        <div class="tw-time">${formatUTC(tw.start)}</div>
+        <div class="tw-time" style="color:#e94560;">→ ${formatUTC(tw.end)}</div>
+      </div>`;
+    }
+  }
+
+  if (result.areas.length > 0) {
+    html += `<h3 style="margin-top:12px;">📍 Areas (${result.areas.length})</h3>`;
+    result.areas.forEach((area, i) => {
+      const color = AREA_COLORS[i % AREA_COLORS.length];
+      html += `<div class="area-item" onclick="zoomToArea(${i})">
+        <div class="area-dot" style="background:${color}"></div>
+        <span>Area ${area.label}</span>
+        <span class="coord-count">${area.coords.length} vertices</span>
+      </div>`;
+    });
+  }
+
+  if (result.areas.length === 0) {
+    html += `<div class="error-msg">⚠ No plottable areas found. Check the format.</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function renderMap(result) {
+  if (result.areas.length === 0) return;
+
+  const allBounds = [];
+
+  result.areas.forEach((area, i) => {
+    const color = AREA_COLORS[i % AREA_COLORS.length];
+    const latlngs = area.coords.map(c => [c[0], c[1]]);
+
+    // Close the polygon
+    const polygon = L.polygon(latlngs, {
+      color: color,
+      fillColor: color,
+      fillOpacity: 0.15,
+      weight: 2.5,
+      dashArray: '6 4'
+    }).addTo(map);
+
+    // Vertex markers
+    latlngs.forEach((ll, vi) => {
+      const marker = L.circleMarker(ll, {
+        radius: 4, fillColor: color, color: '#fff',
+        weight: 1, fillOpacity: 0.9
+      }).addTo(map);
+      marker.bindTooltip(`${area.label}${vi+1}: ${ll[0].toFixed(4)}°, ${ll[1].toFixed(4)}°`,
+        { className: '' });
+      drawnLayers.push(marker);
+    });
+
+    // Popup
+    let popupHtml = `<div class="popup-title">Area ${area.label}</div>`;
+    popupHtml += `<div class="popup-detail"><strong>${result.description}</strong></div>`;
+    popupHtml += `<div class="popup-detail">${result.navareaId}</div>`;
+    if (result.timeWindows.length > 0) {
+      popupHtml += `<div class="popup-detail" style="margin-top:6px;"><strong>First window:</strong><br>`;
+      popupHtml += `${formatUTC(result.timeWindows[0].start)}<br>→ ${formatUTC(result.timeWindows[0].end)}</div>`;
+      if (result.timeWindows.length > 1)
+        popupHtml += `<div class="popup-detail">+ ${result.timeWindows.length - 1} more window(s)</div>`;
+    }
+    polygon.bindPopup(popupHtml);
+
+    // Area label
+    const center = polygon.getBounds().getCenter();
+    const labelMarker = L.marker(center, {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="color:${color};font-weight:900;font-size:20px;text-shadow:0 0 6px rgba(0,0,0,0.8);text-align:center;">${area.label}</div>`,
+        iconSize: [30, 30], iconAnchor: [15, 15]
+      })
+    }).addTo(map);
+
+    drawnLayers.push(polygon, labelMarker);
+    latlngs.forEach(ll => allBounds.push(ll));
+  });
+
+  // Fit bounds
+  if (allBounds.length > 0) {
+    map.fitBounds(L.latLngBounds(allBounds).pad(0.15));
+  }
+}
+
+window.zoomToArea = function(idx) {
+  // Find the polygon layer for this area
+  const polygons = drawnLayers.filter(l => l instanceof L.Polygon);
+  if (polygons[idx]) {
+    map.fitBounds(polygons[idx].getBounds().pad(0.1));
+    polygons[idx].openPopup();
+  }
+};
+
+// Auto-load sample on first visit
+window.addEventListener('load', () => { loadSample(); });
+</script>
+</body>
+</html>
