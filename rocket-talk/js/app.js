@@ -389,14 +389,24 @@ function renderRocketTalkLive(launch) {
     let liveContent = '';
     if (cms?.rocketTalkLive?.enabled) {
         const rtl = cms.rocketTalkLive;
-        if (rtl.url && rtl.text) {
-            liveContent = `<a href="${escapeHTML(rtl.url)}" target="_blank" rel="noopener noreferrer" class="livestream-link">${escapeHTML(rtl.text)}</a>`;
+        if (rtl.url && rtl.label) {
+            liveContent = `<a href="${escapeHTML(rtl.url)}" target="_blank" rel="noopener noreferrer" class="livestream-link">${escapeHTML(rtl.label)}</a>`;
         } else if (rtl.url) {
             liveContent = `<a href="${escapeHTML(rtl.url)}" target="_blank" rel="noopener noreferrer" class="livestream-link">Join Rocket Talk LIVE!</a>`;
-        } else if (rtl.text) {
-            liveContent = `<div class="rocket-talk-live-info">${escapeHTML(rtl.text)}</div>`;
+        } else if (rtl.label) {
+            liveContent = `<div class="rocket-talk-live-info">${escapeHTML(rtl.label)}</div>`;
         }
     }
+
+    // Only render if we have something to show
+    if (!templateContent && !liveContent) return '';
+
+    return `<details class="dropdown rocket-talk-dropdown">
+        <summary>🎙️ Rocket Talk LIVE!</summary>
+        <div class="dropdown-content">${templateContent}${liveContent}</div>
+    </details>`;
+}
+
 
 
     // Only render if we have something to show
