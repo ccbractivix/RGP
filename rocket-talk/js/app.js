@@ -75,8 +75,8 @@ function normalizeLaunchCMS(entry) {
 
     // Viewing Guide - keep as simple string URL
     if (entry.viewing_guide) {
-        result.viewingGuide = typeof entry.viewing_guide === 'string' 
-            ? entry.viewing_guide 
+        result.viewingGuide = typeof entry.viewing_guide === 'string'
+            ? entry.viewing_guide
             : entry.viewing_guide.text || '';
     }
 
@@ -365,7 +365,6 @@ function renderViewingGuide(launch) {
     return '';
 }
 
-
 function renderRocketTalkLive(launch) {
     const cms = cmsData.launches?.[launch.id];
 
@@ -374,7 +373,7 @@ function renderRocketTalkLive(launch) {
 
     // Skip if no live event and no meaningful template variables
     const hasLiveEvent = cms.rocketTalkLive?.enabled;
-    const hasTemplateContent = cms.rocketTalk?.variables && 
+    const hasTemplateContent = cms.rocketTalk?.variables &&
         Object.keys(cms.rocketTalk.variables).length > 0;
     if (!hasLiveEvent && !hasTemplateContent) return '';
 
@@ -397,17 +396,6 @@ function renderRocketTalkLive(launch) {
             liveContent = `<div class="rocket-talk-live-info">${escapeHTML(rtl.label)}</div>`;
         }
     }
-
-    // Only render if we have something to show
-    if (!templateContent && !liveContent) return '';
-
-    return `<details class="dropdown rocket-talk-dropdown">
-        <summary>🎙️ Rocket Talk LIVE!</summary>
-        <div class="dropdown-content">${templateContent}${liveContent}</div>
-    </details>`;
-}
-
-
 
     // Only render if we have something to show
     if (!templateContent && !liveContent) return '';
