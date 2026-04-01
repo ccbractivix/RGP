@@ -218,17 +218,69 @@ function renderLaunchesProgressive(launches) {
     const container = document.getElementById('launches-container');
     container.innerHTML = '';
 
+    // Remove any previous footer so it re-renders in the right spot
+    const oldFooter = document.querySelector('.page-footer-section');
+    if (oldFooter) oldFooter.remove();
+
     if (!launches.length) {
         container.innerHTML = '<p class="no-launches">No upcoming launches scheduled from the Space Coast in the next 14 days. Check back soon!</p>';
         renderPageFooter();
         return;
     }
 
-    const fragment = document.createDocumentFragment();
-    launches.forEach((launch, index) => {
-        const card = buildLaunchCard(launch);
-        fragment.appendChild(card);
+    // Split into imminent (≤48h) and later (>48h)
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+    const imminent = [];
+    const later = [];
+
+    launches.forEach(launch => {
+        const net = new Date(launch.net);
+        if (net <= cutoff) {
+            imminent.push(launch);
+        } else {
+            later.push(launch);
+        }
     });
+
+    // Render imminent launches
+    const fragment = document.createDocumentFragment();
+
+    if (imminent.length > 0) {
+        imminent.forEach(launch => {
+            fragment.appendChild(buildLaunchCard(launch));
+        });
+    } else {
+        const msg = document.createElement('div');
+        msg.className = 'no-imminent-message';
+        msg.textContent = 'No launches within the next 48 hours';
+        fragment.appendChild(msg);
+    }
+
+    // Add "Load More" button if there are later launches
+    if (later.length > 0) {
+        const btn = document.createElement('button');
+        btn.className = 'load-more-button';
+        btn.textContent = `Load More Launches (${later.length})`;
+        btn.addEventListener('click', () => {
+            btn.remove();
+
+            // Remove footer before adding more cards
+            const footer = document.querySelector('.page-footer-section');
+            if (footer) footer.remove();
+
+            const laterFragment = document.createDocumentFragment();
+            later.forEach(launch => {
+                laterFragment.appendChild(buildLaunchCard(launch));
+            });
+
+            container.appendChild(laterFragment);
+            renderPageFooter();
+            startAllCountdowns(); // restart to pick up new timers
+        });
+        fragment.appendChild(btn);
+    }
 
     requestAnimationFrame(() => {
         container.appendChild(fragment);
