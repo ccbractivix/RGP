@@ -645,19 +645,25 @@ function renderPageFooter() {
     }
     filmstripHtml += '</div></div>';
 
+    // Gallery link
+    const galleryHtml = `<a href="https://sites.google.com/view/launch-image-galleries" target="_blank" class="gallery-link">📸 Launch Image Galleries By Local Photographers</a>`;
+
     // Divider
-    const dividerHtml = '<div class="footer-divider"></div>';
+    const dividerHtml = '<hr class="footer-divider">';
+
+    // Disclaimer
+    const disclaimerHtml = `<div class="disclaimer">
+        The Holiday Inn Club® program and Holiday Inn Club Vacations® resorts are independently owned, operated and marketed and are not owned, operated or marketed by IHG® Hotels and Resorts or by the owner or the licensor of the Holiday Inn® brand. Copyright © 2022 Holiday Inn Club Vacations Incorporated. All rights reserved.
+        THIS MATERIAL IS BEING USED FOR THE PURPOSE OF SOLICITING SALES OF TIMESHARE INTERESTS
+        Holiday Inn Club Vacations Incorporated, 9271 S John Young Parkway, Orlando, FL 32819
+    </div>`;
 
     // Footer bar with image
     const footerBarHtml = `<div class="footer-bar">
-        <img src="images/hicvfooter.png" alt="HICV Footer" loading="lazy" onerror="this.style.display='none'">
+        <img src="images/hicvfooter.png" alt="Holiday Inn Club Vacations" loading="lazy" onerror="this.style.display='none'">
     </div>`;
 
-    // Site footer
-    const siteFooterHtml = `<div class="site-footer">
-    </div>`;
-
-    footer.innerHTML = filmstripHtml + dividerHtml + footerBarHtml + siteFooterHtml;
+    footer.innerHTML = filmstripHtml + galleryHtml + dividerHtml + disclaimerHtml + footerBarHtml;
 
     container.after(footer);
 }
