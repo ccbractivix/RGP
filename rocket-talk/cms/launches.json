@@ -23,17 +23,7 @@
     "trajectory": "Northeast",
     "rocket_talk": {
       "template": "rocket_talk_default",
-      "variables": {
-        "mission_name": "Starlink Group 10-58",
-        "launch_vehicle": "Falcon 9 Block 5",
-        "event_date": "Tuesday, March 31",
-        "event_time": "7:00 PM"
-      }
-    },
-    "rocket_talk_live": {
-      "enabled": true,
-      "url": "",
-      "label": "🎙️ Rocket Talk LIVE - Tuesday March 31, 5:00 & 7:00 PM"
+      "variables": {}
     }
   },
   "5ed6ab75-8c5b-4013-93e1-1deb56b14f1d": {
@@ -61,17 +51,7 @@
     "trajectory": "East by northeast",
     "rocket_talk": {
       "template": "rocket_talk_default",
-      "variables": {
-        "mission_name": "Artemis II",
-        "launch_vehicle": "NASA SLS Block I",
-        "event_date": "Tuesday, April 7",
-        "event_time": "7:00 PM"
-      }
-    },
-    "rocket_talk_live": {
-      "enabled": true,
-      "url": "",
-      "label": "🎙️ Rocket Talk LIVE - Tuesday, March 31, 5:00 & 7:00 PM"
+      "variables": {}
     }
   }
 }
