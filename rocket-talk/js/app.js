@@ -646,7 +646,7 @@ function renderPageFooter() {
     filmstripHtml += '</div></div>';
 
     // Gallery link
-    const galleryHtml = `<a href="https://sites.google.com/view/launch-image-galleries" target="_blank" class="gallery-link">📸 Launch Image Galleries By Local Photographers</a>`;
+    const galleryHtml = `<a href="https://sites.google.com/view/holidayinnclubcape/home/rocket-talk/galleries" target="_blank" class="gallery-link">📸 Launch Image Galleries By Local Photographers</a>`;
 
     // Divider
     const dividerHtml = '<hr class="footer-divider">';
