@@ -639,20 +639,20 @@ function renderPageFooter() {
     footer.className = 'page-footer-section';
 
     // Filmstrip
-    let filmstripHtml = '<div class="filmstrip-section"><div class="filmstrip-scroll">';
+    let filmstripHtml = '<div class="filmstrip-container">';
     for (let i = 1; i <= 7; i++) {
         filmstripHtml += `<img src="images/${i}.jpg" alt="Launch photo ${i}" class="filmstrip-img" loading="lazy" onerror="this.style.display='none'">`;
     }
-    filmstripHtml += '</div></div>';
+    filmstripHtml += '</div>';
 
     // Gallery link
     const galleryHtml = `<a href="https://sites.google.com/view/holidayinnclubcape/home/rocket-talk/galleries" target="_blank" class="gallery-link">📸 Launch Image Galleries By Local Photographers</a>`;
 
     // Divider
-    const dividerHtml = '<hr class="footer-divider">';
+    const divider1Html = '<hr class="footer-divider">';
 
-        // Return link
-    const returntorgpHtml = `<a href="https://sites.google.com/view/holidayinnclubcape/home">Retun to Cape Canaveral Site Menu</a>`;
+    // Return link - styled as a bubble like gallery-link
+    const returnHtml = `<a href="https://sites.google.com/view/holidayinnclubcape/home" target="_blank" class="gallery-link">🏠 Return to Cape Canaveral Site Menu</a>`;
 
     // Divider
     const divider2Html = '<hr class="footer-divider">';
@@ -669,7 +669,7 @@ function renderPageFooter() {
         <img src="images/hicvfooter.png" alt="Holiday Inn Club Vacations" loading="lazy" onerror="this.style.display='none'">
     </div>`;
 
-    footer.innerHTML = filmstripHtml + galleryHtml + returntorgpHtml + divider2Html + dividerHtml + disclaimerHtml + footerBarHtml;
+    footer.innerHTML = filmstripHtml + galleryHtml + divider1Html + returnHtml + divider2Html + disclaimerHtml + footerBarHtml;
 
     container.after(footer);
 }
