@@ -669,7 +669,7 @@ function renderPageFooter() {
         <img src="images/hicvfooter.png" alt="Holiday Inn Club Vacations" loading="lazy" onerror="this.style.display='none'">
     </div>`;
 
-    footer.innerHTML = filmstripHtml + galleryHtml + dividerHtml + disclaimerHtml + footerBarHtml;
+    footer.innerHTML = filmstripHtml + galleryHtml + returntorgpHtml + divider2Html + dividerHtml + disclaimerHtml + footerBarHtml;
 
     container.after(footer);
 }
