@@ -9,7 +9,7 @@
   // =====================================================
   // CONFIGURATION — UPDATE THIS URL AFTER REDEPLOYING
   // =====================================================
-  var API_URL = 'https://script.google.com/macros/s/AKfycbxMijIlEy9AHf1KlViaaP4zNx3rS9vA3pQcXvvsqntZHz2rJYm3bp8RWaec8BeLtR90Jw/exec';
+  var API_URL = 'https://script.google.com/macros/s/AKfycbxx8AM28uMdwln2Q57Xhz6XroTd0KT3ojVxKZuIm1Yj2omdocKQDeA6rpHVskgq-_F_lA/exec';
 
   // ===== INIT =====
   document.addEventListener('DOMContentLoaded', function () {
