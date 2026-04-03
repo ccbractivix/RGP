@@ -9,7 +9,7 @@
   // =====================================================
   // CONFIGURATION — UPDATE THIS URL AFTER REDEPLOYING
   // =====================================================
-  var API_URL = 'YOUR_APPS_SCRIPT_DEPLOYMENT_URL_HERE';
+  var API_URL = 'https://script.google.com/macros/s/AKfycbw0Tc_Y5cc8sTeN5oK3b58YKfJhiXHZM1shFTSBB3EyTrer8G6Q1q0sWB5QjjyZvwlXcA/exec';
   // Example: 'https://script.google.com/macros/s/AKfycb.../exec'
 
   // ===== INIT =====
