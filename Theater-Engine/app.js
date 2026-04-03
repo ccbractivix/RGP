@@ -10,13 +10,13 @@
   // CONFIGURATION — UPDATE THIS URL AFTER REDEPLOYING
   // =====================================================
   var API_URL = 'https://script.google.com/macros/s/AKfycbxMijIlEy9AHf1KlViaaP4zNx3rS9vA3pQcXvvsqntZHz2rJYm3bp8RWaec8BeLtR90Jw/exec';
-  // Example: 'https://script.google.com/macros/s/AKfycb.../exec'
 
   // ===== INIT =====
   document.addEventListener('DOMContentLoaded', function () {
     fetchSchedule();
   });
 
+  // ===== FETCH =====
   function fetchSchedule() {
     fetch(API_URL)
       .then(function (response) {
@@ -33,11 +33,13 @@
       });
   }
 
-  function renderSchedule(shows) {
+  // ===== RENDER =====
+  function renderSchedule(days) {
     var container = document.getElementById('schedule-container');
     var footer = document.getElementById('footer');
 
-    if (!shows || shows.length === 0) {
+    // Handle empty data
+    if (!days || days.length === 0) {
       container.innerHTML = '<p style="text-align:center;color:#999;padding:40px;font-size:14px;">No upcoming showings scheduled.</p>';
       document.getElementById('loading').style.display = 'none';
       container.style.display = 'block';
@@ -45,65 +47,64 @@
       return;
     }
 
-    // Group by date
-    var grouped = {};
-    shows.forEach(function (show) {
-      if (!grouped[show.date]) {
-        grouped[show.date] = {
-          dayLabel: show.dayLabel,
-          monthLabel: show.monthLabel,
-          shows: []
-        };
-      }
-      grouped[show.date].shows.push(show);
-    });
-
     var html = '';
-    var dates = Object.keys(grouped).sort();
 
-    dates.forEach(function (dateKey) {
-      var group = grouped[dateKey];
+    // Loop through each day object from the API
+    days.forEach(function (dayObj) {
+
+      // --- Day section wrapper ---
       html += '<div class="day-section">';
-      html += '<div class="day-header">' + escapeHtml(group.dayLabel) + ', ' + escapeHtml(group.monthLabel) + '</div>';
 
-      group.shows.forEach(function (show) {
-        var isLive = (show.type || '').toLowerCase() === 'live event';
-        var dateParts = dateKey.split('-');
-        var monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-        var monthAbbr = monthNames[parseInt(dateParts[1], 10) - 1];
-        var dayNum = parseInt(dateParts[2], 10);
+      // --- Day header (e.g. "Friday, June 13") ---
+      html += '<div class="day-header">' + escapeHtml(dayObj.dateLabel) + '</div>';
+
+      // --- Loop through each show within this day ---
+      dayObj.showings.forEach(function (show) {
+
+        var isLive = show.isLive || false;
 
         html += '<div class="showtime-card">';
 
-        // Date badge
+        // ---- Date badge ----
         html += '<div class="date-badge">';
-        html += '<span class="month">' + monthAbbr + '</span>';
-        html += '<span class="day">' + dayNum + '</span>';
+        html += '<span class="month">' + escapeHtml(dayObj.month) + '</span>';
+        html += '<span class="day">' + escapeHtml(String(dayObj.day)) + '</span>';
         html += '</div>';
 
-        // Poster
-        if (show.poster) {
-          html += '<img class="poster-img" src="' + escapeAttr(show.poster) + '" alt="' + escapeAttr(show.title) + '" loading="lazy">';
+        // ---- Poster ----
+        if (show.posterUrl) {
+          html += '<img class="poster-img" src="' + escapeAttr(show.posterUrl) + '" alt="' + escapeAttr(show.title) + '" loading="lazy">';
         }
 
-        // Card info
+        // ---- Card info ----
         html += '<div class="card-info">';
-        html += '<div class="show-title' + (isLive ? ' live-event-title' : '') + '">' + escapeHtml(show.title) + '</div>';
-        var runtimeDisplay = show.runtime ? ' · ' + escapeHtml(show.runtime) : '';
-html += '<div class="show-time">' + escapeHtml(show.time) + (show.runtime ? ' · ' + escapeHtml(show.runtime) : '') + '</div>';
 
-        // Notes / tagline
+        // Title
+        html += '<div class="show-title' + (isLive ? ' live-event-title' : '') + '">';
+        html += escapeHtml(show.title);
+        html += '</div>';
+
+        // Time + Runtime
+        html += '<div class="show-time">';
+        html += escapeHtml(show.time);
+        if (show.runtime) {
+          html += ' &middot; ' + escapeHtml(show.runtime);
+        }
+        html += '</div>';
+
+        // Notes or Ticket link
         if (show.notes) {
-          var noteText = show.notes;
-          var urlMatch = noteText.match(/https?:\/\/[^\s]+/);
+          var urlMatch = show.notes.match(/https?:\/\/[^\s]+/);
           if (urlMatch && !isLive) {
-            html += '<div class="ticket-link"><a href="' + escapeAttr(urlMatch[0]) + '" target="_blank">🎟️ Tickets</a></div>';
+            html += '<div class="ticket-link">';
+            html += '<a href="' + escapeAttr(urlMatch[0]) + '" target="_blank">🎟️ Tickets</a>';
+            html += '</div>';
           } else {
-            html += '<div class="show-notes">' + escapeHtml(noteText) + '</div>';
+            html += '<div class="show-notes">' + escapeHtml(show.notes) + '</div>';
           }
         }
 
-        // Meta chips
+        // Meta chips (Rated, Year, Genre tags)
         var chips = [];
         if (show.rated) chips.push(show.rated);
         if (show.year) chips.push(show.year);
@@ -121,7 +122,7 @@ html += '<div class="show-time">' + escapeHtml(show.time) + (show.runtime ? ' ·
           html += '</div>';
         }
 
-        // Links
+        // IMDb links (movies only)
         if (!isLive && (show.imdbLink || show.imdbParentsLink)) {
           html += '<div class="card-links">';
           if (show.imdbLink) {
@@ -133,13 +134,14 @@ html += '<div class="show-time">' + escapeHtml(show.time) + (show.runtime ? ' ·
           html += '</div>';
         }
 
-        html += '</div>'; // .card-info
-        html += '</div>'; // .showtime-card
+        html += '</div>'; // close .card-info
+        html += '</div>'; // close .showtime-card
       });
 
-      html += '</div>'; // .day-section
+      html += '</div>'; // close .day-section
     });
 
+    // Inject and reveal
     container.innerHTML = html;
     document.getElementById('loading').style.display = 'none';
     container.style.display = 'block';
