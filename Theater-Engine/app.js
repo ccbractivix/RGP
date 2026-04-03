@@ -89,7 +89,9 @@
         // Card info
         html += '<div class="card-info">';
         html += '<div class="show-title' + (isLive ? ' live-event-title' : '') + '">' + escapeHtml(show.title) + '</div>';
-        html += '<div class="show-time">' + escapeHtml(show.time) + '</div>';
+        var runtimeDisplay = show.runtime ? ' · ' + escapeHtml(show.runtime) : '';
+html += '<div class="show-time">' + escapeHtml(show.time) + runtimeDisplay + '</div>';
+
 
         // Notes / tagline
         if (show.notes) {
