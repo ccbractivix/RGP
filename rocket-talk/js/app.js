@@ -651,6 +651,12 @@ function renderPageFooter() {
     // Divider
     const dividerHtml = '<hr class="footer-divider">';
 
+        // Return link
+    const returntorgpHtml = `<a href="https://sites.google.com/view/holidayinnclubcape/home">Retun to Cape Canaveral Site Menu</a>`;
+
+    // Divider
+    const dividerHtml = '<hr class="footer-divider">';
+
     // Disclaimer
     const disclaimerHtml = `<div class="disclaimer">
         The Holiday Inn Club® program and Holiday Inn Club Vacations® resorts are independently owned, operated and marketed and are not owned, operated or marketed by IHG® Hotels and Resorts or by the owner or the licensor of the Holiday Inn® brand. Copyright © 2022 Holiday Inn Club Vacations Incorporated. All rights reserved.
