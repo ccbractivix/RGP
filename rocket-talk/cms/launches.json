@@ -32,12 +32,7 @@
     "trajectory": "Northeast",
     "rocket_talk": {
       "template": "rocket_talk_default",
-      "variables": {
-        "mission_name": "Cygnus CRS-2 NG-24",
-        "launch_vehicle": "Falcon 9 Block 5",
-        "event_date": "",
-        "event_time": ""
-      }
+      "variables": {}
     }
   },
   "41699701-2ef4-4b0c-ac9d-6757820cde87": {
