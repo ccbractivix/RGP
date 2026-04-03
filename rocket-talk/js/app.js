@@ -655,7 +655,7 @@ function renderPageFooter() {
     const returntorgpHtml = `<a href="https://sites.google.com/view/holidayinnclubcape/home">Retun to Cape Canaveral Site Menu</a>`;
 
     // Divider
-    const dividerHtml = '<hr class="footer-divider">';
+    const divider2Html = '<hr class="footer-divider">';
 
     // Disclaimer
     const disclaimerHtml = `<div class="disclaimer">
