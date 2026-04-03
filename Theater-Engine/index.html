@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Theater Schedule</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Loading Spinner -->
+  <div id="loading">
+    <div class="film-reel">
+      <div class="reel-circle"></div>
+      <div class="reel-circle"></div>
+      <div class="reel-circle"></div>
+    </div>
+    <p style="margin-top:18px;font-family:'Inter',sans-serif;color:#888;font-size:14px;">Loading schedule...</p>
+  </div>
+
+  <!-- Main Content -->
+  <div id="schedule-container" style="display:none;"></div>
+
+  <!-- Footer -->
+  <div id="footer" style="display:none;">
+    <p class="disclaimer-text">
+      Movie information provided for convenience only. All movie titles, posters, ratings, and related metadata are the property of their respective owners and studios. This schedule is not affiliated with or endorsed by any movie studio, distributor, or rights holder. Content is licensed and exhibited under applicable agreements with IHG Hotels & Resorts.
+    </p>
+    <div class="footer-divider"></div>
+    <p class="solicitation-text">INDEPENDENT OWNER AND OPERATOR OF A LICENSED HOTEL</p>
+    <div class="footer-logo-box">
+      <img src="https://lh3.googleusercontent.com/d/1qbjJ1my-cQyUyLfg9sXfjLhVHuX9fMLc" alt="Holiday Inn Club Vacations" class="footer-logo">
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
