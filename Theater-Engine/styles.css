@@ -245,3 +245,46 @@ body {
     font-size: 14px;
   }
 }
+/* --- Back Arrow (floating top-left) --- */
+.back-arrow {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 20px;
+  transition: background 0.2s;
+}
+.back-arrow:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+/* --- Return Bubble (bottom) --- */
+.return-bubble {
+  display: inline-block;
+  margin: 32px auto;
+  padding: 14px 28px;
+  background: #2c2c2c;
+  color: #ffd700;
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  border-radius: 30px;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.2s;
+}
+.return-bubble:hover {
+  background: #444;
+  transform: scale(1.03);
+}
+.return-footer {
+  text-align: center;
+  padding-bottom: 24px;
+}
