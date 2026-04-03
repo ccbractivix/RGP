@@ -638,12 +638,15 @@ function renderPageFooter() {
     const footer = document.createElement('div');
     footer.className = 'page-footer-section';
 
-    // Filmstrip
-    let filmstripHtml = '<div class="filmstrip-container">';
-    for (let i = 1; i <= 7; i++) {
-        filmstripHtml += `<img src="images/${i}.jpg" alt="Launch photo ${i}" class="filmstrip-img" loading="lazy" onerror="this.style.display='none'">`;
-    }
-    filmstripHtml += '</div>';
+  // Filmstrip
+let filmstripHtml = '<div class="filmstrip-section">';
+filmstripHtml += '<div class="filmstrip-container">';
+filmstripHtml += '<div class="filmstrip">';
+for (let i = 1; i <= 7; i++) {
+    filmstripHtml += `<img src="images/${i}.jpg" alt="Launch photo ${i}" loading="lazy" onerror="this.style.display='none'">`;
+}
+filmstripHtml += '</div></div></div>';
+
 
     // Gallery link
     const galleryHtml = `<a href="https://sites.google.com/view/holidayinnclubcape/home/rocket-talk/galleries" target="_blank" class="gallery-link">📸 Launch Image Galleries By Local Photographers</a>`;
