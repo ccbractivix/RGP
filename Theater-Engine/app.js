@@ -9,7 +9,7 @@
   // =====================================================
   // CONFIGURATION — UPDATE THIS URL AFTER REDEPLOYING
   // =====================================================
-  var API_URL = 'https://script.google.com/macros/s/AKfycbxx8AM28uMdwln2Q57Xhz6XroTd0KT3ojVxKZuIm1Yj2omdocKQDeA6rpHVskgq-_F_lA/exec';
+  var API_URL = 'https://script.google.com/macros/s/AKfycbxMijIlEy9AHf1KlViaaP4zNx3rS9vA3pQcXvvsqntZHz2rJYm3bp8RWaec8BeLtR90Jw/exec';
 
   // ===== INIT =====
   document.addEventListener('DOMContentLoaded', function () {
@@ -33,6 +33,31 @@
       });
   }
 
+  // ===== HELPER: Parse "Friday, April 3" into month + day =====
+  function parseDateLabel(label) {
+    // label format: "Friday, April 3"
+    var result = { month: '', day: '' };
+    if (!label) return result;
+    var parts = label.replace(/^[A-Za-z]+,\s*/, '').split(' ');
+    if (parts.length >= 2) {
+      result.month = parts[0].substring(0, 3).toUpperCase(); // "APR"
+      result.day = parts[1];
+    }
+    return result;
+  }
+
+  // ===== HELPER: Format runtime minutes =====
+  function formatRuntime(min) {
+    if (!min) return '';
+    var n = parseInt(min, 10);
+    if (isNaN(n) || n <= 0) return '';
+    var h = Math.floor(n / 60);
+    var m = n % 60;
+    if (h > 0 && m > 0) return h + 'h ' + m + 'm';
+    if (h > 0) return h + 'h';
+    return m + 'm';
+  }
+
   // ===== RENDER =====
   function renderSchedule(days) {
     var container = document.getElementById('schedule-container');
@@ -52,28 +77,31 @@
     // Loop through each day object from the API
     days.forEach(function (dayObj) {
 
+      var dateParts = parseDateLabel(dayObj.label);
+
       // --- Day section wrapper ---
       html += '<div class="day-section">';
 
-      // --- Day header (e.g. "Friday, June 13") ---
-      html += '<div class="day-header">' + escapeHtml(dayObj.dateLabel) + '</div>';
+      // --- Day header (e.g. "Friday, April 3") ---
+      html += '<div class="day-header">' + escapeHtml(dayObj.label) + '</div>';
 
       // --- Loop through each show within this day ---
-      dayObj.showings.forEach(function (show) {
+      var shows = dayObj.shows || [];
+      shows.forEach(function (show) {
 
-        var isLive = show.isLive || false;
+        var isLive = (show.contentType || '').toLowerCase() === 'live event';
 
         html += '<div class="showtime-card">';
 
         // ---- Date badge ----
         html += '<div class="date-badge">';
-        html += '<span class="month">' + escapeHtml(dayObj.month) + '</span>';
-        html += '<span class="day">' + escapeHtml(String(dayObj.day)) + '</span>';
+        html += '<span class="month">' + escapeHtml(dateParts.month) + '</span>';
+        html += '<span class="day">' + escapeHtml(dateParts.day) + '</span>';
         html += '</div>';
 
         // ---- Poster ----
-        if (show.posterUrl) {
-          html += '<img class="poster-img" src="' + escapeAttr(show.posterUrl) + '" alt="' + escapeAttr(show.title) + '" loading="lazy">';
+        if (show.poster) {
+          html += '<img class="poster-img" src="' + escapeAttr(show.poster) + '" alt="' + escapeAttr(show.title) + '" loading="lazy">';
         }
 
         // ---- Card info ----
@@ -81,18 +109,20 @@
 
         // Title
         html += '<div class="show-title' + (isLive ? ' live-event-title' : '') + '">';
+        if (isLive) html += '<span class="live-badge">LIVE</span> ';
         html += escapeHtml(show.title);
         html += '</div>';
 
         // Time + Runtime
         html += '<div class="show-time">';
         html += escapeHtml(show.time);
-        if (show.runtime) {
-          html += ' &middot; ' + escapeHtml(show.runtime);
+        var runtimeStr = formatRuntime(show.runtime);
+        if (runtimeStr) {
+          html += ' &middot; ' + escapeHtml(runtimeStr);
         }
         html += '</div>';
 
-        // Notes or Ticket link
+        // Notes
         if (show.notes) {
           var urlMatch = show.notes.match(/https?:\/\/[^\s]+/);
           if (urlMatch && !isLive) {
@@ -106,7 +136,7 @@
 
         // Meta chips (Rated, Year, Genre tags)
         var chips = [];
-        if (show.rated) chips.push(show.rated);
+        if (show.rating) chips.push(show.rating);
         if (show.year) chips.push(show.year);
         if (show.genre) {
           show.genre.split(',').forEach(function (g) {
@@ -119,18 +149,6 @@
           chips.forEach(function (chip) {
             html += '<span class="chip">' + escapeHtml(chip) + '</span>';
           });
-          html += '</div>';
-        }
-
-        // IMDb links (movies only)
-        if (!isLive && (show.imdbLink || show.imdbParentsLink)) {
-          html += '<div class="card-links">';
-          if (show.imdbLink) {
-            html += '<a href="' + escapeAttr(show.imdbLink) + '" target="_blank">🔗 IMDb</a>';
-          }
-          if (show.imdbParentsLink) {
-            html += '<a href="' + escapeAttr(show.imdbParentsLink) + '" target="_blank">👨‍👩‍👧 Parents Guide</a>';
-          }
           html += '</div>';
         }
 
