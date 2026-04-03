@@ -1,6 +1,6 @@
 {
   "8a9f7ce9-4ab5-4227-95f1-9f328def8828": {
-    "headline": "Overnight Fright Night / Saturday Morning",
+    "headline": "",
     "viewing_guide": "https://docs.google.com/presentation/d/e/2PACX-1vTtws10vWdGIg9FQMDbWa5-xHCqi9lfpx_bNC5IeUOB9qfbIWh_0AFrc-eK0f6tDsE6JG96og3ahWcV/pub?start=false&loop=false&delayms=3000",
     "trajectory": "Northeast",
     "rocket_talk": {
@@ -38,6 +38,12 @@
         "event_date": "",
         "event_time": ""
       }
+    },
+    "rocket_talk_live": {
+      "enabled": true,
+      "url": "",
+      "label": "🎙️ Rocket Talk LIVE - Tuesday, April 7, 7:00 PM"
+    }
   },
   "41699701-2ef4-4b0c-ac9d-6757820cde87": {
     "headline": "Astronauts going to the Moon!",
