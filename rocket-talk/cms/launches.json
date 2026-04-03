@@ -28,22 +28,16 @@
   },
   "5ed6ab75-8c5b-4013-93e1-1deb56b14f1d": {
     "headline": "Landing at LZ-40! Sonic Boom Alert!",
-    "viewing_guide": "",
+    "viewing_guide": "https://docs.google.com/presentation/d/e/2PACX-1vR1UQNCk_8lxwtRxe3fn9rFnKbbcvNuXSASrPngIiYKrngH5jn6ObnNkj5wn4EOTorP79_3rsNQL4G3/pub?start=false&loop=false&delayms=3000",
     "trajectory": "Northeast",
     "rocket_talk": {
       "template": "rocket_talk_default",
       "variables": {
         "mission_name": "Cygnus CRS-2 NG-24",
         "launch_vehicle": "Falcon 9 Block 5",
-        "event_date": "Tuesday, April 7",
-        "event_time": "7:00 PM"
+        "event_date": "",
+        "event_time": ""
       }
-    },
-    "rocket_talk_live": {
-      "enabled": true,
-      "url": "",
-      "label": "🎙️ Rocket Talk LIVE - Tuesday, April 7, 7:00 PM"
-    }
   },
   "41699701-2ef4-4b0c-ac9d-6757820cde87": {
     "headline": "Astronauts going to the Moon!",
