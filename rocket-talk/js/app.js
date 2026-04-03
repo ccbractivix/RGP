@@ -641,7 +641,7 @@ function renderPageFooter() {
     // Filmstrip
     let filmstripHtml = '<div class="filmstrip-section"><div class="filmstrip-scroll">';
     for (let i = 1; i <= 7; i++) {
-        filmstripHtml += `<img src="images/${i}.png" alt="Launch photo ${i}" class="filmstrip-img" loading="lazy" onerror="this.style.display='none'">`;
+        filmstripHtml += `<img src="images/${i}.jpg" alt="Launch photo ${i}" class="filmstrip-img" loading="lazy" onerror="this.style.display='none'">`;
     }
     filmstripHtml += '</div></div>';
 
