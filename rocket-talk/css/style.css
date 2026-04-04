@@ -381,6 +381,8 @@ body {
     padding: 12px 20px;
     margin: 16px auto;
     max-width: 700px;
+    width: 100%;
+    box-sizing: border-box;
     background: linear-gradient(135deg, #1a1a2e, #16213e);
     color: #ffd54f;
     font-size: 1.1rem;
