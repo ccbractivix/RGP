@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Library Manager – Theater Management System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #1a1a1a;
+      --panel:       #242424;
+      --card:        #2c2c2c;
+      --border:      #333;
+      --border-light:#3a3a3a;
+      --gold:        #c8a45a;
+      --gold-hover:  #d9b96e;
+      --gold-dim:    rgba(200,164,90,0.15);
+      --blue:        #4a90d9;
+      --blue-dim:    rgba(74,144,217,0.18);
+      --green:       #5cb85c;
+      --green-dim:   rgba(92,184,92,0.18);
+      --red:         #e05555;
+      --red-dim:     rgba(224,85,85,0.15);
+      --text:        #e8e8e8;
+      --text-muted:  #888;
+      --text-dim:    #555;
+      --header-bg:   #0d0d0d;
+      --success:     #5cb85c;
+    }
+
+    html, body {
+      height: 100%;
+      overflow-x: hidden;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      gap: 1rem;
+    }
+
+    .header-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--gold);
+      white-space: nowrap;
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 0.5rem; }
+
+    /* ── Buttons ── */
+    .btn {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.42rem 0.9rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+    }
+    .btn:hover { background: #353535; border-color: #4a4a4a; }
+
+    .btn-gold { background: var(--gold); color: #1a1a1a; border-color: var(--gold); }
+    .btn-gold:hover { background: var(--gold-hover); border-color: var(--gold-hover); }
+
+    .btn-danger { color: var(--red); border-color: rgba(224,85,85,0.35); }
+    .btn-danger:hover { background: var(--red-dim); border-color: var(--red); }
+
+    .btn-sm { font-size: 0.73rem; padding: 0.25rem 0.6rem; }
+    .btn-xs { font-size: 0.68rem; padding: 0.18rem 0.45rem; }
+
+    /* ── Action bar ── */
+    .action-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    #refresh-status {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-left: 0.4rem;
+    }
+    #refresh-status.success { color: var(--success); }
+    #refresh-status.error   { color: var(--red); }
+
+    /* ── Table wrapper ── */
+    .table-wrap {
+      flex: 1;
+      overflow: auto;
+      padding: 0 1.5rem 1.5rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+
+    thead th {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 0.55rem 0.75rem;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    thead th.sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.15s;
+    }
+    thead th.sortable:hover { color: var(--gold); }
+    thead th.sorted { color: var(--gold); }
+    .sort-arrow { margin-left: 4px; opacity: 0.7; }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+    tbody td {
+      padding: 0.55rem 0.75rem;
+      vertical-align: middle;
+      font-size: 0.82rem;
+    }
+
+    .poster-cell img {
+      width: 40px;
+      height: 56px;
+      object-fit: cover;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+      display: block;
+    }
+
+    .poster-placeholder {
+      width: 40px;
+      height: 56px;
+      background: var(--card);
+      border: 1px dashed var(--border-light);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+    }
+
+    .title-cell {
+      font-weight: 600;
+      color: var(--text);
+      max-width: 240px;
+    }
+
+    .id-cell {
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-block;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.18rem 0.5rem;
+    }
+    .badge-movie {
+      background: var(--blue-dim);
+      color: var(--blue);
+      border: 1px solid rgba(74,144,217,0.35);
+    }
+    .badge-event {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(92,184,92,0.35);
+    }
+
+    .mpaa-badge {
+      background: var(--card);
+      border: 1px solid var(--border-light);
+      border-radius: 3px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.15rem 0.4rem;
+      color: var(--text-muted);
+    }
+
+    .genres-cell {
+      max-width: 160px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .imdb-cell {
+      white-space: nowrap;
+      color: #f5c518;
+      font-weight: 600;
+    }
+
+    .date-cell { white-space: nowrap; color: var(--text-muted); font-size: 0.75rem; }
+
+    .actions-cell {
+      white-space: nowrap;
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+    }
+
+    /* ── Empty / loading states ── */
+    .state-row td {
+      text-align: center;
+      padding: 3rem 0;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    .spinner-inline {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(200,164,90,0.3);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 0.4rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Modal overlay ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal-card {
+      background: var(--panel);
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.7);
+      transform: translateY(8px);
+      transition: transform 0.2s;
+    }
+    .modal-overlay.open .modal-card { transform: translateY(0); }
+
+    .modal-header {
+      padding: 1.1rem 1.25rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .modal-close:hover { color: var(--text); background: var(--card); }
+
+    .modal-body { padding: 1.1rem 1.25rem; }
+
+    .form-row { margin-bottom: 0.9rem; }
+
+    .form-row label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .form-control {
+      width: 100%;
+      background: #1e1e1e;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      padding: 0.5rem 0.7rem;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-control:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(200,164,90,0.12);
+    }
+    .form-control::placeholder { color: #555; }
+    .form-control.invalid { border-color: var(--red); }
+
+    .form-hint {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      margin-top: 0.3rem;
+    }
+
+    .preview-box {
+      display: none;
+      background: var(--card);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 0.7rem 0.85rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    .preview-box.visible { display: block; }
+    .preview-box strong { color: var(--text); }
+
+    .modal-footer {
+      padding: 0.85rem 1.25rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+    }
+
+    .modal-error {
+      color: var(--red);
+      font-size: 0.78rem;
+      margin-top: 0.4rem;
+      display: none;
+    }
+    .modal-error.visible { display: block; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--panel);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 0.65rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+      z-index: 9999;
+      max-width: 320px;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error   { border-color: var(--red); color: var(--red); }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-title">📚 Library Manager</div>
+    <div class="header-actions">
+      <a class="btn" href="/admin-ui/dashboard.html">🎬 Schedule</a>
+      <button class="btn btn-danger" id="btn-logout">⏻ Logout</button>
+    </div>
+  </header>
+
+  <!-- Action bar -->
+  <div class="action-bar">
+    <button class="btn btn-gold" onclick="openAddMovieModal()">＋ Add Movie</button>
+    <button class="btn" onclick="openAddEventModal()" style="color:var(--green);border-color:rgba(92,184,92,0.4)">＋ Add Live Event</button>
+    <button class="btn" id="btn-refresh-all" onclick="refreshAll()">🔄 Refresh All</button>
+    <span id="refresh-status"></span>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table id="lib-table">
+      <thead>
+        <tr>
+          <th style="width:52px">Poster</th>
+          <th class="sortable" data-field="title" onclick="sortBy('title')">Title <span class="sort-arrow" id="sort-title">↕</span></th>
+          <th>ID</th>
+          <th class="sortable" data-field="type" onclick="sortBy('type')">Type <span class="sort-arrow" id="sort-type">↕</span></th>
+          <th>MPAA</th>
+          <th>Runtime</th>
+          <th>Genres</th>
+          <th>IMDB ★</th>
+          <th class="sortable" data-field="last_updated" onclick="sortBy('last_updated')">Last Updated <span class="sort-arrow" id="sort-last_updated">↕</span></th>
+          <th style="width:110px">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="lib-tbody">
+        <tr class="state-row"><td colspan="10"><span class="spinner-inline"></span> Loading library…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Add Movie Modal -->
+  <div class="modal-overlay" id="modal-movie">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Add Movie</div>
+        <button class="modal-close" onclick="closeModal('modal-movie')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label>IMDB ID</label>
+          <div style="display:flex;gap:0.5rem">
+            <input type="text" class="form-control" id="movie-imdb-id" placeholder="tt1234567" spellcheck="false" />
+            <button class="btn btn-sm" onclick="fetchMoviePreview()">🔍 Preview</button>
+          </div>
+          <div class="form-hint">Enter the IMDB ID (e.g. tt0111161)</div>
+          <div class="modal-error" id="movie-error"></div>
+        </div>
+        <div class="preview-box" id="movie-preview"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('modal-movie')">Cancel</button>
+        <button class="btn btn-gold" id="btn-confirm-movie" disabled onclick="addMovie()">Confirm Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Live Event Modal -->
+  <div class="modal-overlay" id="modal-event">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Add Live Event</div>
+        <button class="modal-close" onclick="closeModal('modal-event')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label>Event ID</label>
+          <input type="text" class="form-control" id="event-id" placeholder="EVT-XXX" spellcheck="false" />
+          <div class="form-hint">Must match pattern EVT-[A-Z0-9]+</div>
+        </div>
+        <div class="form-row">
+          <label>Title</label>
+          <input type="text" class="form-control" id="event-title" placeholder="Event title" />
+        </div>
+        <div class="form-row">
+          <label>Ticket URL <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="url" class="form-control" id="event-ticket-url" placeholder="https://…" />
+        </div>
+        <div class="form-row">
+          <label>Custom Art Filename <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="event-art" placeholder="MVN.png" />
+          <div class="form-hint">Filename of art file in the live-event-art folder</div>
+        </div>
+        <div class="modal-error" id="event-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('modal-event')">Cancel</button>
+        <button class="btn btn-gold" onclick="addEvent()">Add Event</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+  (function () {
+    let libraryItems = [];
+    let sortField    = 'title';
+    let sortDir      = 'asc';
+
+    /* ── CSRF token (fetched once per page load) ── */
+    let _csrfToken = null;
+    async function getCsrfToken() {
+      if (_csrfToken) return _csrfToken;
+      const r = await fetch('/admin/csrf-token', { credentials: 'include' });
+      const d = await r.json();
+      _csrfToken = d.csrfToken || '';
+      return _csrfToken;
+    }
+
+    /* ── API helper ── */
+    async function apiFetch(url, opts = {}) {
+      const csrfToken = await getCsrfToken();
+      return fetch(url, {
+        credentials: 'include',
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-Token': csrfToken,
+          ...(opts.headers || {})
+        }
+      }).then(res => {
+        if (res.status === 401) {
+          window.location.href = '/admin-ui/login.html';
+          throw new Error('Unauthorized');
+        }
+        return res;
+      });
+    }
+
+    /* ── Toast ── */
+    function showToast(msg, type) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast' + (type ? ' ' + type : '');
+      t.classList.add('show');
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    /* ── Load library ── */
+    function loadLibrary() {
+      document.getElementById('lib-tbody').innerHTML =
+        `<tr class="state-row"><td colspan="10"><span class="spinner-inline"></span> Loading library…</td></tr>`;
+      apiFetch('/admin/library')
+        .then(r => r.ok ? r.json() : Promise.reject(new Error('Server error')))
+        .then(data => {
+          libraryItems = Array.isArray(data) ? data : (data.items || []);
+          renderTable();
+        })
+        .catch(err => {
+          if (err.message === 'Unauthorized') return;
+          document.getElementById('lib-tbody').innerHTML =
+            `<tr class="state-row"><td colspan="10" style="color:var(--red)">⚠ Failed to load library</td></tr>`;
+          showToast('Load error: ' + err.message, 'error');
+        });
+    }
+
+    /* ── Render table ── */
+    function renderTable() {
+      const sorted = [...libraryItems].sort((a, b) => {
+        let av = a[sortField] || '';
+        let bv = b[sortField] || '';
+        if (sortField === 'last_updated') {
+          av = new Date(av).getTime() || 0;
+          bv = new Date(bv).getTime() || 0;
+        } else {
+          av = String(av).toLowerCase();
+          bv = String(bv).toLowerCase();
+        }
+        if (av < bv) return sortDir === 'asc' ? -1 : 1;
+        if (av > bv) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      // Update sort arrows
+      ['title','type','last_updated'].forEach(f => {
+        const el = document.getElementById('sort-' + f);
+        if (!el) return;
+        el.textContent = f !== sortField ? '↕' : (sortDir === 'asc' ? '↑' : '↓');
+        el.closest('th').classList.toggle('sorted', f === sortField);
+      });
+
+      if (sorted.length === 0) {
+        document.getElementById('lib-tbody').innerHTML =
+          `<tr class="state-row"><td colspan="10">No items in library yet.</td></tr>`;
+        return;
+      }
+
+      const rows = sorted.map(item => {
+        const isMovie = item.type === 'movie';
+        const posterHtml = item.poster_url
+          ? `<img src="${esc(item.poster_url)}" alt="" loading="lazy" />`
+          : `<div class="poster-placeholder">${isMovie ? '🎬' : '📡'}</div>`;
+
+        const typeBadge = isMovie
+          ? `<span class="badge badge-movie">Movie</span>`
+          : `<span class="badge badge-event">Live Event</span>`;
+
+        const mpaa = item.mpaa_rating
+          ? `<span class="mpaa-badge">${esc(item.mpaa_rating)}</span>`
+          : `<span style="color:var(--text-dim)">—</span>`;
+
+        const runtime = item.runtime_min
+          ? `${item.runtime_min} min`
+          : `<span style="color:var(--text-dim)">—</span>`;
+
+        const genres = Array.isArray(item.genres)
+          ? item.genres.slice(0, 3).join(', ')
+          : (item.genres || '—');
+
+        const imdb = item.imdb_rating
+          ? `★ ${item.imdb_rating}`
+          : `<span style="color:var(--text-dim)">—</span>`;
+
+        const lastUpd = item.last_updated
+          ? formatDate(item.last_updated)
+          : `<span style="color:var(--text-dim)">—</span>`;
+
+        const refreshBtn = isMovie
+          ? `<button class="btn btn-xs js-refresh" data-id="${esc(item.id)}" title="Refresh metadata">↻ Refresh</button>`
+          : '';
+
+        return `<tr>
+          <td class="poster-cell">${posterHtml}</td>
+          <td class="title-cell">${esc(item.title || item.id || '—')}</td>
+          <td class="id-cell">${esc(item.id || '—')}</td>
+          <td>${typeBadge}</td>
+          <td>${mpaa}</td>
+          <td>${runtime}</td>
+          <td class="genres-cell">${esc(genres)}</td>
+          <td class="imdb-cell">${imdb}</td>
+          <td class="date-cell">${lastUpd}</td>
+          <td>
+            <div class="actions-cell">
+              ${refreshBtn}
+              <button class="btn btn-xs btn-danger js-delete"
+                data-id="${esc(item.id)}"
+                data-title="${esc(item.title || item.id || '')}"
+                title="Delete">✕ Delete</button>
+            </div>
+          </td>
+        </tr>`;
+      });
+
+      document.getElementById('lib-tbody').innerHTML = rows.join('');
+    }
+
+    /* ── Delegated click handler for table action buttons ── */
+    document.getElementById('lib-tbody').addEventListener('click', function (e) {
+      const refreshBtn = e.target.closest('.js-refresh');
+      if (refreshBtn) { refreshItem(refreshBtn.dataset.id); return; }
+
+      const deleteBtn = e.target.closest('.js-delete');
+      if (deleteBtn) { deleteItem(deleteBtn.dataset.id, deleteBtn.dataset.title); }
+    });
+
+    /* ── Sort ── */
+    function sortBy(field) {
+      if (sortField === field) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortField = field;
+        sortDir   = 'asc';
+      }
+      renderTable();
+    }
+
+    /* ── Refresh all ── */
+    function refreshAll() {
+      const btn = document.getElementById('btn-refresh-all');
+      const st  = document.getElementById('refresh-status');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-inline"></span> Refreshing…';
+      st.textContent = '';
+      st.className = '';
+
+      apiFetch('/admin/library/refresh-all', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          btn.disabled = false;
+          btn.innerHTML = '🔄 Refresh All';
+          const updated = data.updated ?? data.count ?? '?';
+          const errors  = data.errors ?? data.error_count ?? 0;
+          st.textContent = `Refreshing… (${updated} updated, ${errors} errors)`;
+          st.className = errors > 0 ? 'error' : 'success';
+          loadLibrary();
+        })
+        .catch(err => {
+          btn.disabled = false;
+          btn.innerHTML = '🔄 Refresh All';
+          if (err.message !== 'Unauthorized') {
+            st.textContent = 'Refresh failed';
+            st.className = 'error';
+          }
+        });
+    }
+
+    /* ── Refresh single item ── */
+    function refreshItem(id) {
+      showToast('Refreshing…', '');
+      apiFetch('/admin/library/' + encodeURIComponent(id) + '/refresh', { method: 'PUT' })
+        .then(r => {
+          if (r.ok) { showToast('Refreshed successfully', 'success'); loadLibrary(); }
+          else       showToast('Refresh failed', 'error');
+        })
+        .catch(err => { if (err.message !== 'Unauthorized') showToast('Error', 'error'); });
+    }
+
+    /* ── Delete item ── */
+    function deleteItem(id, title) {
+      if (!confirm('Delete "' + title + '"?\n\nThis cannot be undone.')) return;
+      apiFetch('/admin/library/' + encodeURIComponent(id), { method: 'DELETE' })
+        .then(r => {
+          if (r.ok) { showToast('Deleted "' + title + '"', 'success'); loadLibrary(); }
+          else       showToast('Delete failed', 'error');
+        })
+        .catch(err => { if (err.message !== 'Unauthorized') showToast('Error', 'error'); });
+    }
+
+    /* ── Movie modal ── */
+    function openAddMovieModal() {
+      document.getElementById('movie-imdb-id').value = '';
+      document.getElementById('movie-preview').className = 'preview-box';
+      document.getElementById('movie-preview').innerHTML = '';
+      document.getElementById('movie-error').className = 'modal-error';
+      document.getElementById('btn-confirm-movie').disabled = true;
+      openModal('modal-movie');
+      setTimeout(() => document.getElementById('movie-imdb-id').focus(), 100);
+    }
+
+    function fetchMoviePreview() {
+      const input  = document.getElementById('movie-imdb-id');
+      const errEl  = document.getElementById('movie-error');
+      const prevEl = document.getElementById('movie-preview');
+      const confirmBtn = document.getElementById('btn-confirm-movie');
+
+      const id = input.value.trim();
+      errEl.className = 'modal-error';
+      prevEl.className = 'preview-box';
+      confirmBtn.disabled = true;
+
+      if (!/^tt\d{7,8}$/.test(id)) {
+        errEl.textContent = 'Invalid IMDB ID format. Expected: tt1234567';
+        errEl.className = 'modal-error visible';
+        input.classList.add('invalid');
+        return;
+      }
+
+      input.classList.remove('invalid');
+      prevEl.innerHTML = `<span class="spinner-inline"></span> Validating…`;
+      prevEl.className = 'preview-box visible';
+
+      // Show ready message (actual metadata fetch happens server-side on confirm)
+      setTimeout(() => {
+        prevEl.innerHTML = `<strong>Ready to add:</strong> <span style="color:var(--gold);font-family:monospace">${esc(id)}</span><br/>
+          <span style="color:var(--text-dim);font-size:0.75rem">Movie metadata will be fetched from OMDB when added.</span>`;
+        confirmBtn.disabled = false;
+      }, 400);
+    }
+
+    function addMovie() {
+      const id = document.getElementById('movie-imdb-id').value.trim();
+      if (!id) return;
+      const btn = document.getElementById('btn-confirm-movie');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-inline"></span> Adding…';
+
+      apiFetch('/admin/library/movie', {
+        method: 'POST',
+        body: JSON.stringify({ imdbId: id })
+      })
+      .then(r => {
+        if (r.ok) {
+          closeModal('modal-movie');
+          showToast('Movie added: ' + id, 'success');
+          loadLibrary();
+        } else {
+          return r.json().then(d => {
+            const errEl = document.getElementById('movie-error');
+            errEl.textContent = d.error || d.message || 'Failed to add movie';
+            errEl.className = 'modal-error visible';
+            btn.disabled = false;
+            btn.innerHTML = 'Confirm Add';
+          });
+        }
+      })
+      .catch(err => {
+        if (err.message !== 'Unauthorized') {
+          const errEl = document.getElementById('movie-error');
+          errEl.textContent = 'Network error';
+          errEl.className = 'modal-error visible';
+          btn.disabled = false;
+          btn.innerHTML = 'Confirm Add';
+        }
+      });
+    }
+
+    /* ── Event modal ── */
+    function openAddEventModal() {
+      document.getElementById('event-id').value = '';
+      document.getElementById('event-title').value = '';
+      document.getElementById('event-ticket-url').value = '';
+      document.getElementById('event-art').value = '';
+      document.getElementById('event-error').className = 'modal-error';
+      openModal('modal-event');
+      setTimeout(() => document.getElementById('event-id').focus(), 100);
+    }
+
+    function addEvent() {
+      const eventId   = document.getElementById('event-id').value.trim();
+      const title     = document.getElementById('event-title').value.trim();
+      const ticketUrl = document.getElementById('event-ticket-url').value.trim();
+      const art       = document.getElementById('event-art').value.trim();
+      const errEl     = document.getElementById('event-error');
+
+      errEl.className = 'modal-error';
+
+      if (!/^EVT-[A-Z0-9]+$/.test(eventId)) {
+        errEl.textContent = 'Event ID must match EVT-[A-Z0-9]+ (e.g. EVT-SHOW1)';
+        errEl.className = 'modal-error visible';
+        document.getElementById('event-id').focus();
+        return;
+      }
+
+      if (!title) {
+        errEl.textContent = 'Title is required.';
+        errEl.className = 'modal-error visible';
+        document.getElementById('event-title').focus();
+        return;
+      }
+
+      const payload = { id: eventId, title };
+      if (ticketUrl) payload.ticket_url = ticketUrl;
+      if (art)       payload.custom_art  = art;
+
+      apiFetch('/admin/library/event', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+      .then(r => {
+        if (r.ok) {
+          closeModal('modal-event');
+          showToast('Event added: ' + title, 'success');
+          loadLibrary();
+        } else {
+          return r.json().then(d => {
+            errEl.textContent = d.error || d.message || 'Failed to add event';
+            errEl.className = 'modal-error visible';
+          });
+        }
+      })
+      .catch(err => {
+        if (err.message !== 'Unauthorized') {
+          errEl.textContent = 'Network error';
+          errEl.className = 'modal-error visible';
+        }
+      });
+    }
+
+    /* ── Modal helpers ── */
+    function openModal(id) {
+      document.getElementById(id).classList.add('open');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    // Close on overlay click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) overlay.classList.remove('open');
+      });
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.open')
+          .forEach(el => el.classList.remove('open'));
+      }
+    });
+
+    /* ── Enter key for IMDB input ── */
+    document.getElementById('movie-imdb-id').addEventListener('keydown', e => {
+      if (e.key === 'Enter') fetchMoviePreview();
+    });
+
+    /* ── Logout ── */
+    document.getElementById('btn-logout').addEventListener('click', () => {
+      apiFetch('/admin/logout', { method: 'POST' })
+        .finally(() => { window.location.href = '/admin-ui/login.html'; });
+    });
+
+    /* ── Format date ── */
+    function formatDate(ts) {
+      if (!ts) return '—';
+      const d = new Date(ts);
+      if (isNaN(d.getTime())) return '—';
+      return d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+    }
+
+    /* ── Escape helper ── */
+    function esc(str) {
+      return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+
+    /* ── Expose for inline onclick handlers ── */
+    window.sortBy          = sortBy;
+    window.openAddMovieModal = openAddMovieModal;
+    window.openAddEventModal = openAddEventModal;
+    window.closeModal      = closeModal;
+    window.fetchMoviePreview = fetchMoviePreview;
+    window.addMovie        = addMovie;
+    window.addEvent        = addEvent;
+    window.refreshItem     = refreshItem;
+    window.deleteItem      = deleteItem;
+    window.refreshAll      = refreshAll;
+
+    /* ── Boot ── */
+    document.addEventListener('DOMContentLoaded', loadLibrary);
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+/* ===== BASE ===== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #f5f5f0;
+  color: #333;
+  padding: 20px;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+/* ===== LOADING SPINNER ===== */
+#loading {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.film-reel {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.reel-circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #c8a45a;
+  animation: reelPulse 1.2s ease-in-out infinite;
+}
+
+.reel-circle:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.reel-circle:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes reelPulse {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.4); opacity: 1; }
+}
+
+/* ===== DAY SECTIONS ===== */
+.day-section {
+  margin-bottom: 32px;
+}
+
+.day-header {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  color: #2c2c2c;
+  border-bottom: 2px solid #c8a45a;
+  padding-bottom: 6px;
+  margin-bottom: 16px;
+}
+
+/* ===== SHOWTIME CARDS ===== */
+.showtime-card {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid #e0ddd5;
+  align-items: flex-start;
+}
+
+.showtime-card:last-child {
+  border-bottom: none;
+}
+
+/* ===== DATE BADGE ===== */
+.date-badge {
+  min-width: 48px;
+  background: #1a1a1a;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 6px 4px;
+  flex-shrink: 0;
+}
+
+.date-badge .month {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: block;
+}
+
+.date-badge .day {
+  font-size: 20px;
+  font-weight: 700;
+  display: block;
+  line-height: 1.1;
+}
+
+/* ===== POSTER ===== */
+.poster-img {
+  width: 64px;
+  height: 95px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: #ddd;
+}
+
+/* ===== CARD INFO ===== */
+.card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-info .show-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 2px;
+}
+
+.card-info .show-title.live-event-title {
+  color: #0077b6;
+}
+
+.card-info .show-time {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.card-info .show-notes {
+  font-size: 12px;
+  font-style: italic;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+/* ===== META CHIPS ===== */
+.meta-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.chip {
+  font-size: 11px;
+  background: #eee;
+  color: #555;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* ===== LINKS ===== */
+.card-links {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.card-links a {
+  font-size: 12px;
+  color: #b8860b;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.card-links a:hover {
+  text-decoration: underline;
+}
+
+/* ===== TICKET LINK ===== */
+.ticket-link a {
+  font-size: 12px;
+  color: #b8860b;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.ticket-link a:hover {
+  text-decoration: underline;
+}
+
+/* ===== IMDB LINKS ===== */
+.imdb-links {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.imdb-links a {
+  font-size: 12px;
+  color: #b8860b;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.imdb-links a:hover {
+  text-decoration: underline;
+}
+
+/* ===== LIVE BADGE ===== */
+.live-badge {
+  display: inline-block;
+  background: #0077b6;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* ===== FOOTER ===== */
+#footer {
+  margin-top: 40px;
+  text-align: center;
+}
+
+.disclaimer-text {
+  font-size: 10px;
+  color: #999;
+  line-height: 1.5;
+  max-width: 600px;
+  margin: 0 auto 12px auto;
+}
+
+.footer-divider {
+  width: 60px;
+  height: 1px;
+  background: #ccc;
+  margin: 0 auto 12px auto;
+}
+
+/* ===== BACK ARROW (floating top-left) ===== */
+.back-arrow {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 20px;
+  transition: background 0.2s;
+}
+
+.back-arrow:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+/* ===== RETURN BUBBLE (bottom) ===== */
+.return-bubble {
+  display: inline-block;
+  margin: 32px auto;
+  padding: 14px 28px;
+  background: #2c2c2c;
+  color: #ffd700;
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  border-radius: 30px;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.return-bubble:hover {
+  background: #444;
+  transform: scale(1.03);
+}
+
+.return-footer {
+  text-align: center;
+  padding-bottom: 24px;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 500px) {
+  body {
+    padding: 14px;
+  }
+
+  .poster-img {
+    width: 50px;
+    height: 74px;
+  }
+
+  .day-header {
+    font-size: 19px;
+  }
+
+  .card-info .show-title {
+    font-size: 14px;
+  }
+}

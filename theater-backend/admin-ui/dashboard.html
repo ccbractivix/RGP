@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Schedule Builder – Theater Management System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #1a1a1a;
+      --panel:       #242424;
+      --card:        #2c2c2c;
+      --border:      #333;
+      --border-light:#3a3a3a;
+      --gold:        #c8a45a;
+      --gold-hover:  #d9b96e;
+      --gold-dim:    rgba(200,164,90,0.18);
+      --blue:        #4a90d9;
+      --blue-dim:    rgba(74,144,217,0.2);
+      --red:         #e05555;
+      --red-dim:     rgba(224,85,85,0.15);
+      --text:        #e8e8e8;
+      --text-muted:  #888;
+      --text-dim:    #555;
+      --header-bg:   #0d0d0d;
+      --success:     #5cb85c;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.25rem;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      gap: 1rem;
+    }
+
+    .header-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--gold);
+      white-space: nowrap;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.38rem 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      white-space: nowrap;
+    }
+    .btn:hover { background: #353535; border-color: #4a4a4a; }
+    .btn-gold {
+      background: var(--gold);
+      color: #1a1a1a;
+      border-color: var(--gold);
+    }
+    .btn-gold:hover { background: var(--gold-hover); border-color: var(--gold-hover); }
+    .btn-danger { color: var(--red); border-color: rgba(224,85,85,0.35); }
+    .btn-danger:hover { background: var(--red-dim); border-color: var(--red); }
+    .btn-sm { font-size: 0.72rem; padding: 0.25rem 0.55rem; }
+    .btn-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .btn-icon:hover { color: var(--red); background: var(--red-dim); }
+
+    /* ── Week nav ── */
+    .week-nav {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-shrink: 0;
+    }
+
+    .week-nav .btn { padding: 0.3rem 0.7rem; font-size: 1rem; }
+
+    #week-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--gold);
+      min-width: 230px;
+      text-align: center;
+    }
+
+    /* ── Main area ── */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Week grid ── */
+    .week-grid-wrap {
+      flex: 0 0 65%;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 0;
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    .week-grid::-webkit-scrollbar { width: 5px; }
+    .week-grid::-webkit-scrollbar-track { background: var(--bg); }
+    .week-grid::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+    .day-col {
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+    .day-col:last-child { border-right: none; }
+
+    .day-col-header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 0.55rem 0.5rem 0.45rem;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .day-col-header:hover { background: #2e2e2e; }
+    .day-col-header.selected { background: var(--gold-dim); border-bottom-color: var(--gold); }
+
+    .day-name {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+
+    .day-date-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .inherited-badge {
+      display: inline-block;
+      background: var(--blue-dim);
+      color: var(--blue);
+      border: 1px solid rgba(74,144,217,0.4);
+      border-radius: 3px;
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 0 3px;
+      margin-left: 3px;
+      vertical-align: middle;
+    }
+
+    .day-shows {
+      flex: 1;
+      padding: 0.4rem 0.3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .show-card {
+      background: var(--card);
+      border: 1px solid var(--border-light);
+      border-radius: 5px;
+      padding: 0.3rem 0.35rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.25rem;
+      min-width: 0;
+    }
+
+    .show-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .show-card-time {
+      font-size: 0.65rem;
+      color: var(--gold);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .show-card-title {
+      font-size: 0.7rem;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .show-card .btn-icon { font-size: 0.7rem; margin-top: 1px; }
+
+    .add-btn-row {
+      padding: 0.3rem 0.3rem 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .add-btn-row .btn {
+      width: 100%;
+      justify-content: center;
+      font-size: 0.7rem;
+      padding: 0.3rem 0.4rem;
+      color: var(--text-muted);
+    }
+    .add-btn-row .btn:hover { color: var(--gold); border-color: var(--gold); }
+
+    /* ── Day editor ── */
+    .editor-panel {
+      flex: 0 0 35%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .editor-header {
+      padding: 0.85rem 1rem 0.65rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .editor-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    .editor-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .editor-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.75rem 1rem;
+    }
+
+    .editor-body::-webkit-scrollbar { width: 5px; }
+    .editor-body::-webkit-scrollbar-track { background: var(--panel); }
+    .editor-body::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .timeline-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--card);
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      padding: 0.5rem 0.6rem;
+    }
+
+    .timeline-time {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--gold);
+      white-space: nowrap;
+      min-width: 52px;
+    }
+
+    .timeline-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .timeline-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .timeline-end {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      padding: 1.5rem 0;
+    }
+
+    /* ── Add show form ── */
+    .add-show-form {
+      background: var(--card);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 0.85rem;
+      margin-bottom: 0.75rem;
+      display: none;
+    }
+    .add-show-form.open { display: block; }
+
+    .form-row { margin-bottom: 0.6rem; }
+
+    .form-row label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .form-control {
+      width: 100%;
+      background: #1e1e1e;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+      padding: 0.45rem 0.6rem;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-control:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(200,164,90,0.12);
+    }
+    .form-control option { background: #2c2c2c; }
+
+    select.form-control { cursor: pointer; }
+
+    .calc-row {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.3rem;
+    }
+    .calc-val { color: var(--gold); font-weight: 600; }
+
+    /* ── Editor footer ── */
+    .editor-footer {
+      padding: 0.65rem 1rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: var(--panel);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 0.65rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+      z-index: 9999;
+      max-width: 300px;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error   { border-color: var(--red);     color: var(--red); }
+
+    /* ── No-day placeholder ── */
+    .no-day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-dim);
+      text-align: center;
+      padding: 2rem;
+      gap: 0.5rem;
+    }
+    .no-day-icon { font-size: 2rem; }
+    .no-day-text { font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-title">🎬 Schedule Builder</div>
+    <div class="header-actions">
+      <button class="btn btn-gold" id="btn-update-now">⚡ Update Now</button>
+      <a class="btn" href="/admin-ui/library.html">📚 Library</a>
+      <button class="btn btn-danger" id="btn-logout">⏻ Logout</button>
+    </div>
+  </header>
+
+  <!-- Week nav -->
+  <div class="week-nav">
+    <button class="btn" id="btn-prev">←</button>
+    <span id="week-label">Loading…</span>
+    <button class="btn" id="btn-next">→</button>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Week grid -->
+    <div class="week-grid-wrap">
+      <div class="week-grid" id="week-grid">
+        <!-- rendered by JS -->
+      </div>
+    </div>
+
+    <!-- Day editor -->
+    <div class="editor-panel">
+      <div id="editor-inner">
+        <div class="no-day">
+          <div class="no-day-icon">📅</div>
+          <div class="no-day-text">Select a day to edit its schedule</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+  (function () {
+    /* ── State ── */
+    let currentWeekStart = '';   // YYYY-MM-DD (Monday)
+    let libraryData      = [];   // [{id, title, runtime_min, type, …}]
+    let weekData         = [];   // array of 7 {date, shows:[…], hasInherited}
+    let selectedDay      = null; // 0-6
+    let addFormOpen      = false;
+    let sortField        = 'start_time';
+
+    const DAY_NAMES  = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+    const DAY_LABELS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+    /* ── CSRF token (fetched once per page load) ── */
+    let _csrfToken = null;
+    async function getCsrfToken() {
+      if (_csrfToken) return _csrfToken;
+      const r = await fetch('/admin/csrf-token', { credentials: 'include' });
+      const d = await r.json();
+      _csrfToken = d.csrfToken || '';
+      return _csrfToken;
+    }
+
+    /* ── Helpers ── */
+    async function apiFetch(url, opts = {}) {
+      const csrfToken = await getCsrfToken();
+      return fetch(url, {
+        credentials: 'include',
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-Token': csrfToken,
+          ...(opts.headers || {})
+        }
+      }).then(res => {
+        if (res.status === 401) {
+          window.location.href = '/admin-ui/login.html';
+          throw new Error('Unauthorized');
+        }
+        return res;
+      });
+    }
+
+    function showToast(msg, type = '') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast' + (type ? ' ' + type : '');
+      t.classList.add('show');
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function dateToStr(d) {
+      return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+    }
+
+    function strToDate(s) {
+      const [y, m, d] = s.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function addDays(dateStr, n) {
+      const d = strToDate(dateStr);
+      d.setDate(d.getDate() + n);
+      return dateToStr(d);
+    }
+
+    function getMonday(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = (day === 0) ? -6 : 1 - day;
+      d.setDate(d.getDate() + diff);
+      return dateToStr(d);
+    }
+
+    function formatShortDate(dateStr) {
+      const d = strToDate(dateStr);
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return months[d.getMonth()] + ' ' + d.getDate();
+    }
+
+    function formatWeekLabel() {
+      const monDate = strToDate(currentWeekStart);
+      const sunDate = new Date(monDate);
+      sunDate.setDate(monDate.getDate() + 6);
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const wdays  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      return (
+        wdays[monDate.getDay()] + ' ' + months[monDate.getMonth()] + ' ' + monDate.getDate() +
+        ' – ' +
+        wdays[sunDate.getDay()]  + ' ' + months[sunDate.getMonth()]  + ' ' + sunDate.getDate()
+      );
+    }
+
+    /* ── Time helpers ── */
+    function calcEndTime(startTime, runtimeMin) {
+      if (!startTime || !runtimeMin) return '—';
+      const [hStr, mStr] = startTime.split(':');
+      let totalMin = parseInt(hStr, 10) * 60 + parseInt(mStr, 10) + parseInt(runtimeMin, 10);
+      const h = Math.floor(totalMin / 60) % 24;
+      const m = totalMin % 60;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12  = h % 12 || 12;
+      return h12 + ':' + pad2(m) + ' ' + ampm;
+    }
+
+    function calcNextStart(startTime, runtimeMin) {
+      if (!startTime || !runtimeMin) return '—';
+      const [hStr, mStr] = startTime.split(':');
+      let totalMin = parseInt(hStr, 10) * 60 + parseInt(mStr, 10) + parseInt(runtimeMin, 10);
+      // Round up to next hour
+      const nextHour = Math.ceil(totalMin / 60) % 24;
+      const ampm = nextHour >= 12 ? 'PM' : 'AM';
+      const h12  = nextHour % 12 || 12;
+      return h12 + ':00 ' + ampm;
+    }
+
+    function fmtTime(timeStr) {
+      if (!timeStr) return '';
+      const [hStr, mStr] = timeStr.split(':');
+      const h = parseInt(hStr, 10);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12  = h % 12 || 12;
+      return h12 + ':' + mStr + ' ' + ampm;
+    }
+
+    /* ── Init ── */
+    function initWeek() {
+      currentWeekStart = getMonday(new Date());
+      Promise.all([
+        apiFetch('/admin/library').then(r => r.json()).then(d => { libraryData = Array.isArray(d) ? d : (d.items || []); }),
+        loadWeekData()
+      ]).catch(err => { if (err.message !== 'Unauthorized') showToast('Load error: ' + err.message, 'error'); });
+    }
+
+    function loadWeekData() {
+      document.getElementById('week-label').textContent = 'Loading…';
+      return apiFetch('/admin/schedule/' + currentWeekStart)
+        .then(r => r.ok ? r.json() : Promise.reject(new Error('Server error')))
+        .then(data => {
+          // Expect array of 7 or object with days array
+          const days = Array.isArray(data) ? data : (data.days || data.week || []);
+          weekData = [];
+          for (let i = 0; i < 7; i++) {
+            const dateStr = addDays(currentWeekStart, i);
+            const found = days.find(d => d.date === dateStr) || {};
+            weekData.push({
+              date: dateStr,
+              shows: Array.isArray(found.shows) ? found.shows : [],
+              hasInherited: !!found.hasInherited
+            });
+          }
+          document.getElementById('week-label').textContent = formatWeekLabel();
+          renderGrid();
+        })
+        .catch(err => {
+          if (err.message === 'Unauthorized') return;
+          // On error, build empty week still
+          weekData = [];
+          for (let i = 0; i < 7; i++) {
+            weekData.push({ date: addDays(currentWeekStart, i), shows: [], hasInherited: false });
+          }
+          document.getElementById('week-label').textContent = formatWeekLabel();
+          renderGrid();
+          showToast('Could not load schedule', 'error');
+        });
+    }
+
+    /* ── Render grid ── */
+    function renderGrid() {
+      const grid = document.getElementById('week-grid');
+      let html = '';
+      for (let i = 0; i < 7; i++) {
+        const day = weekData[i];
+        const isSelected = selectedDay === i;
+        const shortDate = formatShortDate(day.date);
+        html += `<div class="day-col">
+          <div class="day-col-header${isSelected ? ' selected' : ''}" onclick="openEditor(${i})">
+            <div class="day-name">${DAY_NAMES[i]}${day.hasInherited ? '<span class="inherited-badge">↺</span>' : ''}</div>
+            <div class="day-date-label">${shortDate}</div>
+          </div>
+          <div class="day-shows">`;
+
+        if (day.shows.length === 0) {
+          html += `<div style="color:var(--text-dim);font-size:0.68rem;text-align:center;padding:0.5rem 0;">No shows</div>`;
+        } else {
+          const sorted = [...day.shows].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+          sorted.forEach((show, si) => {
+            html += `<div class="show-card">
+              <div class="show-card-info">
+                <div class="show-card-time">${fmtTime(show.start_time)}</div>
+                <div class="show-card-title" title="${esc(show.title || show.library_id || '')}">${esc(show.title || show.library_id || '—')}</div>
+              </div>
+              <button class="btn-icon" title="Remove" onclick="event.stopPropagation();removeShow(${i},${si})">✕</button>
+            </div>`;
+          });
+        }
+
+        html += `</div>
+          <div class="add-btn-row">
+            <button class="btn" onclick="openEditor(${i})">＋ Add</button>
+          </div>
+        </div>`;
+      }
+      grid.innerHTML = html;
+    }
+
+    /* ── Editor ── */
+    function openEditor(dayIndex) {
+      selectedDay  = dayIndex;
+      addFormOpen  = false;
+      renderGrid();
+      renderEditor();
+    }
+
+    function renderEditor() {
+      if (selectedDay === null) return;
+      const day  = weekData[selectedDay];
+      const label = DAY_LABELS[selectedDay] + ', ' + formatShortDate(day.date);
+      const sorted = [...day.shows].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+
+      let timelineHtml = '';
+      if (sorted.length === 0) {
+        timelineHtml = `<div class="empty-state">No shows scheduled for this day.</div>`;
+      } else {
+        sorted.forEach((show, si) => {
+          const lib  = libraryData.find(l => l.id === show.library_id) || {};
+          const rt   = lib.runtime_min || show.runtime_min || 0;
+          const end  = calcEndTime(show.start_time, rt);
+          const realIdx = day.shows.indexOf(show);
+          timelineHtml += `<div class="timeline-item">
+            <div class="timeline-time">${fmtTime(show.start_time)}</div>
+            <div class="timeline-info">
+              <div class="timeline-title">${esc(show.title || lib.title || show.library_id || '—')}</div>
+              <div class="timeline-end">ends ${end}${rt ? ' · ' + rt + ' min' : ''}</div>
+            </div>
+            <button class="btn-icon" title="Remove" onclick="removeShow(${selectedDay},${realIdx})">🗑</button>
+          </div>`;
+        });
+      }
+
+      const formHtml = buildAddForm();
+
+      const editorHtml = `
+        <div class="editor-header">
+          <div class="editor-title">Editing: ${label}</div>
+          <div class="editor-subtitle">${sorted.length} show${sorted.length !== 1 ? 's' : ''} scheduled</div>
+        </div>
+        <div class="editor-body">
+          <div class="timeline-list" id="timeline-list">${timelineHtml}</div>
+          <button class="btn btn-sm" id="btn-toggle-form" onclick="toggleAddForm()" style="margin-bottom:0.6rem">
+            ${addFormOpen ? '✕ Cancel' : '＋ Add Show'}
+          </button>
+          ${formHtml}
+        </div>
+        <div class="editor-footer">
+          <button class="btn btn-gold btn-sm" onclick="saveDay()">💾 Save Day</button>
+          <button class="btn btn-sm" onclick="copyFromLastWeek()">📋 Copy Last Week</button>
+          <button class="btn btn-danger btn-sm" onclick="clearDay()">🗑 Clear Day</button>
+        </div>`;
+
+      document.getElementById('editor-inner').innerHTML = editorHtml;
+    }
+
+    function buildAddForm() {
+      if (!addFormOpen) return `<div class="add-show-form" id="add-show-form"></div>`;
+
+      const searchVal = (window._lastSearch || '');
+      const matches   = searchLibrary(searchVal);
+      let optHtml = matches.length === 0
+        ? `<option value="">— no results —</option>`
+        : matches.map(l => `<option value="${esc(l.id)}" data-rt="${l.runtime_min || 0}">${esc(l.title)} (${l.runtime_min || '?'} min)</option>`).join('');
+
+      return `<div class="add-show-form open" id="add-show-form">
+        <div class="form-row">
+          <label>Search Library</label>
+          <input type="text" class="form-control" id="lib-search" placeholder="Type to filter…"
+            value="${esc(searchVal)}" oninput="onLibSearch(this.value)" autocomplete="off" />
+        </div>
+        <div class="form-row">
+          <label>Title</label>
+          <select class="form-control" id="lib-select" onchange="onLibSelect()">${optHtml}</select>
+        </div>
+        <div class="form-row">
+          <label>Start Time</label>
+          <input type="time" class="form-control" id="show-time-input"
+            value="${window._lastTime || ''}" oninput="updateCalc()" />
+        </div>
+        <div class="calc-row">
+          Calculated end time: <span class="calc-val" id="calc-end">—</span>
+        </div>
+        <div class="calc-row" style="margin-bottom:0.65rem">
+          Next suggested start: <span class="calc-val" id="calc-next">—</span>
+        </div>
+        <button class="btn btn-gold btn-sm" onclick="addShowToDay()" style="width:100%;justify-content:center">
+          ＋ Add to Schedule
+        </button>
+      </div>`;
+    }
+
+    function toggleAddForm() {
+      addFormOpen = !addFormOpen;
+      window._lastSearch = '';
+      renderEditor();
+      if (addFormOpen) {
+        setTimeout(() => {
+          const el = document.getElementById('lib-search');
+          if (el) el.focus();
+        }, 50);
+      }
+    }
+
+    function onLibSearch(val) {
+      window._lastSearch = val;
+      const matches = searchLibrary(val);
+      const sel = document.getElementById('lib-select');
+      if (!sel) return;
+      if (matches.length === 0) {
+        sel.innerHTML = `<option value="">— no results —</option>`;
+      } else {
+        sel.innerHTML = matches.map(l =>
+          `<option value="${esc(l.id)}" data-rt="${l.runtime_min || 0}">${esc(l.title)} (${l.runtime_min || '?'} min)</option>`
+        ).join('');
+      }
+      updateCalc();
+    }
+
+    function onLibSelect() { updateCalc(); }
+
+    function updateCalc() {
+      const sel  = document.getElementById('lib-select');
+      const time = document.getElementById('show-time-input');
+      const endEl  = document.getElementById('calc-end');
+      const nextEl = document.getElementById('calc-next');
+      if (!sel || !time || !endEl || !nextEl) return;
+
+      window._lastTime = time.value;
+
+      const opt = sel.options[sel.selectedIndex];
+      const rt  = opt ? parseInt(opt.getAttribute('data-rt'), 10) || 0 : 0;
+
+      endEl.textContent  = calcEndTime(time.value, rt) || '—';
+      nextEl.textContent = calcNextStart(time.value, rt) || '—';
+    }
+
+    function searchLibrary(query) {
+      if (!query) return libraryData.slice(0, 50);
+      const q = query.toLowerCase();
+      return libraryData.filter(l => (l.title || '').toLowerCase().includes(q)).slice(0, 50);
+    }
+
+    function addShowToDay() {
+      const sel  = document.getElementById('lib-select');
+      const time = document.getElementById('show-time-input');
+      if (!sel || !time) return;
+
+      const libId = sel.value;
+      const startTime = time.value;
+
+      if (!libId || libId === '') { showToast('Select a title first', 'error'); return; }
+      if (!startTime)             { showToast('Enter a start time', 'error'); return; }
+
+      const lib = libraryData.find(l => l.id === libId) || {};
+      weekData[selectedDay].shows.push({
+        library_id: libId,
+        title:      lib.title || libId,
+        start_time: startTime,
+        runtime_min: lib.runtime_min || 0,
+        notes: ''
+      });
+
+      addFormOpen = false;
+      window._lastSearch = '';
+      renderEditor();
+      renderGrid();
+      showToast('Show added', 'success');
+    }
+
+    function removeShow(dayIndex, showIndex) {
+      weekData[dayIndex].shows.splice(showIndex, 1);
+      if (selectedDay === dayIndex) renderEditor();
+      renderGrid();
+    }
+
+    /* ── Save / clear / copy ── */
+    function saveDay() {
+      if (selectedDay === null) return;
+      const day = weekData[selectedDay];
+      const payload = {
+        date:  day.date,
+        shows: day.shows.map(s => ({
+          library_id: s.library_id,
+          start_time: s.start_time,
+          notes:      s.notes || ''
+        }))
+      };
+      apiFetch('/admin/schedule/day', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+      .then(res => {
+        if (res.ok) showToast('Day saved!', 'success');
+        else        showToast('Save failed', 'error');
+      })
+      .catch(err => { if (err.message !== 'Unauthorized') showToast('Error: ' + err.message, 'error'); });
+    }
+
+    function clearDay() {
+      if (selectedDay === null) return;
+      const day = weekData[selectedDay];
+      if (!confirm('Clear all shows for ' + DAY_LABELS[selectedDay] + ' ' + formatShortDate(day.date) + '?')) return;
+      weekData[selectedDay].shows = [];
+      renderEditor();
+      renderGrid();
+      showToast('Day cleared', '');
+    }
+
+    function copyFromLastWeek() {
+      if (selectedDay === null) return;
+      const lastWeekDate = addDays(weekData[selectedDay].date, -7);
+      // Check if we have it in state (only if user navigated there)
+      const found = weekData.find(d => d.date === lastWeekDate);
+      if (found && found.shows.length > 0) {
+        applyLastWeekShows(found.shows);
+      } else {
+        // Fetch that week's data
+        const lastMon = getMonday(strToDate(lastWeekDate));
+        apiFetch('/admin/schedule/' + lastMon)
+          .then(r => r.ok ? r.json() : Promise.reject(new Error('Server error')))
+          .then(data => {
+            const days = Array.isArray(data) ? data : (data.days || data.week || []);
+            const dayData = days.find(d => d.date === lastWeekDate);
+            if (dayData && dayData.shows && dayData.shows.length > 0) {
+              applyLastWeekShows(dayData.shows);
+            } else {
+              showToast('No shows found for last week\'s ' + DAY_LABELS[selectedDay], '');
+            }
+          })
+          .catch(err => { if (err.message !== 'Unauthorized') showToast('Could not fetch last week', 'error'); });
+      }
+    }
+
+    function applyLastWeekShows(shows) {
+      if (!shows || shows.length === 0) { showToast('Nothing to copy', ''); return; }
+      weekData[selectedDay].shows = shows.map(s => ({ ...s }));
+      renderEditor();
+      renderGrid();
+      showToast('Copied ' + shows.length + ' show' + (shows.length !== 1 ? 's' : '') + ' from last week', 'success');
+    }
+
+    /* ── Week navigation ── */
+    function navWeek(delta) {
+      currentWeekStart = addDays(currentWeekStart, delta * 7);
+      selectedDay      = null;
+      addFormOpen      = false;
+      document.getElementById('editor-inner').innerHTML = `
+        <div class="no-day"><div class="no-day-icon">📅</div>
+        <div class="no-day-text">Select a day to edit its schedule</div></div>`;
+      loadWeekData();
+    }
+
+    /* ── Top-level actions ── */
+    document.getElementById('btn-prev').addEventListener('click', () => navWeek(-1));
+    document.getElementById('btn-next').addEventListener('click', () => navWeek(1));
+
+    document.getElementById('btn-logout').addEventListener('click', () => {
+      apiFetch('/admin/logout', { method: 'POST' })
+        .finally(() => { window.location.href = '/admin-ui/login.html'; });
+    });
+
+    document.getElementById('btn-update-now').addEventListener('click', () => {
+      apiFetch('/admin/update-now', { method: 'POST' })
+        .then(res => {
+          if (res.ok) showToast('⚡ Update triggered!', 'success');
+          else        showToast('Update failed', 'error');
+        })
+        .catch(err => { if (err.message !== 'Unauthorized') showToast('Error', 'error'); });
+    });
+
+    /* ── Escape helper ── */
+    function esc(str) {
+      return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+
+    /* ── Expose for inline onclick handlers ── */
+    window.openEditor      = openEditor;
+    window.removeShow      = removeShow;
+    window.toggleAddForm   = toggleAddForm;
+    window.onLibSearch     = onLibSearch;
+    window.onLibSelect     = onLibSelect;
+    window.updateCalc      = updateCalc;
+    window.addShowToDay    = addShowToDay;
+    window.saveDay         = saveDay;
+    window.clearDay        = clearDay;
+    window.copyFromLastWeek = copyFromLastWeek;
+
+    /* ── Boot ── */
+    document.addEventListener('DOMContentLoaded', initWeek);
+  })();
+  </script>
+</body>
+</html>

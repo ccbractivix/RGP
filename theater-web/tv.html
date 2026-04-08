@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://your-render-backend.onrender.com/api/schedule/tv">
+  <title>Theater TV Display</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #111;
+      color: #eee;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+
+    #tv-container {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      height: 100%;
+      padding: 28px 20px 20px;
+      gap: 0;
+    }
+
+    .tv-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0 16px;
+      border-right: 1px solid #2a2a2a;
+      overflow: hidden;
+    }
+
+    .tv-col:last-child {
+      border-right: none;
+    }
+
+    .tv-day-name {
+      font-size: clamp(14px, 1.4vw, 20px);
+      font-weight: 700;
+      color: #c8a45a;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+
+    .tv-date {
+      font-size: clamp(11px, 1vw, 15px);
+      color: #888;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    .tv-divider {
+      height: 1px;
+      background: #c8a45a;
+      margin-bottom: 14px;
+      opacity: 0.6;
+    }
+
+    .tv-show-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    .tv-show-item {
+      font-size: clamp(10px, 0.95vw, 14px);
+      line-height: 1.4;
+      color: #ddd;
+    }
+
+    .tv-show-time {
+      font-weight: 600;
+      color: #fff;
+      display: block;
+      margin-bottom: 1px;
+    }
+
+    .tv-show-title {
+      display: block;
+      color: #ccc;
+    }
+
+    .tv-show-meta {
+      display: block;
+      font-size: clamp(9px, 0.8vw, 12px);
+      color: #777;
+      margin-top: 1px;
+    }
+
+    .tv-empty {
+      font-size: clamp(10px, 0.9vw, 13px);
+      color: #444;
+      font-style: italic;
+    }
+
+    #tv-status {
+      position: fixed;
+      bottom: 10px;
+      right: 14px;
+      font-size: 11px;
+      color: #333;
+    }
+
+    #tv-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-size: 18px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div id="tv-loading">Loading schedule…</div>
+  <div id="tv-container" style="display:none;"></div>
+  <div id="tv-status"></div>
+  <script src="tv.js"></script>
+</body>
+</html>
