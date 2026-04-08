@@ -15,7 +15,7 @@ function requireAuth(req, res, next) {
 router.post('/login', express.urlencoded({ extended: true }), (req, res) => {
   const passphrase = (req.body.passphrase || '').trim();
   const isJson = (req.headers['content-type'] || '').includes('application/json');
-  if (passphrase && passphrase === process.env.ADMIN_PASSPHRASE) {
+  if (passphrase && passphrase === (process.env.ADMIN_PASSPHRASE || '').trim()) {
     req.session.authed = true;
     if (isJson) return res.json({ ok: true });
     return res.redirect('/admin-ui/dashboard.html');
