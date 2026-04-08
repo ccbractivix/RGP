@@ -1,6 +1,7 @@
 'use strict';
 require('dotenv').config();
 
+const crypto    = require('crypto');
 const express   = require('express');
 const path      = require('path');
 const session   = require('express-session');
@@ -42,21 +43,37 @@ const publicLimiter = rateLimit({ windowMs: 60_000, max: 60, standardHeaders: tr
 const adminLimiter  = rateLimit({ windowMs: 15 * 60_000, max: 200, standardHeaders: true, legacyHeaders: false });
 const loginLimiter  = rateLimit({ windowMs: 15 * 60_000, max: 10, standardHeaders: true, legacyHeaders: false });
 
-// CSRF protection for state-changing admin routes.
-// Validates Origin/Referer against CORS_ORIGIN, or requires X-Requested-With in dev.
-const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-const CSRF_EXEMPT  = ['/login', '/logout', '/cron/nightly'];
+// ── CSRF synchronizer-token protection ───────────────────────────────────────
+// GET /admin/csrf-token returns a per-session token.
+// All state-changing /admin/* requests (except /login, /logout, /cron/nightly)
+// must supply that token in the X-CSRF-Token header.
+const SAFE_METHODS  = new Set(['GET', 'HEAD', 'OPTIONS']);
+const CSRF_EXEMPT_PATHS = ['/login', '/logout', '/cron/nightly'];
+
+app.get('/admin/csrf-token', (req, res) => {
+  if (!req.session.csrfToken) {
+    req.session.csrfToken = crypto.randomBytes(32).toString('hex');
+  }
+  return res.json({ csrfToken: req.session.csrfToken });
+});
+
 app.use('/admin', (req, res, next) => {
   if (SAFE_METHODS.has(req.method)) return next();
-  if (CSRF_EXEMPT.some(p => req.path === p || req.path.startsWith(p))) return next();
-  const allowed = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : [];
-  if (allowed.length === 0) {
-    return req.headers['x-requested-with'] === 'XMLHttpRequest' ? next()
-      : res.status(403).json({ error: 'CSRF check failed' });
+  if (CSRF_EXEMPT_PATHS.some(p => req.path === p)) return next();
+
+  const sessionToken = req.session && req.session.csrfToken;
+  const headerToken  = req.headers['x-csrf-token'];
+
+  if (!sessionToken || !headerToken) {
+    return res.status(403).json({ error: 'CSRF token missing' });
   }
-  const check = req.headers['origin'] || req.headers['referer'] || '';
-  return allowed.some(o => check.startsWith(o)) ? next()
-    : res.status(403).json({ error: 'CSRF check failed: origin not allowed' });
+  // Constant-time comparison to prevent timing attacks
+  const a = Buffer.from(sessionToken);
+  const b = Buffer.from(headerToken);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return res.status(403).json({ error: 'CSRF token invalid' });
+  }
+  return next();
 });
 
 // Static: live-event-art

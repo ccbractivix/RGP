@@ -504,14 +504,26 @@
     const DAY_NAMES  = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
     const DAY_LABELS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
+    /* ── CSRF token (fetched once per page load) ── */
+    let _csrfToken = null;
+    async function getCsrfToken() {
+      if (_csrfToken) return _csrfToken;
+      const r = await fetch('/admin/csrf-token', { credentials: 'include' });
+      const d = await r.json();
+      _csrfToken = d.csrfToken || '';
+      return _csrfToken;
+    }
+
     /* ── Helpers ── */
-    function apiFetch(url, opts = {}) {
+    async function apiFetch(url, opts = {}) {
+      const csrfToken = await getCsrfToken();
       return fetch(url, {
         credentials: 'include',
         ...opts,
         headers: {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-Token': csrfToken,
           ...(opts.headers || {})
         }
       }).then(res => {
