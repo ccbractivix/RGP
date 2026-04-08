@@ -36,7 +36,10 @@ async function getScheduleForSlide() {
     const suffix = h >= 12 ? 'PM' : 'AM';
     const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
     const timeStr = `${h12}:${String(m).padStart(2,'0')} ${suffix}`;
-    const runtime = row.runtime_min ? ` ${Math.floor(row.runtime_min/60)}h ${row.runtime_min%60}m` : '';
+    const h = Math.floor(row.runtime_min / 60), m = row.runtime_min % 60;
+    const runtime = row.runtime_min
+      ? (h > 0 && m > 0 ? ` ${h}h ${m}m` : h > 0 ? ` ${h}h` : ` ${m}m`)
+      : '';
     const rating = row.mpaa_rating ? ` (${row.mpaa_rating})` : '';
     days.get(ds).shows.push(`${timeStr}  ${row.title}${rating}${runtime}`);
   }

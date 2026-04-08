@@ -39,15 +39,15 @@ async function ensureThursdayShow() {
     const cnt = await db.query('SELECT COUNT(*) AS cnt FROM schedule WHERE date = $1', [dateStr]);
     if (parseInt(cnt.rows[0].cnt, 10) > 0) continue; // already has entries
 
-    const lib = await db.query("SELECT id FROM library WHERE id = 'EVT-MVN'");
+    const lib = await db.query("SELECT id FROM library WHERE id = $1", [process.env.THURSDAY_SHOW_ID || 'EVT-MVN']);
     if (!lib.rows.length) { console.warn('[scheduler] EVT-MVN missing, skipping', dateStr); continue; }
 
     await db.query(
       `INSERT INTO schedule (date, start_time, library_id, is_inherited, notes)
-       VALUES ($1, '20:00:00', 'EVT-MVN', true, null) ON CONFLICT (date, start_time) DO NOTHING`,
-      [dateStr]
+       VALUES ($1, '20:00:00', $2, true, null) ON CONFLICT (date, start_time) DO NOTHING`,
+      [dateStr, process.env.THURSDAY_SHOW_ID || 'EVT-MVN']
     );
-    console.log(`[scheduler] Auto-inserted EVT-MVN on ${dateStr}`);
+    console.log(`[scheduler] Auto-inserted ${process.env.THURSDAY_SHOW_ID || 'EVT-MVN'} on ${dateStr}`);
   }
 }
 
