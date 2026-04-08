@@ -1,0 +1,20 @@
+name: Nightly Schedule Update
+on:
+  schedule:
+    - cron: '5 5 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: none
+    steps:
+      - name: Trigger nightly job on Render
+        run: |
+          curl -X POST "${{ secrets.RENDER_BACKEND_URL }}/admin/cron/nightly" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail --silent --show-error

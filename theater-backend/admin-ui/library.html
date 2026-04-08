@@ -642,7 +642,7 @@
           : `<span style="color:var(--text-dim)">—</span>`;
 
         const refreshBtn = isMovie
-          ? `<button class="btn btn-xs" onclick="refreshItem('${esc(item.id)}')" title="Refresh metadata">↻ Refresh</button>`
+          ? `<button class="btn btn-xs js-refresh" data-id="${esc(item.id)}" title="Refresh metadata">↻ Refresh</button>`
           : '';
 
         return `<tr>
@@ -658,8 +658,9 @@
           <td>
             <div class="actions-cell">
               ${refreshBtn}
-              <button class="btn btn-xs btn-danger"
-                onclick="deleteItem('${esc(item.id)}', '${esc(String(item.title || item.id || '').replace(/'/g,"\\'"))}')"
+              <button class="btn btn-xs btn-danger js-delete"
+                data-id="${esc(item.id)}"
+                data-title="${esc(item.title || item.id || '')}"
                 title="Delete">✕ Delete</button>
             </div>
           </td>
@@ -668,6 +669,15 @@
 
       document.getElementById('lib-tbody').innerHTML = rows.join('');
     }
+
+    /* ── Delegated click handler for table action buttons ── */
+    document.getElementById('lib-tbody').addEventListener('click', function (e) {
+      const refreshBtn = e.target.closest('.js-refresh');
+      if (refreshBtn) { refreshItem(refreshBtn.dataset.id); return; }
+
+      const deleteBtn = e.target.closest('.js-delete');
+      if (deleteBtn) { deleteItem(deleteBtn.dataset.id, deleteBtn.dataset.title); }
+    });
 
     /* ── Sort ── */
     function sortBy(field) {
