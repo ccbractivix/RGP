@@ -12,7 +12,7 @@ function requireAuth(req, res, next) {
 }
 
 // Login (public)
-router.post('/login', express.urlencoded({ extended: true }), (req, res) => {
+router.post('/login', (req, res) => {
   const passphrase = (req.body.passphrase || '').trim();
   const isJson = (req.headers['content-type'] || '').includes('application/json');
   if (passphrase && passphrase === (process.env.ADMIN_PASSPHRASE || '').trim()) {
