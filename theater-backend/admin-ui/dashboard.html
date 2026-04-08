@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="api-base" content="https://theater-backend-qf1b.onrender.com" />
   <title>Schedule Builder – Theater Management System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -493,6 +494,16 @@
 
   <script>
   (function () {
+    // If served from a different origin (e.g. GitHub Pages), redirect to the
+    // backend-served version so session cookies and API calls work correctly.
+    var metaBase = document.querySelector('meta[name="api-base"]');
+    var apiBase  = (metaBase && metaBase.getAttribute('content')) || '';
+    if (apiBase.endsWith('/')) apiBase = apiBase.slice(0, -1);
+    if (apiBase && window.location.origin !== apiBase) {
+      window.location.replace(apiBase + '/admin-ui/dashboard.html');
+      return;
+    }
+
     /* ── State ── */
     let currentWeekStart = '';   // YYYY-MM-DD (Monday)
     let libraryData      = [];   // [{id, title, runtime_min, type, …}]

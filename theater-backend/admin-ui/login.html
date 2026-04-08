@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="api-base" content="https://theater-backend-qf1b.onrender.com" />
   <title>Admin Login – Theater Management System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -238,6 +239,14 @@
 
   <script>
     (function () {
+      var metaBase = document.querySelector('meta[name="api-base"]');
+      var API_BASE = (metaBase && metaBase.getAttribute('content')) || '';
+      // Remove trailing slash if present
+      if (API_BASE.endsWith('/')) API_BASE = API_BASE.slice(0, -1);
+
+      var backendOrigin = API_BASE || window.location.origin;
+      var isSameOrigin  = window.location.origin === backendOrigin;
+
       const passphraseInput = document.getElementById('passphrase');
       const loginBtn        = document.getElementById('btn-login');
       const errorMsg        = document.getElementById('error-msg');
@@ -268,6 +277,23 @@
 
         hideError();
         setLoading(true);
+
+        if (!isSameOrigin) {
+          // Cross-origin (e.g. GitHub Pages): use a form POST so the browser
+          // navigates to the backend domain, which sets the session cookie and
+          // redirects to the dashboard — all on the backend origin.
+          var form  = document.createElement('form');
+          form.method = 'POST';
+          form.action = backendOrigin + '/admin/login';
+          var input = document.createElement('input');
+          input.type  = 'hidden';
+          input.name  = 'passphrase';
+          input.value = passphrase;
+          form.appendChild(input);
+          document.body.appendChild(form);
+          form.submit();
+          return;
+        }
 
         try {
           const res = await fetch('/admin/login', {
