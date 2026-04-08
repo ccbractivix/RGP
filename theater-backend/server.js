@@ -16,6 +16,10 @@ const { scheduleCron } = require('./cron/midnight');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust Render's (and similar) reverse proxy so req.secure is correct,
+// which allows express-session to set Secure cookies over HTTPS.
+app.set('trust proxy', 1);
+
 // CORS
 app.use(cors({
   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : false,
