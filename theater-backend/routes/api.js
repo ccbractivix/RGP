@@ -2,6 +2,7 @@
 const express      = require('express');
 const db           = require('../db/db');
 const { fetchPoster } = require('../services/tmdb');
+const { fetchMovie }  = require('../services/omdb');
 const router       = express.Router();
 
 function formatDateLabel(date) {
@@ -88,7 +89,8 @@ async function backfillPosters(rows) {
 
   await Promise.allSettled(unique.map(async (row) => {
     try {
-      const url = await fetchPoster(row.library_id);
+      const url = await fetchPoster(row.library_id).catch(() => null)
+        || await fetchMovie(row.library_id).then(m => m.poster).catch(() => null);
       if (url) {
         await db.query('UPDATE library SET poster_url = $1 WHERE id = $2 AND poster_url IS NULL', [url, row.library_id]);
         // Update in-memory rows so the current response includes the poster
