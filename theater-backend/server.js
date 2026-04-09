@@ -97,6 +97,9 @@ app.use('/admin-ui', (req, res, next) => {
 app.use('/admin', adminLimiter, adminRouter);
 app.use('/admin/library', adminLimiter, libraryRouter);
 
+// Root redirect → admin login
+app.get('/', (_req, res) => res.redirect(302, '/admin-ui/login.html'));
+
 // Health check
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
