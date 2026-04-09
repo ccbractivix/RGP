@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://your-amenities-backend.onrender.com">
+  <title>Amenities Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --card-border: #334155;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.15);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.15);
+      --amber: #f59e0b;
+      --amber-dim: rgba(245,158,11,0.15);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59,130,246,0.15);
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+    }
+
+    /* ── Login Screen ── */
+    #login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    #login-screen h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    #login-screen p {
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      font-size: 13px;
+    }
+
+    .code-input {
+      width: 160px;
+      padding: 14px;
+      font-size: 24px;
+      font-family: 'Inter', sans-serif;
+      text-align: center;
+      letter-spacing: 8px;
+      background: var(--card);
+      color: var(--text);
+      border: 2px solid var(--card-border);
+      border-radius: 10px;
+      outline: none;
+    }
+
+    .code-input:focus { border-color: var(--blue); }
+
+    .login-btn {
+      margin-top: 16px;
+      padding: 12px 40px;
+      font-size: 15px;
+      font-weight: 600;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .login-btn:active { opacity: 0.8; }
+
+    .login-error {
+      color: var(--red);
+      margin-top: 12px;
+      font-size: 13px;
+      min-height: 20px;
+    }
+
+    /* ── Dashboard ── */
+    #dashboard { display: none; }
+
+    .dash-header {
+      background: #020617;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .dash-header h1 {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .dash-header .logout-btn {
+      font-size: 12px;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+
+    .dash-content {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 12px 12px 32px;
+    }
+
+    .server-time {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 8px 0;
+    }
+
+    /* ── Lightning Section ── */
+    .lightning-section {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .lightning-section h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--amber);
+      margin-bottom: 10px;
+    }
+
+    .lightning-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .lightning-row select {
+      flex: 1;
+      min-width: 120px;
+      padding: 10px 8px;
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn:active { opacity: 0.8; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-blue { background: var(--blue); color: #fff; }
+    .btn-amber { background: var(--amber); color: #000; }
+    .btn-outline {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--card-border);
+    }
+
+    .lightning-affected {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    /* ── Amenity Cards ── */
+    .amenity-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+
+    .amenity-card.is-closed {
+      border-color: var(--red);
+      background: var(--red-dim);
+    }
+
+    .amenity-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .amenity-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .amenity-dot.open { background: var(--green); }
+    .amenity-dot.closed { background: var(--red); }
+
+    .amenity-name {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .amenity-hours {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .amenity-status {
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    .amenity-status .open-text { color: var(--green); }
+    .amenity-status .closed-text { color: var(--red); }
+
+    .amenity-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .amenity-actions select {
+      padding: 8px 6px;
+      font-size: 12px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      min-width: 110px;
+    }
+
+    .amenity-actions .btn { padding: 8px 12px; font-size: 12px; }
+
+    .updated-at {
+      font-size: 11px;
+      color: var(--amber);
+      margin-top: 6px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #334155;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 100;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div id="login-screen">
+    <h1>Amenities Control</h1>
+    <p>Enter your 4-digit access code</p>
+    <input type="tel" maxlength="4" pattern="\d{4}" class="code-input" id="code-input" inputmode="numeric" autocomplete="off">
+    <button class="login-btn" id="login-btn">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard">
+    <div class="dash-header">
+      <h1>Amenities Control</h1>
+      <button class="logout-btn" id="logout-btn">Sign Out</button>
+    </div>
+    <div class="dash-content">
+      <div class="server-time" id="dash-time"></div>
+
+      <div class="lightning-section">
+        <h2>⚡ Lightning Closure</h2>
+        <div class="lightning-row">
+          <select id="lightning-duration"></select>
+          <button class="btn btn-red" id="lightning-btn">Lightning Close</button>
+          <button class="btn btn-green" id="lightning-clear-btn">Clear Lightning</button>
+        </div>
+        <div class="lightning-affected">Affects: Main Pool, Main Spa, Lazy River, Water Slide, Signature Pool, Signature Spa</div>
+      </div>
+
+      <div id="amenity-list"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var metaTag = document.querySelector('meta[name="api-url"]');
+    var BASE_URL = (metaTag && metaTag.getAttribute('content')) || '';
+    var authCode = localStorage.getItem('amenity_code') || '';
+    var REFRESH_MS = 15000;
+    var refreshTimer = null;
+
+    var DURATION_OPTIONS = [
+      { value: '15', label: '15 minutes' },
+      { value: '30', label: '30 minutes' },
+      { value: '60', label: '1 hour' },
+      { value: '120', label: '2 hours' },
+      { value: '240', label: '4 hours' },
+      { value: '360', label: '6 hours' },
+      { value: '720', label: '12 hours' },
+      { value: '1440', label: '24 hours' },
+      { value: '2880', label: '48 hours' },
+      { value: '4320', label: '72 hours' },
+      { value: 'null', label: 'Indeterminate' },
+    ];
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatTime12(t) {
+      if (!t) return '';
+      var parts = t.split(':');
+      var h = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      var ampm = h >= 12 ? 'PM' : 'AM';
+      if (h === 0) h = 12;
+      else if (h > 12) h -= 12;
+      if (m === 0) return h + ' ' + ampm;
+      return h + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(function () { t.classList.remove('show'); }, 2500);
+    }
+
+    function apiCall(method, path, body) {
+      var opts = {
+        method: method,
+        headers: { 'Content-Type': 'application/json', 'X-Auth-Code': authCode },
+      };
+      if (body) opts.body = JSON.stringify(body);
+      return fetch(BASE_URL + path, opts).then(function (r) {
+        if (r.status === 401) {
+          localStorage.removeItem('amenity_code');
+          authCode = '';
+          showLogin();
+          throw new Error('Unauthorized');
+        }
+        return r.json();
+      });
+    }
+
+    // ── Login ────────────────────────────────────────────────────────────────
+    function showLogin() {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('dashboard').style.display = 'none';
+      if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+    }
+
+    function showDashboard() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      loadStatus();
+      if (!refreshTimer) refreshTimer = setInterval(loadStatus, REFRESH_MS);
+    }
+
+    document.getElementById('login-btn').addEventListener('click', function () {
+      var code = document.getElementById('code-input').value.trim();
+      if (!/^\d{4}$/.test(code)) {
+        document.getElementById('login-error').textContent = 'Enter a 4-digit code';
+        return;
+      }
+      fetch(BASE_URL + '/admin/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code }),
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.valid) {
+          authCode = code;
+          localStorage.setItem('amenity_code', code);
+          document.getElementById('login-error').textContent = '';
+          showDashboard();
+        } else {
+          document.getElementById('login-error').textContent = 'Invalid code';
+        }
+      })
+      .catch(function () {
+        document.getElementById('login-error').textContent = 'Connection error';
+      });
+    });
+
+    document.getElementById('code-input').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('login-btn').click();
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', function () {
+      localStorage.removeItem('amenity_code');
+      authCode = '';
+      showLogin();
+    });
+
+    // ── Duration dropdown builder ────────────────────────────────────────────
+    function buildDurationOptions(select) {
+      select.innerHTML = '';
+      DURATION_OPTIONS.forEach(function (opt) {
+        var o = document.createElement('option');
+        o.value = opt.value;
+        o.textContent = opt.label;
+        select.appendChild(o);
+      });
+    }
+
+    // ── Lightning controls ──────────────────────────────────────────────────
+    var lightningSelect = document.getElementById('lightning-duration');
+    buildDurationOptions(lightningSelect);
+
+    document.getElementById('lightning-btn').addEventListener('click', function () {
+      var val = lightningSelect.value;
+      var minutes = val === 'null' ? null : Number(val);
+      this.disabled = true;
+      var self = this;
+      apiCall('POST', '/admin/lightning', { minutes: minutes })
+        .then(function () { showToast('⚡ Lightning closure activated'); loadStatus(); })
+        .catch(function () { showToast('Error activating lightning closure'); })
+        .finally(function () { self.disabled = false; });
+    });
+
+    document.getElementById('lightning-clear-btn').addEventListener('click', function () {
+      this.disabled = true;
+      var self = this;
+      apiCall('POST', '/admin/lightning/clear')
+        .then(function () { showToast('Lightning closure cleared'); loadStatus(); })
+        .catch(function () { showToast('Error clearing lightning closure'); })
+        .finally(function () { self.disabled = false; });
+    });
+
+    // ── Render amenities ────────────────────────────────────────────────────
+    function loadStatus() {
+      apiCall('GET', '/admin/status')
+        .then(function (data) { renderAmenities(data); })
+        .catch(function (err) {
+          if (err.message !== 'Unauthorized') console.error('Load error:', err);
+        });
+    }
+
+    function renderAmenities(data) {
+      var amenities = data.amenities;
+      var now = new Date(data.serverTime);
+      document.getElementById('dash-time').textContent =
+        now.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+
+      var list = document.getElementById('amenity-list');
+      var html = '';
+
+      amenities.forEach(function (a) {
+        var isClosed = a.status === 'closed';
+        html += '<div class="amenity-card' + (isClosed ? ' is-closed' : '') + '" data-id="' + escapeHtml(a.id) + '">';
+
+        // Top row: dot + name + hours
+        html += '<div class="amenity-top">';
+        html += '<div class="amenity-dot ' + (isClosed ? 'closed' : 'open') + '"></div>';
+        html += '<div class="amenity-name">' + escapeHtml(a.name) + '</div>';
+        html += '<div class="amenity-hours">' + formatTime12(a.openTime) + ' – ' + formatTime12(a.closeTime) + '</div>';
+        html += '</div>';
+
+        // Status info
+        html += '<div class="amenity-status">';
+        if (isClosed) {
+          html += '<span class="closed-text">CLOSED</span>';
+          if (a.lightning) html += ' <span style="color:var(--amber)">⚡</span>';
+          if (a.reopenAt) {
+            var reopen = new Date(a.reopenAt);
+            html += ' — Est. reopen: ' + reopen.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+          } else {
+            html += ' — Indeterminate';
+          }
+        } else {
+          html += '<span class="open-text">OPEN</span>';
+        }
+        html += '</div>';
+
+        // Last updated
+        if (isClosed && a.lastUpdatedAt) {
+          var upd = new Date(a.lastUpdatedAt);
+          html += '<div class="updated-at">Last updated at: ' +
+            upd.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) + '</div>';
+        }
+
+        // Actions
+        html += '<div class="amenity-actions">';
+        if (isClosed) {
+          html += '<button class="btn btn-green btn-open" data-id="' + escapeHtml(a.id) + '">Open</button>';
+          if (a.closureMinutes != null && a.closureMinutes < 60) {
+            html += '<button class="btn btn-amber btn-update-now" data-id="' + escapeHtml(a.id) + '">Update Now (+15 min)</button>';
+          }
+        } else {
+          html += '<select class="close-duration" data-id="' + escapeHtml(a.id) + '"></select>';
+          html += '<button class="btn btn-red btn-close" data-id="' + escapeHtml(a.id) + '">Close</button>';
+        }
+        html += '</div>';
+
+        html += '</div>';
+      });
+
+      list.innerHTML = html;
+
+      // Populate close-duration selects
+      var selects = list.querySelectorAll('.close-duration');
+      for (var i = 0; i < selects.length; i++) {
+        buildDurationOptions(selects[i]);
+      }
+
+      // Bind action buttons
+      bindActions(list);
+    }
+
+    function bindActions(container) {
+      // Close buttons
+      var closeBtns = container.querySelectorAll('.btn-close');
+      for (var i = 0; i < closeBtns.length; i++) {
+        closeBtns[i].addEventListener('click', function () {
+          var id = this.getAttribute('data-id');
+          var select = container.querySelector('.close-duration[data-id="' + id + '"]');
+          var val = select.value;
+          var minutes = val === 'null' ? null : Number(val);
+          var self = this;
+          self.disabled = true;
+          apiCall('POST', '/admin/close/' + id, { minutes: minutes })
+            .then(function () { showToast(id + ' closed'); loadStatus(); })
+            .catch(function () { showToast('Error closing ' + id); })
+            .finally(function () { self.disabled = false; });
+        });
+      }
+
+      // Open buttons
+      var openBtns = container.querySelectorAll('.btn-open');
+      for (var i = 0; i < openBtns.length; i++) {
+        openBtns[i].addEventListener('click', function () {
+          var id = this.getAttribute('data-id');
+          var self = this;
+          self.disabled = true;
+          apiCall('POST', '/admin/open/' + id)
+            .then(function () { showToast(id + ' opened'); loadStatus(); })
+            .catch(function () { showToast('Error opening ' + id); })
+            .finally(function () { self.disabled = false; });
+        });
+      }
+
+      // Update Now buttons
+      var updateBtns = container.querySelectorAll('.btn-update-now');
+      for (var i = 0; i < updateBtns.length; i++) {
+        updateBtns[i].addEventListener('click', function () {
+          var id = this.getAttribute('data-id');
+          var self = this;
+          self.disabled = true;
+          apiCall('POST', '/admin/update-now/' + id)
+            .then(function () { showToast('Extended +15 min'); loadStatus(); })
+            .catch(function () { showToast('Error updating'); })
+            .finally(function () { self.disabled = false; });
+        });
+      }
+    }
+
+    // ── Init ────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+      if (authCode) {
+        showDashboard();
+      } else {
+        showLogin();
+      }
+    });
+  })();
+  </script>
+</body>
+</html>

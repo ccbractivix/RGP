@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://your-amenities-backend.onrender.com/api/status">
+  <title>Resort Amenities</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4f6f8;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --green: #16a34a;
+      --green-bg: #dcfce7;
+      --red: #dc2626;
+      --red-bg: #fee2e2;
+      --slate: #94a3b8;
+      --slate-bg: #f1f5f9;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .header {
+      background: #0f172a;
+      color: #fff;
+      text-align: center;
+      padding: 18px 16px 14px;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .header .subtitle {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 12px 12px 24px;
+    }
+
+    .refresh-note {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 6px 0;
+    }
+
+    .refresh-note .live {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .card .status-dot {
+      flex-shrink: 0;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+    }
+
+    .card .status-dot.open { background: var(--green); }
+    .card .status-dot.closed { background: var(--red); }
+    .card .status-dot.outside { background: var(--slate); }
+
+    .card .info { flex: 1; min-width: 0; }
+
+    .card .name {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .card .hours {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .card .status-label {
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    .card .status-text {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .card .status-text.open { color: var(--green); }
+    .card .status-text.closed { color: var(--red); }
+    .card .status-text.outside { color: var(--slate); }
+
+    .card .status-detail {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .card.closed-card {
+      background: var(--red-bg);
+      border-color: #fecaca;
+    }
+
+    .card.outside-card {
+      background: var(--slate-bg);
+      border-color: #e2e8f0;
+    }
+
+    .error-msg {
+      text-align: center;
+      color: var(--red);
+      padding: 40px 20px;
+      font-size: 14px;
+    }
+
+    .loading {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 60px 20px;
+      font-size: 14px;
+    }
+
+    .lightning-banner {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: #92400e;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Resort Amenities</h1>
+    <div class="subtitle" id="server-time"></div>
+  </div>
+  <div class="container">
+    <div id="content"><div class="loading">Loading amenity status…</div></div>
+    <div class="refresh-note" id="refresh-note"></div>
+  </div>
+  <script>
+  (function () {
+    'use strict';
+
+    var metaTag = document.querySelector('meta[name="api-url"]');
+    var API_URL = (metaTag && metaTag.getAttribute('content')) || '/api/status';
+    var refreshTimer = null;
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatTime12(t) {
+      if (!t) return '';
+      var parts = t.split(':');
+      var h = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      var ampm = h >= 12 ? 'PM' : 'AM';
+      if (h === 0) h = 12;
+      else if (h > 12) h -= 12;
+      if (m === 0) return h + ' ' + ampm;
+      return h + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+    }
+
+    function parseServerTime(serverTimeStr) {
+      return new Date(serverTimeStr);
+    }
+
+    function getETNow(serverTimeStr) {
+      // serverTime is a locale string in ET; parse it
+      return parseServerTime(serverTimeStr);
+    }
+
+    function isWithinHours(now, openTime, closeTime) {
+      var h = now.getHours();
+      var m = now.getMinutes();
+      var current = h * 60 + m;
+      var openParts = openTime.split(':');
+      var closeParts = closeTime.split(':');
+      var open = parseInt(openParts[0], 10) * 60 + parseInt(openParts[1], 10);
+      var close = parseInt(closeParts[0], 10) * 60 + parseInt(closeParts[1], 10);
+      return current >= open && current < close;
+    }
+
+    function formatReopenTime(reopenAt) {
+      if (!reopenAt) return 'Indefinitely';
+      var d = new Date(reopenAt);
+      return 'Est. reopen: ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+    }
+
+    function render(data) {
+      var amenities = data.amenities;
+      var serverTime = data.serverTime;
+      var now = getETNow(serverTime);
+      var content = document.getElementById('content');
+
+      document.getElementById('server-time').textContent =
+        now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
+
+      // Check for any lightning closures
+      var hasLightning = amenities.some(function (a) { return a.lightning; });
+      var hasShortClosure = amenities.some(function (a) {
+        return a.status === 'closed' && a.closureMinutes != null && a.closureMinutes <= 60;
+      });
+
+      var html = '';
+
+      if (hasLightning) {
+        html += '<div class="lightning-banner">⚡ Weather closure in effect — some amenities temporarily closed</div>';
+      }
+
+      amenities.forEach(function (a) {
+        var withinHours = isWithinHours(now, a.openTime, a.closeTime);
+        var statusClass, dotClass, cardClass, statusText, detail;
+
+        if (a.status === 'closed') {
+          statusClass = 'closed';
+          dotClass = 'closed';
+          cardClass = 'closed-card';
+          statusText = 'Closed';
+          detail = formatReopenTime(a.reopenAt);
+        } else if (!withinHours) {
+          statusClass = 'outside';
+          dotClass = 'outside';
+          cardClass = 'outside-card';
+          statusText = 'Opens at ' + formatTime12(a.openTime);
+          detail = '';
+        } else {
+          statusClass = 'open';
+          dotClass = 'open';
+          cardClass = '';
+          statusText = 'Open';
+          detail = 'Until ' + formatTime12(a.closeTime);
+        }
+
+        html += '<div class="card ' + cardClass + '">';
+        html += '<div class="status-dot ' + dotClass + '"></div>';
+        html += '<div class="info">';
+        html += '<div class="name">' + escapeHtml(a.name) + '</div>';
+        html += '<div class="hours">' + formatTime12(a.openTime) + ' – ' + formatTime12(a.closeTime) + '</div>';
+        html += '</div>';
+        html += '<div class="status-label">';
+        html += '<div class="status-text ' + statusClass + '">' + escapeHtml(statusText) + '</div>';
+        if (detail) html += '<div class="status-detail">' + escapeHtml(detail) + '</div>';
+        html += '</div>';
+        html += '</div>';
+      });
+
+      content.innerHTML = html;
+
+      // Auto-refresh logic: poll during short closures
+      var refreshNote = document.getElementById('refresh-note');
+      if (hasShortClosure) {
+        if (!refreshTimer) {
+          refreshTimer = setInterval(fetchAndRender, 30000);
+        }
+        refreshNote.innerHTML = '<span class="live">● Live</span> Auto-refreshing';
+      } else {
+        if (refreshTimer) {
+          clearInterval(refreshTimer);
+          refreshTimer = null;
+        }
+        refreshNote.textContent = '';
+      }
+    }
+
+    function fetchAndRender() {
+      fetch(API_URL)
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          render(data);
+        })
+        .catch(function (err) {
+          console.error('[amenities] Fetch failed:', err);
+          document.getElementById('content').innerHTML =
+            '<div class="error-msg">Unable to load amenity status. Please try again later.</div>';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchAndRender);
+  })();
+  </script>
+</body>
+</html>
