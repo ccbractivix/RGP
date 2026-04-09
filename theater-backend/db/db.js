@@ -7,4 +7,12 @@ const { Pool, types } = require('pg');
 types.setTypeParser(types.builtins.DATE, (val) => val);
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false });
+
+// Lightweight schema migrations — add columns if missing
+(async () => {
+  try {
+    await pool.query('ALTER TABLE library ADD COLUMN IF NOT EXISTS release_year TEXT');
+  } catch (_) { /* ignore — older Postgres or table doesn't exist yet */ }
+})();
+
 module.exports = { query: (text, params) => pool.query(text, params), connect: () => pool.connect() };

@@ -73,7 +73,7 @@
 
           html += '<div class="tv-show-item">';
           html += '<span class="tv-show-time">' + escapeHtml(show.time) + '</span>';
-          html += '<span class="tv-show-title">' + escapeHtml(show.title) + '</span>';
+          html += '<span class="tv-show-title">' + escapeHtml(show.title) + (show.year ? ' (' + escapeHtml(show.year) + ')' : '') + '</span>';
           if (meta.length) {
             html += '<span class="tv-show-meta">' + escapeHtml(meta.join(' · ')) + '</span>';
           }

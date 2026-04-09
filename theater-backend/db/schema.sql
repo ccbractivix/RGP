@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS library (
   runtime_min    INT,
   genres         TEXT[],
   imdb_rating    FLOAT,
+  release_year   TEXT,
   poster_url     TEXT,
   ticket_url     TEXT,
   custom_art     TEXT,
