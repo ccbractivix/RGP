@@ -12,10 +12,12 @@ const {
 
 const router = express.Router();
 
+// Parse valid codes once at module load
+const validCodes = (process.env.AMENITY_CODES || '').split(',').map(c => c.trim()).filter(Boolean);
+
 // ── Auth middleware ──────────────────────────────────────────────────────────
 function requireAuth(req, res, next) {
   const code = (req.headers['x-auth-code'] || '').trim();
-  const validCodes = (process.env.AMENITY_CODES || '').split(',').map(c => c.trim()).filter(Boolean);
   if (!code || validCodes.length === 0 || !validCodes.includes(code)) {
     return res.status(401).json({ error: 'Invalid or missing auth code' });
   }
@@ -25,7 +27,6 @@ function requireAuth(req, res, next) {
 // ── POST /admin/verify — check if a code is valid (no side effects) ─────────
 router.post('/verify', (req, res) => {
   const code = (req.body.code || '').trim();
-  const validCodes = (process.env.AMENITY_CODES || '').split(',').map(c => c.trim()).filter(Boolean);
   return res.json({ valid: validCodes.includes(code) });
 });
 
