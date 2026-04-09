@@ -33,7 +33,7 @@ async function getRange(startDate, endDate) {
     `SELECT s.id, s.date, s.start_time, s.notes, s.is_inherited,
             l.id AS library_id, l.title, l.type, l.mpaa_rating,
             l.runtime_min, l.genres, l.imdb_rating, l.poster_url,
-            l.ticket_url, l.custom_art
+            l.ticket_url, l.custom_art, l.release_year
      FROM schedule s JOIN library l ON l.id = s.library_id
      WHERE s.date >= $1 AND s.date <= $2
      ORDER BY s.date, s.start_time`,
@@ -58,7 +58,7 @@ function buildDays(rows) {
       endTime: calcEndTime(row.start_time, row.runtime_min),
       runtime: row.runtime_min,
       rating: row.mpaa_rating || '',
-      year: '',
+      year: row.release_year || '',
       genre: (row.genres || []).join(', '),
       poster: isLive && row.custom_art
         ? '/live-event-art/' + row.custom_art
@@ -100,6 +100,27 @@ async function backfillPosters(rows) {
   }));
 }
 
+/**
+ * For any movie rows missing a release_year, fetch from OMDB and cache in DB.
+ */
+async function backfillYears(rows) {
+  const missing = rows.filter(r => r.type === 'movie' && !r.release_year);
+  if (missing.length === 0) return;
+
+  const seen = new Set();
+  const unique = missing.filter(r => { if (seen.has(r.library_id)) return false; seen.add(r.library_id); return true; });
+
+  await Promise.allSettled(unique.map(async (row) => {
+    try {
+      const movie = await fetchMovie(row.library_id);
+      if (movie.year) {
+        await db.query('UPDATE library SET release_year = $1 WHERE id = $2 AND release_year IS NULL', [movie.year, row.library_id]);
+        rows.forEach(r => { if (r.library_id === row.library_id) r.release_year = movie.year; });
+      }
+    } catch (_) { /* non-fatal */ }
+  }));
+}
+
 router.get('/schedule', async (_req, res) => {
   try {
     const now = new Date();
@@ -107,7 +128,7 @@ router.get('/schedule', async (_req, res) => {
     const end = new Date(now); end.setDate(end.getDate() + 4);
     const endStr = end.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const rows = await getRange(today, endStr);
-    await backfillPosters(rows);
+    await Promise.all([backfillPosters(rows), backfillYears(rows)]);
     return res.json(buildDays(rows));
   } catch (e) { console.error(e); return res.status(500).json({ error: 'Failed to load schedule' }); }
 });
@@ -119,7 +140,7 @@ router.get('/schedule/tv', async (_req, res) => {
     const end = new Date(now); end.setDate(end.getDate() + 4);
     const endStr = end.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const rows = await getRange(today, endStr);
-    await backfillPosters(rows);
+    await Promise.all([backfillPosters(rows), backfillYears(rows)]);
     return res.json(buildDays(rows));
   } catch (e) { console.error(e); return res.status(500).json({ error: 'Failed to load TV schedule' }); }
 });
