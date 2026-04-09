@@ -257,7 +257,7 @@
       <!-- Center: QR code to theater schedule -->
       <div id="tv-gutter-center">
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=https%3A%2F%2Fccbractivix.github.io%2FRGP%2Ftheater-web%2Findex.html" alt="QR Code to theater schedule">
-        <div class="gutter-qr-text">Pools closed? Take in a movie at the theater!</div>
+        <div class="gutter-qr-text" id="gutter-qr-text">Check out our movie schedule!</div>
       </div>
 
       <!-- Right: Arcade -->
@@ -326,6 +326,15 @@
       // Lightning banner
       var hasLightning = amenities.some(function (a) { return a.lightning; });
       lightning.textContent = hasLightning ? '⚡ Weather closure in effect' : '';
+
+      // Dynamic QR text: show pool-closed message when any water amenity is closed
+      var poolsClosed = amenities.some(function (a) {
+        return a.inLightningGroup && a.status === 'closed';
+      });
+      var qrText = document.getElementById('gutter-qr-text');
+      qrText.textContent = poolsClosed
+        ? 'Pools closed? Take in a movie at the theater!'
+        : 'Check out our movie schedule!';
 
       var html = '';
       amenities.forEach(function (a) {
