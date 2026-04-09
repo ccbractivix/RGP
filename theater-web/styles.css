@@ -73,32 +73,7 @@ body {
   border-bottom: none;
 }
 
-/* ===== DATE BADGE ===== */
-.date-badge {
-  min-width: 48px;
-  background: #1a1a1a;
-  color: #fff;
-  text-align: center;
-  border-radius: 6px;
-  padding: 6px 4px;
-  flex-shrink: 0;
-}
-
-.date-badge .month {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  display: block;
-}
-
-.date-badge .day {
-  font-size: 20px;
-  font-weight: 700;
-  display: block;
-  line-height: 1.1;
-}
-
-/* ===== POSTER ===== */
+/* ===== POSTER THUMBNAIL ===== */
 .poster-img {
   width: 64px;
   height: 95px;

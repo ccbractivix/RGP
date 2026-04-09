@@ -8,6 +8,7 @@
 
   var metaTag = document.querySelector('meta[name="api-url"]');
   var API_URL = (metaTag && metaTag.getAttribute('content')) || '/api/schedule';
+  var API_BASE = API_URL.replace(/\/api\/schedule$/, '');
 
   document.addEventListener('DOMContentLoaded', function () {
     fetchSchedule();
@@ -37,17 +38,6 @@
       });
   }
 
-  function parseDateLabel(label) {
-    var result = { month: '', day: '' };
-    if (!label) return result;
-    var parts = label.replace(/^[A-Za-z]+,\s*/, '').split(' ');
-    if (parts.length >= 2) {
-      result.month = parts[0].substring(0, 3).toUpperCase();
-      result.day = parts[1];
-    }
-    return result;
-  }
-
   function formatRuntime(min) {
     if (!min) return '';
     var n = parseInt(min, 10);
@@ -74,8 +64,6 @@
     var html = '';
 
     days.forEach(function (dayObj) {
-      var dateParts = parseDateLabel(dayObj.label);
-
       html += '<div class="day-section">';
       html += '<div class="day-header">' + escapeHtml(dayObj.label) + '</div>';
 
@@ -85,15 +73,13 @@
 
         html += '<div class="showtime-card">';
 
-        // Date badge
-        html += '<div class="date-badge">';
-        html += '<span class="month">' + escapeHtml(dateParts.month) + '</span>';
-        html += '<span class="day">' + escapeHtml(dateParts.day) + '</span>';
-        html += '</div>';
-
-        // Poster
-        if (show.poster) {
-          html += '<img class="poster-img" src="' + escapeAttr(show.poster) + '" alt="' + escapeAttr(show.title) + '" loading="lazy">';
+        // Poster thumbnail (replaces date badge)
+        var posterSrc = show.poster || '';
+        if (posterSrc && posterSrc.charAt(0) === '/') {
+          posterSrc = API_BASE + posterSrc;
+        }
+        if (posterSrc) {
+          html += '<img class="poster-img" src="' + escapeAttr(posterSrc) + '" alt="' + escapeAttr(show.title) + '" loading="lazy">';
         }
 
         // Card info
@@ -105,12 +91,12 @@
         html += escapeHtml(show.title);
         html += '</div>';
 
-        // Time + Runtime
+        // Time + Rating + Runtime
         html += '<div class="show-time">';
         html += escapeHtml(show.time);
+        if (show.rating) html += ' &middot; ' + escapeHtml(show.rating);
         var runtimeStr = formatRuntime(show.runtime);
         if (runtimeStr) html += ' &middot; ' + escapeHtml(runtimeStr);
-        if (show.endTime) html += ' &middot; ends ' + escapeHtml(show.endTime);
         html += '</div>';
 
         // Notes
@@ -135,7 +121,6 @@
 
         // Meta chips
         var chips = [];
-        if (show.rating) chips.push(show.rating);
         if (show.year) chips.push(show.year);
         if (show.genre) {
           show.genre.split(',').forEach(function (g) {
