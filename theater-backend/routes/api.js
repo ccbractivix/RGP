@@ -1,7 +1,8 @@
 'use strict';
-const express = require('express');
-const db      = require('../db/db');
-const router  = express.Router();
+const express      = require('express');
+const db           = require('../db/db');
+const { fetchPoster } = require('../services/tmdb');
+const router       = express.Router();
 
 function formatDateLabel(date) {
   return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
@@ -73,13 +74,39 @@ function buildDays(rows) {
   return Array.from(map.entries()).sort(([a],[b])=>a.localeCompare(b)).map(([,v])=>v);
 }
 
+/**
+ * For any movie rows missing a poster_url, try to fetch from TMDB and cache in DB.
+ * Runs in parallel with a short timeout so the schedule response is never blocked.
+ */
+async function backfillPosters(rows) {
+  const missing = rows.filter(r => r.type === 'movie' && !r.poster_url);
+  if (missing.length === 0) return;
+
+  // Deduplicate by library_id (same movie may appear on multiple days)
+  const seen = new Set();
+  const unique = missing.filter(r => { if (seen.has(r.library_id)) return false; seen.add(r.library_id); return true; });
+
+  await Promise.allSettled(unique.map(async (row) => {
+    try {
+      const url = await fetchPoster(row.library_id);
+      if (url) {
+        await db.query('UPDATE library SET poster_url = $1 WHERE id = $2 AND poster_url IS NULL', [url, row.library_id]);
+        // Update in-memory rows so the current response includes the poster
+        rows.forEach(r => { if (r.library_id === row.library_id) r.poster_url = url; });
+      }
+    } catch (_) { /* non-fatal: poster will be retried next request */ }
+  }));
+}
+
 router.get('/schedule', async (_req, res) => {
   try {
     const now = new Date();
     const today = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-    const end = new Date(now); end.setDate(end.getDate() + 13);
+    const end = new Date(now); end.setDate(end.getDate() + 4);
     const endStr = end.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-    return res.json(buildDays(await getRange(today, endStr)));
+    const rows = await getRange(today, endStr);
+    await backfillPosters(rows);
+    return res.json(buildDays(rows));
   } catch (e) { console.error(e); return res.status(500).json({ error: 'Failed to load schedule' }); }
 });
 
@@ -89,7 +116,9 @@ router.get('/schedule/tv', async (_req, res) => {
     const today = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const end = new Date(now); end.setDate(end.getDate() + 4);
     const endStr = end.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-    return res.json(buildDays(await getRange(today, endStr)));
+    const rows = await getRange(today, endStr);
+    await backfillPosters(rows);
+    return res.json(buildDays(rows));
   } catch (e) { console.error(e); return res.status(500).json({ error: 'Failed to load TV schedule' }); }
 });
 
