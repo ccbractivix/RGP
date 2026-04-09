@@ -70,6 +70,7 @@ function buildDays(rows) {
       contentType: isLive ? 'live event' : 'movie',
       notes: row.notes || '',
       ticketUrl: row.ticket_url || '',
+      libraryId: row.library_id,
     });
   });
   return Array.from(map.entries()).sort(([a],[b])=>a.localeCompare(b)).map(([,v])=>v);

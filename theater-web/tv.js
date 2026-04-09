@@ -39,6 +39,20 @@
     return { dayName: dayName, dateStr: month + ' ' + day };
   }
 
+  function hasEvtMvnOnThursday(days) {
+    if (!days) return false;
+    for (var i = 0; i < days.length; i++) {
+      var parsed = parseDateLabel(days[i].label);
+      if (parsed.dayName === 'THURSDAY') {
+        var shows = days[i].shows || [];
+        for (var j = 0; j < shows.length; j++) {
+          if (shows[j].libraryId === 'EVT-MVN') return true;
+        }
+      }
+    }
+    return false;
+  }
+
   function render(days) {
     var container = document.getElementById('tv-container');
     var loading   = document.getElementById('tv-loading');
@@ -88,6 +102,14 @@
     container.innerHTML = html;
     loading.style.display = 'none';
     container.style.display = 'flex';
+
+    // Toggle MVN promo in bottom bar when EVT-MVN is on a Thursday
+    var bottom = document.getElementById('tv-bottom');
+    if (hasEvtMvnOnThursday(days)) {
+      bottom.classList.add('mvn-active');
+    } else {
+      bottom.classList.remove('mvn-active');
+    }
 
     var now = new Date();
     status.textContent = 'Updated ' + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
