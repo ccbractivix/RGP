@@ -91,6 +91,95 @@
       margin-bottom: 1rem;
       font-style: italic;
     }
+
+    /* ========== Editor Section ========== */
+    #editor-section {
+      display: none;
+      margin-top: 2rem;
+    }
+    #editor-section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      color: #0b0d17;
+    }
+    #editor-section label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin: 0.75rem 0 0.25rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    #editor-section select,
+    #editor-section input,
+    #editor-section textarea {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      background: #fff;
+    }
+    #editor-section textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    #editor-section select:focus,
+    #editor-section input:focus,
+    #editor-section textarea:focus {
+      outline: none;
+      border-color: #0288d1;
+      box-shadow: 0 0 0 2px rgba(2,136,209,0.15);
+    }
+    .editor-actions {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .editor-btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .editor-btn-primary {
+      background: #0288d1;
+      color: #fff;
+    }
+    .editor-btn-primary:hover {
+      background: #0277bd;
+    }
+    .editor-btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+    .editor-btn-secondary:hover {
+      background: #d0d0d0;
+    }
+    .editor-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #editor-status {
+      margin-top: 0.75rem;
+      font-size: 0.75rem;
+      color: #00c853;
+      min-height: 1.2em;
+    }
+    #editor-form {
+      display: none;
+    }
+    .editor-rtl-note {
+      font-size: 0.7rem;
+      color: #888;
+      margin-top: 0.25rem;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -103,11 +192,50 @@
     <div class="loading">Loading launches...</div>
   </div>
 
+  <!-- Editor Section -->
+  <div id="editor-section">
+    <h2>✏️ Launch Card Editor</h2>
+
+    <label for="launch-select">Select Launch</label>
+    <select id="launch-select">
+      <option value="">— Select a launch —</option>
+    </select>
+
+    <div id="editor-form">
+      <label for="edit-headline">Headline</label>
+      <input type="text" id="edit-headline" placeholder="e.g., LAUNCH TODAY 5:15 PM">
+
+      <label for="edit-viewing-guide">Viewing Guide (URL)</label>
+      <input type="url" id="edit-viewing-guide" placeholder="https://docs.google.com/...">
+
+      <label for="edit-chris-says">Chris Says</label>
+      <textarea id="edit-chris-says" placeholder="Chris's commentary about this launch..."></textarea>
+
+      <label for="edit-rtl-datetime">Rocket Talk LIVE! Date &amp; Time</label>
+      <input type="datetime-local" id="edit-rtl-datetime">
+      <div id="rtl-note" class="editor-rtl-note"></div>
+
+      <div class="editor-actions">
+        <button class="editor-btn editor-btn-primary" id="btn-save">Save Changes</button>
+        <button class="editor-btn editor-btn-secondary" id="btn-download-launches">Download launches.json</button>
+        <button class="editor-btn editor-btn-secondary" id="btn-download-chris">Download chris-says.json</button>
+      </div>
+
+      <div id="editor-status"></div>
+    </div>
+  </div>
+
   <script>
     const API_BASE = 'https://ll.thespacedevs.com/2.3.0';
     const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
     const PAD_LOCATION_IDS = [12, 27];
     const WINDOW_DAYS = 14;
+
+    // Editor state
+    let _editorLaunches = [];
+    let _cmsLaunchData = {};
+    let _cmsChrisSaysData = [];
+    let _originalChrisSays = '';
 
     async function init() {
       const container = document.getElementById('table-container');
@@ -204,6 +332,9 @@
         html += '</tbody></table>';
         container.innerHTML = html;
 
+        _editorLaunches = launches;
+        initEditor();
+
       } catch (err) {
         container.innerHTML = `<div class="error">Error loading data: ${err.message}</div>`;
       }
@@ -221,6 +352,206 @@
     }
 
     init();
+
+    // ============================================================
+    // EDITOR FUNCTIONS
+    // ============================================================
+    async function initEditor() {
+      const section = document.getElementById('editor-section');
+      const select = document.getElementById('launch-select');
+      const form = document.getElementById('editor-form');
+
+      // Load CMS data independently for editing
+      try {
+        const lr = await fetch('cms/launches.json?v=' + Date.now());
+        if (lr.ok) _cmsLaunchData = await lr.json();
+      } catch(e) {}
+      try {
+        const cr = await fetch('cms/chris-says.json?v=' + Date.now());
+        if (cr.ok) {
+          const raw = await cr.json();
+          _cmsChrisSaysData = Array.isArray(raw) ? raw : [];
+        }
+      } catch(e) {}
+
+      // Populate dropdown
+      if (!_editorLaunches.length) return;
+
+      _editorLaunches.forEach(l => {
+        const opt = document.createElement('option');
+        opt.value = l.id;
+        const date = l.window_start
+          ? new Date(l.window_start).toLocaleDateString('en-US', {
+              timeZone: 'America/New_York',
+              month: 'short', day: 'numeric', year: 'numeric'
+            })
+          : 'TBD';
+        opt.textContent = `${l.name || 'Unknown'} — ${date}`;
+        select.appendChild(opt);
+      });
+
+      section.style.display = 'block';
+
+      // Event: launch selected
+      select.addEventListener('change', function() {
+        const id = select.value;
+        if (!id) {
+          form.style.display = 'none';
+          setEditorStatus('');
+          return;
+        }
+        form.style.display = 'block';
+        loadLaunchToForm(id);
+      });
+
+      // Event: save
+      document.getElementById('btn-save').addEventListener('click', function() {
+        saveLaunchData(select.value);
+      });
+
+      // Event: download launches.json
+      document.getElementById('btn-download-launches').addEventListener('click', function() {
+        downloadJSON(_cmsLaunchData, 'launches.json');
+      });
+
+      // Event: download chris-says.json
+      document.getElementById('btn-download-chris').addEventListener('click', function() {
+        downloadJSON(_cmsChrisSaysData, 'chris-says.json');
+      });
+    }
+
+    function loadLaunchToForm(launchId) {
+      const cms = _cmsLaunchData[launchId] || {};
+
+      // Find newest chris-says entry for this launch
+      const chrisEntries = _cmsChrisSaysData
+        .filter(function(e) { return e.launch_id === launchId; })
+        .sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
+      const chrisEntry = chrisEntries[0];
+
+      document.getElementById('edit-headline').value = cms.headline || '';
+      document.getElementById('edit-viewing-guide').value = cms.viewing_guide || '';
+
+      _originalChrisSays = chrisEntry ? chrisEntry.text || '' : '';
+      document.getElementById('edit-chris-says').value = _originalChrisSays;
+
+      // Rocket Talk LIVE! datetime — show existing values as note
+      document.getElementById('edit-rtl-datetime').value = '';
+      var rtlNote = document.getElementById('rtl-note');
+      if (cms.rocket_talk && cms.rocket_talk.variables &&
+          (cms.rocket_talk.variables.event_date || cms.rocket_talk.variables.event_time)) {
+        rtlNote.textContent = 'Current: ' +
+          (cms.rocket_talk.variables.event_date || '') + ' at ' +
+          (cms.rocket_talk.variables.event_time || '');
+      } else {
+        rtlNote.textContent = '';
+      }
+
+      setEditorStatus('');
+    }
+
+    function saveLaunchData(launchId) {
+      if (!launchId) return;
+
+      var headline = document.getElementById('edit-headline').value.trim();
+      var viewingGuide = document.getElementById('edit-viewing-guide').value.trim();
+      var chrisSaysText = document.getElementById('edit-chris-says').value.trim();
+      var rtlDatetime = document.getElementById('edit-rtl-datetime').value;
+
+      // Update launches.json entry
+      if (!_cmsLaunchData[launchId]) {
+        _cmsLaunchData[launchId] = {};
+      }
+      var entry = _cmsLaunchData[launchId];
+
+      entry.headline = headline;
+      entry.viewing_guide = viewingGuide;
+
+      // Rocket Talk LIVE! — only update if datetime was provided
+      if (rtlDatetime) {
+        var parts = rtlDatetime.split('T');
+        var dateParts = parts[0].split('-');
+        var timeParts = parts[1].split(':');
+        var year = parseInt(dateParts[0], 10);
+        var month = parseInt(dateParts[1], 10) - 1;
+        var day = parseInt(dateParts[2], 10);
+        var hour = parseInt(timeParts[0], 10);
+        var minute = parseInt(timeParts[1], 10);
+
+        var dateObj = new Date(year, month, day);
+        var eventDate = dateObj.toLocaleDateString('en-US', {
+          weekday: 'long', month: 'long', day: 'numeric'
+        });
+
+        var ampm = hour >= 12 ? 'PM' : 'AM';
+        var hour12 = hour % 12 || 12;
+        var eventTime = hour12 + ':' + String(minute).padStart(2, '0') + ' ' + ampm;
+
+        if (!entry.rocket_talk) {
+          entry.rocket_talk = { template: 'rocket_talk_default', variables: {} };
+        }
+        if (!entry.rocket_talk.variables) {
+          entry.rocket_talk.variables = {};
+        }
+        entry.rocket_talk.variables.event_date = eventDate;
+        entry.rocket_talk.variables.event_time = eventTime;
+
+        // Auto-populate mission info from API data
+        var launch = _editorLaunches.find(function(l) { return l.id === launchId; });
+        if (launch) {
+          entry.rocket_talk.variables.mission_name = launch.name || '';
+          entry.rocket_talk.variables.launch_vehicle =
+            (launch.rocket && launch.rocket.configuration)
+              ? (launch.rocket.configuration.full_name || launch.rocket.configuration.name || '')
+              : '';
+        }
+
+        if (!entry.rocket_talk_live) {
+          entry.rocket_talk_live = {};
+        }
+        entry.rocket_talk_live.enabled = true;
+      }
+
+      // Update chris-says.json — only if text was changed
+      if (chrisSaysText && chrisSaysText !== _originalChrisSays) {
+        var now = new Date();
+        var dateStr = now.toISOString().slice(0, 10);
+        var timeStr = now.toLocaleTimeString('en-US', {
+          hour: 'numeric', minute: '2-digit',
+          timeZone: 'America/New_York'
+        });
+        var nextId = _cmsChrisSaysData.length
+          ? Math.max.apply(null, _cmsChrisSaysData.map(function(e) { return e.id || 0; })) + 1
+          : 1;
+
+        _cmsChrisSaysData.push({
+          id: nextId,
+          date: dateStr + ' ' + timeStr,
+          text: chrisSaysText,
+          launch_id: launchId
+        });
+
+        _originalChrisSays = chrisSaysText;
+      }
+
+      setEditorStatus('\u2713 Changes saved. Download the JSON files to commit them.');
+    }
+
+    function setEditorStatus(msg) {
+      document.getElementById('editor-status').textContent = msg;
+    }
+
+    function downloadJSON(data, filename) {
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   </script>
 
 </body>
