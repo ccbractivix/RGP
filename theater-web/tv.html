@@ -194,23 +194,18 @@
       color: #999;
     }
 
-    /* Promo-active layout: left gutter, centered promo, QR in right gutter */
-    #tv-bottom.promo-active::before {
-      content: '';
-      flex: 0 0 clamp(80px, 9vw, 130px);
-      order: 0;
-    }
-
+    /* Promo-active layout: image+text left-aligned, QR centered, info right of QR */
     #tv-bottom.promo-active #tv-promo {
       display: flex;
       flex: 1;
-      justify-content: center;
-      order: 1;
+      justify-content: flex-start;
+      order: 0;
+      margin-left: 12px;
     }
 
     #tv-bottom.promo-active #tv-qr {
       flex: 0 0 auto;
-      order: 2;
+      order: 1;
     }
 
     #tv-bottom.promo-active #tv-qr img {
@@ -219,7 +214,9 @@
     }
 
     #tv-bottom.promo-active #tv-info {
-      display: none;
+      flex: 1;
+      order: 2;
+      padding-left: 16px;
     }
 
     /* ===== STATUS ===== */
@@ -259,7 +256,7 @@
       </div>
       <div id="tv-info">
         <div>See our web schedule for movie schedule with ratings, runtimes, and links to IMDB and parents' resources.</div>
-        <div>Scan Here, or visit rocketbeachresort.com</div>
+        <div>Scan Here, or visit <strong>rocketbeachresort.com</strong></div>
         <div class="info-rules">Kids under 12 require responsible adult supervision. Please take your trash with you if you bring snacks and drinks into the theater. Please be respectful of others, take phone calls outside the theater.</div>
       </div>
     </div>
