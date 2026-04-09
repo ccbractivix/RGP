@@ -437,7 +437,7 @@
 
       // Rocket Talk LIVE! datetime — show existing values as note
       document.getElementById('edit-rtl-datetime').value = '';
-      var rtlNote = document.getElementById('rtl-note');
+      const rtlNote = document.getElementById('rtl-note');
       if (cms.rocket_talk && cms.rocket_talk.variables &&
           (cms.rocket_talk.variables.event_date || cms.rocket_talk.variables.event_time)) {
         rtlNote.textContent = 'Current: ' +
@@ -453,39 +453,39 @@
     function saveLaunchData(launchId) {
       if (!launchId) return;
 
-      var headline = document.getElementById('edit-headline').value.trim();
-      var viewingGuide = document.getElementById('edit-viewing-guide').value.trim();
-      var chrisSaysText = document.getElementById('edit-chris-says').value.trim();
-      var rtlDatetime = document.getElementById('edit-rtl-datetime').value;
+      const headline = document.getElementById('edit-headline').value.trim();
+      const viewingGuide = document.getElementById('edit-viewing-guide').value.trim();
+      const chrisSaysText = document.getElementById('edit-chris-says').value.trim();
+      const rtlDatetime = document.getElementById('edit-rtl-datetime').value;
 
       // Update launches.json entry
       if (!_cmsLaunchData[launchId]) {
         _cmsLaunchData[launchId] = {};
       }
-      var entry = _cmsLaunchData[launchId];
+      const entry = _cmsLaunchData[launchId];
 
       entry.headline = headline;
       entry.viewing_guide = viewingGuide;
 
-      // Rocket Talk LIVE! — only update if datetime was provided
-      if (rtlDatetime) {
-        var parts = rtlDatetime.split('T');
-        var dateParts = parts[0].split('-');
-        var timeParts = parts[1].split(':');
-        var year = parseInt(dateParts[0], 10);
-        var month = parseInt(dateParts[1], 10) - 1;
-        var day = parseInt(dateParts[2], 10);
-        var hour = parseInt(timeParts[0], 10);
-        var minute = parseInt(timeParts[1], 10);
+      // Rocket Talk LIVE! — only update if datetime was provided and valid
+      if (rtlDatetime && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rtlDatetime)) {
+        const parts = rtlDatetime.split('T');
+        const dateParts = parts[0].split('-');
+        const timeParts = parts[1].split(':');
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1;
+        const day = parseInt(dateParts[2], 10);
+        const hour = parseInt(timeParts[0], 10);
+        const minute = parseInt(timeParts[1], 10);
 
-        var dateObj = new Date(year, month, day);
-        var eventDate = dateObj.toLocaleDateString('en-US', {
+        const dateObj = new Date(year, month, day);
+        const eventDate = dateObj.toLocaleDateString('en-US', {
           weekday: 'long', month: 'long', day: 'numeric'
         });
 
-        var ampm = hour >= 12 ? 'PM' : 'AM';
-        var hour12 = hour % 12 || 12;
-        var eventTime = hour12 + ':' + String(minute).padStart(2, '0') + ' ' + ampm;
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        const eventTime = hour12 + ':' + String(minute).padStart(2, '0') + ' ' + ampm;
 
         if (!entry.rocket_talk) {
           entry.rocket_talk = { template: 'rocket_talk_default', variables: {} };
@@ -497,7 +497,7 @@
         entry.rocket_talk.variables.event_time = eventTime;
 
         // Auto-populate mission info from API data
-        var launch = _editorLaunches.find(function(l) { return l.id === launchId; });
+        const launch = _editorLaunches.find(function(l) { return l.id === launchId; });
         if (launch) {
           entry.rocket_talk.variables.mission_name = launch.name || '';
           entry.rocket_talk.variables.launch_vehicle =
@@ -514,19 +514,15 @@
 
       // Update chris-says.json — only if text was changed
       if (chrisSaysText && chrisSaysText !== _originalChrisSays) {
-        var now = new Date();
-        var dateStr = now.toISOString().slice(0, 10);
-        var timeStr = now.toLocaleTimeString('en-US', {
-          hour: 'numeric', minute: '2-digit',
-          timeZone: 'America/New_York'
-        });
-        var nextId = _cmsChrisSaysData.length
-          ? Math.max.apply(null, _cmsChrisSaysData.map(function(e) { return e.id || 0; })) + 1
-          : 1;
+        const now = new Date();
+        const timestamp = now.toISOString();
+        const existingIds = _cmsChrisSaysData
+          .map(function(e) { return typeof e.id === 'number' && e.id > 0 ? e.id : 0; });
+        const nextId = existingIds.length ? Math.max.apply(null, existingIds) + 1 : 1;
 
         _cmsChrisSaysData.push({
           id: nextId,
-          date: dateStr + ' ' + timeStr,
+          date: timestamp,
           text: chrisSaysText,
           launch_id: launchId
         });
@@ -542,9 +538,9 @@
     }
 
     function downloadJSON(data, filename) {
-      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);
