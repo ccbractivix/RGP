@@ -58,7 +58,9 @@ function buildDays(rows) {
       rating: row.mpaa_rating || '',
       year: '',
       genre: (row.genres || []).join(', '),
-      poster: row.poster_url || '',
+      poster: isLive && row.custom_art
+        ? '/live-event-art/' + row.custom_art
+        : (row.poster_url || ''),
       imdbId,
       imdbRating: row.imdb_rating || null,
       imdbUrl: imdbId ? `https://www.imdb.com/title/${imdbId}/` : '',
