@@ -39,18 +39,41 @@
     return { dayName: dayName, dateStr: month + ' ' + day };
   }
 
-  function hasEvtMvnOnThursday(days) {
-    if (!days) return false;
+  function findEvtMvnOnThursday(days) {
+    if (!days) return null;
     for (var i = 0; i < days.length; i++) {
       var parsed = parseDateLabel(days[i].label);
       if (parsed.dayName === 'THURSDAY') {
         var shows = days[i].shows || [];
         for (var j = 0; j < shows.length; j++) {
-          if (shows[j].libraryId === 'EVT-MVN') return true;
+          if (shows[j].libraryId === 'EVT-MVN') {
+            return { dayLabel: days[i].label, show: shows[j] };
+          }
         }
       }
     }
-    return false;
+    return null;
+  }
+
+  function findEvtRtlBeforeThursday(days) {
+    if (!days) return null;
+    // Find the index of the first Thursday in the schedule
+    var thursdayIdx = -1;
+    for (var i = 0; i < days.length; i++) {
+      var parsed = parseDateLabel(days[i].label);
+      if (parsed.dayName === 'THURSDAY') { thursdayIdx = i; break; }
+    }
+    // Search for EVT-RTL before Thursday (or all days if no Thursday in window)
+    var searchEnd = thursdayIdx >= 0 ? thursdayIdx : days.length;
+    for (var i = 0; i < searchEnd; i++) {
+      var shows = days[i].shows || [];
+      for (var j = 0; j < shows.length; j++) {
+        if (shows[j].libraryId === 'EVT-RTL') {
+          return { dayLabel: days[i].label, show: shows[j] };
+        }
+      }
+    }
+    return null;
   }
 
   function render(days) {
@@ -103,12 +126,30 @@
     loading.style.display = 'none';
     container.style.display = 'flex';
 
-    // Toggle MVN promo in bottom bar when EVT-MVN is on a Thursday
+    // Determine which promo to show: EVT-RTL takes priority over EVT-MVN
     var bottom = document.getElementById('tv-bottom');
-    if (hasEvtMvnOnThursday(days)) {
-      bottom.classList.add('mvn-active');
+    var promoImg = document.getElementById('tv-promo-img');
+    var promoHeadline = document.querySelector('.promo-headline');
+    var promoSubline = document.querySelector('.promo-subline');
+    var rtlInfo = findEvtRtlBeforeThursday(days);
+    var mvnInfo = findEvtMvnOnThursday(days);
+
+    if (rtlInfo) {
+      var p = parseDateLabel(rtlInfo.dayLabel);
+      var dayTitle = p.dayName.charAt(0) + p.dayName.slice(1).toLowerCase();
+      promoImg.src = 'static/RTL.png';
+      promoImg.alt = 'Pre-Launch Briefing promotional image';
+      promoHeadline.textContent = 'Pre-Launch Briefing';
+      promoSubline.textContent = dayTitle + ' \u00B7 ' + p.dateStr + ' \u00B7 ' + rtlInfo.show.time;
+      bottom.classList.add('promo-active');
+    } else if (mvnInfo) {
+      promoImg.src = 'static/MVN.jpg';
+      promoImg.alt = 'Comedy Magic Show promotional poster';
+      promoHeadline.textContent = 'Comedy Magic Show Tickets';
+      promoSubline.textContent = 'See the web schedule for ticket link';
+      bottom.classList.add('promo-active');
     } else {
-      bottom.classList.remove('mvn-active');
+      bottom.classList.remove('promo-active');
     }
 
     var now = new Date();

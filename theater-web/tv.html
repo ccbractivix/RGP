@@ -133,32 +133,35 @@
       border-top: 1px solid #2a2a2a;
     }
 
-    #tv-mvn-promo {
+    #tv-promo {
       display: none;
-      flex-direction: column;
+      flex-direction: row;
       align-items: center;
-      justify-content: center;
-      text-align: center;
-      gap: 6px;
+      gap: 20px;
     }
 
-    #tv-mvn-promo img {
+    #tv-promo img {
       width: clamp(90px, 10vw, 160px);
       height: auto;
       border-radius: 6px;
     }
 
-    .mvn-headline {
+    #tv-promo-text {
+      text-align: left;
+    }
+
+    .promo-headline {
       font-size: clamp(14px, 1.4vw, 22px);
       font-weight: 700;
       color: #c8a45a;
       line-height: 1.3;
     }
 
-    .mvn-subline {
+    .promo-subline {
       font-size: clamp(10px, 1vw, 15px);
       color: #bbb;
       line-height: 1.3;
+      margin-top: 4px;
     }
 
     #tv-qr {
@@ -191,26 +194,32 @@
       color: #999;
     }
 
-    /* MVN-active layout: promo on left, QR+info on right */
-    #tv-bottom.mvn-active #tv-mvn-promo {
-      display: flex;
-      flex: 0 0 33.333%;
+    /* Promo-active layout: left gutter, centered promo, QR in right gutter */
+    #tv-bottom.promo-active::before {
+      content: '';
+      flex: 0 0 clamp(80px, 9vw, 130px);
       order: 0;
     }
 
-    #tv-bottom.mvn-active #tv-qr {
-      flex: 0 0 auto;
+    #tv-bottom.promo-active #tv-promo {
+      display: flex;
+      flex: 1;
+      justify-content: center;
       order: 1;
     }
 
-    #tv-bottom.mvn-active #tv-qr img {
+    #tv-bottom.promo-active #tv-qr {
+      flex: 0 0 auto;
+      order: 2;
+    }
+
+    #tv-bottom.promo-active #tv-qr img {
       width: clamp(80px, 9vw, 130px);
       height: clamp(80px, 9vw, 130px);
     }
 
-    #tv-bottom.mvn-active #tv-info {
-      flex: 1;
-      order: 2;
+    #tv-bottom.promo-active #tv-info {
+      display: none;
     }
 
     /* ===== STATUS ===== */
@@ -238,10 +247,12 @@
     <div id="tv-loading">Loading schedule…</div>
     <div id="tv-container" style="display:none;"></div>
     <div id="tv-bottom">
-      <div id="tv-mvn-promo">
-        <img src="static/MVN.jpg" alt="Comedy Magic Show promotional poster">
-        <div class="mvn-headline">Comedy Magic Show Tickets</div>
-        <div class="mvn-subline">See the web schedule for ticket link</div>
+      <div id="tv-promo">
+        <img id="tv-promo-img" src="" alt="">
+        <div id="tv-promo-text">
+          <div class="promo-headline"></div>
+          <div class="promo-subline"></div>
+        </div>
       </div>
       <div id="tv-qr">
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=https%3A%2F%2Fccbractivix.github.io%2FRGP%2Ftheater-web%2Findex.html" alt="QR Code to schedule">
