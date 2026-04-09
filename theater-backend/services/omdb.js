@@ -12,6 +12,7 @@ async function fetchMovie(imdbId) {
     genres: d.Genre ? d.Genre.split(',').map(g => g.trim()) : [],
     imdbRating: d.imdbRating ? parseFloat(d.imdbRating) : null,
     year: d.Year || '',
+    poster: d.Poster && d.Poster !== 'N/A' ? d.Poster : null,
   };
 }
 module.exports = { fetchMovie };

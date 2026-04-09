@@ -17,7 +17,7 @@ router.post('/movie', async (req, res) => {
   if (!imdbId || !/^tt\d{7,8}$/.test(imdbId)) return res.status(400).json({ error: 'Invalid IMDB ID (must be tt followed by 7-8 digits)' });
   try {
     const movie  = await fetchMovie(imdbId);
-    const poster = await fetchPoster(imdbId).catch(() => null);
+    const poster = await fetchPoster(imdbId).catch(() => null) || movie.poster;
     await db.query(
       `INSERT INTO library (id, title, type, mpaa_rating, runtime_min, genres, imdb_rating, poster_url, last_updated)
        VALUES ($1,$2,'movie',$3,$4,$5,$6,$7,NOW())
@@ -34,7 +34,7 @@ router.put('/:id/refresh', async (req, res) => {
   if (!/^tt\d{7,8}$/.test(id)) return res.status(400).json({ error: 'Only movie entries can be refreshed by OMDB' });
   try {
     const movie  = await fetchMovie(id);
-    const poster = await fetchPoster(id).catch(() => null);
+    const poster = await fetchPoster(id).catch(() => null) || movie.poster;
     await db.query(
       'UPDATE library SET title=$2, mpaa_rating=$3, runtime_min=$4, genres=$5, imdb_rating=$6, poster_url=$7, last_updated=NOW() WHERE id=$1',
       [id, movie.title, movie.mpaaRating, movie.runtimeMin, movie.genres, movie.imdbRating, poster]
@@ -78,7 +78,7 @@ router.post('/refresh-all', async (_req, res) => {
       await new Promise(r => setTimeout(r, 500));
       try {
         const movie  = await fetchMovie(row.id);
-        const poster = await fetchPoster(row.id).catch(() => null);
+        const poster = await fetchPoster(row.id).catch(() => null) || movie.poster;
         await db.query(
           'UPDATE library SET title=$2, mpaa_rating=$3, runtime_min=$4, genres=$5, imdb_rating=$6, poster_url=$7, last_updated=NOW() WHERE id=$1',
           [row.id, movie.title, movie.mpaaRating, movie.runtimeMin, movie.genres, movie.imdbRating, poster]
