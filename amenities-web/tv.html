@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://your-amenities-backend.onrender.com/api/status">
+  <title>Amenities Status Display</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #111;
+      color: #eee;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+
+    #tv-page {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ===== HEADLINE ===== */
+    #tv-headline {
+      text-align: center;
+      padding: 18px 0 10px;
+      font-size: clamp(28px, 3.5vw, 48px);
+      font-weight: 700;
+      letter-spacing: 6px;
+      color: #c8a45a;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    /* ===== AMENITY GRID ===== */
+    #tv-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 12px;
+      padding: 8px 24px 12px;
+      min-height: 0;
+    }
+
+    .tv-amenity {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 8px;
+      text-align: center;
+    }
+
+    .tv-amenity.is-open {
+      border-color: #166534;
+      background: rgba(22,101,52,0.12);
+    }
+
+    .tv-amenity.is-closed {
+      border-color: #991b1b;
+      background: rgba(153,27,27,0.15);
+    }
+
+    .tv-amenity.is-outside {
+      border-color: #334155;
+      background: rgba(51,65,85,0.1);
+    }
+
+    .tv-amenity-name {
+      font-size: clamp(14px, 1.6vw, 24px);
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 6px;
+    }
+
+    .tv-amenity-status {
+      font-size: clamp(12px, 1.3vw, 20px);
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .tv-amenity-status.open { color: #22c55e; }
+    .tv-amenity-status.closed { color: #ef4444; }
+    .tv-amenity-status.outside { color: #64748b; }
+
+    .tv-amenity-detail {
+      font-size: clamp(10px, 0.9vw, 14px);
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .tv-amenity-hours {
+      font-size: clamp(9px, 0.8vw, 12px);
+      color: #555;
+      margin-top: 4px;
+    }
+
+    /* ===== LIGHTNING BANNER ===== */
+    .tv-lightning {
+      text-align: center;
+      font-size: clamp(12px, 1.2vw, 18px);
+      font-weight: 600;
+      color: #f59e0b;
+      padding: 4px 0;
+      flex-shrink: 0;
+    }
+
+    .tv-lightning:empty { display: none; }
+
+    /* ===== BOTTOM GUTTER ===== */
+    #tv-bottom {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      padding: 12px 24px 16px;
+      border-top: 1px solid #2a2a2a;
+      gap: 16px;
+    }
+
+    /* Left third: EVT-MVN promo */
+    #tv-gutter-left {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    #tv-gutter-left img {
+      width: clamp(80px, 9vw, 140px);
+      height: auto;
+      border-radius: 6px;
+    }
+
+    .gutter-promo-text {
+      text-align: left;
+    }
+
+    .gutter-promo-headline {
+      font-size: clamp(13px, 1.3vw, 20px);
+      font-weight: 700;
+      color: #c8a45a;
+      line-height: 1.3;
+    }
+
+    .gutter-promo-subline {
+      font-size: clamp(10px, 0.9vw, 14px);
+      color: #bbb;
+      line-height: 1.3;
+      margin-top: 3px;
+    }
+
+    /* Center: QR + text */
+    #tv-gutter-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    #tv-gutter-center img {
+      width: clamp(80px, 9vw, 130px);
+      height: clamp(80px, 9vw, 130px);
+      border-radius: 6px;
+      background: #fff;
+      padding: 5px;
+    }
+
+    .gutter-qr-text {
+      font-size: clamp(10px, 1vw, 15px);
+      color: #bbb;
+      margin-top: 6px;
+      line-height: 1.3;
+      max-width: 220px;
+    }
+
+    /* Right third: Arcade */
+    #tv-gutter-right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+    }
+
+    .gutter-arcade-text {
+      text-align: right;
+    }
+
+    .gutter-arcade-headline {
+      font-size: clamp(13px, 1.3vw, 20px);
+      font-weight: 700;
+      color: #c8a45a;
+      line-height: 1.3;
+    }
+
+    .gutter-arcade-subline {
+      font-size: clamp(10px, 0.9vw, 14px);
+      color: #bbb;
+      line-height: 1.3;
+      margin-top: 3px;
+    }
+
+    #tv-gutter-right img {
+      width: clamp(80px, 9vw, 140px);
+      height: auto;
+      border-radius: 6px;
+    }
+
+    /* ===== STATUS ===== */
+    #tv-status {
+      position: fixed;
+      bottom: 4px;
+      right: 14px;
+      font-size: 10px;
+      color: #333;
+    }
+
+    #tv-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      font-size: 18px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div id="tv-page">
+    <div id="tv-headline">RESORT AMENITIES</div>
+    <div id="tv-loading">Loading amenity status…</div>
+    <div class="tv-lightning" id="tv-lightning"></div>
+    <div id="tv-grid" style="display:none;"></div>
+
+    <div id="tv-bottom">
+      <!-- Left: EVT-MVN promo -->
+      <div id="tv-gutter-left">
+        <img src="../theater-web/static/MVN.jpg" alt="Comedy Magic Show">
+        <div class="gutter-promo-text">
+          <div class="gutter-promo-headline">Comedy Magic Show</div>
+          <div class="gutter-promo-subline">Thursdays at 8 PM<br>See web schedule for tickets</div>
+        </div>
+      </div>
+
+      <!-- Center: QR code to theater schedule -->
+      <div id="tv-gutter-center">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=https%3A%2F%2Fccbractivix.github.io%2FRGP%2Ftheater-web%2Findex.html" alt="QR Code to theater schedule">
+        <div class="gutter-qr-text">Pools closed? Take in a movie at the theater!</div>
+      </div>
+
+      <!-- Right: Arcade -->
+      <div id="tv-gutter-right">
+        <div class="gutter-arcade-text">
+          <div class="gutter-arcade-headline">Arcade</div>
+          <div class="gutter-arcade-subline">Hours Daily<br>8 AM – 11 PM</div>
+        </div>
+        <img src="../theater-web/static/MVN.jpg" alt="Arcade">
+      </div>
+    </div>
+  </div>
+  <div id="tv-status"></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var metaTag = document.querySelector('meta[name="api-url"]');
+    var API_URL = (metaTag && metaTag.getAttribute('content')) || '/api/status';
+    var REFRESH_MS = 60000; // 1 minute
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatTime12(t) {
+      if (!t) return '';
+      var parts = t.split(':');
+      var h = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      var ampm = h >= 12 ? 'PM' : 'AM';
+      if (h === 0) h = 12;
+      else if (h > 12) h -= 12;
+      if (m === 0) return h + ' ' + ampm;
+      return h + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+    }
+
+    function isWithinHours(now, openTime, closeTime) {
+      var h = now.getHours();
+      var m = now.getMinutes();
+      var current = h * 60 + m;
+      var openParts = openTime.split(':');
+      var closeParts = closeTime.split(':');
+      var open = parseInt(openParts[0], 10) * 60 + parseInt(openParts[1], 10);
+      var close = parseInt(closeParts[0], 10) * 60 + parseInt(closeParts[1], 10);
+      return current >= open && current < close;
+    }
+
+    function render(data) {
+      var amenities = data.amenities;
+      var now = new Date(data.serverTime);
+      var grid = document.getElementById('tv-grid');
+      var loading = document.getElementById('tv-loading');
+      var lightning = document.getElementById('tv-lightning');
+      var status = document.getElementById('tv-status');
+
+      if (!amenities || amenities.length === 0) {
+        loading.textContent = 'No amenity data available.';
+        loading.style.display = 'flex';
+        grid.style.display = 'none';
+        return;
+      }
+
+      // Lightning banner
+      var hasLightning = amenities.some(function (a) { return a.lightning; });
+      lightning.textContent = hasLightning ? '⚡ Weather closure in effect' : '';
+
+      var html = '';
+      amenities.forEach(function (a) {
+        var withinHours = isWithinHours(now, a.openTime, a.closeTime);
+        var cardClass, statusClass, statusText, detail;
+
+        if (a.status === 'closed') {
+          cardClass = 'is-closed';
+          statusClass = 'closed';
+          statusText = 'CLOSED';
+          if (a.reopenAt) {
+            var reopen = new Date(a.reopenAt);
+            detail = 'Est. reopen: ' + reopen.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+          } else {
+            detail = 'Closed indefinitely';
+          }
+        } else if (!withinHours) {
+          cardClass = 'is-outside';
+          statusClass = 'outside';
+          statusText = 'Opens ' + formatTime12(a.openTime);
+          detail = '';
+        } else {
+          cardClass = 'is-open';
+          statusClass = 'open';
+          statusText = 'OPEN';
+          detail = 'Until ' + formatTime12(a.closeTime);
+        }
+
+        html += '<div class="tv-amenity ' + cardClass + '">';
+        html += '<div class="tv-amenity-name">' + escapeHtml(a.name) + '</div>';
+        html += '<div class="tv-amenity-status ' + statusClass + '">' + escapeHtml(statusText) + '</div>';
+        if (detail) html += '<div class="tv-amenity-detail">' + escapeHtml(detail) + '</div>';
+        html += '<div class="tv-amenity-hours">' + formatTime12(a.openTime) + ' – ' + formatTime12(a.closeTime) + '</div>';
+        html += '</div>';
+      });
+
+      grid.innerHTML = html;
+      loading.style.display = 'none';
+      grid.style.display = 'grid';
+
+      var ts = new Date();
+      status.textContent = 'Updated ' + ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function fetchAndRender() {
+      fetch(API_URL)
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          render(data);
+          setTimeout(fetchAndRender, REFRESH_MS);
+        })
+        .catch(function (err) {
+          console.error('[tv] Fetch failed:', err);
+          var loading = document.getElementById('tv-loading');
+          loading.textContent = 'Loading…';
+          loading.style.display = 'flex';
+          document.getElementById('tv-grid').style.display = 'none';
+          setTimeout(fetchAndRender, REFRESH_MS);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchAndRender);
+  })();
+  </script>
+</body>
+</html>

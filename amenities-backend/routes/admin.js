@@ -1,0 +1,130 @@
+'use strict';
+const express = require('express');
+const {
+  AMENITY_DEFS,
+  LIGHTNING_IDS,
+  VALID_CLOSURE_MINUTES,
+  closeAmenity,
+  openAmenity,
+  updateNow,
+  getAllStatus,
+} = require('../services/amenities');
+
+const router = express.Router();
+
+// ── Auth middleware ──────────────────────────────────────────────────────────
+function requireAuth(req, res, next) {
+  const code = (req.headers['x-auth-code'] || '').trim();
+  const validCodes = (process.env.AMENITY_CODES || '').split(',').map(c => c.trim()).filter(Boolean);
+  if (!code || validCodes.length === 0 || !validCodes.includes(code)) {
+    return res.status(401).json({ error: 'Invalid or missing auth code' });
+  }
+  return next();
+}
+
+// ── POST /admin/verify — check if a code is valid (no side effects) ─────────
+router.post('/verify', (req, res) => {
+  const code = (req.body.code || '').trim();
+  const validCodes = (process.env.AMENITY_CODES || '').split(',').map(c => c.trim()).filter(Boolean);
+  return res.json({ valid: validCodes.includes(code) });
+});
+
+// All routes below require auth
+router.use(requireAuth);
+
+// ── GET /admin/status — same as public but requires auth ────────────────────
+router.get('/status', async (_req, res) => {
+  try {
+    const amenities = await getAllStatus();
+    const serverTime = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+    return res.json({ amenities, serverTime });
+  } catch (e) {
+    console.error('[admin] /status error:', e);
+    return res.status(500).json({ error: 'Failed to load status' });
+  }
+});
+
+// ── POST /admin/close/:id — close a single amenity ─────────────────────────
+router.post('/close/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!AMENITY_DEFS.find(a => a.id === id)) {
+    return res.status(404).json({ error: 'Amenity not found' });
+  }
+  const minutes = req.body.minutes;
+  if (minutes != null && !VALID_CLOSURE_MINUTES.includes(Number(minutes))) {
+    return res.status(400).json({ error: 'Invalid closure duration' });
+  }
+  try {
+    await closeAmenity(id, minutes != null ? Number(minutes) : null, false);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[admin] close error:', e);
+    return res.status(500).json({ error: 'Failed to close amenity' });
+  }
+});
+
+// ── POST /admin/open/:id — reopen a single amenity ─────────────────────────
+router.post('/open/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!AMENITY_DEFS.find(a => a.id === id)) {
+    return res.status(404).json({ error: 'Amenity not found' });
+  }
+  try {
+    await openAmenity(id);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[admin] open error:', e);
+    return res.status(500).json({ error: 'Failed to open amenity' });
+  }
+});
+
+// ── POST /admin/update-now/:id — extend short closure by 15 min ────────────
+router.post('/update-now/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!AMENITY_DEFS.find(a => a.id === id)) {
+    return res.status(404).json({ error: 'Amenity not found' });
+  }
+  try {
+    const result = await updateNow(id);
+    if (result.error) {
+      const status = result.error === 'not_found' ? 404 : 400;
+      return res.status(status).json({ error: result.error });
+    }
+    return res.json(result);
+  } catch (e) {
+    console.error('[admin] update-now error:', e);
+    return res.status(500).json({ error: 'Failed to update' });
+  }
+});
+
+// ── POST /admin/lightning — close all lightning-group amenities ──────────────
+router.post('/lightning', async (req, res) => {
+  const minutes = req.body.minutes;
+  if (minutes != null && !VALID_CLOSURE_MINUTES.includes(Number(minutes))) {
+    return res.status(400).json({ error: 'Invalid closure duration' });
+  }
+  try {
+    for (const id of LIGHTNING_IDS) {
+      await closeAmenity(id, minutes != null ? Number(minutes) : null, true);
+    }
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[admin] lightning error:', e);
+    return res.status(500).json({ error: 'Failed to trigger lightning closure' });
+  }
+});
+
+// ── POST /admin/lightning/clear — reopen all lightning-closed amenities ──────
+router.post('/lightning/clear', async (_req, res) => {
+  try {
+    for (const id of LIGHTNING_IDS) {
+      await openAmenity(id);
+    }
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[admin] lightning/clear error:', e);
+    return res.status(500).json({ error: 'Failed to clear lightning closure' });
+  }
+});
+
+module.exports = router;
