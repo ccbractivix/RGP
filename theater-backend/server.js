@@ -20,9 +20,15 @@ const PORT = process.env.PORT || 3000;
 // which allows express-session to set Secure cookies over HTTPS.
 app.set('trust proxy', 1);
 
-// CORS
+// CORS – always allow the public GitHub Pages site; additional origins via env
+const allowedOrigins = ['https://ccbractivix.github.io'];
+if (process.env.CORS_ORIGIN) {
+  process.env.CORS_ORIGIN.split(',').map(s => s.trim()).forEach(o => {
+    if (o && !allowedOrigins.includes(o)) allowedOrigins.push(o);
+  });
+}
 app.use(cors({
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()) : false,
+  origin: allowedOrigins,
   credentials: true,
 }));
 
