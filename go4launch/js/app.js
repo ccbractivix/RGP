@@ -728,6 +728,20 @@ function updateCountdowns() {
         replacement.textContent = '🚀 Liftoff!';
         row.replaceWith(replacement);
     });
+
+    // Auto-refresh data when a countdown reaches zero
+    if (toReplace.length > 0) {
+        setTimeout(async () => {
+            try {
+                const fresh = await fetchAndCache();
+                allLaunches = fresh;
+                await loadCMS();
+                handleRoute();
+            } catch (e) {
+                console.warn('Post-liftoff refresh failed:', e);
+            }
+        }, 60000); // Refresh 1 minute after liftoff
+    }
 }
 
 // ============================================================

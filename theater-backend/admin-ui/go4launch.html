@@ -507,6 +507,14 @@
 
         imageExt = ext === 'jpeg' ? 'jpg' : ext;
 
+        // Check file size — base64 encoding adds ~33%, max upload is 12mb
+        const maxFileSizeMb = 8;
+        if (file.size > maxFileSizeMb * 1024 * 1024) {
+          document.getElementById('upload-status').textContent = `Image too large (max ${maxFileSizeMb}MB). Please resize and try again.`;
+          document.getElementById('upload-status').className = 'status-msg error';
+          return;
+        }
+
         const reader = new FileReader();
         reader.onload = function(ev) {
           // ev.target.result is a data URL like "data:image/jpeg;base64,..."
