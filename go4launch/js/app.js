@@ -691,6 +691,7 @@ function startCountdowns() {
 function updateCountdowns() {
     const rows = document.querySelectorAll('.countdown-row[data-net]');
     const now = Date.now();
+    const toReplace = [];
 
     rows.forEach(row => {
         const net = new Date(row.dataset.net).getTime();
@@ -704,12 +705,8 @@ function updateCountdowns() {
         if (!dEl) return;
 
         if (diff <= 0) {
-            dEl.textContent = '00';
-            hEl.textContent = '00';
-            mEl.textContent = '00';
-            sEl.textContent = '00';
-            // Replace with launched message
-            row.outerHTML = '<div class="countdown-launched">🚀 Liftoff!</div>';
+            // Mark for replacement after the loop to avoid DOM mutation issues
+            toReplace.push(row);
             return;
         }
 
@@ -722,6 +719,14 @@ function updateCountdowns() {
         hEl.textContent = String(h).padStart(2, '0');
         mEl.textContent = String(m).padStart(2, '0');
         sEl.textContent = String(s).padStart(2, '0');
+    });
+
+    // Replace completed countdowns after iteration
+    toReplace.forEach(row => {
+        const replacement = document.createElement('div');
+        replacement.className = 'countdown-launched';
+        replacement.textContent = '🚀 Liftoff!';
+        row.replaceWith(replacement);
     });
 }
 

@@ -4,6 +4,14 @@ const express = require('express');
 const axios   = require('axios');
 const db      = require('../db/db');
 
+// UUID v4 format validation to prevent SSRF / path traversal
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidUUID(str) { return typeof str === 'string' && UUID_RE.test(str); }
+
+// Configurable base URLs from environment
+const ARCHIVE_BASE_URL = process.env.GO4LAUNCH_ARCHIVE_URL || 'https://ccbractivix.github.io/RGP/go4launch';
+const GITHUB_BRANCH    = process.env.GITHUB_BRANCH || 'main';
+
 // ============================================================
 // AUTO-CREATE TABLES
 // ============================================================
@@ -166,8 +174,8 @@ publicRouter.post('/saw-it', async (req, res) => {
   if (!launch_id || !email) {
     return res.status(400).json({ error: 'launch_id and email required' });
   }
-  // Basic email validation
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  // Simple email validation (avoids ReDoS)
+  if (!email || typeof email !== 'string' || email.length > 254 || !email.includes('@') || email.indexOf('@') === 0 || email.indexOf('@') === email.length - 1) {
     return res.status(400).json({ error: 'Invalid email' });
   }
   try {
@@ -237,10 +245,15 @@ adminRouter.post('/content', async (req, res) => {
 });
 
 // POST /admin/go4launch/upload-image — upload a launch card image to repo
-adminRouter.post('/upload-image', express.json({ limit: '10mb' }), async (req, res) => {
+adminRouter.post('/upload-image', async (req, res) => {
   const { launch_id, image_data, image_ext } = req.body;
   if (!launch_id || !image_data || !image_ext) {
     return res.status(400).json({ error: 'launch_id, image_data, and image_ext required' });
+  }
+
+  // Validate launch_id is a UUID to prevent path traversal / SSRF
+  if (!isValidUUID(launch_id)) {
+    return res.status(400).json({ error: 'Invalid launch_id format (expected UUID)' });
   }
 
   const allowedExts = ['jpg', 'jpeg', 'png'];
@@ -264,7 +277,7 @@ adminRouter.post('/upload-image', express.json({ limit: '10mb' }), async (req, r
     try {
       const existing = await axios.get(
         `https://api.github.com/repos/${repo}/contents/${filePath}`,
-        { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' } }
+        { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' } }
       );
       sha = existing.data.sha;
     } catch (e) {
@@ -278,9 +291,9 @@ adminRouter.post('/upload-image', express.json({ limit: '10mb' }), async (req, r
         message: `go4launch: upload card image for ${launch_id}`,
         content: image_data,
         ...(sha ? { sha } : {}),
-        branch: 'main',
+        branch: GITHUB_BRANCH,
       },
-      { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' } }
+      { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' } }
     );
 
     // Save the path in the content table
@@ -337,7 +350,7 @@ adminRouter.post('/send-gallery-emails', async (req, res) => {
 
     const galleryUrl = contentRes.rows[0]?.gallery_url || '';
     const launchName = archiveRes.rows[0]?.launch_name || 'this launch';
-    const archiveUrl = `https://ccbractivix.github.io/RGP/go4launch/#/archive/launch/${encodeURIComponent(launch_id)}`;
+    const archiveUrl = `${ARCHIVE_BASE_URL}/#/archive/launch/${encodeURIComponent(launch_id)}`;
 
     let sentCount = 0;
     for (const row of rows) {
@@ -374,7 +387,7 @@ async function trySendSawItEmail(launchId, email) {
 
     const launchName = rows[0]?.launch_name || 'a Space Coast launch';
     const galleryUrl = contentRes.rows[0]?.gallery_url || '';
-    const archiveUrl = `https://ccbractivix.github.io/RGP/go4launch/#/archive/launch/${encodeURIComponent(launchId)}`;
+    const archiveUrl = `${ARCHIVE_BASE_URL}/#/archive/launch/${encodeURIComponent(launchId)}`;
 
     await sendGalleryEmail(email, launchName, archiveUrl, galleryUrl);
     await db.query(
