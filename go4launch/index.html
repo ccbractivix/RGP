@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="api-base" content="https://theater-backend-qf1b.onrender.com">
+    <title>go4launch</title>
+    <link rel="preconnect" href="https://ll.thespacedevs.com">
+    <link rel="dns-prefetch" href="https://ll.thespacedevs.com">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loading-screen">
+        <div class="loading-rocket">🚀</div>
+        <p>Loading launches…</p>
+    </div>
+
+    <!-- App Container (SPA) -->
+    <div id="app"></div>
+
+    <!-- "I Saw This" Email Modal -->
+    <div class="modal-overlay" id="saw-it-modal">
+        <div class="modal-card">
+            <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+            <div class="modal-icon">🎉</div>
+            <h3>I Saw This Launch!</h3>
+            <p>Enter your email and we'll send you a link to the photo gallery and archive for this launch.</p>
+            <input type="email" id="saw-it-email" placeholder="you@example.com" autocomplete="email">
+            <button class="btn-primary" id="saw-it-submit">Send Me the Link</button>
+            <div id="saw-it-status"></div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,839 @@
+/* ============================================================
+   go4launch — style.css
+   Dark theme inspired by go4liftoff.com
+   ============================================================ */
+
+/* --- Reset & Base --- */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #0a0a14;
+    --card-bg: #14142a;
+    --card-border: #1e1e3a;
+    --text: #e8e8f0;
+    --text-muted: #8888a0;
+    --text-dim: #555570;
+    --accent-green: #4caf50;
+    --accent-orange: #ff9800;
+    --accent-red: #e53935;
+    --accent-blue: #42a5f5;
+    --accent-purple: #7c4dff;
+    --accent-gold: #f0c040;
+    --accent-tbc: #29b6f6;
+    --radius: 16px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* --- Loading Screen --- */
+.loading-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 0.4s ease;
+}
+
+.loading-screen.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loading-rocket {
+    font-size: 3rem;
+    animation: bounce-rocket 1s ease-in-out infinite;
+}
+
+@keyframes bounce-rocket {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-18px); }
+}
+
+.loading-screen p {
+    margin-top: 1rem;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+}
+
+/* --- App Container --- */
+#app {
+    width: 100%;
+    max-width: 640px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-bottom: 3rem;
+}
+
+/* --- Page Header --- */
+.page-header {
+    text-align: center;
+    padding: 1.5rem 0 0.5rem;
+}
+
+.page-header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #fff;
+}
+
+.page-header h1 span {
+    color: var(--accent-gold);
+}
+
+.page-header .subtitle {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+    letter-spacing: 0.03em;
+}
+
+/* --- Launch Card --- */
+.launch-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.launch-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+
+/* --- Card Image --- */
+.card-image {
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    background: #0e0e20;
+    position: relative;
+}
+
+.card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* --- Card Body --- */
+.card-body {
+    padding: 1.25rem 1.5rem 1.5rem;
+    text-align: center;
+}
+
+/* --- Mission Name --- */
+.card-body .mission-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.35;
+    color: #fff;
+    margin-bottom: 0.75rem;
+}
+
+/* --- Status Badge --- */
+.status-badge {
+    display: inline-block;
+    padding: 0.3rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.75rem;
+}
+
+.status-go       { background: var(--accent-green); color: #fff; }
+.status-tbd      { background: var(--accent-orange); color: #fff; }
+.status-tbc      { background: var(--accent-tbc); color: #fff; }
+.status-hold     { background: var(--accent-red); color: #fff; }
+.status-inflight { background: var(--accent-purple); color: #fff; }
+.status-success  { background: var(--accent-green); color: #fff; }
+.status-failure  { background: var(--accent-red); color: #fff; }
+
+/* --- Provider & Location --- */
+.card-meta {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 0.2rem;
+}
+
+/* --- Countdown --- */
+.countdown-row {
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: 0.15rem;
+    margin: 1rem 0 0.25rem;
+}
+
+.countdown-row .cd-prefix {
+    font-size: 1.8rem;
+    font-weight: 300;
+    color: var(--text-muted);
+    margin-right: 0.25rem;
+}
+
+.countdown-row .cd-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 52px;
+}
+
+.countdown-row .cd-value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.countdown-row .cd-sep {
+    font-size: 2rem;
+    font-weight: 300;
+    color: var(--text-dim);
+    margin: 0 0.1rem;
+    align-self: flex-start;
+}
+
+.countdown-row .cd-label {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 0.2rem;
+}
+
+.countdown-launched {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent-green);
+    margin: 1rem 0 0.25rem;
+}
+
+/* --- Launch Date --- */
+.card-date {
+    font-size: 1rem;
+    color: var(--accent-gold);
+    font-weight: 500;
+    margin: 0.5rem 0 1rem;
+}
+
+/* --- Card Actions --- */
+.card-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.card-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    letter-spacing: 0.04em;
+    transition: opacity 0.2s;
+}
+
+.card-action:hover {
+    opacity: 0.8;
+}
+
+.card-action.watch {
+    color: var(--accent-red);
+}
+
+.card-action.more-info {
+    color: var(--text-muted);
+}
+
+.card-action .action-icon {
+    font-size: 1rem;
+}
+
+.card-share {
+    display: flex;
+    justify-content: center;
+}
+
+.card-share .card-action {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+}
+
+/* --- "I Saw This" Button --- */
+.saw-it-btn {
+    display: block;
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.7rem 1rem;
+    background: linear-gradient(135deg, var(--accent-purple), #5e35b1);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.saw-it-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(124, 77, 255, 0.4);
+}
+
+/* --- Modal --- */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-card {
+    background: #1e1e30;
+    border: 1px solid #2a2a44;
+    border-radius: var(--radius);
+    padding: 2rem;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+}
+
+.modal-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #fff;
+}
+
+.modal-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.modal-card h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.modal-card p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.modal-card input[type="email"] {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid #333;
+    border-radius: var(--radius-sm);
+    background: #0e0e1a;
+    color: var(--text);
+    font-size: 0.9rem;
+    outline: none;
+    margin-bottom: 0.75rem;
+}
+
+.modal-card input[type="email"]:focus {
+    border-color: var(--accent-purple);
+    box-shadow: 0 0 0 3px rgba(124,77,255,0.2);
+}
+
+.btn-primary {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    background: var(--accent-purple);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background: #6a3de8;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#saw-it-status {
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    min-height: 1.2em;
+}
+
+#saw-it-status.success { color: var(--accent-green); }
+#saw-it-status.error   { color: var(--accent-red); }
+
+/* ============================================================
+   DETAIL PAGE (More Info)
+   ============================================================ */
+.detail-page {
+    max-width: 640px;
+    width: 100%;
+}
+
+.detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    transition: color 0.2s;
+}
+
+.detail-back:hover {
+    color: #fff;
+}
+
+.detail-hero {
+    width: 100%;
+    max-height: 350px;
+    overflow: hidden;
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    background: #0e0e20;
+}
+
+.detail-hero img {
+    width: 100%;
+    max-height: 350px;
+    object-fit: cover;
+    display: block;
+}
+
+.detail-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.detail-header .mission-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.75rem;
+    line-height: 1.35;
+}
+
+.detail-header .meta-row {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+}
+
+.detail-header .meta-row .sep {
+    margin: 0 0.3rem;
+    color: var(--text-dim);
+}
+
+.detail-countdown-area {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.detail-date {
+    font-size: 1.05rem;
+    color: var(--accent-gold);
+    font-weight: 500;
+    margin-top: 0.5rem;
+}
+
+/* --- Detail Sections --- */
+.detail-section {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.detail-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.75rem;
+}
+
+.detail-section-title .section-icon {
+    font-size: 1.1rem;
+}
+
+.detail-section p,
+.detail-section .section-text {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.detail-section a {
+    color: var(--accent-blue);
+    text-decoration: none;
+}
+
+.detail-section a:hover {
+    text-decoration: underline;
+}
+
+/* --- Livestream Links --- */
+.livestream-list {
+    list-style: none;
+}
+
+.livestream-list li {
+    margin-bottom: 0.5rem;
+}
+
+.livestream-list a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--accent-red);
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+
+.livestream-list a:hover {
+    opacity: 0.8;
+}
+
+.livestream-list .stream-icon {
+    font-size: 0.9rem;
+}
+
+/* --- Viewing Guide Section (Green accent) --- */
+.section-viewing-guide {
+    border-left: 3px solid var(--accent-green);
+}
+
+/* --- Chris Says Section (Orange accent) --- */
+.section-chris-says {
+    border-left: 3px solid var(--accent-orange);
+}
+
+.section-chris-says .chris-text {
+    font-style: italic;
+    color: var(--text);
+}
+
+/* --- Rocket Talk LIVE Section (Purple accent) --- */
+.section-rtl {
+    border-left: 3px solid var(--accent-purple);
+}
+
+/* --- Mission Details Section (Blue accent) --- */
+.section-mission {
+    border-left: 3px solid var(--accent-blue);
+}
+
+.mission-detail-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.3rem;
+    font-size: 0.9rem;
+}
+
+.mission-detail-row .label {
+    color: var(--text-dim);
+    min-width: 70px;
+    font-weight: 600;
+}
+
+.mission-detail-row .value {
+    color: var(--text-muted);
+}
+
+/* ============================================================
+   ARCHIVE PAGE
+   ============================================================ */
+.archive-header {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.archive-header h2 {
+    font-size: 1.3rem;
+    color: #fff;
+}
+
+.archive-header .archive-sub {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+.archive-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+}
+
+.archive-nav a {
+    padding: 0.4rem 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+}
+
+.archive-nav a:hover,
+.archive-nav a.active {
+    background: var(--accent-purple);
+    color: #fff;
+    border-color: var(--accent-purple);
+}
+
+.archive-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.archive-item {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    transition: background 0.2s;
+}
+
+.archive-item:hover {
+    background: #1e1e38;
+}
+
+.archive-item-thumb {
+    width: 80px;
+    height: 55px;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #0e0e20;
+}
+
+.archive-item-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.archive-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.archive-item-info .name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.archive-item-info .date {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+}
+
+.archive-item-info .status-sm {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 0.1rem 0.5rem;
+    border-radius: 10px;
+    margin-top: 0.25rem;
+}
+
+/* --- Gallery Link in Archive --- */
+.gallery-link {
+    display: block;
+    text-align: center;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, var(--accent-purple), #5e35b1);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    margin: 1rem 0;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.gallery-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(124,77,255,0.4);
+}
+
+/* --- No Launches Message --- */
+.no-launches {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+
+/* --- Footer --- */
+.page-footer {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+    border-top: 1px solid var(--card-border);
+    margin-top: 1rem;
+}
+
+.page-footer .footer-link {
+    display: inline-block;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    text-decoration: none;
+    margin: 0 0.5rem;
+}
+
+.page-footer .footer-link:hover {
+    color: var(--text-muted);
+}
+
+.page-footer .footer-copy {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 0.5rem;
+}
+
+/* --- Back Button (floating) --- */
+.back-button {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 10000;
+    width: 40px;
+    height: 40px;
+    background: #1e1e30;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    border: 1px solid var(--card-border);
+    transition: background 0.2s, transform 0.2s;
+}
+
+.back-button:hover {
+    background: var(--accent-purple);
+    transform: scale(1.1);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 600px) {
+    #app {
+        padding: 0.75rem;
+        gap: 1rem;
+    }
+
+    .card-body {
+        padding: 1rem 1.25rem 1.25rem;
+    }
+
+    .card-body .mission-name {
+        font-size: 1.1rem;
+    }
+
+    .countdown-row .cd-value {
+        font-size: 1.8rem;
+    }
+
+    .countdown-row .cd-group {
+        min-width: 42px;
+    }
+
+    .detail-header .mission-name {
+        font-size: 1.25rem;
+    }
+
+    .card-image {
+        height: 180px;
+    }
+}

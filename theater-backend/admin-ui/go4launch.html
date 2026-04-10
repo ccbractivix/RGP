@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="api-base" content="https://theater-backend-qf1b.onrender.com">
+  <title>go4launch — Admin Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a14;
+      --card: #14142a;
+      --border: #1e1e3a;
+      --text: #e8e8f0;
+      --muted: #8888a0;
+      --dim: #555570;
+      --purple: #7c4dff;
+      --green: #4caf50;
+      --red: #e53935;
+      --gold: #f0c040;
+      --blue: #42a5f5;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+
+    .container { max-width: 720px; margin: 0 auto; }
+
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 0.25rem;
+      color: #fff;
+    }
+
+    h1 span { color: var(--gold); }
+
+    .subtitle {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+    }
+
+    /* --- Form Elements --- */
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin: 1rem 0 0.35rem;
+    }
+
+    select, input[type="text"], input[type="url"], input[type="datetime-local"],
+    input[type="file"], textarea {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      background: #0e0e1a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    select:focus, input:focus, textarea:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(124,77,255,0.15);
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    select { cursor: pointer; }
+    select option { background: #0e0e1a; color: var(--text); }
+
+    /* --- Card Panel --- */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* --- Buttons --- */
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+    }
+
+    .btn {
+      padding: 0.6rem 1.25rem;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      font-family: inherit;
+    }
+
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary { background: var(--purple); color: #fff; }
+    .btn-primary:hover { background: #6a3de8; }
+
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-secondary:hover { background: #2a2a44; }
+
+    .btn-danger { background: var(--red); color: #fff; }
+    .btn-danger:hover { background: #c62828; }
+
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-green:hover { background: #388e3c; }
+
+    /* --- Status --- */
+    .status-msg {
+      font-size: 0.8rem;
+      margin-top: 0.75rem;
+      min-height: 1.2em;
+      padding: 0.4rem;
+      border-radius: 4px;
+    }
+
+    .status-msg.success { color: var(--green); background: rgba(76,175,80,0.1); }
+    .status-msg.error { color: var(--red); background: rgba(229,57,53,0.1); }
+    .status-msg.info { color: var(--blue); background: rgba(66,165,245,0.1); }
+
+    /* --- Image Preview --- */
+    .image-preview {
+      margin-top: 0.5rem;
+      max-width: 300px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .image-preview img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* --- Existing Content Indicator --- */
+    .field-hint {
+      font-size: 0.7rem;
+      color: var(--dim);
+      margin-top: 0.2rem;
+      font-style: italic;
+    }
+
+    /* --- Nav --- */
+    .nav {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .nav a:hover { color: #fff; }
+
+    /* --- Saw-It Table --- */
+    .saw-it-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      margin-top: 0.75rem;
+    }
+
+    .saw-it-table th {
+      text-align: left;
+      padding: 0.5rem;
+      background: var(--border);
+      color: var(--muted);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+    }
+
+    .saw-it-table td {
+      padding: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .badge-sent { color: var(--green); font-weight: 600; }
+    .badge-pending { color: var(--gold); font-weight: 600; }
+
+    /* --- Loading --- */
+    .loading { color: var(--muted); text-align: center; padding: 2rem; }
+
+    /* --- Responsive --- */
+    @media (max-width: 600px) {
+      body { padding: 1rem; }
+      .panel { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 go4<span>launch</span> Admin</h1>
+    <p class="subtitle">Manage launch content for the public go4launch page</p>
+
+    <div class="nav">
+      <a href="/admin-ui/dashboard.html">← Theater Dashboard</a>
+      <a href="/admin-ui/go4launch.html">go4launch Admin</a>
+    </div>
+
+    <!-- Launch Selector -->
+    <div class="panel">
+      <div class="panel-title">📋 Select Launch</div>
+      <label for="launch-select">Upcoming Launches</label>
+      <select id="launch-select">
+        <option value="">— Loading launches… —</option>
+      </select>
+      <div id="select-status" class="status-msg"></div>
+    </div>
+
+    <!-- Content Editor (hidden until launch selected) -->
+    <div id="editor" style="display:none;">
+      <div class="panel">
+        <div class="panel-title">✏️ Launch Content</div>
+
+        <label for="f-headline">Headline Banner</label>
+        <input type="text" id="f-headline" placeholder="e.g., LAUNCH TODAY 5:15 PM">
+        <div class="field-hint">Shows as a red banner on the launch card. Leave blank for no banner.</div>
+
+        <label for="f-viewing-guide">Viewing Guide</label>
+        <textarea id="f-viewing-guide" placeholder="Where to watch from the resort, trajectory info, tips…"></textarea>
+        <div class="field-hint">Text content. URLs will be auto-linked. Leave blank to omit this section.</div>
+
+        <label for="f-chris-says">Chris Says</label>
+        <textarea id="f-chris-says" placeholder="Chris's commentary about this launch…"></textarea>
+        <div class="field-hint">Leave blank to omit this section from the More Info page.</div>
+
+        <label for="f-gallery-url">Photo Gallery URL</label>
+        <input type="url" id="f-gallery-url" placeholder="https://photos.example.com/launch-gallery">
+        <div class="field-hint">Link to a photo gallery for this launch. Shows on the More Info and Archive pages.</div>
+
+        <label for="f-rtl-datetime">Rocket Talk LIVE! Date &amp; Time</label>
+        <input type="datetime-local" id="f-rtl-datetime">
+        <div class="field-hint">Leave blank if no Rocket Talk LIVE! is scheduled for this launch.</div>
+
+        <label for="f-rtl-notes">Rocket Talk LIVE! Notes</label>
+        <textarea id="f-rtl-notes" rows="3" placeholder="Join Chris the Rocket Guy in the Movie Theater…"></textarea>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-save">💾 Save Content</button>
+          <button class="btn btn-secondary" id="btn-clear">Clear Form</button>
+        </div>
+        <div id="save-status" class="status-msg"></div>
+      </div>
+
+      <!-- Image Upload -->
+      <div class="panel">
+        <div class="panel-title">🖼️ Launch Card Image</div>
+        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;">
+          Upload a custom image for this launch card. If no image is uploaded, the LL2 API image will be used.
+        </p>
+        <label for="f-image">Select Image (JPG or PNG)</label>
+        <input type="file" id="f-image" accept="image/jpeg,image/png">
+        <div id="image-preview" class="image-preview" style="display:none;"><img id="preview-img" alt="Preview"></div>
+        <div class="btn-row">
+          <button class="btn btn-green" id="btn-upload" disabled>📤 Upload Image</button>
+        </div>
+        <div id="upload-status" class="status-msg"></div>
+      </div>
+
+      <!-- "I Saw This" Submissions -->
+      <div class="panel">
+        <div class="panel-title">🎉 "I Saw This Launch!" Submissions</div>
+        <div id="saw-it-list"><div class="loading">Select a launch to view submissions.</div></div>
+        <div class="btn-row">
+          <button class="btn btn-green" id="btn-send-emails" disabled>📧 Send Gallery Emails</button>
+        </div>
+        <div id="email-status" class="status-msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const API_BASE = (document.querySelector('meta[name="api-base"]')?.getAttribute('content') || '').replace(/\/$/, '');
+      const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
+      const LL2_KEY  = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
+      const LOC_IDS  = [12, 27];
+      const WINDOW   = 14; // days
+
+      let csrfToken = '';
+      let currentLaunchId = '';
+      let allLaunches = [];
+      let imageBase64 = '';
+      let imageExt = '';
+
+      // --- CSRF ---
+      async function fetchCsrf() {
+        try {
+          const r = await fetch(API_BASE + '/admin/csrf-token', { credentials: 'include' });
+          if (r.ok) { const d = await r.json(); csrfToken = d.csrfToken || ''; }
+        } catch (e) {
+          try {
+            const r = await fetch('/admin/csrf-token', { credentials: 'include' });
+            if (r.ok) { const d = await r.json(); csrfToken = d.csrfToken || ''; }
+          } catch (e2) { console.warn('CSRF fetch failed'); }
+        }
+      }
+
+      function authHeaders() {
+        const h = { 'Content-Type': 'application/json' };
+        if (csrfToken) h['X-CSRF-Token'] = csrfToken;
+        return h;
+      }
+
+      // --- Fetch Upcoming Launches from LL2 ---
+      async function fetchUpcoming() {
+        const cutoff = new Date(Date.now() + WINDOW * 86400000).toISOString();
+        const launches = [];
+        for (const locId of LOC_IDS) {
+          const url = `${LL2_BASE}/launches/upcoming/?` + new URLSearchParams({
+            location__ids: locId, net__lte: cutoff, limit: 50, mode: 'detailed', format: 'json'
+          });
+          try {
+            const r = await fetch(url, { headers: { Authorization: `Token ${LL2_KEY}` } });
+            if (r.ok) { const d = await r.json(); if (d.results) launches.push(...d.results); }
+          } catch (e) { console.warn('LL2 fetch error:', e); }
+        }
+        // Deduplicate and sort
+        const seen = new Set();
+        allLaunches = launches.filter(l => { if (seen.has(l.id)) return false; seen.add(l.id); return true; });
+        allLaunches.sort((a, b) => new Date(a.net || a.window_start || '2099') - new Date(b.net || b.window_start || '2099'));
+        return allLaunches;
+      }
+
+      // --- Populate Dropdown ---
+      async function populateDropdown() {
+        const select = document.getElementById('launch-select');
+        const status = document.getElementById('select-status');
+        try {
+          const launches = await fetchUpcoming();
+          select.innerHTML = '<option value="">— Select a launch —</option>';
+          launches.forEach(l => {
+            const date = l.net ? new Date(l.net).toLocaleDateString('en-US', {
+              timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric'
+            }) : 'TBD';
+            const opt = document.createElement('option');
+            opt.value = l.id;
+            opt.textContent = `${l.name || 'Unknown'} — ${date}`;
+            select.appendChild(opt);
+          });
+          if (!launches.length) {
+            status.textContent = 'No upcoming launches found within 14 days.';
+            status.className = 'status-msg info';
+          }
+        } catch (e) {
+          select.innerHTML = '<option value="">— Error loading launches —</option>';
+          status.textContent = 'Failed to load launches from LL2 API.';
+          status.className = 'status-msg error';
+        }
+      }
+
+      // --- Load Content for Selected Launch ---
+      async function loadContent(launchId) {
+        if (!launchId) {
+          document.getElementById('editor').style.display = 'none';
+          return;
+        }
+        currentLaunchId = launchId;
+        document.getElementById('editor').style.display = 'block';
+
+        // Clear form
+        clearForm();
+
+        // Load existing content from backend
+        try {
+          const r = await fetch(`${API_BASE}/admin/go4launch/content/${encodeURIComponent(launchId)}`, {
+            credentials: 'include'
+          });
+          if (r.ok) {
+            const data = await r.json();
+            if (data) {
+              document.getElementById('f-headline').value = data.headline || '';
+              document.getElementById('f-viewing-guide').value = data.viewing_guide || '';
+              document.getElementById('f-chris-says').value = data.chris_says || '';
+              document.getElementById('f-gallery-url').value = data.gallery_url || '';
+              if (data.rtl_datetime) {
+                // Convert to local datetime-local format
+                const dt = new Date(data.rtl_datetime);
+                const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                document.getElementById('f-rtl-datetime').value = local;
+              }
+              document.getElementById('f-rtl-notes').value = data.rtl_notes || '';
+
+              if (data.card_image_path) {
+                document.getElementById('upload-status').textContent = 'Current image: ' + data.card_image_path;
+                document.getElementById('upload-status').className = 'status-msg info';
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Load content failed:', e);
+        }
+
+        // Load "I Saw This" submissions
+        loadSawItList(launchId);
+      }
+
+      function clearForm() {
+        ['f-headline', 'f-viewing-guide', 'f-chris-says', 'f-gallery-url', 'f-rtl-datetime', 'f-rtl-notes'].forEach(id => {
+          document.getElementById(id).value = '';
+        });
+        document.getElementById('f-image').value = '';
+        document.getElementById('image-preview').style.display = 'none';
+        document.getElementById('btn-upload').disabled = true;
+        imageBase64 = '';
+        imageExt = '';
+        ['save-status', 'upload-status', 'email-status'].forEach(id => {
+          document.getElementById(id).textContent = '';
+          document.getElementById(id).className = 'status-msg';
+        });
+      }
+
+      // --- Save Content ---
+      async function saveContent() {
+        if (!currentLaunchId) return;
+        const btn = document.getElementById('btn-save');
+        const status = document.getElementById('save-status');
+
+        btn.disabled = true;
+        status.textContent = 'Saving…';
+        status.className = 'status-msg info';
+
+        try {
+          const r = await fetch(`${API_BASE}/admin/go4launch/content`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: authHeaders(),
+            body: JSON.stringify({
+              launch_id: currentLaunchId,
+              headline: document.getElementById('f-headline').value.trim(),
+              viewing_guide: document.getElementById('f-viewing-guide').value.trim(),
+              chris_says: document.getElementById('f-chris-says').value.trim(),
+              gallery_url: document.getElementById('f-gallery-url').value.trim(),
+              rtl_datetime: document.getElementById('f-rtl-datetime').value || null,
+              rtl_notes: document.getElementById('f-rtl-notes').value.trim(),
+            }),
+          });
+
+          if (r.ok) {
+            status.textContent = '✓ Content saved successfully!';
+            status.className = 'status-msg success';
+          } else {
+            const d = await r.json().catch(() => ({}));
+            status.textContent = d.error || 'Save failed.';
+            status.className = 'status-msg error';
+          }
+        } catch (e) {
+          status.textContent = 'Network error. Try again.';
+          status.className = 'status-msg error';
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      // --- Image Upload ---
+      function handleImageSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['jpg', 'jpeg', 'png'].includes(ext)) {
+          document.getElementById('upload-status').textContent = 'Only JPG and PNG files are allowed.';
+          document.getElementById('upload-status').className = 'status-msg error';
+          return;
+        }
+
+        imageExt = ext === 'jpeg' ? 'jpg' : ext;
+
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          // ev.target.result is a data URL like "data:image/jpeg;base64,..."
+          const dataUrl = ev.target.result;
+          imageBase64 = dataUrl.split(',')[1]; // Just the base64 part
+
+          // Show preview
+          document.getElementById('preview-img').src = dataUrl;
+          document.getElementById('image-preview').style.display = 'block';
+          document.getElementById('btn-upload').disabled = false;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      async function uploadImage() {
+        if (!currentLaunchId || !imageBase64) return;
+        const btn = document.getElementById('btn-upload');
+        const status = document.getElementById('upload-status');
+
+        btn.disabled = true;
+        status.textContent = 'Uploading to repository…';
+        status.className = 'status-msg info';
+
+        try {
+          const r = await fetch(`${API_BASE}/admin/go4launch/upload-image`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: authHeaders(),
+            body: JSON.stringify({
+              launch_id: currentLaunchId,
+              image_data: imageBase64,
+              image_ext: imageExt,
+            }),
+          });
+
+          if (r.ok) {
+            const d = await r.json();
+            status.textContent = '✓ Image uploaded! Path: ' + (d.path || 'saved');
+            status.className = 'status-msg success';
+          } else {
+            const d = await r.json().catch(() => ({}));
+            status.textContent = d.error || 'Upload failed.';
+            status.className = 'status-msg error';
+          }
+        } catch (e) {
+          status.textContent = 'Network error. Try again.';
+          status.className = 'status-msg error';
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      // --- "I Saw This" List ---
+      async function loadSawItList(launchId) {
+        const container = document.getElementById('saw-it-list');
+        container.innerHTML = '<div class="loading">Loading submissions…</div>';
+
+        try {
+          const r = await fetch(`${API_BASE}/admin/go4launch/saw-it`, { credentials: 'include' });
+          if (!r.ok) throw new Error('Failed');
+          const all = await r.json();
+          const filtered = all.filter(s => s.launch_id === launchId);
+
+          if (!filtered.length) {
+            container.innerHTML = '<p style="color:var(--dim);font-size:0.85rem;">No submissions for this launch yet.</p>';
+            document.getElementById('btn-send-emails').disabled = true;
+            return;
+          }
+
+          let html = '<table class="saw-it-table"><thead><tr><th>Email</th><th>Date</th><th>Status</th></tr></thead><tbody>';
+          let hasUnsent = false;
+          filtered.forEach(s => {
+            const date = new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+            html += `<tr><td>${escHtml(s.email)}</td><td>${date}</td><td>${s.sent ? '<span class="badge-sent">Sent</span>' : '<span class="badge-pending">Pending</span>'}</td></tr>`;
+            if (!s.sent) hasUnsent = true;
+          });
+          html += '</tbody></table>';
+          container.innerHTML = html;
+          document.getElementById('btn-send-emails').disabled = !hasUnsent;
+        } catch (e) {
+          container.innerHTML = '<p style="color:var(--red);font-size:0.85rem;">Failed to load submissions.</p>';
+        }
+      }
+
+      async function sendGalleryEmails() {
+        if (!currentLaunchId) return;
+        const btn = document.getElementById('btn-send-emails');
+        const status = document.getElementById('email-status');
+
+        btn.disabled = true;
+        status.textContent = 'Sending emails…';
+        status.className = 'status-msg info';
+
+        try {
+          const r = await fetch(`${API_BASE}/admin/go4launch/send-gallery-emails`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: authHeaders(),
+            body: JSON.stringify({ launch_id: currentLaunchId }),
+          });
+
+          if (r.ok) {
+            const d = await r.json();
+            status.textContent = `✓ ${d.sent || 0} email(s) sent!`;
+            status.className = 'status-msg success';
+            loadSawItList(currentLaunchId);
+          } else {
+            const d = await r.json().catch(() => ({}));
+            status.textContent = d.error || 'Failed to send emails.';
+            status.className = 'status-msg error';
+          }
+        } catch (e) {
+          status.textContent = 'Network error. Try again.';
+          status.className = 'status-msg error';
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      // --- Utility ---
+      function escHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str || '';
+        return d.innerHTML;
+      }
+
+      // --- Event Listeners ---
+      document.getElementById('launch-select').addEventListener('change', function() {
+        loadContent(this.value);
+      });
+
+      document.getElementById('btn-save').addEventListener('click', saveContent);
+      document.getElementById('btn-clear').addEventListener('click', clearForm);
+      document.getElementById('f-image').addEventListener('change', handleImageSelect);
+      document.getElementById('btn-upload').addEventListener('click', uploadImage);
+      document.getElementById('btn-send-emails').addEventListener('click', sendGalleryEmails);
+
+      // --- Init ---
+      (async function init() {
+        await fetchCsrf();
+        await populateDropdown();
+      })();
+    })();
+  </script>
+</body>
+</html>
