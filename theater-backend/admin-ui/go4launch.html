@@ -322,29 +322,38 @@
       const LOC_IDS  = [12, 27];
       const WINDOW   = 14; // days
 
-      let csrfToken = '';
       let currentLaunchId = '';
       let allLaunches = [];
       let imageBase64 = '';
       let imageExt = '';
 
-      // --- CSRF ---
-      async function fetchCsrf() {
-        try {
-          const r = await fetch(API_BASE + '/admin/csrf-token', { credentials: 'include' });
-          if (r.ok) { const d = await r.json(); csrfToken = d.csrfToken || ''; }
-        } catch (e) {
-          try {
-            const r = await fetch('/admin/csrf-token', { credentials: 'include' });
-            if (r.ok) { const d = await r.json(); csrfToken = d.csrfToken || ''; }
-          } catch (e2) { console.warn('CSRF fetch failed'); }
-        }
+      /* ── CSRF token (fetched on-demand before first use) ── */
+      let _csrfToken = null;
+      async function getCsrfToken() {
+        if (_csrfToken) return _csrfToken;
+        const r = await fetch('/admin/csrf-token', { credentials: 'include' });
+        const d = await r.json();
+        _csrfToken = d.csrfToken || '';
+        return _csrfToken;
       }
 
-      function authHeaders() {
-        const h = { 'Content-Type': 'application/json' };
-        if (csrfToken) h['X-CSRF-Token'] = csrfToken;
-        return h;
+      async function apiFetch(url, opts = {}) {
+        const csrfToken = await getCsrfToken();
+        return fetch(url, {
+          credentials: 'include',
+          ...opts,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken,
+            ...(opts.headers || {})
+          }
+        }).then(res => {
+          if (res.status === 401) {
+            window.location.href = '/admin-ui/login.html';
+            throw new Error('Unauthorized');
+          }
+          return res;
+        });
       }
 
       // --- Fetch Upcoming Launches from LL2 ---
@@ -467,10 +476,8 @@
         status.className = 'status-msg info';
 
         try {
-          const r = await fetch(`${API_BASE}/admin/go4launch/content`, {
+          const r = await apiFetch(`${API_BASE}/admin/go4launch/content`, {
             method: 'POST',
-            credentials: 'include',
-            headers: authHeaders(),
             body: JSON.stringify({
               launch_id: currentLaunchId,
               headline: document.getElementById('f-headline').value.trim(),
@@ -545,10 +552,8 @@
         status.className = 'status-msg info';
 
         try {
-          const r = await fetch(`${API_BASE}/admin/go4launch/upload-image`, {
+          const r = await apiFetch(`${API_BASE}/admin/go4launch/upload-image`, {
             method: 'POST',
-            credentials: 'include',
-            headers: authHeaders(),
             body: JSON.stringify({
               launch_id: currentLaunchId,
               image_data: imageBase64,
@@ -615,10 +620,8 @@
         status.className = 'status-msg info';
 
         try {
-          const r = await fetch(`${API_BASE}/admin/go4launch/send-gallery-emails`, {
+          const r = await apiFetch(`${API_BASE}/admin/go4launch/send-gallery-emails`, {
             method: 'POST',
-            credentials: 'include',
-            headers: authHeaders(),
             body: JSON.stringify({ launch_id: currentLaunchId }),
           });
 
@@ -660,7 +663,6 @@
 
       // --- Init ---
       (async function init() {
-        await fetchCsrf();
         await populateDropdown();
       })();
     })();
