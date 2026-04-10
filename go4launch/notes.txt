@@ -1,0 +1,29 @@
+go4launch — Complete Implementation Summary
+New Files Created
+File	Purpose
+go4launch/index.html	Dark-themed SPA with loading screen, hash routing, "I saw this" email modal
+go4launch/css/style.css	go4liftoff.com-inspired dark design — cards, countdown, detail pages, archive, responsive
+go4launch/js/app.js	Full SPA: LL2 API fetch, CMS content merge, card rendering, countdown timers, hash router, detail page, archive, share, "I saw this"
+go4launch/images/launches/.gitkeep	Directory for admin-uploaded launch card images
+theater-backend/routes/go4launch.js	Public API (7 routes) + Admin API (6 routes) — DB auto-creation, CMS CRUD, archive, "I saw this" email, image upload via GitHub API, SendGrid integration
+theater-backend/admin-ui/go4launch.html	Admin dashboard — launch dropdown (from LL2), content editor fields (headline, viewing guide, chris says, gallery URL, RTL datetime/notes), image upload with preview, email submission management
+Modified Files
+File	Change
+theater-backend/server.js	Mount go4launch routes, increase JSON body limit to 12MB
+theater-backend/db/schema.sql	Reference docs for 3 new tables
+Feature Coverage
+✅ Launch cards — go4liftoff dark theme: image, mission name, status badge, provider, location, countdown (DD:HH:MM:SS), date, WATCH, MORE INFO, SHARE
+✅ More Info page — LL2 mission details, livestream links (NASASpaceflight/SpaceflightNow priority), admin content sections (only shown if populated)
+✅ Admin dashboard — dropdown of upcoming launches, all content input fields, image upload to repo
+✅ LL2 image fallback — constrained to 220px height with object-fit: cover
+✅ 36-hour post-launch retention before auto-archive
+✅ Archive — organized by year/month, permanent URLs
+✅ "I Saw This Launch!" — post-launch button, email collection, SendGrid email with archive + gallery links
+✅ Same API rules as rocket-talk (LL2 API, same key, same locations 12/27, 14-day window)
+Security
+UUID validation prevents SSRF/path traversal in GitHub API calls
+CSRF protection on all admin routes
+Session-based auth (same ADMIN_PASSPHRASE as theater-backend)
+No ReDoS-vulnerable patterns
+Configurable URLs via environment variables
+Send message
