@@ -23,6 +23,7 @@ const GITHUB_BRANCH    = process.env.GITHUB_BRANCH || 'main';
         headline        TEXT,
         viewing_guide   TEXT,
         chris_says      TEXT,
+        trajectory      TEXT,
         card_image_path TEXT,
         gallery_url     TEXT,
         rtl_datetime    TIMESTAMPTZ,
@@ -53,6 +54,11 @@ const GITHUB_BRANCH    = process.env.GITHUB_BRANCH || 'main';
     `);
 
     console.log('[go4launch] Tables ready.');
+
+    // Add trajectory column if it doesn't exist (migration)
+    await db.query(`
+      ALTER TABLE go4launch_content ADD COLUMN IF NOT EXISTS trajectory TEXT
+    `);
   } catch (err) {
     console.error('[go4launch] Table creation error:', err.message);
   }
@@ -220,23 +226,24 @@ adminRouter.get('/content/:launchId', async (req, res) => {
 
 // POST /admin/go4launch/content — save/update content for a launch
 adminRouter.post('/content', async (req, res) => {
-  const { launch_id, headline, viewing_guide, chris_says, gallery_url, rtl_datetime, rtl_notes } = req.body;
+  const { launch_id, headline, viewing_guide, chris_says, trajectory, gallery_url, rtl_datetime, rtl_notes } = req.body;
   if (!launch_id) {
     return res.status(400).json({ error: 'launch_id required' });
   }
   try {
     await db.query(`
-      INSERT INTO go4launch_content (launch_id, headline, viewing_guide, chris_says, gallery_url, rtl_datetime, rtl_notes, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      INSERT INTO go4launch_content (launch_id, headline, viewing_guide, chris_says, trajectory, gallery_url, rtl_datetime, rtl_notes, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
       ON CONFLICT (launch_id) DO UPDATE SET
         headline = EXCLUDED.headline,
         viewing_guide = EXCLUDED.viewing_guide,
         chris_says = EXCLUDED.chris_says,
+        trajectory = EXCLUDED.trajectory,
         gallery_url = EXCLUDED.gallery_url,
         rtl_datetime = EXCLUDED.rtl_datetime,
         rtl_notes = EXCLUDED.rtl_notes,
         updated_at = NOW()
-    `, [launch_id, headline || null, viewing_guide || null, chris_says || null, gallery_url || null, rtl_datetime || null, rtl_notes || null]);
+    `, [launch_id, headline || null, viewing_guide || null, chris_says || null, trajectory || null, gallery_url || null, rtl_datetime || null, rtl_notes || null]);
     return res.json({ ok: true });
   } catch (err) {
     console.error('[go4launch] POST /content error:', err.message);
