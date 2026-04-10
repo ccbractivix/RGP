@@ -336,7 +336,7 @@ function renderMainPage() {
 
     // Header
     html += `<div class="page-header">
-        <h1>go4<span>launch</span></h1>
+        <h1><span class="logo-go">GO</span>4LAUNCH</h1>
         <div class="subtitle">Space Coast Launch Tracker</div>
     </div>`;
 
@@ -535,6 +535,14 @@ function renderDetailContent(launch, cms, backHash) {
         html += `<div class="detail-section section-chris-says">
             <div class="detail-section-title"><span class="section-icon">🔭</span> Chris Says</div>
             <div class="chris-text">${sanitizeCmsHtml(cms.chris_says)}</div>
+        </div>`;
+    }
+
+    // --- CMS: Trajectory ---
+    if (cms?.trajectory) {
+        html += `<div class="detail-section section-trajectory">
+            <div class="detail-section-title"><span class="section-icon">🛤️</span> Trajectory</div>
+            <div class="section-text">${sanitizeCmsHtml(cms.trajectory)}</div>
         </div>`;
     }
 

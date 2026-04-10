@@ -265,6 +265,10 @@
         <textarea id="f-chris-says" placeholder="Chris's commentary about this launch…"></textarea>
         <div class="field-hint">Leave blank to omit this section from the More Info page.</div>
 
+        <label for="f-trajectory">Trajectory</label>
+        <textarea id="f-trajectory" placeholder="Launch trajectory details, direction, visibility arc…"></textarea>
+        <div class="field-hint">Trajectory information for this launch. Leave blank to omit this section.</div>
+
         <label for="f-gallery-url">Photo Gallery URL</label>
         <input type="url" id="f-gallery-url" placeholder="https://photos.example.com/launch-gallery">
         <div class="field-hint">Link to a photo gallery for this launch. Shows on the More Info and Archive pages.</div>
@@ -413,6 +417,7 @@
               document.getElementById('f-headline').value = data.headline || '';
               document.getElementById('f-viewing-guide').value = data.viewing_guide || '';
               document.getElementById('f-chris-says').value = data.chris_says || '';
+              document.getElementById('f-trajectory').value = data.trajectory || '';
               document.getElementById('f-gallery-url').value = data.gallery_url || '';
               if (data.rtl_datetime) {
                 // Convert to local datetime-local format
@@ -437,7 +442,7 @@
       }
 
       function clearForm() {
-        ['f-headline', 'f-viewing-guide', 'f-chris-says', 'f-gallery-url', 'f-rtl-datetime', 'f-rtl-notes'].forEach(id => {
+        ['f-headline', 'f-viewing-guide', 'f-chris-says', 'f-trajectory', 'f-gallery-url', 'f-rtl-datetime', 'f-rtl-notes'].forEach(id => {
           document.getElementById(id).value = '';
         });
         document.getElementById('f-image').value = '';
@@ -471,6 +476,7 @@
               headline: document.getElementById('f-headline').value.trim(),
               viewing_guide: document.getElementById('f-viewing-guide').value.trim(),
               chris_says: document.getElementById('f-chris-says').value.trim(),
+              trajectory: document.getElementById('f-trajectory').value.trim(),
               gallery_url: document.getElementById('f-gallery-url').value.trim(),
               rtl_datetime: document.getElementById('f-rtl-datetime').value || null,
               rtl_notes: document.getElementById('f-rtl-notes').value.trim(),
