@@ -133,34 +133,72 @@ function getLocation(launch) {
 }
 
 // ============================================================
-// LL2 API FETCHING
+// LAUNCH FETCHING (via backend proxy, with LL2 direct fallback)
 // ============================================================
-async function fetchLL2Launches() {
+
+// Primary: fetch from go4launch-backend proxy (avoids CORS / rate-limit issues)
+async function fetchLaunchesFromProxy() {
+    if (!CONFIG.BACKEND) throw new Error('No backend configured');
+    const resp = await fetch(`${CONFIG.BACKEND}/api/launches`);
+    if (!resp.ok) throw new Error(`Proxy returned ${resp.status}`);
+    const data = await resp.json();
+    if (!Array.isArray(data)) throw new Error('Unexpected proxy response');
+    return data;
+}
+
+// Fallback: fetch directly from LL2 API (browser-side)
+async function fetchLL2Direct() {
     const locIds = CONFIG.LOCATION_IDS.join(',');
     const cutoff = new Date(Date.now() + CONFIG.MAX_DAYS * 86400000).toISOString();
 
-    // Fetch upcoming and recent previous in parallel
-    const headers = { Authorization: `Token ${CONFIG.LL2_KEY}` };
-    const [upResp, prevResp] = await Promise.all([
+    // Try with auth header first, fall back to unauthenticated
+    let headers = {};
+    if (CONFIG.LL2_KEY) headers = { Authorization: `Token ${CONFIG.LL2_KEY}` };
+
+    const [upResp, prevResp] = await Promise.allSettled([
         fetch(`${CONFIG.LL2_BASE}/launch/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`, { headers }),
         fetch(`${CONFIG.LL2_BASE}/launch/previous/?location__ids=${locIds}&limit=5&mode=detailed`, { headers }),
     ]);
 
-    const upData = upResp.ok ? await upResp.json() : { results: [] };
-    const prevData = prevResp.ok ? await prevResp.json() : { results: [] };
+    let upResults = [];
+    let prevResults = [];
 
-    // Combine and deduplicate
-    const combined = [...(upData.results || []), ...(prevData.results || [])];
+    if (upResp.status === 'fulfilled' && upResp.value.ok) {
+        const d = await upResp.value.json();
+        upResults = d.results || [];
+    } else {
+        console.warn('LL2 upcoming failed:', upResp.status === 'rejected' ? upResp.reason : `HTTP ${upResp.value?.status}`);
+    }
+
+    if (prevResp.status === 'fulfilled' && prevResp.value.ok) {
+        const d = await prevResp.value.json();
+        prevResults = d.results || [];
+    } else {
+        console.warn('LL2 previous failed:', prevResp.status === 'rejected' ? prevResp.reason : `HTTP ${prevResp.value?.status}`);
+    }
+
+    const combined = [...upResults, ...prevResults];
     const seen = new Set();
     const unique = combined.filter(l => {
         if (seen.has(l.id)) return false;
         seen.add(l.id);
         return true;
     });
-
-    // Sort by NET ascending
     unique.sort((a, b) => new Date(a.net) - new Date(b.net));
     return unique;
+}
+
+// Combined fetch: proxy first, then LL2 direct fallback
+async function fetchLaunches() {
+    // Try backend proxy first (server-to-server, no CORS issues)
+    try {
+        return await fetchLaunchesFromProxy();
+    } catch (e) {
+        console.warn('Backend proxy failed, trying LL2 direct:', e.message);
+    }
+
+    // Fallback to direct LL2 API
+    return await fetchLL2Direct();
 }
 
 async function loadLaunches() {
@@ -181,7 +219,7 @@ async function loadLaunches() {
 }
 
 async function fetchAndCache() {
-    const data = await fetchLL2Launches();
+    const data = await fetchLaunches();
     if (data.length) {
         localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
         return data;
@@ -199,7 +237,7 @@ async function fetchAndCache() {
 
 async function refreshInBackground() {
     try {
-        const fresh = await fetchLL2Launches();
+        const fresh = await fetchLaunches();
         if (fresh.length) {
             localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
         }
