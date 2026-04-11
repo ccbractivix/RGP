@@ -12,6 +12,7 @@ const router = express.Router();
 const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
 const LL2_KEY  = process.env.LL2_API_KEY || '';
 const LOC_IDS  = [12, 27];
+const PREV_LIMIT = 50; // max previous launches to fetch from LL2
 
 // In-memory cache for LL2 launches (avoids hitting LL2 on every request)
 let launchCache = { data: null, ts: 0 };
@@ -36,6 +37,8 @@ router.get('/launches', async (_req, res) => {
     const locIds = LOC_IDS.join(',');
     const cutoff = new Date(Date.now() + 14 * 86400000).toISOString();
 
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+
     const [upRes, prevRes] = await Promise.allSettled([
       fetchLL2('/launches/upcoming/', {
         location__ids: locIds,
@@ -45,8 +48,9 @@ router.get('/launches', async (_req, res) => {
       }),
       fetchLL2('/launches/previous/', {
         location__ids: locIds,
-        limit: 5,
+        limit: PREV_LIMIT,
         mode: 'detailed',
+        net__gte: thirtyDaysAgo,
       }),
     ]);
 
@@ -249,16 +253,51 @@ router.get('/archive', async (_req, res) => {
   }
 });
 
-// GET /api/archive/recent — launches from the past 30 days
+// GET /api/archive/recent — launches from the past 30 days (KSC + CCAFS only)
 // IMPORTANT: Must be defined before /archive/:year/:month to avoid "recent" matching as a year
+
+// Cache for the proactive LL2 sync so we don't hammer LL2 on every /archive/recent call
+let recentSyncPromise = null;
+let recentSyncTs = 0;
+const RECENT_SYNC_TTL = 10 * 60 * 1000; // 10 minutes
+
+async function syncRecentLaunches() {
+  if (Date.now() - recentSyncTs < RECENT_SYNC_TTL) return;
+  // Reuse in-flight promise to avoid duplicate concurrent LL2 calls
+  if (recentSyncPromise) return recentSyncPromise;
+  recentSyncPromise = (async () => {
+    try {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+      const data = await fetchLL2('/launches/previous/', {
+        location__ids: LOC_IDS.join(','),
+        limit: PREV_LIMIT,
+        mode: 'detailed',
+        net__gte: thirtyDaysAgo,
+      });
+      const launches = data.results || [];
+      await autoArchiveCompleted(launches);
+      recentSyncTs = Date.now();
+    } catch (e) {
+      console.warn('[go4launch] recent sync error:', e.message);
+    } finally {
+      recentSyncPromise = null;
+    }
+  })();
+  return recentSyncPromise;
+}
+
 router.get('/archive/recent', async (_req, res) => {
   try {
+    // Proactively sync recent launches from LL2 to ensure completeness
+    await syncRecentLaunches();
+
     const { rows } = await db.query(`
       SELECT launch_id, launch_name, launch_date, launch_data, content_data
       FROM go4launch_archive
       WHERE launch_date >= NOW() - INTERVAL '30 days'
+        AND (launch_data->'pad'->'location'->>'id')::int = ANY($1::int[])
       ORDER BY launch_date DESC
-    `);
+    `, [LOC_IDS]);
     return res.json(rows);
   } catch (err) {
     console.error('[go4launch] GET /archive/recent error:', err.message);
