@@ -37,13 +37,13 @@ router.get('/launches', async (_req, res) => {
     const cutoff = new Date(Date.now() + 14 * 86400000).toISOString();
 
     const [upRes, prevRes] = await Promise.allSettled([
-      fetchLL2('/launch/upcoming/', {
+      fetchLL2('/launches/upcoming/', {
         location__ids: locIds,
         limit: 50,
         mode: 'detailed',
         net__lte: cutoff,
       }),
-      fetchLL2('/launch/previous/', {
+      fetchLL2('/launches/previous/', {
         location__ids: locIds,
         limit: 5,
         mode: 'detailed',
