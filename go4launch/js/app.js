@@ -4,8 +4,7 @@
 // CONFIGURATION
 // ============================================================
 const CONFIG = {
-    LL2_BASE: 'https://ll.thespacedevs.com/2.3.0',
-    LL2_KEY: '506485404eb785c1b7e1c3dac3ba394ba8fb6834',
+    LL2_BASE: 'https://lldev.thespacedevs.com/2.3.0',
     BACKEND: (() => {
         const meta = document.querySelector('meta[name="api-base"]');
         return (meta && meta.getAttribute('content')) || '';
@@ -136,18 +135,14 @@ async function fetchLaunchesFromProxy() {
     return data;
 }
 
-// Fallback: fetch directly from LL2 API (browser-side)
+// Fallback: fetch directly from LL2 dev API (browser-side, CORS-friendly)
 async function fetchLL2Direct() {
     const locIds = CONFIG.LOCATION_IDS.join(',');
     const cutoff = new Date(Date.now() + CONFIG.MAX_DAYS * 86400000).toISOString();
 
-    // Try with auth header first, fall back to unauthenticated
-    let headers = {};
-    if (CONFIG.LL2_KEY) headers = { Authorization: `Token ${CONFIG.LL2_KEY}` };
-
     const [upResp, prevResp] = await Promise.allSettled([
-        fetch(`${CONFIG.LL2_BASE}/launches/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`, { headers }),
-        fetch(`${CONFIG.LL2_BASE}/launches/previous/?location__ids=${locIds}&limit=5&mode=detailed`, { headers }),
+        fetch(`${CONFIG.LL2_BASE}/launches/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`),
+        fetch(`${CONFIG.LL2_BASE}/launches/previous/?location__ids=${locIds}&limit=5&mode=detailed`),
     ]);
 
     let upResults = [];
@@ -182,12 +177,14 @@ async function fetchLL2Direct() {
 async function fetchLaunches() {
     // Try backend proxy first (server-to-server, no CORS issues)
     try {
-        return await fetchLaunchesFromProxy();
+        const data = await fetchLaunchesFromProxy();
+        if (data && data.length) return data;
+        console.warn('Backend proxy returned empty data, trying LL2 direct');
     } catch (e) {
         console.warn('Backend proxy failed, trying LL2 direct:', e.message);
     }
 
-    // Fallback to direct LL2 API
+    // Fallback to direct LL2 dev API (CORS-friendly)
     return await fetchLL2Direct();
 }
 
@@ -230,6 +227,9 @@ async function refreshInBackground() {
         const fresh = await fetchLaunches();
         if (fresh.length) {
             localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
+            // Update the live page with fresh data
+            allLaunches = fresh;
+            handleRoute();
         }
     } catch (e) {
         console.warn('Background refresh failed:', e);
