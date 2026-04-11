@@ -296,6 +296,8 @@ router.get('/archive/recent', async (_req, res) => {
       FROM go4launch_archive
       WHERE launch_date >= NOW() - INTERVAL '30 days'
         AND (launch_data->'pad'->'location'->>'id')::int = ANY($1::int[])
+        AND content_data->>'gallery_url' IS NOT NULL
+        AND content_data->>'gallery_url' <> ''
       ORDER BY launch_date DESC
     `, [LOC_IDS]);
     return res.json(rows);
