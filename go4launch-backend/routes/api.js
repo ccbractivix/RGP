@@ -73,6 +73,11 @@ router.get('/launches', async (_req, res) => {
     // Cache result (even if empty — avoids hammering LL2 when there are genuinely no launches)
     launchCache = { data: unique, ts: Date.now() };
 
+    // Auto-archive completed launches (fire-and-forget, never blocks response)
+    autoArchiveCompleted(unique).catch(e =>
+      console.warn('[go4launch] auto-archive error:', e.message)
+    );
+
     return res.json(unique);
   } catch (err) {
     console.error('[go4launch] /api/launches error:', err.message);
@@ -84,6 +89,39 @@ router.get('/launches', async (_req, res) => {
     return res.status(502).json({ error: 'Failed to fetch launches from LL2 API' });
   }
 });
+
+// ============================================================
+// AUTO-ARCHIVE COMPLETED LAUNCHES
+// ============================================================
+const COMPLETED_STATUS_IDS = [3, 4, 7]; // Success, Failure, Partial Failure
+
+async function autoArchiveCompleted(launches) {
+  for (const launch of launches) {
+    if (!COMPLETED_STATUS_IDS.includes(launch.status?.id)) continue;
+
+    // Check if already archived
+    const { rows } = await db.query(
+      'SELECT 1 FROM go4launch_archive WHERE launch_id = $1',
+      [launch.id]
+    );
+    if (rows.length) continue;
+
+    // Fetch CMS content for this launch (if any)
+    const cmsRes = await db.query(
+      'SELECT * FROM go4launch_content WHERE launch_id = $1',
+      [launch.id]
+    );
+    const cms = cmsRes.rows[0] || null;
+
+    await db.query(
+      `INSERT INTO go4launch_archive (launch_id, launch_name, launch_date, launch_data, content_data)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (launch_id) DO NOTHING`,
+      [launch.id, launch.name || 'Unknown', launch.net || new Date().toISOString(), launch, cms]
+    );
+    console.log(`[go4launch] Auto-archived: ${launch.name}`);
+  }
+}
 
 // ============================================================
 // AUTO-CREATE TABLES
@@ -208,6 +246,23 @@ router.get('/archive', async (_req, res) => {
   } catch (err) {
     console.error('[go4launch] GET /archive error:', err.message);
     return res.status(500).json({ error: 'Failed to load archive index' });
+  }
+});
+
+// GET /api/archive/recent — launches from the past 30 days
+// IMPORTANT: Must be defined before /archive/:year/:month to avoid "recent" matching as a year
+router.get('/archive/recent', async (_req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT launch_id, launch_name, launch_date, launch_data, content_data
+      FROM go4launch_archive
+      WHERE launch_date >= NOW() - INTERVAL '30 days'
+      ORDER BY launch_date DESC
+    `);
+    return res.json(rows);
+  } catch (err) {
+    console.error('[go4launch] GET /archive/recent error:', err.message);
+    return res.status(500).json({ error: 'Failed to load recent launches' });
   }
 });
 

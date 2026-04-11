@@ -290,7 +290,12 @@ function handleRoute() {
         countdownTimer = null;
     }
 
-    if (hash.startsWith('#/launch/')) {
+    if (hash.startsWith('#/recent/')) {
+        const id = decodeURIComponent(hash.slice(9));
+        renderRecentDetailPage(id);
+    } else if (hash === '#/recent') {
+        renderRecentPage();
+    } else if (hash.startsWith('#/launch/')) {
         const id = decodeURIComponent(hash.slice(9));
         renderDetailPage(id);
     } else {
@@ -324,6 +329,7 @@ function renderMainPage() {
     // Footer
     html += `<div class="page-footer">
         <a href="https://sites.google.com/view/holidayinnclubcape/home" class="footer-link" target="_blank">🏠 Resort Home</a>
+        <a href="#/recent" class="footer-link">🕐 Recent Launches</a>
         <div class="footer-copy">Data from Launch Library 2 &bull; Not affiliated with any launch provider</div>
     </div>`;
 
@@ -555,6 +561,169 @@ function renderDetailContent(launch, cms, backHash) {
     app.innerHTML = html;
     startCountdowns();
     window.scrollTo(0, 0);
+}
+
+// ============================================================
+// RECENT LAUNCHES PAGE
+// ============================================================
+async function renderRecentPage() {
+    const app = document.getElementById('app');
+
+    let html = '';
+
+    // Header
+    html += `<div class="page-header">
+        <h1><span class="logo-go">GO</span>4LAUNCH</h1>
+        <div class="subtitle">Recent Launches — Past 30 Days</div>
+    </div>`;
+
+    // Back link
+    html += '<a href="#/" class="detail-back">← Back to Upcoming</a>';
+
+    // Show loading state
+    app.innerHTML = html + '<div class="no-launches">Loading recent launches…</div>';
+
+    try {
+        const res = await fetch(`${CONFIG.BACKEND}/api/archive/recent`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const launches = await res.json();
+
+        if (!launches.length) {
+            html += '<div class="no-launches">No launches in the past 30 days. Check back after the next launch!</div>';
+        } else {
+            launches.forEach(entry => {
+                html += buildRecentCard(entry);
+            });
+        }
+    } catch (e) {
+        console.error('Recent launches load failed:', e);
+        html += '<div class="no-launches">Unable to load recent launches. Please try again later.</div>';
+    }
+
+    // Footer
+    html += `<div class="page-footer">
+        <a href="https://sites.google.com/view/holidayinnclubcape/home" class="footer-link" target="_blank">🏠 Resort Home</a>
+        <a href="#/" class="footer-link">🚀 Upcoming Launches</a>
+        <div class="footer-copy">Data from Launch Library 2 &bull; Not affiliated with any launch provider</div>
+    </div>`;
+
+    app.innerHTML = html;
+    window.scrollTo(0, 0);
+}
+
+function buildRecentCard(entry) {
+    const launch = entry.launch_data || {};
+    const cms = entry.content_data || {};
+    const provider = launch.launch_service_provider?.name || '';
+    const location = launch.pad?.location?.name || launch.pad?.name || '';
+
+    // Image: CMS card_image_path takes precedence, then LL2 image
+    let imgUrl = null;
+    if (cms.card_image_path) {
+        imgUrl = 'images/launches/' + cms.card_image_path;
+    } else {
+        imgUrl = launch.image?.image_url
+            || launch.image?.thumbnail_url
+            || launch.rocket?.configuration?.image_url
+            || null;
+    }
+
+    const statusCls = statusClass(launch.status);
+    const statusLbl = statusLabel(launch.status);
+    const launchId = entry.launch_id;
+
+    let html = `<div class="launch-card recent-card" data-launch-id="${esc(launchId)}">`;
+
+    // CMS Headline Banner
+    if (cms.headline) {
+        html += `<div style="background:linear-gradient(135deg,#e53935,#c62828);color:#fff;font-weight:700;font-size:0.85rem;text-align:center;padding:0.4rem 1rem;">${esc(cms.headline)}</div>`;
+    }
+
+    html += '<div class="card-body">';
+
+    // Compact layout: thumbnail + info side by side
+    html += '<div class="recent-card-row">';
+    if (imgUrl) {
+        html += `<div class="recent-card-thumb"><img src="${esc(imgUrl)}" alt="${esc(entry.launch_name)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
+    }
+    html += '<div class="recent-card-info">';
+
+    // Mission name
+    html += `<div class="mission-name" style="font-size:1.05rem;">${esc(entry.launch_name || 'Unknown Mission')}</div>`;
+
+    // Status badge
+    html += `<div><span class="status-badge ${statusCls}" style="font-size:0.7rem;padding:0.2rem 0.7rem;">${esc(statusLbl)}</span></div>`;
+
+    // Provider & Location
+    if (provider) html += `<div class="card-meta" style="font-size:0.8rem;">${esc(provider)}</div>`;
+    if (location) html += `<div class="card-meta" style="font-size:0.8rem;">${esc(location)}</div>`;
+
+    // Date
+    if (entry.launch_date) {
+        html += `<div class="card-date" style="font-size:0.85rem;margin:0.3rem 0 0;">${esc(formatDateET(entry.launch_date))}</div>`;
+    }
+
+    html += '</div>'; // recent-card-info
+    html += '</div>'; // recent-card-row
+
+    // Actions row
+    html += '<div class="card-actions" style="margin-top:0.75rem;">';
+    html += `<a href="#/recent/${encodeURIComponent(launchId)}" class="card-action more-info"><span class="action-icon">ℹ</span> MORE INFO</a>`;
+    html += `<button class="card-action" onclick="shareLaunch('${esc(launchId)}','${esc(entry.launch_name)}')"><span class="action-icon">↗</span> SHARE</button>`;
+    html += '</div>';
+
+    // "I Saw This" button
+    html += `<button class="saw-it-btn" onclick="openSawIt('${esc(launchId)}')">🎉 I Saw This Launch!</button>`;
+
+    html += '</div>'; // card-body
+    html += '</div>'; // launch-card
+
+    return html;
+}
+
+// ============================================================
+// RECENT LAUNCH DETAIL PAGE
+// ============================================================
+async function renderRecentDetailPage(launchId) {
+    const app = document.getElementById('app');
+
+    // Show loading state
+    app.innerHTML = `<div class="detail-page">
+        <a href="#/recent" class="detail-back">← Back to Recent</a>
+        <div class="no-launches">Loading launch details…</div>
+    </div>`;
+
+    try {
+        const res = await fetch(`${CONFIG.BACKEND}/api/archive/launch/${encodeURIComponent(launchId)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const entry = await res.json();
+
+        const launch = entry.launch_data || {};
+        const cms = entry.content_data || {};
+
+        // Ensure launch has the id field set
+        if (!launch.id) launch.id = launchId;
+
+        // Temporarily set cmsContent for this launch so getImageUrl() works
+        // within renderDetailContent (it reads cmsContent[launch.id] for card_image_path)
+        const prevCms = cmsContent[launch.id];
+        cmsContent[launch.id] = cms;
+
+        renderDetailContent(launch, cms, '#/recent');
+
+        // Restore previous value (avoid leaking archived CMS into the active lookup)
+        if (prevCms !== undefined) {
+            cmsContent[launch.id] = prevCms;
+        } else {
+            delete cmsContent[launch.id];
+        }
+    } catch (e) {
+        console.error('Recent detail load failed:', e);
+        app.innerHTML = `<div class="detail-page">
+            <a href="#/recent" class="detail-back">← Back to Recent</a>
+            <div class="no-launches">Launch not found or unable to load.</div>
+        </div>`;
+    }
 }
 
 function sanitizeCmsHtml(text) {
