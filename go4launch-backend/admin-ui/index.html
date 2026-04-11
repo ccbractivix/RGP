@@ -312,9 +312,9 @@
           <input type="url" id="f-gallery-url" placeholder="https://photos.example.com/launch-gallery">
           <div class="field-hint">Link to a photo gallery for this launch. Shows on the More Info and Archive pages.</div>
 
-          <label for="f-rtl-datetime">Rocket Talk LIVE! Date &amp; Time</label>
+          <label for="f-rtl-datetime">Rocket Talk LIVE! Date &amp; Time (Eastern Time)</label>
           <input type="datetime-local" id="f-rtl-datetime">
-          <div class="field-hint">Leave blank if no Rocket Talk LIVE! is scheduled for this launch.</div>
+          <div class="field-hint">Enter the date/time in Eastern Time. Leave blank if no Rocket Talk LIVE! is scheduled.</div>
 
           <label for="f-rtl-notes">Rocket Talk LIVE! Notes</label>
           <textarea id="f-rtl-notes" rows="3" placeholder="Join Chris the Rocket Guy in the Movie Theater…"></textarea>
@@ -332,8 +332,8 @@
           <p style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;">
             Upload a custom image for this launch card. If no image is uploaded, the LL2 API image will be used.
           </p>
-          <label for="f-image">Select Image (JPG or PNG)</label>
-          <input type="file" id="f-image" accept="image/jpeg,image/png">
+          <label for="f-image">Select Image (JPG, PNG, or WebP)</label>
+          <input type="file" id="f-image" accept="image/jpeg,image/png,image/webp,image/*">
           <div id="image-preview" class="image-preview" style="display:none;"><img id="preview-img" alt="Preview"></div>
           <div class="btn-row">
             <button class="btn btn-green" id="btn-upload" disabled>📤 Upload Image</button>
@@ -366,6 +366,33 @@
       let allLaunches = [];
       let imageBase64 = '';
       let imageExt = '';
+
+      // ── Eastern timezone helpers ──
+      function getEasternOffset(date) {
+        // Returns Eastern timezone offset string (e.g., "-04:00" for EDT, "-05:00" for EST)
+        const utcStr = date.toLocaleString('en-US', { timeZone: 'UTC' });
+        const etStr = date.toLocaleString('en-US', { timeZone: 'America/New_York' });
+        const diffMs = new Date(utcStr) - new Date(etStr);
+        const diffMins = diffMs / 60000;
+        const hrs = Math.floor(Math.abs(diffMins) / 60);
+        const mins = Math.abs(diffMins) % 60;
+        return (diffMins >= 0 ? '-' : '+') + String(hrs).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+      }
+
+      function toEasternISO(dtLocalValue) {
+        // Converts a datetime-local value (intended as Eastern) to ISO with Eastern offset
+        if (!dtLocalValue) return null;
+        const d = new Date(dtLocalValue);
+        const offset = getEasternOffset(d);
+        return dtLocalValue + offset;
+      }
+
+      function utcToEasternLocal(isoStr) {
+        // Converts a UTC/TIMESTAMPTZ value to a datetime-local string in Eastern time
+        if (!isoStr) return '';
+        const dt = new Date(isoStr);
+        return dt.toLocaleString('sv-SE', { timeZone: 'America/New_York' }).replace(' ', 'T').slice(0, 16);
+      }
 
       // ── Auth-code helper for admin API calls ──
       function adminFetch(url, opts = {}) {
@@ -538,9 +565,7 @@
               document.getElementById('f-trajectory').value = data.trajectory || '';
               document.getElementById('f-gallery-url').value = data.gallery_url || '';
               if (data.rtl_datetime) {
-                const dt = new Date(data.rtl_datetime);
-                const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                document.getElementById('f-rtl-datetime').value = local;
+                document.getElementById('f-rtl-datetime').value = utcToEasternLocal(data.rtl_datetime);
               }
               document.getElementById('f-rtl-notes').value = data.rtl_notes || '';
 
@@ -592,7 +617,7 @@
               chris_says: document.getElementById('f-chris-says').value.trim(),
               trajectory: document.getElementById('f-trajectory').value.trim(),
               gallery_url: document.getElementById('f-gallery-url').value.trim(),
-              rtl_datetime: document.getElementById('f-rtl-datetime').value || null,
+              rtl_datetime: toEasternISO(document.getElementById('f-rtl-datetime').value),
               rtl_notes: document.getElementById('f-rtl-notes').value.trim(),
             }),
           });
@@ -619,14 +644,22 @@
         const file = e.target.files[0];
         if (!file) return;
 
+        // Validate by MIME type (more reliable than extension)
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
         const ext = file.name.split('.').pop().toLowerCase();
-        if (!['jpg', 'jpeg', 'png'].includes(ext)) {
-          document.getElementById('upload-status').textContent = 'Only JPG and PNG files are allowed.';
+        const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+
+        if (!allowedTypes.includes(file.type) && !allowedExts.includes(ext)) {
+          document.getElementById('upload-status').textContent = 'Only JPG, PNG, and WebP images are allowed.';
           document.getElementById('upload-status').className = 'status-msg error';
           return;
         }
 
-        imageExt = ext === 'jpeg' ? 'jpg' : ext;
+        // Determine extension from MIME type (preferred) or filename
+        if (file.type === 'image/jpeg') imageExt = 'jpg';
+        else if (file.type === 'image/png') imageExt = 'png';
+        else if (file.type === 'image/webp') imageExt = 'webp';
+        else imageExt = ext === 'jpeg' ? 'jpg' : ext;
 
         const maxFileSizeMb = 8;
         if (file.size > maxFileSizeMb * 1024 * 1024) {

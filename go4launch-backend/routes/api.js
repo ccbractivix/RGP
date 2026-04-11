@@ -323,7 +323,7 @@ async function sendGalleryEmail(email, launchName, archiveUrl, galleryUrl) {
       <p><a href="${archiveUrl}" style="display:inline-block;padding:12px 24px;background:#7c4dff;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">View Launch Archive</a></p>
       ${gallerySection}
       <hr style="border:none;border-top:1px solid #1e1e3a;margin:24px 0;">
-      <p style="font-size:12px;color:#555570;">go4launch — Space Coast Launch Tracker</p>
+      <p style="font-size:12px;color:#555570;">go4launch — Resort Rocket Launch Viewing Companion</p>
     </div>
   `;
 

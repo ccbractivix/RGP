@@ -15,7 +15,6 @@ const CONFIG = {
     CACHE_TTL: 6 * 60 * 60 * 1000,
     MAX_LAUNCHES: 15,
     MAX_DAYS: 14,
-    ARCHIVE_HOURS: 36,
 };
 
 // ============================================================
@@ -77,15 +76,6 @@ function formatDateET(dateStr) {
         hour: '2-digit',
         minute: '2-digit',
         timeZoneName: 'short',
-    });
-}
-
-function formatDateShort(dateStr) {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-        timeZone: 'America/New_York',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
     });
 }
 
@@ -264,80 +254,19 @@ async function loadCMS() {
 }
 
 // ============================================================
-// ARCHIVE HELPERS
-// ============================================================
-async function archiveLaunch(launch) {
-    if (!CONFIG.BACKEND) return;
-    try {
-        await fetch(`${CONFIG.BACKEND}/api/archive`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                launch_id: launch.id,
-                launch_name: launch.name,
-                launch_date: launch.net,
-                launch_data: launch,
-                content_data: cmsContent[launch.id] || null,
-            }),
-        });
-    } catch (e) {
-        console.warn('Archive failed:', e);
-    }
-}
-
-async function loadArchiveIndex() {
-    if (!CONFIG.BACKEND) return [];
-    try {
-        const res = await fetch(`${CONFIG.BACKEND}/api/archive`);
-        if (res.ok) return await res.json();
-    } catch (e) {
-        console.warn('Archive index load failed:', e);
-    }
-    return [];
-}
-
-async function loadArchiveMonth(year, month) {
-    if (!CONFIG.BACKEND) return [];
-    try {
-        const res = await fetch(`${CONFIG.BACKEND}/api/archive/${year}/${month}`);
-        if (res.ok) return await res.json();
-    } catch (e) {
-        console.warn('Archive month load failed:', e);
-    }
-    return [];
-}
-
-async function loadArchivedLaunch(launchId) {
-    if (!CONFIG.BACKEND) return null;
-    try {
-        const res = await fetch(`${CONFIG.BACKEND}/api/archive/launch/${encodeURIComponent(launchId)}`);
-        if (res.ok) return await res.json();
-    } catch (e) {
-        console.warn('Archived launch load failed:', e);
-    }
-    return null;
-}
-
-// ============================================================
 // FILTERING
 // ============================================================
 function filterActiveLaunches(launches) {
     const now = Date.now();
     const maxFuture = now + CONFIG.MAX_DAYS * 86400000;
-    const archiveMs = CONFIG.ARCHIVE_HOURS * 3600000;
 
     return launches.filter(launch => {
         const net = new Date(launch.net).getTime();
 
-        // Completed launches: keep for ARCHIVE_HOURS after NET
+        // Completed launches: keep for 36 hours after NET
         if (isCompleted(launch)) {
-            const cutoff = net + archiveMs;
-            if (now > cutoff) {
-                // Auto-archive
-                archiveLaunch(launch);
-                return false;
-            }
-            return true;
+            const cutoff = net + 36 * 3600000;
+            return now <= cutoff;
         }
 
         // In-flight: always show
@@ -364,14 +293,6 @@ function handleRoute() {
     if (hash.startsWith('#/launch/')) {
         const id = decodeURIComponent(hash.slice(9));
         renderDetailPage(id);
-    } else if (hash === '#/archive') {
-        renderArchiveIndex();
-    } else if (hash.match(/^#\/archive\/\d{4}\/\d{1,2}$/)) {
-        const parts = hash.split('/');
-        renderArchiveMonth(parts[2], parts[3]);
-    } else if (hash.startsWith('#/archive/launch/')) {
-        const id = decodeURIComponent(hash.slice(17));
-        renderArchivedLaunchPage(id);
     } else {
         renderMainPage();
     }
@@ -389,11 +310,11 @@ function renderMainPage() {
     // Header
     html += `<div class="page-header">
         <h1><span class="logo-go">GO</span>4LAUNCH</h1>
-        <div class="subtitle">Space Coast Launch Tracker</div>
+        <div class="subtitle">Resort Rocket Launch Viewing Companion</div>
     </div>`;
 
     if (!active.length) {
-        html += '<div class="no-launches">No upcoming launches scheduled from the Space Coast in the next 14 days. Check back soon!</div>';
+        html += '<div class="no-launches">No upcoming launches scheduled in the next 14 days. Check back soon!</div>';
     } else {
         active.forEach(launch => {
             html += buildCard(launch);
@@ -402,7 +323,6 @@ function renderMainPage() {
 
     // Footer
     html += `<div class="page-footer">
-        <a href="#/archive" class="footer-link">📁 Launch Archive</a>
         <a href="https://sites.google.com/view/holidayinnclubcape/home" class="footer-link" target="_blank">🏠 Resort Home</a>
         <div class="footer-copy">Data from Launch Library 2 &bull; Not affiliated with any launch provider</div>
     </div>`;
@@ -496,11 +416,9 @@ function renderDetailPage(launchId) {
     // Try active launches first
     let launch = allLaunches.find(l => l.id === launchId);
     if (!launch) {
-        // May be an archived launch viewed from main page
         app.innerHTML = `<div class="detail-page">
             <a href="#/" class="detail-back">← Back to Launches</a>
-            <div class="no-launches">Launch not found. It may have been archived.</div>
-            <a href="#/archive" class="detail-back">Browse Archive →</a>
+            <div class="no-launches">Launch not found.</div>
         </div>`;
         return;
     }
@@ -649,94 +567,6 @@ function sanitizeCmsHtml(text) {
     // Auto-link URLs
     safe = safe.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
     return safe;
-}
-
-// ============================================================
-// ARCHIVE PAGES
-// ============================================================
-async function renderArchiveIndex() {
-    const app = document.getElementById('app');
-    app.innerHTML = '<div class="archive-header"><h2>📁 Launch Archive</h2><div class="archive-sub">Loading…</div></div>';
-
-    const index = await loadArchiveIndex();
-
-    let html = '<div class="detail-page">';
-    html += '<a href="#/" class="detail-back">← Back to Launches</a>';
-    html += '<div class="archive-header"><h2>📁 Launch Archive</h2><div class="archive-sub">Past launches organized by month</div></div>';
-
-    if (!index.length) {
-        html += '<div class="no-launches">No archived launches yet.</div>';
-    } else {
-        html += '<div class="archive-nav">';
-        index.forEach(item => {
-            const label = new Date(item.year, item.month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-            html += `<a href="#/archive/${item.year}/${item.month}">${esc(label)} (${item.count})</a>`;
-        });
-        html += '</div>';
-    }
-
-    html += '</div>';
-    app.innerHTML = html;
-    window.scrollTo(0, 0);
-}
-
-async function renderArchiveMonth(year, month) {
-    const app = document.getElementById('app');
-    const label = new Date(year, month - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    app.innerHTML = `<div class="archive-header"><h2>${esc(label)}</h2><div class="archive-sub">Loading…</div></div>`;
-
-    const launches = await loadArchiveMonth(year, month);
-
-    let html = '<div class="detail-page">';
-    html += '<a href="#/archive" class="detail-back">← Back to Archive</a>';
-    html += `<div class="archive-header"><h2>${esc(label)}</h2><div class="archive-sub">${launches.length} launch${launches.length !== 1 ? 'es' : ''}</div></div>`;
-
-    if (!launches.length) {
-        html += '<div class="no-launches">No launches found for this month.</div>';
-    } else {
-        html += '<div class="archive-list">';
-        launches.forEach(l => {
-            const data = l.launch_data || {};
-            const imgUrl = data.image?.thumbnail_url || data.image?.image_url || '';
-            const stClass = statusClass(data.status);
-
-            html += `<a href="#/archive/launch/${encodeURIComponent(l.launch_id)}" class="archive-item">`;
-            html += `<div class="archive-item-thumb">${imgUrl ? `<img src="${esc(imgUrl)}" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}</div>`;
-            html += '<div class="archive-item-info">';
-            html += `<div class="name">${esc(l.launch_name)}</div>`;
-            html += `<div class="date">${esc(formatDateShort(l.launch_date))}</div>`;
-            if (data.status) {
-                html += `<span class="status-sm ${stClass}">${esc(statusLabel(data.status))}</span>`;
-            }
-            html += '</div></a>';
-        });
-        html += '</div>';
-    }
-
-    html += '</div>';
-    app.innerHTML = html;
-    window.scrollTo(0, 0);
-}
-
-async function renderArchivedLaunchPage(launchId) {
-    const app = document.getElementById('app');
-    app.innerHTML = '<div class="no-launches">Loading archived launch…</div>';
-
-    const archived = await loadArchivedLaunch(launchId);
-    if (!archived) {
-        app.innerHTML = '<div class="detail-page"><a href="#/archive" class="detail-back">← Back to Archive</a><div class="no-launches">Archived launch not found.</div></div>';
-        return;
-    }
-
-    const launch = archived.launch_data || {};
-    const cms = archived.content_data || {};
-
-    // Reconstruct a launch-like object for detail rendering
-    launch.id = archived.launch_id;
-    launch.name = launch.name || archived.launch_name;
-    launch.net = launch.net || archived.launch_date;
-
-    renderDetailContent(launch, cms, '#/archive');
 }
 
 // ============================================================
