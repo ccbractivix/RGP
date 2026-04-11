@@ -36,6 +36,8 @@ router.get('/launches', async (_req, res) => {
     const locIds = LOC_IDS.join(',');
     const cutoff = new Date(Date.now() + 14 * 86400000).toISOString();
 
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+
     const [upRes, prevRes] = await Promise.allSettled([
       fetchLL2('/launches/upcoming/', {
         location__ids: locIds,
@@ -45,8 +47,9 @@ router.get('/launches', async (_req, res) => {
       }),
       fetchLL2('/launches/previous/', {
         location__ids: locIds,
-        limit: 5,
+        limit: 50,
         mode: 'detailed',
+        net__gte: thirtyDaysAgo,
       }),
     ]);
 
@@ -249,16 +252,43 @@ router.get('/archive', async (_req, res) => {
   }
 });
 
-// GET /api/archive/recent — launches from the past 30 days
+// GET /api/archive/recent — launches from the past 30 days (KSC + CCAFS only)
 // IMPORTANT: Must be defined before /archive/:year/:month to avoid "recent" matching as a year
+
+// Cache for the proactive LL2 sync so we don't hammer LL2 on every /archive/recent call
+let recentSyncCache = { ts: 0 };
+const RECENT_SYNC_TTL = 10 * 60 * 1000; // 10 minutes
+
+async function syncRecentLaunches() {
+  if (Date.now() - recentSyncCache.ts < RECENT_SYNC_TTL) return;
+  recentSyncCache.ts = Date.now();
+  try {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+    const data = await fetchLL2('/launches/previous/', {
+      location__ids: LOC_IDS.join(','),
+      limit: 50,
+      mode: 'detailed',
+      net__gte: thirtyDaysAgo,
+    });
+    const launches = data.results || [];
+    await autoArchiveCompleted(launches);
+  } catch (e) {
+    console.warn('[go4launch] recent sync error:', e.message);
+  }
+}
+
 router.get('/archive/recent', async (_req, res) => {
   try {
+    // Proactively sync recent launches from LL2 to ensure completeness
+    await syncRecentLaunches();
+
     const { rows } = await db.query(`
       SELECT launch_id, launch_name, launch_date, launch_data, content_data
       FROM go4launch_archive
       WHERE launch_date >= NOW() - INTERVAL '30 days'
+        AND (launch_data->'pad'->'location'->>'id')::int = ANY($1::int[])
       ORDER BY launch_date DESC
-    `);
+    `, [LOC_IDS]);
     return res.json(rows);
   } catch (err) {
     console.error('[go4launch] GET /archive/recent error:', err.message);
