@@ -421,25 +421,50 @@
         await populateDropdown();
       }
 
-      // ── Fetch Upcoming & Recent Launches from LL2 ──
+      // ── Fetch Upcoming & Recent Launches ──
+      // Primary: use backend proxy (same origin, no CORS issues)
+      // Fallback: direct LL2 API calls
       async function fetchUpcoming() {
+        // Try backend proxy first (same-origin)
+        try {
+          const proxyResp = await fetch('/api/launches');
+          if (proxyResp.ok) {
+            const data = await proxyResp.json();
+            if (Array.isArray(data)) {
+              allLaunches = data;
+              allLaunches.sort((a, b) => new Date(a.net || a.window_start || '2099') - new Date(b.net || b.window_start || '2099'));
+              if (allLaunches.length) {
+                sessionStorage.setItem('go4launch_admin_launches', JSON.stringify(allLaunches));
+              }
+              return allLaunches;
+            }
+          }
+        } catch (e) {
+          console.warn('Backend proxy failed, trying LL2 direct:', e.message);
+        }
+
+        // Fallback: direct LL2 API calls
         const locIds = LOC_IDS.join(',');
         const cutoff = new Date(Date.now() + WINDOW * 86400000).toISOString();
         const launches = [];
 
-        const headers = { Authorization: `Token ${LL2_KEY}` };
-        const [upResp, prevResp] = await Promise.all([
+        const headers = LL2_KEY ? { Authorization: `Token ${LL2_KEY}` } : {};
+        const [upResp, prevResp] = await Promise.allSettled([
           fetch(`${LL2_BASE}/launch/upcoming/?location__ids=${locIds}&limit=50&mode=detailed&net__lte=${cutoff}`, { headers }),
           fetch(`${LL2_BASE}/launch/previous/?location__ids=${locIds}&limit=5&mode=detailed`, { headers }),
         ]);
 
-        if (upResp.ok) {
-          const d = await upResp.json();
+        if (upResp.status === 'fulfilled' && upResp.value.ok) {
+          const d = await upResp.value.json();
           if (d.results) launches.push(...d.results);
+        } else {
+          console.warn('LL2 upcoming failed:', upResp.status === 'rejected' ? upResp.reason : `HTTP ${upResp.value?.status}`);
         }
-        if (prevResp.ok) {
-          const d = await prevResp.json();
+        if (prevResp.status === 'fulfilled' && prevResp.value.ok) {
+          const d = await prevResp.value.json();
           if (d.results) launches.push(...d.results);
+        } else {
+          console.warn('LL2 previous failed:', prevResp.status === 'rejected' ? prevResp.reason : `HTTP ${prevResp.value?.status}`);
         }
 
         const seen = new Set();

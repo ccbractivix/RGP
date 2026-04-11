@@ -1,9 +1,89 @@
 'use strict';
 
 const express = require('express');
+const axios   = require('axios');
 const db      = require('../db/db');
 
 const router = express.Router();
+
+// ============================================================
+// LL2 API PROXY — avoids browser CORS / rate-limit issues
+// ============================================================
+const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
+const LL2_KEY  = process.env.LL2_API_KEY || '';
+const LOC_IDS  = [12, 27];
+
+// In-memory cache for LL2 launches (avoids hitting LL2 on every request)
+let launchCache = { data: null, ts: 0 };
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function fetchLL2(endpoint, params) {
+  const headers = {};
+  if (LL2_KEY) headers.Authorization = `Token ${LL2_KEY}`;
+  const url = `${LL2_BASE}${endpoint}`;
+  const res = await axios.get(url, { params, headers, timeout: 15000 });
+  return res.data;
+}
+
+// GET /api/launches — proxied upcoming + recent launches
+router.get('/launches', async (_req, res) => {
+  try {
+    // Return cached data if fresh
+    if (launchCache.data && Date.now() - launchCache.ts < CACHE_TTL) {
+      return res.json(launchCache.data);
+    }
+
+    const locIds = LOC_IDS.join(',');
+    const cutoff = new Date(Date.now() + 14 * 86400000).toISOString();
+
+    const [upRes, prevRes] = await Promise.allSettled([
+      fetchLL2('/launch/upcoming/', {
+        location__ids: locIds,
+        limit: 50,
+        mode: 'detailed',
+        net__lte: cutoff,
+      }),
+      fetchLL2('/launch/previous/', {
+        location__ids: locIds,
+        limit: 5,
+        mode: 'detailed',
+      }),
+    ]);
+
+    const upResults = upRes.status === 'fulfilled' ? (upRes.value.results || []) : [];
+    const prevResults = prevRes.status === 'fulfilled' ? (prevRes.value.results || []) : [];
+
+    if (upRes.status === 'rejected') {
+      console.warn('[go4launch] LL2 upcoming fetch failed:', upRes.reason?.message);
+    }
+    if (prevRes.status === 'rejected') {
+      console.warn('[go4launch] LL2 previous fetch failed:', prevRes.reason?.message);
+    }
+
+    // Combine, deduplicate, sort
+    const combined = [...upResults, ...prevResults];
+    const seen = new Set();
+    const unique = combined.filter(l => {
+      if (seen.has(l.id)) return false;
+      seen.add(l.id);
+      return true;
+    });
+    unique.sort((a, b) => new Date(a.net) - new Date(b.net));
+
+    // Cache result (even if empty — avoids hammering LL2 when there are genuinely no launches)
+    launchCache = { data: unique, ts: Date.now() };
+
+    return res.json(unique);
+  } catch (err) {
+    console.error('[go4launch] /api/launches error:', err.message);
+
+    // Return stale cache if available
+    if (launchCache.data) {
+      return res.json(launchCache.data);
+    }
+    return res.status(502).json({ error: 'Failed to fetch launches from LL2 API' });
+  }
+});
 
 // ============================================================
 // AUTO-CREATE TABLES
@@ -198,7 +278,6 @@ router.post('/saw-it', async (req, res) => {
 // ============================================================
 // EMAIL HELPERS
 // ============================================================
-const axios = require('axios');
 
 async function trySendSawItEmail(launchId, email) {
   if (!process.env.SENDGRID_API_KEY) return;
