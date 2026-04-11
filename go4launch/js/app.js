@@ -666,14 +666,10 @@ function buildRecentCard(entry) {
     html += '</div>'; // recent-card-info
     html += '</div>'; // recent-card-row
 
-    // Actions row
-    html += '<div class="card-actions" style="margin-top:0.75rem;">';
-    html += `<a href="#/recent/${encodeURIComponent(launchId)}" class="card-action more-info"><span class="action-icon">ℹ</span> MORE INFO</a>`;
-    html += `<button class="card-action" onclick="shareLaunch('${esc(launchId)}','${esc(entry.launch_name)}')"><span class="action-icon">↗</span> SHARE</button>`;
-    html += '</div>';
-
-    // "I Saw This" button
-    html += `<button class="saw-it-btn" onclick="openSawIt('${esc(launchId)}')">🎉 I Saw This Launch!</button>`;
+    // Gallery link (archive only shows launches with a gallery)
+    if (cms?.gallery_url) {
+        html += `<a href="${esc(cms.gallery_url)}" target="_blank" rel="noopener noreferrer" class="gallery-link" style="margin-top:0.75rem;">📸 View Photo Gallery</a>`;
+    }
 
     html += '</div>'; // card-body
     html += '</div>'; // launch-card
