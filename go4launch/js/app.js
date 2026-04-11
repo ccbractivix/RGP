@@ -178,7 +178,7 @@ async function fetchLaunches() {
     // Try backend proxy first (server-to-server, no CORS issues)
     try {
         const data = await fetchLaunchesFromProxy();
-        if (data.length) return data;
+        if (data && data.length) return data;
         console.warn('Backend proxy returned empty data, trying LL2 direct');
     } catch (e) {
         console.warn('Backend proxy failed, trying LL2 direct:', e.message);
