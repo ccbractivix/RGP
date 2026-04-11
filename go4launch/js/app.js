@@ -701,15 +701,22 @@ async function renderRecentDetailPage(launchId) {
         const launch = entry.launch_data || {};
         const cms = entry.content_data || {};
 
-        // Inject CMS card_image_path into the cmsContent lookup so getImageUrl works
-        if (cms.card_image_path) {
-            cmsContent[launch.id || launchId] = cms;
-        }
-
         // Ensure launch has the id field set
         if (!launch.id) launch.id = launchId;
 
+        // Temporarily set cmsContent for this launch so getImageUrl() works
+        // within renderDetailContent (it reads cmsContent[launch.id] for card_image_path)
+        const prevCms = cmsContent[launch.id];
+        cmsContent[launch.id] = cms;
+
         renderDetailContent(launch, cms, '#/recent');
+
+        // Restore previous value (avoid leaking archived CMS into the active lookup)
+        if (prevCms !== undefined) {
+            cmsContent[launch.id] = prevCms;
+        } else {
+            delete cmsContent[launch.id];
+        }
     } catch (e) {
         console.error('Recent detail load failed:', e);
         app.innerHTML = `<div class="detail-page">
