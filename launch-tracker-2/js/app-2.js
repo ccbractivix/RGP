@@ -2,13 +2,14 @@
 // Florida Space Launch Tracker – app.js (Phase 2)
 // ─────────────────────────────────────────────
 
-// ── API & Sheet Configuration ──────────────
-const LL2_API_KEY  = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
-const LL2_BASE     = 'https://ll.thespacedevs.com/2.3.0';
+// ⚠️ DEPRECATED – this tracker is no longer active. API calls disabled.
+console.warn('⚠️ launch-tracker-2 is deprecated. API calls disabled.');
+const LL2_API_KEY  = '';
+const LL2_BASE     = '';
 const LOCATION_IDS = [12, 27];
-const SHEET_ID     = '1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU';
+const SHEET_ID     = '';
 const SHEET_GID    = '0';
-const SHEET_URL    = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${SHEET_GID}`;
+const SHEET_URL    = '';
 
 // ── Timing Constants ───────────────────────
 const REFRESH_INTERVAL   = 300000;   // 5 min full refresh

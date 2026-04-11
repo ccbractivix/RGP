@@ -5,16 +5,17 @@
 (function () {
     'use strict';
 
-    // ---- Configuration ----
+    // ⚠️ DEPRECATED – this tracker is no longer active. API calls disabled.
+    console.warn('⚠️ launch-tracker-2 is deprecated. API calls disabled.');
     const CONFIG = {
-        API_KEY: '506485404eb785c1b7e1c3dac3ba394ba8fb6834',
-        API_BASE: 'https://ll.thespacedevs.com/2.3.0',
-        SHEET_ID: '1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU',
+        API_KEY: '',
+        API_BASE: '',
+        SHEET_ID: '',
         LOCATION_IDS: [12, 27],
         REFRESH_INTERVAL: 300000,
         COUNTDOWN_INTERVAL: 1000,
         LOOKAHEAD_DAYS: 14,
-        LAUNCH_EXPIRY_MS: 3600000, // 1 hour after NET
+        LAUNCH_EXPIRY_MS: 3600000,
     };
 
     // Hardcoded Starlink trajectory map (baseline, form overrides these)

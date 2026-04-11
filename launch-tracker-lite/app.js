@@ -1,8 +1,10 @@
 // ─────────────────────────────────────────────
 // Florida Space Launch Tracker – app.js (Lite)
+// ⚠️ DEPRECATED – this tracker is no longer active. API calls disabled.
 // ─────────────────────────────────────────────
+console.warn('⚠️ launch-tracker-lite is deprecated. API calls disabled.');
 
-const LL2_BASE     = 'https://ll.thespacedevs.com/2.3.0';
+const LL2_BASE     = '';
 const LOCATION_IDS = [12, 27];
 
 const REFRESH_INTERVAL   = 300000;

@@ -140,9 +140,10 @@ async function fetchLL2Launches() {
     const cutoff = new Date(Date.now() + CONFIG.MAX_DAYS * 86400000).toISOString();
 
     // Fetch upcoming and recent previous in parallel
+    const headers = { Authorization: `Token ${CONFIG.LL2_KEY}` };
     const [upResp, prevResp] = await Promise.all([
-        fetch(`${CONFIG.LL2_BASE}/launch/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}&api_key=${CONFIG.LL2_KEY}`),
-        fetch(`${CONFIG.LL2_BASE}/launch/previous/?location__ids=${locIds}&limit=5&mode=detailed&api_key=${CONFIG.LL2_KEY}`),
+        fetch(`${CONFIG.LL2_BASE}/launch/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`, { headers }),
+        fetch(`${CONFIG.LL2_BASE}/launch/previous/?location__ids=${locIds}&limit=5&mode=detailed`, { headers }),
     ]);
 
     const upData = upResp.ok ? await upResp.json() : { results: [] };
