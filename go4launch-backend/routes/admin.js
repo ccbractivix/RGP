@@ -88,7 +88,7 @@ router.post('/upload-image', async (req, res) => {
   const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
   const ext = image_ext.toLowerCase();
   if (!allowedExts.includes(ext)) {
-    return res.status(400).json({ error: 'Only jpg and png images are allowed' });
+    return res.status(400).json({ error: 'Only jpg, png, and webp images are allowed' });
   }
 
   const token = process.env.GITHUB_TOKEN;
