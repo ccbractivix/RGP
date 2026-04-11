@@ -241,10 +241,18 @@
     <!-- Launch Selector -->
     <div class="panel">
       <div class="panel-title">📋 Select Launch</div>
-      <label for="launch-select">Upcoming Launches</label>
+      <label for="launch-select">Upcoming & Recent Launches</label>
       <select id="launch-select">
         <option value="">— Loading launches… —</option>
       </select>
+
+      <label for="manual-launch-id">Or Enter Launch ID Manually</label>
+      <div style="display:flex;gap:0.5rem;">
+        <input type="text" id="manual-launch-id" placeholder="Paste a launch UUID…" style="flex:1;">
+        <button class="btn btn-secondary" id="btn-load-manual" style="flex:0 0 auto;">Load</button>
+      </div>
+      <div class="field-hint">Use this if the launch isn't listed above (e.g., launches beyond 14 days).</div>
+
       <div id="select-status" class="status-msg"></div>
     </div>
 
@@ -355,19 +363,27 @@
         });
       }
 
-      // --- Fetch Upcoming Launches from LL2 ---
+      // --- Fetch Upcoming & Recent Launches from LL2 ---
       async function fetchUpcoming() {
+        const locIds = LOC_IDS.join(',');
         const cutoff = new Date(Date.now() + WINDOW * 86400000).toISOString();
         const launches = [];
-        for (const locId of LOC_IDS) {
-          const url = `${LL2_BASE}/launches/upcoming/?` + new URLSearchParams({
-            location__ids: locId, net__lte: cutoff, limit: 50, mode: 'detailed', format: 'json'
-          });
-          try {
-            const r = await fetch(url, { headers: { Authorization: `Token ${LL2_KEY}` } });
-            if (r.ok) { const d = await r.json(); if (d.results) launches.push(...d.results); }
-          } catch (e) { console.warn('LL2 fetch error:', e); }
+
+        // Fetch upcoming and recent previous launches in parallel (matches frontend app.js)
+        const [upResp, prevResp] = await Promise.all([
+          fetch(`${LL2_BASE}/launches/upcoming/?location__ids=${locIds}&limit=50&mode=detailed&net__lte=${cutoff}&api_key=${LL2_KEY}`),
+          fetch(`${LL2_BASE}/launches/previous/?location__ids=${locIds}&limit=5&mode=detailed&api_key=${LL2_KEY}`),
+        ]);
+
+        if (upResp.ok) {
+          const d = await upResp.json();
+          if (d.results) launches.push(...d.results);
         }
+        if (prevResp.ok) {
+          const d = await prevResp.json();
+          if (d.results) launches.push(...d.results);
+        }
+
         // Deduplicate and sort
         const seen = new Set();
         allLaunches = launches.filter(l => { if (seen.has(l.id)) return false; seen.add(l.id); return true; });
@@ -392,12 +408,13 @@
             select.appendChild(opt);
           });
           if (!launches.length) {
-            status.textContent = 'No upcoming launches found within 14 days.';
+            status.textContent = 'No launches found within 14 days. Use the manual launch ID field below.';
             status.className = 'status-msg info';
           }
         } catch (e) {
-          select.innerHTML = '<option value="">— Error loading launches —</option>';
-          status.textContent = 'Failed to load launches from LL2 API.';
+          console.warn('LL2 fetch error:', e);
+          select.innerHTML = '<option value="">— Could not load launches —</option>';
+          status.textContent = 'LL2 API unavailable. Use the manual launch ID field below.';
           status.className = 'status-msg error';
         }
       }
@@ -652,6 +669,22 @@
       // --- Event Listeners ---
       document.getElementById('launch-select').addEventListener('change', function() {
         loadContent(this.value);
+      });
+
+      document.getElementById('btn-load-manual').addEventListener('click', function() {
+        const id = document.getElementById('manual-launch-id').value.trim();
+        if (!id) return;
+        // Clear dropdown selection and load the manual ID
+        document.getElementById('launch-select').value = '';
+        loadContent(id);
+      });
+
+      // Allow pressing Enter in the manual launch ID field
+      document.getElementById('manual-launch-id').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          document.getElementById('btn-load-manual').click();
+        }
       });
 
       document.getElementById('btn-save').addEventListener('click', saveContent);
