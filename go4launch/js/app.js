@@ -141,8 +141,8 @@ async function fetchLL2Launches() {
 
     // Fetch upcoming and recent previous in parallel
     const [upResp, prevResp] = await Promise.all([
-        fetch(`${CONFIG.LL2_BASE}/launches/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}&api_key=${CONFIG.LL2_KEY}`),
-        fetch(`${CONFIG.LL2_BASE}/launches/previous/?location__ids=${locIds}&limit=5&mode=detailed&api_key=${CONFIG.LL2_KEY}`),
+        fetch(`${CONFIG.LL2_BASE}/launch/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}&api_key=${CONFIG.LL2_KEY}`),
+        fetch(`${CONFIG.LL2_BASE}/launch/previous/?location__ids=${locIds}&limit=5&mode=detailed&api_key=${CONFIG.LL2_KEY}`),
     ]);
 
     const upData = upResp.ok ? await upResp.json() : { results: [] };

@@ -428,8 +428,8 @@
         const launches = [];
 
         const [upResp, prevResp] = await Promise.all([
-          fetch(`${LL2_BASE}/launches/upcoming/?location__ids=${locIds}&limit=50&mode=detailed&net__lte=${cutoff}&api_key=${LL2_KEY}`),
-          fetch(`${LL2_BASE}/launches/previous/?location__ids=${locIds}&limit=5&mode=detailed&api_key=${LL2_KEY}`),
+          fetch(`${LL2_BASE}/launch/upcoming/?location__ids=${locIds}&limit=50&mode=detailed&net__lte=${cutoff}&api_key=${LL2_KEY}`),
+          fetch(`${LL2_BASE}/launch/previous/?location__ids=${locIds}&limit=5&mode=detailed&api_key=${LL2_KEY}`),
         ]);
 
         if (upResp.ok) {
