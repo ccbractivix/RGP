@@ -329,7 +329,6 @@ function renderMainPage() {
     // Footer
     html += `<div class="page-footer">
         <a href="https://sites.google.com/view/holidayinnclubcape/home" class="footer-link" target="_blank">🏠 Resort Home</a>
-        <a href="#/recent" class="footer-link">🕐 Recent Launches</a>
         <div class="footer-copy">Data from Launch Library 2 &bull; Not affiliated with any launch provider</div>
     </div>`;
 
