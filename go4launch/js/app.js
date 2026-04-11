@@ -485,6 +485,7 @@ function renderDetailContent(launch, cms, backHash) {
     if (streams.length) {
         html += '<div class="detail-section">';
         html += '<div class="detail-section-title"><span class="section-icon">📡</span> Watch Live</div>';
+        html += '<div class="streams-subtitle">Additional streams become available about an hour before launch</div>';
         html += '<ul class="livestream-list">';
         streams.forEach(s => {
             html += `<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer"><span class="stream-icon">▶</span> ${esc(s.title)}</a></li>`;

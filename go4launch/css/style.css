@@ -542,6 +542,14 @@ body {
     text-decoration: underline;
 }
 
+.streams-subtitle {
+    font-size: 0.8rem;
+    font-style: italic;
+    color: rgba(255,255,255,0.45);
+    margin-top: -0.4rem;
+    margin-bottom: 0.75rem;
+}
+
 /* --- Livestream Links --- */
 .livestream-list {
     list-style: none;
