@@ -7,6 +7,7 @@ const path      = require('path');
 const session   = require('express-session');
 const cors      = require('cors');
 const rateLimit = require('express-rate-limit');
+const { Pool }  = require('pg');
 
 const apiRouter     = require('./routes/api');
 const adminRouter   = require('./routes/admin');
@@ -36,15 +37,22 @@ app.use(cors({
 app.use(express.json({ limit: '12mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Session
+// Session — use PostgreSQL store so sessions survive server restarts
+const PgSession = require('connect-pg-simple')(session);
+const sessionPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
 app.use(session({
+  store: new PgSession({ pool: sessionPool, createTableIfMissing: true }),
   secret: process.env.SESSION_SECRET || process.env.ADMIN_PASSPHRASE || 'change-me',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure:   process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: 'lax',
     maxAge:   8 * 60 * 60 * 1000,
   },
 }));
