@@ -494,10 +494,7 @@ function renderDetailContent(launch, cms, backHash) {
 
     // --- CMS: Viewing Guide ---
     if (cms?.viewing_guide) {
-        html += `<div class="detail-section section-viewing-guide">
-            <div class="detail-section-title"><span class="section-icon">📍</span> Viewing Guide</div>
-            <div class="section-text">${sanitizeCmsHtml(cms.viewing_guide)}</div>
-        </div>`;
+        html += `<a href="${esc(cms.viewing_guide)}" target="_blank" rel="noopener noreferrer" class="gallery-link">📍 Viewing Guide</a>`;
     }
 
     // --- CMS: Chris Says ---
