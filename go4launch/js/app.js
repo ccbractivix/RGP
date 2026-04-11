@@ -156,8 +156,8 @@ async function fetchLL2Direct() {
     if (CONFIG.LL2_KEY) headers = { Authorization: `Token ${CONFIG.LL2_KEY}` };
 
     const [upResp, prevResp] = await Promise.allSettled([
-        fetch(`${CONFIG.LL2_BASE}/launch/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`, { headers }),
-        fetch(`${CONFIG.LL2_BASE}/launch/previous/?location__ids=${locIds}&limit=5&mode=detailed`, { headers }),
+        fetch(`${CONFIG.LL2_BASE}/launches/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`, { headers }),
+        fetch(`${CONFIG.LL2_BASE}/launches/previous/?location__ids=${locIds}&limit=5&mode=detailed`, { headers }),
     ]);
 
     let upResults = [];
