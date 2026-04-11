@@ -181,14 +181,27 @@ async function loadLaunches() {
 
 async function fetchAndCache() {
     const data = await fetchLL2Launches();
-    localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+    if (data.length) {
+        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+        return data;
+    }
+    // API returned nothing — fall back to stale cache if available
+    const stale = localStorage.getItem(CONFIG.CACHE_KEY);
+    if (stale) {
+        try {
+            const { data: prev } = JSON.parse(stale);
+            if (prev?.length) return prev;
+        } catch (_) { /* ignore parse errors */ }
+    }
     return data;
 }
 
 async function refreshInBackground() {
     try {
         const fresh = await fetchLL2Launches();
-        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
+        if (fresh.length) {
+            localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
+        }
     } catch (e) {
         console.warn('Background refresh failed:', e);
     }

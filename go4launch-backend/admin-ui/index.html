@@ -444,6 +444,20 @@
         const seen = new Set();
         allLaunches = launches.filter(l => { if (seen.has(l.id)) return false; seen.add(l.id); return true; });
         allLaunches.sort((a, b) => new Date(a.net || a.window_start || '2099') - new Date(b.net || b.window_start || '2099'));
+
+        if (allLaunches.length) {
+          sessionStorage.setItem('go4launch_admin_launches', JSON.stringify(allLaunches));
+        } else {
+          // API returned nothing — fall back to cached launches
+          const cached = sessionStorage.getItem('go4launch_admin_launches');
+          if (cached) {
+            try {
+              const prev = JSON.parse(cached);
+              if (prev?.length) allLaunches = prev;
+            } catch (_) { /* ignore */ }
+          }
+        }
+
         return allLaunches;
       }
 
