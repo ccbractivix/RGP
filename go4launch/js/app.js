@@ -10,7 +10,7 @@ const CONFIG = {
         const meta = document.querySelector('meta[name="api-base"]');
         return (meta && meta.getAttribute('content')) || '';
     })(),
-    LOCATION_IDS: [12, 27],
+    LOCATION_IDS: [27, 16], // Kennedy Space Center, Cape Canaveral SFS
     CACHE_KEY: 'go4launch_v1',
     CACHE_TTL: 6 * 60 * 60 * 1000,
     MAX_LAUNCHES: 15,

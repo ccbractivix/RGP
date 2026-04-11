@@ -518,11 +518,16 @@
     const DAY_NAMES  = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
     const DAY_LABELS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
-    /* ── CSRF token (fetched once per page load) ── */
+    /* ── CSRF token (fetched once per page load, refreshed on 403) ── */
     let _csrfToken = null;
-    async function getCsrfToken() {
-      if (_csrfToken) return _csrfToken;
+    async function getCsrfToken(forceRefresh) {
+      if (_csrfToken && !forceRefresh) return _csrfToken;
+      _csrfToken = null;
       const r = await fetch('/admin/csrf-token', { credentials: 'include' });
+      if (r.status === 401) {
+        window.location.href = '/admin-ui/login.html';
+        return '';
+      }
       const d = await r.json();
       _csrfToken = d.csrfToken || '';
       return _csrfToken;
@@ -531,22 +536,33 @@
     /* ── Helpers ── */
     async function apiFetch(url, opts = {}) {
       const csrfToken = await getCsrfToken();
-      return fetch(url, {
+      if (!csrfToken) return new Response(null, { status: 401 });
+
+      const doFetch = (token) => fetch(url, {
         credentials: 'include',
         ...opts,
         headers: {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRF-Token': csrfToken,
+          'X-CSRF-Token': token,
           ...(opts.headers || {})
         }
-      }).then(res => {
-        if (res.status === 401) {
-          window.location.href = '/admin-ui/login.html';
-          throw new Error('Unauthorized');
-        }
-        return res;
       });
+
+      let res = await doFetch(csrfToken);
+
+      // On 403 (stale CSRF token), refresh token and retry once
+      if (res.status === 403) {
+        const freshToken = await getCsrfToken(true);
+        if (!freshToken) return new Response(null, { status: 401 });
+        res = await doFetch(freshToken);
+      }
+
+      if (res.status === 401) {
+        window.location.href = '/admin-ui/login.html';
+        return new Response(null, { status: 401 });
+      }
+      return res;
     }
 
     function showToast(msg, type = '') {
