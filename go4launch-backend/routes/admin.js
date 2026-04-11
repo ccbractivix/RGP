@@ -85,7 +85,7 @@ router.post('/upload-image', async (req, res) => {
     return res.status(400).json({ error: 'Invalid launch_id format (expected UUID)' });
   }
 
-  const allowedExts = ['jpg', 'jpeg', 'png'];
+  const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
   const ext = image_ext.toLowerCase();
   if (!allowedExts.includes(ext)) {
     return res.status(400).json({ error: 'Only jpg and png images are allowed' });
