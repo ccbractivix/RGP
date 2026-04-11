@@ -200,7 +200,7 @@ async function refreshInBackground() {
 async function loadCMS() {
     if (!CONFIG.BACKEND) return;
     try {
-        const res = await fetch(`${CONFIG.BACKEND}/api/go4launch/content`);
+        const res = await fetch(`${CONFIG.BACKEND}/api/content`);
         if (res.ok) {
             const data = await res.json();
             // data is an object keyed by launch_id
@@ -217,7 +217,7 @@ async function loadCMS() {
 async function archiveLaunch(launch) {
     if (!CONFIG.BACKEND) return;
     try {
-        await fetch(`${CONFIG.BACKEND}/api/go4launch/archive`, {
+        await fetch(`${CONFIG.BACKEND}/api/archive`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -236,7 +236,7 @@ async function archiveLaunch(launch) {
 async function loadArchiveIndex() {
     if (!CONFIG.BACKEND) return [];
     try {
-        const res = await fetch(`${CONFIG.BACKEND}/api/go4launch/archive`);
+        const res = await fetch(`${CONFIG.BACKEND}/api/archive`);
         if (res.ok) return await res.json();
     } catch (e) {
         console.warn('Archive index load failed:', e);
@@ -247,7 +247,7 @@ async function loadArchiveIndex() {
 async function loadArchiveMonth(year, month) {
     if (!CONFIG.BACKEND) return [];
     try {
-        const res = await fetch(`${CONFIG.BACKEND}/api/go4launch/archive/${year}/${month}`);
+        const res = await fetch(`${CONFIG.BACKEND}/api/archive/${year}/${month}`);
         if (res.ok) return await res.json();
     } catch (e) {
         console.warn('Archive month load failed:', e);
@@ -258,7 +258,7 @@ async function loadArchiveMonth(year, month) {
 async function loadArchivedLaunch(launchId) {
     if (!CONFIG.BACKEND) return null;
     try {
-        const res = await fetch(`${CONFIG.BACKEND}/api/go4launch/archive/launch/${encodeURIComponent(launchId)}`);
+        const res = await fetch(`${CONFIG.BACKEND}/api/archive/launch/${encodeURIComponent(launchId)}`);
         if (res.ok) return await res.json();
     } catch (e) {
         console.warn('Archived launch load failed:', e);
@@ -809,7 +809,7 @@ async function submitSawIt() {
     status.className = '';
 
     try {
-        const res = await fetch(`${CONFIG.BACKEND}/api/go4launch/saw-it`, {
+        const res = await fetch(`${CONFIG.BACKEND}/api/saw-it`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ launch_id: currentSawItLaunchId, email }),

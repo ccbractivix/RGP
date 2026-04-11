@@ -12,7 +12,6 @@ const { Pool }  = require('pg');
 const apiRouter     = require('./routes/api');
 const adminRouter   = require('./routes/admin');
 const libraryRouter = require('./routes/library');
-const { publicRouter: go4launchPublic, adminRouter: go4launchAdmin } = require('./routes/go4launch');
 const { scheduleCron } = require('./cron/midnight');
 
 const app  = express();
@@ -34,7 +33,7 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json({ limit: '12mb' }));
+app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Session — use PostgreSQL store so sessions survive server restarts
@@ -100,7 +99,6 @@ app.use('/live-event-art', express.static(path.join(__dirname, '..', 'live-event
 
 // Public API
 app.use('/api', publicLimiter, apiRouter);
-app.use('/api/go4launch', publicLimiter, go4launchPublic);
 
 // Admin UI static files — login.html is public
 app.use('/admin-ui/login.html', loginLimiter, express.static(path.join(__dirname, 'admin-ui', 'login.html')));
@@ -112,7 +110,6 @@ app.use('/admin-ui', (req, res, next) => {
 // Admin API
 app.use('/admin', adminLimiter, adminRouter);
 app.use('/admin/library', adminLimiter, libraryRouter);
-app.use('/admin/go4launch', adminLimiter, go4launchAdmin);
 
 // Root redirect → admin login
 app.get('/', (_req, res) => res.redirect(302, '/admin-ui/login.html'));

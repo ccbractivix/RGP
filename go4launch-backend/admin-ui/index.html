@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="api-base" content="https://theater-backend-qf1b.onrender.com">
   <title>go4launch — Admin Dashboard</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -58,7 +57,7 @@
     }
 
     select, input[type="text"], input[type="url"], input[type="datetime-local"],
-    input[type="file"], textarea {
+    input[type="file"], input[type="password"], textarea {
       width: 100%;
       padding: 0.6rem 0.8rem;
       background: #0e0e1a;
@@ -173,25 +172,6 @@
       font-style: italic;
     }
 
-    /* --- Nav --- */
-    .nav {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
-      padding-bottom: 0.75rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .nav a {
-      color: var(--muted);
-      text-decoration: none;
-      font-size: 0.85rem;
-      font-weight: 600;
-      transition: color 0.2s;
-    }
-
-    .nav a:hover { color: #fff; }
-
     /* --- Saw-It Table --- */
     .saw-it-table {
       width: 100%;
@@ -221,6 +201,43 @@
     /* --- Loading --- */
     .loading { color: var(--muted); text-align: center; padding: 2rem; }
 
+    /* --- Login Screen --- */
+    #login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+    }
+
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+    }
+
+    .login-card h2 {
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+
+    .login-card p {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .login-card input {
+      text-align: center;
+      font-size: 1.5rem;
+      letter-spacing: 0.5em;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+    }
+
     /* --- Responsive --- */
     @media (max-width: 600px) {
       body { padding: 1rem; }
@@ -229,95 +246,110 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🚀 go4<span>launch</span> Admin</h1>
-    <p class="subtitle">Manage launch content for the public go4launch page</p>
 
-    <div class="nav">
-      <a href="/admin-ui/dashboard.html">← Theater Dashboard</a>
-      <a href="/admin-ui/go4launch.html">go4launch Admin</a>
+  <!-- Login Screen -->
+  <div id="login-screen">
+    <div class="login-card">
+      <h2>🚀 go4<span style="color:#f0c040;">launch</span></h2>
+      <p>Enter your admin code to continue</p>
+      <input type="password" id="auth-code" maxlength="10" placeholder="••••" autocomplete="off">
+      <div class="btn-row" style="justify-content:center;">
+        <button class="btn btn-primary" id="btn-login">Log In</button>
+      </div>
+      <div id="login-status" class="status-msg"></div>
     </div>
+  </div>
 
-    <!-- Launch Selector -->
-    <div class="panel">
-      <div class="panel-title">📋 Select Launch</div>
-      <label for="launch-select">Upcoming & Recent Launches</label>
-      <select id="launch-select">
-        <option value="">— Loading launches… —</option>
-      </select>
-
-      <label for="manual-launch-id">Or Enter Launch ID Manually</label>
-      <div style="display:flex;gap:0.5rem;">
-        <input type="text" id="manual-launch-id" placeholder="Paste a launch UUID…" style="flex:1;">
-        <button class="btn btn-secondary" id="btn-load-manual" style="flex:0 0 auto;">Load</button>
+  <!-- Main Dashboard (hidden until authed) -->
+  <div id="dashboard" style="display:none;">
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+        <h1>🚀 go4<span>launch</span> Admin</h1>
+        <button class="btn btn-secondary" id="btn-logout" style="padding:0.4rem 0.8rem;font-size:0.75rem;">Log Out</button>
       </div>
-      <div class="field-hint">Use this if the launch isn't listed above.</div>
+      <p class="subtitle">Manage launch content for the public go4launch page</p>
 
-      <div id="select-status" class="status-msg"></div>
-    </div>
-
-    <!-- Content Editor (hidden until launch selected) -->
-    <div id="editor" style="display:none;">
+      <!-- Launch Selector -->
       <div class="panel">
-        <div class="panel-title">✏️ Launch Content</div>
+        <div class="panel-title">📋 Select Launch</div>
+        <label for="launch-select">Upcoming & Recent Launches</label>
+        <select id="launch-select">
+          <option value="">— Loading launches… —</option>
+        </select>
 
-        <label for="f-headline">Headline Banner</label>
-        <input type="text" id="f-headline" placeholder="e.g., LAUNCH TODAY 5:15 PM">
-        <div class="field-hint">Shows as a red banner on the launch card. Leave blank for no banner.</div>
-
-        <label for="f-viewing-guide">Viewing Guide</label>
-        <textarea id="f-viewing-guide" placeholder="Where to watch from the resort, trajectory info, tips…"></textarea>
-        <div class="field-hint">Text content. URLs will be auto-linked. Leave blank to omit this section.</div>
-
-        <label for="f-chris-says">Chris Says</label>
-        <textarea id="f-chris-says" placeholder="Chris's commentary about this launch…"></textarea>
-        <div class="field-hint">Leave blank to omit this section from the More Info page.</div>
-
-        <label for="f-trajectory">Trajectory</label>
-        <textarea id="f-trajectory" placeholder="Launch trajectory details, direction, visibility arc…"></textarea>
-        <div class="field-hint">Trajectory information for this launch. Leave blank to omit this section.</div>
-
-        <label for="f-gallery-url">Photo Gallery URL</label>
-        <input type="url" id="f-gallery-url" placeholder="https://photos.example.com/launch-gallery">
-        <div class="field-hint">Link to a photo gallery for this launch. Shows on the More Info and Archive pages.</div>
-
-        <label for="f-rtl-datetime">Rocket Talk LIVE! Date &amp; Time</label>
-        <input type="datetime-local" id="f-rtl-datetime">
-        <div class="field-hint">Leave blank if no Rocket Talk LIVE! is scheduled for this launch.</div>
-
-        <label for="f-rtl-notes">Rocket Talk LIVE! Notes</label>
-        <textarea id="f-rtl-notes" rows="3" placeholder="Join Chris the Rocket Guy in the Movie Theater…"></textarea>
-
-        <div class="btn-row">
-          <button class="btn btn-primary" id="btn-save">💾 Save Content</button>
-          <button class="btn btn-secondary" id="btn-clear">Clear Form</button>
+        <label for="manual-launch-id">Or Enter Launch ID Manually</label>
+        <div style="display:flex;gap:0.5rem;">
+          <input type="text" id="manual-launch-id" placeholder="Paste a launch UUID…" style="flex:1;">
+          <button class="btn btn-secondary" id="btn-load-manual" style="flex:0 0 auto;">Load</button>
         </div>
-        <div id="save-status" class="status-msg"></div>
+        <div class="field-hint">Use this if the launch isn't listed above.</div>
+
+        <div id="select-status" class="status-msg"></div>
       </div>
 
-      <!-- Image Upload -->
-      <div class="panel">
-        <div class="panel-title">🖼️ Launch Card Image</div>
-        <p style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;">
-          Upload a custom image for this launch card. If no image is uploaded, the LL2 API image will be used.
-        </p>
-        <label for="f-image">Select Image (JPG or PNG)</label>
-        <input type="file" id="f-image" accept="image/jpeg,image/png">
-        <div id="image-preview" class="image-preview" style="display:none;"><img id="preview-img" alt="Preview"></div>
-        <div class="btn-row">
-          <button class="btn btn-green" id="btn-upload" disabled>📤 Upload Image</button>
-        </div>
-        <div id="upload-status" class="status-msg"></div>
-      </div>
+      <!-- Content Editor (hidden until launch selected) -->
+      <div id="editor" style="display:none;">
+        <div class="panel">
+          <div class="panel-title">✏️ Launch Content</div>
 
-      <!-- "I Saw This" Submissions -->
-      <div class="panel">
-        <div class="panel-title">🎉 "I Saw This Launch!" Submissions</div>
-        <div id="saw-it-list"><div class="loading">Select a launch to view submissions.</div></div>
-        <div class="btn-row">
-          <button class="btn btn-green" id="btn-send-emails" disabled>📧 Send Gallery Emails</button>
+          <label for="f-headline">Headline Banner</label>
+          <input type="text" id="f-headline" placeholder="e.g., LAUNCH TODAY 5:15 PM">
+          <div class="field-hint">Shows as a red banner on the launch card. Leave blank for no banner.</div>
+
+          <label for="f-viewing-guide">Viewing Guide</label>
+          <textarea id="f-viewing-guide" placeholder="Where to watch from the resort, trajectory info, tips…"></textarea>
+          <div class="field-hint">Text content. URLs will be auto-linked. Leave blank to omit this section.</div>
+
+          <label for="f-chris-says">Chris Says</label>
+          <textarea id="f-chris-says" placeholder="Chris's commentary about this launch…"></textarea>
+          <div class="field-hint">Leave blank to omit this section from the More Info page.</div>
+
+          <label for="f-trajectory">Trajectory</label>
+          <textarea id="f-trajectory" placeholder="Launch trajectory details, direction, visibility arc…"></textarea>
+          <div class="field-hint">Trajectory information for this launch. Leave blank to omit this section.</div>
+
+          <label for="f-gallery-url">Photo Gallery URL</label>
+          <input type="url" id="f-gallery-url" placeholder="https://photos.example.com/launch-gallery">
+          <div class="field-hint">Link to a photo gallery for this launch. Shows on the More Info and Archive pages.</div>
+
+          <label for="f-rtl-datetime">Rocket Talk LIVE! Date &amp; Time</label>
+          <input type="datetime-local" id="f-rtl-datetime">
+          <div class="field-hint">Leave blank if no Rocket Talk LIVE! is scheduled for this launch.</div>
+
+          <label for="f-rtl-notes">Rocket Talk LIVE! Notes</label>
+          <textarea id="f-rtl-notes" rows="3" placeholder="Join Chris the Rocket Guy in the Movie Theater…"></textarea>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-save">💾 Save Content</button>
+            <button class="btn btn-secondary" id="btn-clear">Clear Form</button>
+          </div>
+          <div id="save-status" class="status-msg"></div>
         </div>
-        <div id="email-status" class="status-msg"></div>
+
+        <!-- Image Upload -->
+        <div class="panel">
+          <div class="panel-title">🖼️ Launch Card Image</div>
+          <p style="font-size:0.8rem;color:var(--muted);margin-bottom:0.75rem;">
+            Upload a custom image for this launch card. If no image is uploaded, the LL2 API image will be used.
+          </p>
+          <label for="f-image">Select Image (JPG or PNG)</label>
+          <input type="file" id="f-image" accept="image/jpeg,image/png">
+          <div id="image-preview" class="image-preview" style="display:none;"><img id="preview-img" alt="Preview"></div>
+          <div class="btn-row">
+            <button class="btn btn-green" id="btn-upload" disabled>📤 Upload Image</button>
+          </div>
+          <div id="upload-status" class="status-msg"></div>
+        </div>
+
+        <!-- "I Saw This" Submissions -->
+        <div class="panel">
+          <div class="panel-title">🎉 "I Saw This Launch!" Submissions</div>
+          <div id="saw-it-list"><div class="loading">Select a launch to view submissions.</div></div>
+          <div class="btn-row">
+            <button class="btn btn-green" id="btn-send-emails" disabled>📧 Send Gallery Emails</button>
+          </div>
+          <div id="email-status" class="status-msg"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -326,66 +358,75 @@
     (function() {
       const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
       const LL2_KEY  = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
-      const LOC_IDS  = [27, 16]; // Kennedy Space Center, Cape Canaveral SFS
-      const WINDOW   = 14; // days
+      const LOC_IDS  = [27, 16];
+      const WINDOW   = 14;
 
+      let authCode = sessionStorage.getItem('go4launch_code') || '';
       let currentLaunchId = '';
       let allLaunches = [];
       let imageBase64 = '';
       let imageExt = '';
 
-      /* ── CSRF token (fetched on-demand, refreshed on 403) ── */
-      let _csrfToken = null;
-      async function getCsrfToken(forceRefresh) {
-        if (_csrfToken && !forceRefresh) return _csrfToken;
-        _csrfToken = null;
-        const r = await fetch('/admin/csrf-token', { credentials: 'include' });
-        if (r.status === 401) {
-          window.location.href = '/admin-ui/login.html';
-          return '';
-        }
-        const d = await r.json();
-        _csrfToken = d.csrfToken || '';
-        return _csrfToken;
-      }
-
-      async function apiFetch(url, opts = {}) {
-        const csrfToken = await getCsrfToken();
-        if (!csrfToken) return new Response(null, { status: 401 });
-
-        const doFetch = (token) => fetch(url, {
-          credentials: 'include',
+      // ── Auth-code helper for admin API calls ──
+      function adminFetch(url, opts = {}) {
+        return fetch(url, {
           ...opts,
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-Token': token,
-            ...(opts.headers || {})
-          }
+            'X-Auth-Code': authCode,
+            ...(opts.headers || {}),
+          },
         });
-
-        let res = await doFetch(csrfToken);
-
-        // On 403 (stale CSRF token), refresh token and retry once
-        if (res.status === 403) {
-          const freshToken = await getCsrfToken(true);
-          if (!freshToken) return new Response(null, { status: 401 });
-          res = await doFetch(freshToken);
-        }
-
-        if (res.status === 401) {
-          window.location.href = '/admin-ui/login.html';
-          return new Response(null, { status: 401 });
-        }
-        return res;
       }
 
-      // --- Fetch Upcoming & Recent Launches from LL2 ---
+      // ── Login ──
+      async function doLogin() {
+        const code = document.getElementById('auth-code').value.trim();
+        const status = document.getElementById('login-status');
+        if (!code) { status.textContent = 'Please enter a code.'; status.className = 'status-msg error'; return; }
+
+        try {
+          const r = await fetch('/admin/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code }),
+          });
+          const d = await r.json();
+          if (d.valid) {
+            authCode = code;
+            sessionStorage.setItem('go4launch_code', code);
+            showDashboard();
+          } else {
+            status.textContent = 'Invalid code. Try again.';
+            status.className = 'status-msg error';
+          }
+        } catch (_e) {
+          status.textContent = 'Connection error. Try again.';
+          status.className = 'status-msg error';
+        }
+      }
+
+      function doLogout() {
+        authCode = '';
+        sessionStorage.removeItem('go4launch_code');
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('auth-code').value = '';
+        document.getElementById('login-status').textContent = '';
+      }
+
+      async function showDashboard() {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        await populateDropdown();
+      }
+
+      // ── Fetch Upcoming & Recent Launches from LL2 ──
       async function fetchUpcoming() {
         const locIds = LOC_IDS.join(',');
         const cutoff = new Date(Date.now() + WINDOW * 86400000).toISOString();
         const launches = [];
 
-        // Fetch upcoming and recent previous launches in parallel (matches frontend app.js)
         const [upResp, prevResp] = await Promise.all([
           fetch(`${LL2_BASE}/launches/upcoming/?location__ids=${locIds}&limit=50&mode=detailed&net__lte=${cutoff}&api_key=${LL2_KEY}`),
           fetch(`${LL2_BASE}/launches/previous/?location__ids=${locIds}&limit=5&mode=detailed&api_key=${LL2_KEY}`),
@@ -400,14 +441,13 @@
           if (d.results) launches.push(...d.results);
         }
 
-        // Deduplicate and sort
         const seen = new Set();
         allLaunches = launches.filter(l => { if (seen.has(l.id)) return false; seen.add(l.id); return true; });
         allLaunches.sort((a, b) => new Date(a.net || a.window_start || '2099') - new Date(b.net || b.window_start || '2099'));
         return allLaunches;
       }
 
-      // --- Populate Dropdown ---
+      // ── Populate Dropdown ──
       async function populateDropdown() {
         const select = document.getElementById('launch-select');
         const status = document.getElementById('select-status');
@@ -435,7 +475,7 @@
         }
       }
 
-      // --- Load Content for Selected Launch ---
+      // ── Load Content for Selected Launch ──
       async function loadContent(launchId) {
         if (!launchId) {
           document.getElementById('editor').style.display = 'none';
@@ -444,14 +484,11 @@
         currentLaunchId = launchId;
         document.getElementById('editor').style.display = 'block';
 
-        // Clear form
         clearForm();
 
-        // Load existing content from backend
         try {
-          const r = await fetch(`/admin/go4launch/content/${encodeURIComponent(launchId)}`, {
-            credentials: 'include'
-          });
+          const r = await adminFetch(`/admin/content/${encodeURIComponent(launchId)}`);
+          if (r.status === 401) { doLogout(); return; }
           if (r.ok) {
             const data = await r.json();
             if (data) {
@@ -461,7 +498,6 @@
               document.getElementById('f-trajectory').value = data.trajectory || '';
               document.getElementById('f-gallery-url').value = data.gallery_url || '';
               if (data.rtl_datetime) {
-                // Convert to local datetime-local format
                 const dt = new Date(data.rtl_datetime);
                 const local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
                 document.getElementById('f-rtl-datetime').value = local;
@@ -478,7 +514,6 @@
           console.warn('Load content failed:', e);
         }
 
-        // Load "I Saw This" submissions
         loadSawItList(launchId);
       }
 
@@ -497,7 +532,7 @@
         });
       }
 
-      // --- Save Content ---
+      // ── Save Content ──
       async function saveContent() {
         if (!currentLaunchId) return;
         const btn = document.getElementById('btn-save');
@@ -508,7 +543,7 @@
         status.className = 'status-msg info';
 
         try {
-          const r = await apiFetch('/admin/go4launch/content', {
+          const r = await adminFetch('/admin/content', {
             method: 'POST',
             body: JSON.stringify({
               launch_id: currentLaunchId,
@@ -522,6 +557,7 @@
             }),
           });
 
+          if (r.status === 401) { doLogout(); return; }
           if (r.ok) {
             status.textContent = '✓ Content saved successfully!';
             status.className = 'status-msg success';
@@ -531,14 +567,14 @@
             status.className = 'status-msg error';
           }
         } catch (e) {
-          status.textContent = 'Connection failed — check your network and try again.';
+          status.textContent = 'Network error — check your connection and try again.';
           status.className = 'status-msg error';
         } finally {
           btn.disabled = false;
         }
       }
 
-      // --- Image Upload ---
+      // ── Image Upload ──
       function handleImageSelect(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -552,7 +588,6 @@
 
         imageExt = ext === 'jpeg' ? 'jpg' : ext;
 
-        // Check file size — base64 encoding adds ~33%, max upload is 12mb
         const maxFileSizeMb = 8;
         if (file.size > maxFileSizeMb * 1024 * 1024) {
           document.getElementById('upload-status').textContent = `Image too large (max ${maxFileSizeMb}MB). Please resize and try again.`;
@@ -562,11 +597,8 @@
 
         const reader = new FileReader();
         reader.onload = function(ev) {
-          // ev.target.result is a data URL like "data:image/jpeg;base64,..."
           const dataUrl = ev.target.result;
-          imageBase64 = dataUrl.split(',')[1]; // Just the base64 part
-
-          // Show preview
+          imageBase64 = dataUrl.split(',')[1];
           document.getElementById('preview-img').src = dataUrl;
           document.getElementById('image-preview').style.display = 'block';
           document.getElementById('btn-upload').disabled = false;
@@ -584,7 +616,7 @@
         status.className = 'status-msg info';
 
         try {
-          const r = await apiFetch('/admin/go4launch/upload-image', {
+          const r = await adminFetch('/admin/upload-image', {
             method: 'POST',
             body: JSON.stringify({
               launch_id: currentLaunchId,
@@ -593,6 +625,7 @@
             }),
           });
 
+          if (r.status === 401) { doLogout(); return; }
           if (r.ok) {
             const d = await r.json();
             status.textContent = '✓ Image uploaded! Path: ' + (d.path || 'saved');
@@ -603,20 +636,21 @@
             status.className = 'status-msg error';
           }
         } catch (e) {
-          status.textContent = 'Connection failed — check your network and try again.';
+          status.textContent = 'Network error — check your connection and try again.';
           status.className = 'status-msg error';
         } finally {
           btn.disabled = false;
         }
       }
 
-      // --- "I Saw This" List ---
+      // ── "I Saw This" List ──
       async function loadSawItList(launchId) {
         const container = document.getElementById('saw-it-list');
         container.innerHTML = '<div class="loading">Loading submissions…</div>';
 
         try {
-          const r = await fetch('/admin/go4launch/saw-it', { credentials: 'include' });
+          const r = await adminFetch('/admin/saw-it');
+          if (r.status === 401) { doLogout(); return; }
           if (!r.ok) throw new Error('Failed');
           const all = await r.json();
           const filtered = all.filter(s => s.launch_id === launchId);
@@ -652,11 +686,12 @@
         status.className = 'status-msg info';
 
         try {
-          const r = await apiFetch('/admin/go4launch/send-gallery-emails', {
+          const r = await adminFetch('/admin/send-gallery-emails', {
             method: 'POST',
             body: JSON.stringify({ launch_id: currentLaunchId }),
           });
 
+          if (r.status === 401) { doLogout(); return; }
           if (r.ok) {
             const d = await r.json();
             status.textContent = `✓ ${d.sent || 0} email(s) sent!`;
@@ -668,21 +703,27 @@
             status.className = 'status-msg error';
           }
         } catch (e) {
-          status.textContent = 'Connection failed — check your network and try again.';
+          status.textContent = 'Network error — check your connection and try again.';
           status.className = 'status-msg error';
         } finally {
           btn.disabled = false;
         }
       }
 
-      // --- Utility ---
+      // ── Utility ──
       function escHtml(str) {
         const d = document.createElement('div');
         d.textContent = str || '';
         return d.innerHTML;
       }
 
-      // --- Event Listeners ---
+      // ── Event Listeners ──
+      document.getElementById('btn-login').addEventListener('click', doLogin);
+      document.getElementById('auth-code').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); doLogin(); }
+      });
+      document.getElementById('btn-logout').addEventListener('click', doLogout);
+
       document.getElementById('launch-select').addEventListener('change', function() {
         loadContent(this.value);
       });
@@ -690,17 +731,12 @@
       document.getElementById('btn-load-manual').addEventListener('click', function() {
         const id = document.getElementById('manual-launch-id').value.trim();
         if (!id) return;
-        // Clear dropdown selection and load the manual ID
         document.getElementById('launch-select').value = '';
         loadContent(id);
       });
 
-      // Allow pressing Enter in the manual launch ID field
       document.getElementById('manual-launch-id').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          document.getElementById('btn-load-manual').click();
-        }
+        if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btn-load-manual').click(); }
       });
 
       document.getElementById('btn-save').addEventListener('click', saveContent);
@@ -709,9 +745,23 @@
       document.getElementById('btn-upload').addEventListener('click', uploadImage);
       document.getElementById('btn-send-emails').addEventListener('click', sendGalleryEmails);
 
-      // --- Init ---
+      // ── Init: auto-login if code saved in session ──
       (async function init() {
-        await populateDropdown();
+        if (authCode) {
+          try {
+            const r = await fetch('/admin/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code: authCode }),
+            });
+            const d = await r.json();
+            if (d.valid) { showDashboard(); return; }
+          } catch (_e) { /* fall through to login */ }
+          // Invalid saved code — clear it
+          authCode = '';
+          sessionStorage.removeItem('go4launch_code');
+        }
+        // Show login screen (already visible by default)
       })();
     })();
   </script>
