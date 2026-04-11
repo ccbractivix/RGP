@@ -1,6 +1,7 @@
-console.log("🟢 SCRIPT STARTED");
+// ⚠️ DEPRECATED – this tracker is no longer active. API calls disabled.
+console.warn("⚠️ launch-tracker-lite is deprecated. API calls disabled.");
 
-const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
+const API_KEY = '';
 
 function getFutureDate(days) {
     const now = new Date();
@@ -8,7 +9,7 @@ function getFutureDate(days) {
     return now.toISOString();
 }
 
-const API_URL = `https://ll.thespacedevs.com/2.2.0/launch/upcoming/?format=json&limit=10&location__ids=12,27&mode=detailed&ordering=net&net__lte=${getFutureDate(14)}`;
+const API_URL = ''; // deprecated
 const SHEET_ID = '1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU';
 const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 

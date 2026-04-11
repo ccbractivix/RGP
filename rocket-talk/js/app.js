@@ -131,9 +131,11 @@ function getNestedValue(obj, path) {
 // ============================================================
 async function fetchLaunches() {
     const locationIds = CONFIG.LOCATION_IDS.join(',');
-    const url = `${CONFIG.API_BASE}/launches/upcoming/?location__ids=${locationIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&api_key=${CONFIG.API_KEY}`;
+    const url = `${CONFIG.API_BASE}/launches/upcoming/?location__ids=${locationIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+        headers: { Authorization: `Token ${CONFIG.API_KEY}` }
+    });
     if (!response.ok) throw new Error(`API error: ${response.status}`);
 
     const data = await response.json();

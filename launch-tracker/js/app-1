@@ -1,7 +1,8 @@
-console.log("🟢 SCRIPT STARTED");
+// ⚠️ DEPRECATED – this tracker is no longer active. API calls disabled.
+console.log("⚠️ launch-tracker is deprecated. API calls disabled.");
 
-const API_KEY = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
-const API_URL = `https://ll.thespacedevs.com/2.2.0/launch/upcoming/?format=json&limit=10&location__ids=12,27&mode=detailed&ordering=net`;
+const API_KEY = '';
+const API_URL = '';
 
 // ==================== STARLINK TRAJECTORY ====================
 

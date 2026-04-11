@@ -140,9 +140,10 @@ async function fetchLL2Launches() {
     const cutoff = new Date(Date.now() + CONFIG.MAX_DAYS * 86400000).toISOString();
 
     // Fetch upcoming and recent previous in parallel
+    const headers = { Authorization: `Token ${CONFIG.LL2_KEY}` };
     const [upResp, prevResp] = await Promise.all([
-        fetch(`${CONFIG.LL2_BASE}/launch/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}&api_key=${CONFIG.LL2_KEY}`),
-        fetch(`${CONFIG.LL2_BASE}/launch/previous/?location__ids=${locIds}&limit=5&mode=detailed&api_key=${CONFIG.LL2_KEY}`),
+        fetch(`${CONFIG.LL2_BASE}/launch/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`, { headers }),
+        fetch(`${CONFIG.LL2_BASE}/launch/previous/?location__ids=${locIds}&limit=5&mode=detailed`, { headers }),
     ]);
 
     const upData = upResp.ok ? await upResp.json() : { results: [] };
@@ -181,14 +182,27 @@ async function loadLaunches() {
 
 async function fetchAndCache() {
     const data = await fetchLL2Launches();
-    localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+    if (data.length) {
+        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+        return data;
+    }
+    // API returned nothing — fall back to stale cache if available
+    const stale = localStorage.getItem(CONFIG.CACHE_KEY);
+    if (stale) {
+        try {
+            const parsed = JSON.parse(stale);
+            if (parsed && Array.isArray(parsed.data) && parsed.data.length) return parsed.data;
+        } catch (_) { /* ignore parse errors */ }
+    }
     return data;
 }
 
 async function refreshInBackground() {
     try {
         const fresh = await fetchLL2Launches();
-        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
+        if (fresh.length) {
+            localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
+        }
     } catch (e) {
         console.warn('Background refresh failed:', e);
     }

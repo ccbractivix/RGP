@@ -1,11 +1,13 @@
 // js/app.js - Florida Space Launch Tracker
 // Phase 2: Full CMS Integration
 
+// ⚠️ DEPRECATED – this tracker is no longer active. API calls disabled.
+console.warn('⚠️ launch-tracker-3 is deprecated. API calls disabled.');
 const CONFIG = {
-    API_URL: 'https://ll.thespacedevs.com/2.3.0/launches/upcoming/',
-    API_KEY: '506485404eb785c1b7e1c3dac3ba394ba8fb6834',
+    API_URL: '',
+    API_KEY: '',
     LOCATION_IDS: '12,27',
-    SHEET_ID: '1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU',
+    SHEET_ID: '',
     REFRESH_INTERVAL: 300000,
     LOOKAHEAD_DAYS: 14,
     POST_LAUNCH_DISPLAY: 3600000

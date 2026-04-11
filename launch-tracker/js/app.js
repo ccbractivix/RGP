@@ -1,7 +1,9 @@
 // Florida Space Launch Tracker - app.js
+// ⚠️ DEPRECATED – this tracker is no longer active. API calls disabled.
+console.warn('⚠️ launch-tracker is deprecated. API calls disabled.');
 
-const API_KEY = "506485404eb785c1b7e1c3dac3ba394ba8fb6834";
-const SHEET_ID = "1zNQAXjKxNVOv9zb5pj_h6vd2M-XvGKhTDRqoz92Y8PU";
+const API_KEY = "";
+const SHEET_ID = "";
 const SHEET_GID = "0";
 const FLORIDA_PAD_IDS = [12, 27];
 const REFRESH_INTERVAL = 300000;
@@ -184,8 +186,7 @@ function fetchAndRender() {
 
   if (loading) loading.style.display = "flex";
 
-  var apiUrl = "https://ll.thespacedevs.com/2.3.0/launches/upcoming/?format=json&limit=10&location__ids=" +
-    FLORIDA_PAD_IDS.join(",") + "&mode=detailed";
+  var apiUrl = ""; // deprecated – API calls disabled
 
   Promise.all([
     fetch(apiUrl, { headers: { Authorization: "Token " + API_KEY } }).then(function (r) { return r.json(); }),

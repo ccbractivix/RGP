@@ -427,9 +427,10 @@
         const cutoff = new Date(Date.now() + WINDOW * 86400000).toISOString();
         const launches = [];
 
+        const headers = { Authorization: `Token ${LL2_KEY}` };
         const [upResp, prevResp] = await Promise.all([
-          fetch(`${LL2_BASE}/launch/upcoming/?location__ids=${locIds}&limit=50&mode=detailed&net__lte=${cutoff}&api_key=${LL2_KEY}`),
-          fetch(`${LL2_BASE}/launch/previous/?location__ids=${locIds}&limit=5&mode=detailed&api_key=${LL2_KEY}`),
+          fetch(`${LL2_BASE}/launch/upcoming/?location__ids=${locIds}&limit=50&mode=detailed&net__lte=${cutoff}`, { headers }),
+          fetch(`${LL2_BASE}/launch/previous/?location__ids=${locIds}&limit=5&mode=detailed`, { headers }),
         ]);
 
         if (upResp.ok) {
@@ -444,6 +445,20 @@
         const seen = new Set();
         allLaunches = launches.filter(l => { if (seen.has(l.id)) return false; seen.add(l.id); return true; });
         allLaunches.sort((a, b) => new Date(a.net || a.window_start || '2099') - new Date(b.net || b.window_start || '2099'));
+
+        if (allLaunches.length) {
+          sessionStorage.setItem('go4launch_admin_launches', JSON.stringify(allLaunches));
+        } else {
+          // API returned nothing — fall back to cached launches
+          const cached = sessionStorage.getItem('go4launch_admin_launches');
+          if (cached) {
+            try {
+              const prev = JSON.parse(cached);
+              if (Array.isArray(prev) && prev.length) allLaunches = prev;
+            } catch (_) { /* ignore */ }
+          }
+        }
+
         return allLaunches;
       }
 
