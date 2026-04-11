@@ -453,7 +453,7 @@
           if (cached) {
             try {
               const prev = JSON.parse(cached);
-              if (prev?.length) allLaunches = prev;
+              if (Array.isArray(prev) && prev.length) allLaunches = prev;
             } catch (_) { /* ignore */ }
           }
         }

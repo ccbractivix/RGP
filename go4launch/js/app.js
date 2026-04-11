@@ -189,8 +189,8 @@ async function fetchAndCache() {
     const stale = localStorage.getItem(CONFIG.CACHE_KEY);
     if (stale) {
         try {
-            const { data: prev } = JSON.parse(stale);
-            if (prev?.length) return prev;
+            const parsed = JSON.parse(stale);
+            if (parsed && Array.isArray(parsed.data) && parsed.data.length) return parsed.data;
         } catch (_) { /* ignore parse errors */ }
     }
     return data;
