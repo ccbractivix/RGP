@@ -45,15 +45,19 @@ router.put('/:id/refresh', async (req, res) => {
 });
 
 router.post('/event', async (req, res) => {
-  const { id, title, ticket_url, custom_art } = req.body;
+  const { id, title, title_line2, title_line3, ticket_url, custom_art, runtime_min } = req.body;
   if (!id || !title) return res.status(400).json({ error: 'id and title are required' });
   if (!/^EVT-[A-Z0-9]+$/.test(id)) return res.status(400).json({ error: 'Live event ID must match EVT-XXXX format' });
+  const parsedRuntime = runtime_min ? parseInt(runtime_min, 10) : null;
+  if (parsedRuntime !== null && (isNaN(parsedRuntime) || parsedRuntime <= 0)) {
+    return res.status(400).json({ error: 'Runtime must be a positive number (minutes)' });
+  }
   try {
     await db.query(
-      `INSERT INTO library (id, title, type, ticket_url, custom_art, last_updated)
-       VALUES ($1,$2,'live_event',$3,$4,NOW())
-       ON CONFLICT (id) DO UPDATE SET title=$2, ticket_url=$3, custom_art=$4, last_updated=NOW()`,
-      [id, title, ticket_url || null, custom_art || null]
+      `INSERT INTO library (id, title, title_line2, title_line3, type, ticket_url, custom_art, runtime_min, last_updated)
+       VALUES ($1,$2,$3,$4,'live_event',$5,$6,$7,NOW())
+       ON CONFLICT (id) DO UPDATE SET title=$2, title_line2=$3, title_line3=$4, ticket_url=$5, custom_art=$6, runtime_min=$7, last_updated=NOW()`,
+      [id, title, title_line2 || null, title_line3 || null, ticket_url || null, custom_art || null, parsedRuntime]
     );
     const r = await db.query('SELECT * FROM library WHERE id = $1', [id]);
     return res.status(201).json(r.rows[0]);

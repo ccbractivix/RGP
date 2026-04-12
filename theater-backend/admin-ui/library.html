@@ -504,8 +504,20 @@
           <div class="form-hint">Must match pattern EVT-[A-Z0-9]+</div>
         </div>
         <div class="form-row">
-          <label>Title</label>
-          <input type="text" class="form-control" id="event-title" placeholder="Event title" />
+          <label>Title Line 1</label>
+          <input type="text" class="form-control" id="event-title" placeholder="Event title (required)" />
+        </div>
+        <div class="form-row">
+          <label>Title Line 2 <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="event-title-line2" placeholder="Second line of title" />
+        </div>
+        <div class="form-row">
+          <label>Title Line 3 <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="event-title-line3" placeholder="Third line of title" />
+        </div>
+        <div class="form-row">
+          <label>Runtime (minutes) <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="number" class="form-control" id="event-runtime" placeholder="e.g. 90" min="1" />
         </div>
         <div class="form-row">
           <label>Ticket URL <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
@@ -514,7 +526,7 @@
         <div class="form-row">
           <label>Custom Art Filename <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
           <input type="text" class="form-control" id="event-art" placeholder="MVN.png" />
-          <div class="form-hint">Filename of art file in the live-event-art folder</div>
+          <div class="form-hint">Filename of art file in the theater-web/static folder</div>
         </div>
         <div class="modal-error" id="event-error"></div>
       </div>
@@ -863,6 +875,9 @@
     function openAddEventModal() {
       document.getElementById('event-id').value = '';
       document.getElementById('event-title').value = '';
+      document.getElementById('event-title-line2').value = '';
+      document.getElementById('event-title-line3').value = '';
+      document.getElementById('event-runtime').value = '';
       document.getElementById('event-ticket-url').value = '';
       document.getElementById('event-art').value = '';
       document.getElementById('event-error').className = 'modal-error';
@@ -871,11 +886,14 @@
     }
 
     function addEvent() {
-      const eventId   = document.getElementById('event-id').value.trim();
-      const title     = document.getElementById('event-title').value.trim();
-      const ticketUrl = document.getElementById('event-ticket-url').value.trim();
-      const art       = document.getElementById('event-art').value.trim();
-      const errEl     = document.getElementById('event-error');
+      const eventId    = document.getElementById('event-id').value.trim();
+      const title      = document.getElementById('event-title').value.trim();
+      const titleLine2 = document.getElementById('event-title-line2').value.trim();
+      const titleLine3 = document.getElementById('event-title-line3').value.trim();
+      const runtime    = document.getElementById('event-runtime').value.trim();
+      const ticketUrl  = document.getElementById('event-ticket-url').value.trim();
+      const art        = document.getElementById('event-art').value.trim();
+      const errEl      = document.getElementById('event-error');
 
       errEl.className = 'modal-error';
 
@@ -887,15 +905,18 @@
       }
 
       if (!title) {
-        errEl.textContent = 'Title is required.';
+        errEl.textContent = 'Title Line 1 is required.';
         errEl.className = 'modal-error visible';
         document.getElementById('event-title').focus();
         return;
       }
 
       const payload = { id: eventId, title };
-      if (ticketUrl) payload.ticket_url = ticketUrl;
-      if (art)       payload.custom_art  = art;
+      if (titleLine2) payload.title_line2 = titleLine2;
+      if (titleLine3) payload.title_line3 = titleLine3;
+      if (runtime)    payload.runtime_min = parseInt(runtime, 10);
+      if (ticketUrl)  payload.ticket_url  = ticketUrl;
+      if (art)        payload.custom_art  = art;
 
       apiFetch('/admin/library/event', {
         method: 'POST',

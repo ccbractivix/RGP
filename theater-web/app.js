@@ -85,11 +85,21 @@
         // Card info
         html += '<div class="card-info">';
 
-        // Title
+        // Title (up to 3 lines for live events)
         html += '<div class="show-title' + (isLive ? ' live-event-title' : '') + '">';
         if (isLive) html += '<span class="live-badge">LIVE</span> ';
         html += escapeHtml(show.title);
         html += '</div>';
+        if (show.titleLine2) {
+          html += '<div class="show-title' + (isLive ? ' live-event-title' : '') + '">';
+          html += escapeHtml(show.titleLine2);
+          html += '</div>';
+        }
+        if (show.titleLine3) {
+          html += '<div class="show-title' + (isLive ? ' live-event-title' : '') + '">';
+          html += escapeHtml(show.titleLine3);
+          html += '</div>';
+        }
 
         // Time + Rating + Runtime
         html += '<div class="show-time">';
