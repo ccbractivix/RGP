@@ -314,7 +314,6 @@ function renderMainPage() {
 
     // Header
     html += `<div class="page-header">
-        <h1><span class="logo-go">GO</span>4LAUNCH</h1>
         <div class="subtitle">Resort Rocket Launch Viewing Companion</div>
     </div>`;
 
