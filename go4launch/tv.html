@@ -9,18 +9,18 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #121212;
-      --card-bg: #1E1E1E;
-      --card-border: #1e1e3a;
-      --text: #e8e8f0;
-      --text-muted: #8888a0;
-      --text-dim: #555570;
+      --bg: #E37433;
+      --card-bg: #C25A1E;
+      --card-border: #D4743A;
+      --text: #FFFFFF;
+      --text-muted: #FFE0C8;
+      --text-dim: #F5C4A0;
       --accent-green: #4caf50;
       --accent-orange: #ff9800;
       --accent-red: #e53935;
       --accent-blue: #42a5f5;
       --accent-purple: #7c4dff;
-      --accent-gold: #f0c040;
+      --accent-gold: #FFF8DC;
       --accent-tbc: #29b6f6;
       --radius: 12px;
       --radius-sm: 6px;
@@ -59,10 +59,9 @@
     }
 
     #header-logo img {
-      max-height: 64px;
-      max-width: 90%;
-      height: auto;
-      width: auto;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
 
     #header-title {
@@ -139,7 +138,7 @@
       padding-bottom: 56.25%;
       position: relative;
       overflow: hidden;
-      background: #0e0e20;
+      background: #5C2A0E;
       flex-shrink: 0;
     }
 
@@ -301,7 +300,7 @@
       flex: 0 0 clamp(70px, 7vw, 110px);
       height: clamp(52px, 5.5vw, 82px);
       overflow: hidden;
-      background: #0e0e20;
+      background: #5C2A0E;
     }
 
     .compact-image img {
@@ -438,7 +437,7 @@
       bottom: 4px;
       right: 14px;
       font-size: 10px;
-      color: #333;
+      color: #5C2A0E;
     }
 
     .no-data {
@@ -454,7 +453,7 @@
     <!-- Header -->
     <div id="tv-header">
       <div id="header-logo">
-        <img src="images/Go4Launch_autograph_lg.jpg" alt="Go4Launch" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span style=&quot;color:#4caf50;font-weight:700;font-size:clamp(16px,1.8vw,28px);&quot;>GO4LAUNCH</span>')">
+        <img src="images/go4launch_landscape_t.png" alt="Go4Launch" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span style=&quot;color:#FFFFFF;font-weight:700;font-size:clamp(16px,1.8vw,28px);&quot;>GO4LAUNCH</span>')">
       </div>
       <div id="header-title">ROCKET LAUNCH DASHBOARD</div>
     </div>
@@ -473,10 +472,10 @@
     <div id="tv-footer">
       <div class="footer-cell footer-left">
         <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=https%3A%2F%2Fccbractivix.github.io%2FRGP%2Fgo4launch%2Findex.html" alt="QR Code to Go4Launch app">
-        <div class="footer-left-text">The Go4Launch app has all the information you need for launch viewing at the resort!</div>
+        <div class="footer-left-text">The Go4Launch app has all the information you need for launch viewing at the resort!<br>Scan the QR code or use the shortcut <strong>rocketbeachresort.com</strong></div>
       </div>
       <div class="footer-cell footer-center">
-        Rocket launches are subject to wind, weather, mechanical and other conditions that may delay, postpone, or cancel a launch at any time. Follow the Go4Launch app for the latest information.
+        Rocket launches are subject to weather, mechanical and other conditions that may delay, postpone, or cancel a launch. Follow the Go4Launch app for the latest information.
       </div>
       <div class="footer-cell"></div>
     </div>
@@ -493,6 +492,7 @@
       var REFRESH_MS = 300000; // 5 minutes
       var RETRY_MS   = 60000;  // 1 minute on error
       var RTL_GRACE_MS = 120 * 60 * 1000; // 120 minutes after RTL time
+      var MAX_CENTER_LAUNCHES = 5;
 
       var countdownTimer = null;
 
@@ -745,24 +745,24 @@
           countdownTimer = null;
         }
 
-        // Filter to upcoming (non-completed) launches, sorted by NET
-        var upcoming = launches.filter(function (l) { return !isCompleted(l); });
-        upcoming.sort(function (a, b) { return new Date(a.net) - new Date(b.net); });
+        // Sort all launches by NET (no filtering by status)
+        var sorted = launches.slice().sort(function (a, b) { return new Date(a.net) - new Date(b.net); });
 
         // === LEFT CELL: Featured next launch ===
-        if (upcoming.length > 0) {
-          var next = upcoming[0];
+        if (sorted.length > 0) {
+          var next = sorted[0];
           var cms = cmsContent[next.id] || {};
           leftEl.innerHTML = buildFeaturedCard(next, cms);
         } else {
-          leftEl.innerHTML = '<div class="no-data">No upcoming launches scheduled</div>';
+          leftEl.innerHTML = '<div class="no-data">No launch data available</div>';
         }
 
-        // === CENTER CELL: Additional launches as compact cards ===
-        if (upcoming.length > 1) {
+        // === CENTER CELL: Next 5 launches as compact cards ===
+        if (sorted.length > 1) {
           var centerHtml = '';
-          for (var i = 1; i < upcoming.length; i++) {
-            var launch = upcoming[i];
+          var count = Math.min(sorted.length - 1, MAX_CENTER_LAUNCHES);
+          for (var i = 1; i <= count; i++) {
+            var launch = sorted[i];
             var lcms = cmsContent[launch.id] || {};
             centerHtml += buildCompactCard(launch, lcms);
           }
