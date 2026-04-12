@@ -454,7 +454,7 @@
     <!-- Header -->
     <div id="tv-header">
       <div id="header-logo">
-        <img src="images/Go4Launch_autograph_lg.jpg" alt="Go4Launch">
+        <img src="images/Go4Launch_autograph_lg.jpg" alt="Go4Launch" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span style=&quot;color:#4caf50;font-weight:700;font-size:clamp(16px,1.8vw,28px);&quot;>GO4LAUNCH</span>')">
       </div>
       <div id="header-title">ROCKET LAUNCH DASHBOARD</div>
     </div>
@@ -775,7 +775,7 @@
         var nextRTL = findNextRTL(cmsContent);
         if (nextRTL) {
           rightEl.innerHTML =
-            '<img class="rtl-image" src="../theater-web/static/RTL.png" alt="Rocket Talk LIVE!">' +
+            '<img class="rtl-image" src="../theater-web/static/RTL.png" alt="Rocket Talk LIVE!" onerror="this.style.display=\'none\'">' +
             '<div class="rtl-label">Rocket Talk LIVE!</div>' +
             '<div class="rtl-datetime">' +
               esc(formatDateET(nextRTL.datetime)) + '<br>' +
