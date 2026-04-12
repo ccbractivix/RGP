@@ -492,6 +492,7 @@
       var REFRESH_MS = 300000; // 5 minutes
       var RETRY_MS   = 60000;  // 1 minute on error
       var RTL_GRACE_MS = 120 * 60 * 1000; // 120 minutes after RTL time
+      var MAX_CENTER_LAUNCHES = 5;
 
       var countdownTimer = null;
 
@@ -753,13 +754,13 @@
           var cms = cmsContent[next.id] || {};
           leftEl.innerHTML = buildFeaturedCard(next, cms);
         } else {
-          leftEl.innerHTML = '<div class="no-data">No launches scheduled</div>';
+          leftEl.innerHTML = '<div class="no-data">No launch data available</div>';
         }
 
         // === CENTER CELL: Next 5 launches as compact cards ===
         if (sorted.length > 1) {
           var centerHtml = '';
-          var count = Math.min(sorted.length - 1, 5);
+          var count = Math.min(sorted.length - 1, MAX_CENTER_LAUNCHES);
           for (var i = 1; i <= count; i++) {
             var launch = sorted[i];
             var lcms = cmsContent[launch.id] || {};
