@@ -59,8 +59,8 @@
     }
 
     #header-logo img {
-      width: 100%;
-      height: 100%;
+      width: 80%;
+      height: auto;
       object-fit: contain;
     }
 
@@ -71,6 +71,7 @@
       letter-spacing: 4px;
       color: var(--accent-gold);
       text-transform: uppercase;
+      text-align: center;
     }
 
     /* ===== MAIN CONTENT ===== */
@@ -370,6 +371,13 @@
       line-height: 1.5;
     }
 
+    .rtl-vehicle {
+      text-align: center;
+      font-size: clamp(9px, 0.85vw, 14px);
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
     /* ===== STATUS BADGE COLORS ===== */
     .status-go       { background: var(--accent-green); color: #fff; }
     .status-tbd      { background: var(--accent-orange); color: #fff; }
@@ -467,7 +475,7 @@
       <div id="header-logo">
         <img src="images/go4launch_main_t.png" alt="Go4Launch" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span style=&quot;color:#FFFFFF;font-weight:700;font-size:clamp(16px,1.8vw,28px);&quot;>GO4LAUNCH</span>')">
       </div>
-      <div id="header-title">ROCKET LAUNCH DASHBOARD</div>
+      <div id="header-title">Rocket Roundup</div>
     </div>
 
     <!-- Loading -->
@@ -591,7 +599,7 @@
             var rtlTime = new Date(cms.rtl_datetime).getTime();
             // Show if the RTL is upcoming or within 120 min of having passed
             if (rtlTime + RTL_GRACE_MS > now) {
-              candidates.push({ datetime: cms.rtl_datetime, time: rtlTime });
+              candidates.push({ datetime: cms.rtl_datetime, time: rtlTime, launchId: launchId });
             }
           }
         }
@@ -791,9 +799,20 @@
         // === RIGHT CELL: Rocket Talk LIVE! ===
         var nextRTL = findNextRTL(cmsContent);
         if (nextRTL) {
+          var rtlVehicle = '';
+          if (nextRTL.launchId) {
+            for (var ri = 0; ri < launches.length; ri++) {
+              if (launches[ri].id === nextRTL.launchId) {
+                var cfg = launches[ri].rocket && launches[ri].rocket.configuration;
+                rtlVehicle = (cfg && cfg.full_name) || '';
+                break;
+              }
+            }
+          }
           rightEl.innerHTML =
             '<img class="rtl-image" src="../theater-web/static/RTL.png" alt="Rocket Talk LIVE!" onerror="this.style.display=\'none\'">' +
             '<div class="rtl-label">Rocket Talk LIVE!</div>' +
+            (rtlVehicle ? '<div class="rtl-vehicle">' + esc(rtlVehicle) + '</div>' : '') +
             '<div class="rtl-datetime">' +
               esc(formatDateET(nextRTL.datetime)) + '<br>' +
               esc(formatTimeET(nextRTL.datetime)) +
