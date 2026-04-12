@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+    }
+
+    #slide {
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 48px 60px;
+      position: relative;
+    }
+
+    /* Default dark theme */
+    #slide {
+      background: #111;
+      color: #eee;
+    }
+
+    #slide-image {
+      max-width: 60%;
+      max-height: 50%;
+      object-fit: contain;
+      border-radius: 12px;
+      margin-bottom: 32px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    #slide-title {
+      font-size: clamp(28px, 4vw, 64px);
+      font-weight: 800;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    #slide-message {
+      font-size: clamp(18px, 2.5vw, 36px);
+      font-weight: 400;
+      line-height: 1.5;
+      max-width: 80%;
+      opacity: 0.9;
+    }
+
+    /* Hide elements that aren't set */
+    .hide { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="slide">
+    <img id="slide-image" class="hide" alt="">
+    <div id="slide-title" class="hide"></div>
+    <div id="slide-message" class="hide"></div>
+  </div>
+
+<script>
+(function() {
+  'use strict';
+
+  const params = new URLSearchParams(window.location.search);
+
+  const slide     = document.getElementById('slide');
+  const imgEl     = document.getElementById('slide-image');
+  const titleEl   = document.getElementById('slide-title');
+  const messageEl = document.getElementById('slide-message');
+
+  // Background and text colors
+  const bg    = params.get('bg');
+  const color = params.get('color');
+  if (bg)    slide.style.background = bg;
+  if (color) slide.style.color = color;
+
+  // Image (only allow http/https URLs)
+  const image = params.get('image');
+  if (image && /^https?:\/\//i.test(image)) {
+    imgEl.src = image;
+    imgEl.classList.remove('hide');
+  }
+
+  // Title
+  const title = params.get('title');
+  if (title) {
+    titleEl.textContent = title;
+    titleEl.classList.remove('hide');
+    document.title = title;
+  }
+
+  // Message (supports line breaks with \n in URL)
+  const message = params.get('message');
+  if (message) {
+    messageEl.textContent = message;
+    messageEl.classList.remove('hide');
+  }
+})();
+</script>
+</body>
+</html>
