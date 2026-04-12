@@ -60,6 +60,9 @@ async function ensureSchema() {
     )
   `);
   await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_channel_slides_channel_id ON channel_slides(channel_id)
+  `);
+  await db.query(`
     CREATE TABLE IF NOT EXISTS breakthroughs (
       id              SERIAL PRIMARY KEY,
       title           TEXT NOT NULL,

@@ -203,7 +203,7 @@
     const iframe = document.createElement('iframe');
     iframe.src = url;
     iframe.setAttribute('loading', 'eager');
-    iframe.setAttribute('sandbox', 'allow-scripts allow-popups');
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
     return iframe;
   }
 
