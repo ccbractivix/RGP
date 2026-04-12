@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://channel-backend.onrender.com">
+  <title>Channel Player</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* ── Iframe container ─────────────────────────────────────────────────── */
+    .frame-container {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      transition: opacity 1.2s ease-in-out;
+    }
+    .frame-container iframe {
+      width: 100%; height: 100%;
+      border: none;
+      background: #000;
+    }
+    .frame-container.hidden { opacity: 0; pointer-events: none; }
+    .frame-container.visible { opacity: 1; }
+
+    /* ── Breakthrough overlay ─────────────────────────────────────────────── */
+    #breakthrough-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px;
+    }
+    #breakthrough-overlay.active { display: flex; }
+    #bt-title {
+      font-size: clamp(36px, 5vw, 72px);
+      font-weight: 800;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    }
+    #bt-message {
+      font-size: clamp(22px, 3vw, 48px);
+      font-weight: 500;
+      line-height: 1.5;
+      max-width: 80%;
+      text-shadow: 0 1px 8px rgba(0,0,0,0.3);
+    }
+    #bt-pulse {
+      position: absolute;
+      top: 24px; right: 32px;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* ── Lightning banner ─────────────────────────────────────────────────── */
+    #lightning-banner {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0;
+      width: 100%;
+      z-index: 900;
+      background: linear-gradient(90deg, #f59e0b, #d97706);
+      color: #000;
+      padding: 14px 32px;
+      font-size: clamp(16px, 2vw, 28px);
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      box-shadow: 0 -4px 20px rgba(245,158,11,0.4);
+    }
+    #lightning-banner.active { display: block; }
+    #lightning-banner .bolt { margin: 0 12px; }
+
+    /* ── Loading / error state ────────────────────────────────────────────── */
+    #loading-screen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: #000;
+      color: #666;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      font-size: 18px;
+    }
+    #loading-screen .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid #333;
+      border-top-color: #888;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-screen.hidden { display: none; }
+
+    /* ── Status indicator (bottom-right) ──────────────────────────────────── */
+    #status-dot {
+      position: fixed;
+      bottom: 8px; right: 12px;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      z-index: 800;
+      opacity: 0.5;
+    }
+    #status-dot.error { background: #ef4444; }
+  </style>
+</head>
+<body>
+
+  <!-- Loading screen (shown until first slide loads) -->
+  <div id="loading-screen">
+    <div class="spinner"></div>
+    <div id="loading-text">Loading channel…</div>
+  </div>
+
+  <!-- Two alternating iframe containers for crossfade -->
+  <div id="frame-a" class="frame-container visible"></div>
+  <div id="frame-b" class="frame-container hidden"></div>
+
+  <!-- Breakthrough overlay -->
+  <div id="breakthrough-overlay">
+    <div id="bt-pulse"></div>
+    <div id="bt-title"></div>
+    <div id="bt-message"></div>
+  </div>
+
+  <!-- Lightning banner -->
+  <div id="lightning-banner">
+    <span class="bolt">⚡</span>
+    WEATHER CLOSURE IN EFFECT — WATER AMENITIES TEMPORARILY CLOSED
+    <span class="bolt">⚡</span>
+  </div>
+
+  <!-- Status indicator -->
+  <div id="status-dot"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ── Configuration ─────────────────────────────────────────────────────── */
+  const API_BASE      = document.querySelector('meta[name="api-url"]')?.content || '';
+  const ALERT_POLL_MS = 15_000;   // Check for breakthroughs every 15s
+  const HEARTBEAT_MS  = 60_000;   // Send heartbeat every 60s
+  const CONFIG_POLL_MS = 300_000; // Re-fetch channel config every 5 min
+  const PRELOAD_SEC   = 12;       // Pre-load next iframe this many seconds before transition
+  const CACHE_KEY     = 'channel_player_cache';
+
+  /* ── State ─────────────────────────────────────────────────────────────── */
+  const params    = new URLSearchParams(window.location.search);
+  const channelId = params.get('channel') || 'front-lobby';
+  let slides      = [];
+  let currentIdx  = 0;
+  let rotationTimer = null;
+  let preloadTimer  = null;
+  let breakthroughActive = false;
+
+  /* ── DOM refs ──────────────────────────────────────────────────────────── */
+  const frameA   = document.getElementById('frame-a');
+  const frameB   = document.getElementById('frame-b');
+  const loading  = document.getElementById('loading-screen');
+  const loadText = document.getElementById('loading-text');
+  const btOverlay = document.getElementById('breakthrough-overlay');
+  const btTitle   = document.getElementById('bt-title');
+  const btMessage = document.getElementById('bt-message');
+  const ltBanner  = document.getElementById('lightning-banner');
+  const statusDot = document.getElementById('status-dot');
+
+  let activeFrame  = frameA;
+  let pendingFrame = frameB;
+
+  /* ── Helpers ───────────────────────────────────────────────────────────── */
+  function setTitle(name) {
+    document.title = name ? `${name} — Channel Player` : 'Channel Player';
+  }
+
+  function createIframe(url) {
+    const iframe = document.createElement('iframe');
+    iframe.src = url;
+    iframe.setAttribute('loading', 'eager');
+    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
+    return iframe;
+  }
+
+  function clearFrame(container) {
+    while (container.firstChild) container.removeChild(container.firstChild);
+  }
+
+  /* ── Load channel config ───────────────────────────────────────────────── */
+  async function loadConfig() {
+    try {
+      const res = await fetch(`${API_BASE}/api/channels/${channelId}`, {
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      statusDot.classList.remove('error');
+
+      // Cache for offline resilience
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (_) {}
+
+      return data;
+    } catch (e) {
+      console.error('[player] config fetch error:', e.message);
+      statusDot.classList.add('error');
+
+      // Try cached config
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          console.log('[player] using cached config');
+          return JSON.parse(cached);
+        }
+      } catch (_) {}
+
+      return null;
+    }
+  }
+
+  /* ── Start rotation ────────────────────────────────────────────────────── */
+  function startRotation() {
+    if (slides.length === 0) return;
+
+    // Load first slide immediately
+    currentIdx = 0;
+    loadSlide(activeFrame, slides[0].url);
+    activeFrame.classList.add('visible');
+    activeFrame.classList.remove('hidden');
+    loading.classList.add('hidden');
+
+    // If only one slide, no rotation needed
+    if (slides.length <= 1) return;
+
+    scheduleNext();
+  }
+
+  function scheduleNext() {
+    if (rotationTimer) clearTimeout(rotationTimer);
+    if (preloadTimer) clearTimeout(preloadTimer);
+
+    const current = slides[currentIdx];
+    const durationMs = (current.duration || 30) * 1000;
+
+    // Pre-load next slide before transition
+    const preloadMs = Math.max(0, durationMs - PRELOAD_SEC * 1000);
+    preloadTimer = setTimeout(() => {
+      const nextIdx = (currentIdx + 1) % slides.length;
+      loadSlide(pendingFrame, slides[nextIdx].url);
+    }, preloadMs);
+
+    // Transition to next slide
+    rotationTimer = setTimeout(() => {
+      if (breakthroughActive) {
+        // During breakthrough, postpone rotation — retry in 5s
+        scheduleNext();
+        return;
+      }
+      transition();
+    }, durationMs);
+  }
+
+  function transition() {
+    currentIdx = (currentIdx + 1) % slides.length;
+
+    // Crossfade
+    activeFrame.classList.remove('visible');
+    activeFrame.classList.add('hidden');
+    pendingFrame.classList.remove('hidden');
+    pendingFrame.classList.add('visible');
+
+    // Swap references
+    const tmp = activeFrame;
+    activeFrame = pendingFrame;
+    pendingFrame = tmp;
+
+    scheduleNext();
+  }
+
+  function loadSlide(container, url) {
+    clearFrame(container);
+    container.appendChild(createIframe(url));
+  }
+
+  /* ── Alert polling ─────────────────────────────────────────────────────── */
+  async function pollAlerts() {
+    try {
+      const res = await fetch(`${API_BASE}/api/channels/${channelId}/alerts`, {
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // Breakthrough
+      if (data.breakthrough) {
+        showBreakthrough(data.breakthrough);
+      } else {
+        hideBreakthrough();
+      }
+
+      // Lightning
+      if (data.lightning) {
+        ltBanner.classList.add('active');
+      } else {
+        ltBanner.classList.remove('active');
+      }
+    } catch (e) {
+      console.error('[player] alert poll error:', e.message);
+    }
+  }
+
+  function showBreakthrough(bt) {
+    btTitle.textContent = bt.title;
+    btMessage.textContent = bt.message;
+    btOverlay.style.background = bt.bg_color || '#D32F2F';
+    btOverlay.style.color = bt.text_color || '#FFFFFF';
+    btOverlay.classList.add('active');
+    breakthroughActive = true;
+  }
+
+  function hideBreakthrough() {
+    if (!breakthroughActive) return;
+    btOverlay.classList.remove('active');
+    breakthroughActive = false;
+  }
+
+  /* ── Heartbeat ─────────────────────────────────────────────────────────── */
+  function sendHeartbeat() {
+    fetch(`${API_BASE}/api/channels/${channelId}/heartbeat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    }).catch(() => {});
+  }
+
+  /* ── Config refresh (picks up slide changes without page reload) ────────── */
+  async function refreshConfig() {
+    const data = await loadConfig();
+    if (!data || !data.slides || data.slides.length === 0) return;
+
+    // Check if slides actually changed
+    const newJson = JSON.stringify(data.slides);
+    const oldJson = JSON.stringify(slides);
+    if (newJson === oldJson) return;
+
+    console.log('[player] config changed, updating slides');
+    slides = data.slides;
+    setTitle(data.name);
+
+    // Restart rotation with updated slides
+    currentIdx = 0;
+    if (rotationTimer) clearTimeout(rotationTimer);
+    if (preloadTimer) clearTimeout(preloadTimer);
+    loadSlide(activeFrame, slides[0].url);
+    if (slides.length > 1) scheduleNext();
+  }
+
+  /* ── Init ───────────────────────────────────────────────────────────────── */
+  async function init() {
+    loadText.textContent = `Loading ${channelId}…`;
+
+    const data = await loadConfig();
+    if (!data) {
+      loadText.textContent = 'Channel not found. Check the URL and try again.';
+      return;
+    }
+
+    if (!data.slides || data.slides.length === 0) {
+      loadText.textContent = `Channel "${data.name}" has no slides configured.`;
+      return;
+    }
+
+    slides = data.slides;
+    setTitle(data.name);
+    startRotation();
+
+    // Start polling for alerts
+    pollAlerts();
+    setInterval(pollAlerts, ALERT_POLL_MS);
+
+    // Start heartbeat
+    sendHeartbeat();
+    setInterval(sendHeartbeat, HEARTBEAT_MS);
+
+    // Periodically refresh config (picks up slide changes)
+    setInterval(refreshConfig, CONFIG_POLL_MS);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
