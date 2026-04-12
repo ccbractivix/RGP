@@ -422,6 +422,18 @@
       text-align: center;
     }
 
+    .footer-right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .footer-right-logo {
+      max-height: clamp(60px, 7vw, 100px);
+      width: auto;
+      object-fit: contain;
+    }
+
     /* ===== LOADING ===== */
     #tv-loading {
       display: flex;
@@ -453,7 +465,7 @@
     <!-- Header -->
     <div id="tv-header">
       <div id="header-logo">
-        <img src="images/go4launch_landscape_t.png" alt="Go4Launch" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span style=&quot;color:#FFFFFF;font-weight:700;font-size:clamp(16px,1.8vw,28px);&quot;>GO4LAUNCH</span>')">
+        <img src="images/go4launch_main_t.png" alt="Go4Launch" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span style=&quot;color:#FFFFFF;font-weight:700;font-size:clamp(16px,1.8vw,28px);&quot;>GO4LAUNCH</span>')">
       </div>
       <div id="header-title">ROCKET LAUNCH DASHBOARD</div>
     </div>
@@ -477,7 +489,9 @@
       <div class="footer-cell footer-center">
         Rocket launches are subject to weather, mechanical and other conditions that may delay, postpone, or cancel a launch. Follow the Go4Launch app for the latest information.
       </div>
-      <div class="footer-cell"></div>
+      <div class="footer-cell footer-right">
+        <img class="footer-right-logo" src="images/ctrg_t.png" alt="CTRG" onerror="this.style.display='none'">
+      </div>
     </div>
   </div>
 
@@ -489,6 +503,8 @@
 
       var metaTag = document.querySelector('meta[name="api-base"]');
       var API_BASE = (metaTag && metaTag.getAttribute('content')) || '';
+      var LL2_BASE = 'https://lldev.thespacedevs.com/2.3.0';
+      var LOCATION_IDS = '12,27';
       var REFRESH_MS = 300000; // 5 minutes
       var RETRY_MS   = 60000;  // 1 minute on error
       var RTL_GRACE_MS = 120 * 60 * 1000; // 120 minutes after RTL time
@@ -745,24 +761,25 @@
           countdownTimer = null;
         }
 
-        // Sort all launches by NET (no filtering by status)
+        // Sort all launches by NET and filter to upcoming (non-completed) only
         var sorted = launches.slice().sort(function (a, b) { return new Date(a.net) - new Date(b.net); });
+        var upcoming = sorted.filter(function (l) { return !isCompleted(l); });
 
-        // === LEFT CELL: Featured next launch ===
-        if (sorted.length > 0) {
-          var next = sorted[0];
+        // === LEFT CELL: Featured next upcoming launch ===
+        if (upcoming.length > 0) {
+          var next = upcoming[0];
           var cms = cmsContent[next.id] || {};
           leftEl.innerHTML = buildFeaturedCard(next, cms);
         } else {
           leftEl.innerHTML = '<div class="no-data">No launch data available</div>';
         }
 
-        // === CENTER CELL: Next 5 launches as compact cards ===
-        if (sorted.length > 1) {
+        // === CENTER CELL: Next 5 upcoming launches as compact cards ===
+        if (upcoming.length > 1) {
           var centerHtml = '';
-          var count = Math.min(sorted.length - 1, MAX_CENTER_LAUNCHES);
+          var count = Math.min(upcoming.length - 1, MAX_CENTER_LAUNCHES);
           for (var i = 1; i <= count; i++) {
-            var launch = sorted[i];
+            var launch = upcoming[i];
             var lcms = cmsContent[launch.id] || {};
             centerHtml += buildCompactCard(launch, lcms);
           }
@@ -799,12 +816,38 @@
 
       // ── Fetch & refresh loop ───────────────────────────────
 
+      function fetchLL2Direct() {
+        return fetch(LL2_BASE + '/launches/upcoming/?location__ids=' + LOCATION_IDS + '&limit=10&mode=detailed')
+          .then(function (r) {
+            if (!r.ok) throw new Error('LL2 HTTP ' + r.status);
+            return r.json();
+          })
+          .then(function (data) {
+            return data.results || [];
+          });
+      }
+
+      function fetchBackendLaunches() {
+        return fetch(API_BASE + '/api/launches').then(function (r) {
+          if (!r.ok) throw new Error('Launches HTTP ' + r.status);
+          return r.json();
+        });
+      }
+
+      function fetchLaunches() {
+        // Fetch from LL2 directly (no 14-day limitation), fall back to backend
+        return fetchLL2Direct().then(function (launches) {
+          if (launches && launches.length) return launches;
+          return fetchBackendLaunches();
+        }).catch(function (err) {
+          console.warn('[go4launch-tv] LL2 direct failed, falling back to backend:', err.message);
+          return fetchBackendLaunches();
+        });
+      }
+
       function fetchAndRender() {
         Promise.all([
-          fetch(API_BASE + '/api/launches').then(function (r) {
-            if (!r.ok) throw new Error('Launches HTTP ' + r.status);
-            return r.json();
-          }),
+          fetchLaunches(),
           fetch(API_BASE + '/api/content').then(function (r) {
             if (!r.ok) throw new Error('Content HTTP ' + r.status);
             return r.json();
