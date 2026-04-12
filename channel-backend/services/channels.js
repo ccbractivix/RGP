@@ -271,7 +271,7 @@ async function getActiveBreakthroughs(channelId) {
   const r = await db.query(`
     SELECT * FROM breakthroughs
     WHERE active = true
-      AND (target_channels IS NULL OR target_channels = '{}' OR $1 = ANY(target_channels))
+      AND (target_channels IS NULL OR $1 = ANY(target_channels))
     ORDER BY priority DESC
     LIMIT 1
   `, [channelId]);

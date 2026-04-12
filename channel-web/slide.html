@@ -86,9 +86,9 @@
   if (bg)    slide.style.background = bg;
   if (color) slide.style.color = color;
 
-  // Image
+  // Image (only allow http/https URLs)
   const image = params.get('image');
-  if (image) {
+  if (image && /^https?:\/\//i.test(image)) {
     imgEl.src = image;
     imgEl.classList.remove('hide');
   }

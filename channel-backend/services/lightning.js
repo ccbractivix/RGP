@@ -17,7 +17,8 @@ async function pollLightning() {
     const res = await fetch(AMENITIES_API, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    lightningActive = (data.amenities || []).some(a => a.lightning === true);
+    const amenities = Array.isArray(data.amenities) ? data.amenities : [];
+    lightningActive = amenities.some(a => a.lightning === true);
     lastCheck = new Date();
     lastError = null;
   } catch (e) {

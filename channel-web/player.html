@@ -203,7 +203,7 @@
     const iframe = document.createElement('iframe');
     iframe.src = url;
     iframe.setAttribute('loading', 'eager');
-    iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups');
+    iframe.setAttribute('sandbox', 'allow-scripts allow-popups');
     return iframe;
   }
 
@@ -276,8 +276,11 @@
     // Transition to next slide
     rotationTimer = setTimeout(() => {
       if (breakthroughActive) {
-        // During breakthrough, postpone rotation — retry in 5s
-        scheduleNext();
+        // During breakthrough, retry in 5s instead of full duration
+        rotationTimer = setTimeout(() => {
+          if (breakthroughActive) { scheduleNext(); return; }
+          transition();
+        }, 5000);
         return;
       }
       transition();
