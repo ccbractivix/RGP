@@ -835,8 +835,30 @@
 
       // ── Fetch & refresh loop ───────────────────────────────
 
+      var FETCH_TIMEOUT_MS = 10000; // 10-second timeout for all fetches
+
+      function fetchWithTimeout(url, timeoutMs) {
+        var ms = timeoutMs || FETCH_TIMEOUT_MS;
+        var controller = new AbortController();
+        var timer = setTimeout(function () { controller.abort(); }, ms);
+        return fetch(url, { signal: controller.signal })
+          .then(function (r) { clearTimeout(timer); return r; })
+          .catch(function (err) {
+            clearTimeout(timer);
+            if (err.name === 'AbortError') throw new Error('Timeout after ' + ms + 'ms: ' + url);
+            throw err;
+          });
+      }
+
+      function fetchBackendLaunches() {
+        return fetchWithTimeout(API_BASE + '/api/launches').then(function (r) {
+          if (!r.ok) throw new Error('Launches HTTP ' + r.status);
+          return r.json();
+        });
+      }
+
       function fetchLL2Direct() {
-        return fetch(LL2_BASE + '/launches/upcoming/?location__ids=' + LOCATION_IDS + '&limit=10&mode=detailed')
+        return fetchWithTimeout(LL2_BASE + '/launches/upcoming/?location__ids=' + LOCATION_IDS + '&limit=10&mode=detailed')
           .then(function (r) {
             if (!r.ok) throw new Error('LL2 HTTP ' + r.status);
             return r.json();
@@ -846,31 +868,34 @@
           });
       }
 
-      function fetchBackendLaunches() {
-        return fetch(API_BASE + '/api/launches').then(function (r) {
-          if (!r.ok) throw new Error('Launches HTTP ' + r.status);
-          return r.json();
+      function fetchLaunches() {
+        // Try backend proxy first (uses production LL2 API with key + caching)
+        return fetchBackendLaunches().then(function (launches) {
+          if (launches && launches.length) return launches;
+          console.warn('[go4launch-tv] Backend returned empty data, trying LL2 direct');
+          return fetchLL2Direct();
+        }).catch(function (err) {
+          console.warn('[go4launch-tv] Backend failed, trying LL2 direct:', err.message);
+          return fetchLL2Direct();
         });
       }
 
-      function fetchLaunches() {
-        // Fetch from LL2 directly (no 14-day limitation), fall back to backend
-        return fetchLL2Direct().then(function (launches) {
-          if (launches && launches.length) return launches;
-          return fetchBackendLaunches();
-        }).catch(function (err) {
-          console.warn('[go4launch-tv] LL2 direct failed, falling back to backend:', err.message);
-          return fetchBackendLaunches();
-        });
+      function fetchContent() {
+        return fetchWithTimeout(API_BASE + '/api/content')
+          .then(function (r) {
+            if (!r.ok) throw new Error('Content HTTP ' + r.status);
+            return r.json();
+          })
+          .catch(function (err) {
+            console.warn('[go4launch-tv] Content fetch failed, using empty content:', err.message);
+            return {};
+          });
       }
 
       function fetchAndRender() {
         Promise.all([
           fetchLaunches(),
-          fetch(API_BASE + '/api/content').then(function (r) {
-            if (!r.ok) throw new Error('Content HTTP ' + r.status);
-            return r.json();
-          })
+          fetchContent()
         ])
         .then(function (results) {
           render(results[0] || [], results[1] || {});
