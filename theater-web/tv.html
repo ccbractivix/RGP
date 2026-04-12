@@ -7,13 +7,13 @@
   <title>Theater TV Display</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       width: 100%; height: 100%;
-      background: #E37433;
+      background: #4A7A36;
       color: #fff;
       font-family: 'Inter', sans-serif;
       overflow: hidden;
@@ -32,8 +32,9 @@
       padding: 18px 0 8px;
       font-size: clamp(28px, 3.5vw, 48px);
       font-weight: 700;
+      font-family: 'Fredoka', sans-serif;
       letter-spacing: 6px;
-      color: #4A7A36;
+      color: #E37433;
       text-transform: uppercase;
       flex-shrink: 0;
     }
@@ -53,7 +54,7 @@
       display: flex;
       flex-direction: column;
       padding: 0 16px;
-      border-right: 1px solid #c85a20;
+      border-right: 1px solid #3a6228;
       overflow: hidden;
     }
 
@@ -64,7 +65,7 @@
     .tv-day-name {
       font-size: clamp(14px, 1.4vw, 20px);
       font-weight: 700;
-      color: #4A7A36;
+      color: #fff;
       text-transform: uppercase;
       letter-spacing: 2px;
       margin-bottom: 4px;
@@ -72,14 +73,14 @@
 
     .tv-date {
       font-size: clamp(11px, 1vw, 15px);
-      color: #fff5e6;
+      color: #d4e8cc;
       margin-bottom: 10px;
       font-weight: 500;
     }
 
     .tv-divider {
       height: 1px;
-      background: #4A7A36;
+      background: #E37433;
       margin-bottom: 14px;
       opacity: 0.6;
     }
@@ -106,20 +107,20 @@
 
     .tv-show-title {
       display: block;
-      color: #2d5a1e;
+      color: #FFD59A;
       font-weight: 700;
     }
 
     .tv-show-meta {
       display: block;
       font-size: clamp(9px, 0.8vw, 12px);
-      color: #fde8d0;
+      color: #d4e8cc;
       margin-top: 1px;
     }
 
     .tv-empty {
       font-size: clamp(10px, 0.9vw, 13px);
-      color: #c85a20;
+      color: #8ab87a;
       font-style: italic;
     }
 
@@ -130,7 +131,7 @@
       flex-direction: row;
       align-items: center;
       padding: 12px 24px 16px;
-      border-top: 1px solid #c85a20;
+      border-top: 1px solid #3a6228;
     }
 
     #tv-promo {
@@ -153,13 +154,13 @@
     .promo-headline {
       font-size: clamp(14px, 1.4vw, 22px);
       font-weight: 700;
-      color: #4A7A36;
+      color: #E37433;
       line-height: 1.3;
     }
 
     .promo-subline {
       font-size: clamp(10px, 1vw, 15px);
-      color: #fff5e6;
+      color: #d4e8cc;
       line-height: 1.3;
       margin-top: 4px;
     }
@@ -191,7 +192,7 @@
       font-style: italic;
       margin-top: 6px;
       font-size: clamp(10px, 1vw, 14px);
-      color: #fde8d0;
+      color: #d4e8cc;
     }
 
     /* Promo-active layout: image+text left-aligned, QR centered, info right of QR */
@@ -225,7 +226,7 @@
       bottom: 4px;
       right: 14px;
       font-size: 10px;
-      color: #c85a20;
+      color: #8ab87a;
     }
 
     #tv-loading {
@@ -234,7 +235,7 @@
       justify-content: center;
       flex: 1;
       font-size: 18px;
-      color: #fff5e6;
+      color: #e8f5e0;
     }
   </style>
 </head>
