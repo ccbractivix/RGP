@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-base" content="https://go4launch-backend.onrender.com">
+  <title>Go4Launch — TV Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #121212;
+      --card-bg: #1E1E1E;
+      --card-border: #1e1e3a;
+      --text: #e8e8f0;
+      --text-muted: #8888a0;
+      --text-dim: #555570;
+      --accent-green: #4caf50;
+      --accent-orange: #ff9800;
+      --accent-red: #e53935;
+      --accent-blue: #42a5f5;
+      --accent-purple: #7c4dff;
+      --accent-gold: #f0c040;
+      --accent-tbc: #29b6f6;
+      --radius: 12px;
+      --radius-sm: 6px;
+    }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #tv-page {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ===== HEADER ===== */
+    #tv-header {
+      display: flex;
+      align-items: center;
+      padding: 10px 24px;
+      border-bottom: 1px solid var(--card-border);
+      flex-shrink: 0;
+    }
+
+    #header-logo {
+      flex: 0 0 33.333%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #header-logo img {
+      max-height: 64px;
+      max-width: 90%;
+      height: auto;
+      width: auto;
+    }
+
+    #header-title {
+      flex: 0 0 66.666%;
+      font-size: clamp(22px, 3vw, 42px);
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    #tv-main {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      padding: 12px 24px;
+      gap: 20px;
+    }
+
+    /* Left cell — Featured launch card */
+    #tv-left {
+      flex: 0 0 28%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Center cell — Compact launch cards */
+    #tv-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    /* Right cell — RTL info */
+    #tv-right {
+      flex: 0 0 20%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    /* ===== LEFT CELL — FEATURED LAUNCH CARD ===== */
+    .featured-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .featured-headline {
+      background: linear-gradient(135deg, #e53935, #c62828);
+      color: #fff;
+      font-weight: 700;
+      font-size: clamp(11px, 1vw, 15px);
+      text-align: center;
+      padding: 6px 12px;
+      flex-shrink: 0;
+    }
+
+    .featured-image {
+      width: 100%;
+      height: 0;
+      padding-bottom: 56.25%;
+      position: relative;
+      overflow: hidden;
+      background: #0e0e20;
+      flex-shrink: 0;
+    }
+
+    .featured-image img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .featured-body {
+      padding: 10px 14px;
+      text-align: center;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    .featured-mission {
+      font-size: clamp(13px, 1.2vw, 20px);
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 5px;
+      line-height: 1.3;
+    }
+
+    .featured-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 16px;
+      font-size: clamp(9px, 0.75vw, 12px);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 5px;
+    }
+
+    .featured-meta {
+      font-size: clamp(9px, 0.8vw, 13px);
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .featured-countdown {
+      display: flex;
+      justify-content: center;
+      align-items: baseline;
+      gap: 2px;
+      margin: 6px 0 3px;
+    }
+
+    .cd-prefix {
+      font-size: clamp(13px, 1.3vw, 20px);
+      font-weight: 300;
+      color: var(--text-muted);
+      margin-right: 3px;
+    }
+
+    .cd-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: clamp(28px, 2.8vw, 44px);
+    }
+
+    .cd-value {
+      font-size: clamp(16px, 1.6vw, 26px);
+      font-weight: 700;
+      color: #fff;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .cd-sep {
+      font-size: clamp(13px, 1.3vw, 20px);
+      font-weight: 300;
+      color: var(--text-dim);
+      margin: 0 1px;
+      align-self: flex-start;
+    }
+
+    .cd-label {
+      font-size: clamp(6px, 0.5vw, 8px);
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-top: 2px;
+    }
+
+    .countdown-launched {
+      font-size: clamp(13px, 1.2vw, 18px);
+      font-weight: 700;
+      color: var(--accent-green);
+      margin: 6px 0 3px;
+    }
+
+    .featured-date {
+      font-size: clamp(9px, 0.8vw, 13px);
+      color: var(--accent-gold);
+      font-weight: 500;
+      margin-top: 3px;
+    }
+
+    .featured-chris-says {
+      border-top: 1px solid var(--card-border);
+      padding: 8px 14px;
+      flex-shrink: 0;
+    }
+
+    .featured-chris-says .cs-label {
+      font-size: clamp(8px, 0.65vw, 10px);
+      color: var(--accent-orange);
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+
+    .featured-chris-says .cs-text {
+      font-size: clamp(8px, 0.7vw, 11px);
+      color: var(--text-muted);
+      font-style: italic;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* ===== CENTER CELL — COMPACT HORIZONTAL CARDS ===== */
+    .compact-card {
+      display: flex;
+      flex-direction: column;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .compact-headline {
+      background: linear-gradient(135deg, #e53935, #c62828);
+      color: #fff;
+      font-weight: 700;
+      font-size: clamp(8px, 0.75vw, 11px);
+      text-align: center;
+      padding: 3px 8px;
+    }
+
+    .compact-card-inner {
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .compact-image {
+      flex: 0 0 clamp(70px, 7vw, 110px);
+      height: clamp(52px, 5.5vw, 82px);
+      overflow: hidden;
+      background: #0e0e20;
+    }
+
+    .compact-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .compact-info {
+      flex: 1;
+      padding: 6px 10px;
+      min-width: 0;
+    }
+
+    .compact-vehicle {
+      font-size: clamp(8px, 0.7vw, 11px);
+      color: var(--text-muted);
+      margin-bottom: 1px;
+    }
+
+    .compact-mission {
+      font-size: clamp(10px, 0.9vw, 15px);
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .compact-datetime {
+      font-size: clamp(8px, 0.75vw, 12px);
+      color: var(--accent-gold);
+      margin-bottom: 3px;
+    }
+
+    .compact-status {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: clamp(7px, 0.6vw, 9px);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ===== RIGHT CELL — RTL ===== */
+    .rtl-image {
+      max-width: 90%;
+      height: auto;
+      border-radius: var(--radius);
+    }
+
+    .rtl-label {
+      font-size: clamp(11px, 1vw, 16px);
+      color: var(--accent-purple);
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .rtl-datetime {
+      text-align: center;
+      font-size: clamp(10px, 0.9vw, 15px);
+      color: var(--text);
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    /* ===== STATUS BADGE COLORS ===== */
+    .status-go       { background: var(--accent-green); color: #fff; }
+    .status-tbd      { background: var(--accent-orange); color: #fff; }
+    .status-tbc      { background: var(--accent-tbc); color: #fff; }
+    .status-hold     { background: var(--accent-red); color: #fff; }
+    .status-inflight { background: var(--accent-purple); color: #fff; }
+    .status-success  { background: var(--accent-green); color: #fff; }
+    .status-failure  { background: var(--accent-red); color: #fff; }
+
+    /* ===== FOOTER ===== */
+    #tv-footer {
+      display: flex;
+      align-items: center;
+      padding: 10px 24px 14px;
+      border-top: 1px solid var(--card-border);
+      flex-shrink: 0;
+      gap: 20px;
+    }
+
+    .footer-cell {
+      flex: 1;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-left .qr-code {
+      width: clamp(80px, 8vw, 120px);
+      height: clamp(80px, 8vw, 120px);
+      border-radius: 6px;
+      background: #fff;
+      padding: 4px;
+      flex-shrink: 0;
+    }
+
+    .footer-left-text {
+      font-size: clamp(10px, 0.85vw, 13px);
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .footer-center {
+      font-size: clamp(9px, 0.75vw, 12px);
+      color: var(--text-dim);
+      line-height: 1.5;
+      font-style: italic;
+      text-align: center;
+    }
+
+    /* ===== LOADING ===== */
+    #tv-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      font-size: 18px;
+      color: var(--text-dim);
+    }
+
+    #tv-status {
+      position: fixed;
+      bottom: 4px;
+      right: 14px;
+      font-size: 10px;
+      color: #333;
+    }
+
+    .no-data {
+      color: var(--text-dim);
+      font-size: clamp(11px, 1vw, 15px);
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="tv-page">
+    <!-- Header -->
+    <div id="tv-header">
+      <div id="header-logo">
+        <img src="images/Go4Launch_autograph_lg.jpg" alt="Go4Launch">
+      </div>
+      <div id="header-title">ROCKET LAUNCH DASHBOARD</div>
+    </div>
+
+    <!-- Loading -->
+    <div id="tv-loading">Loading launch data…</div>
+
+    <!-- Main Content -->
+    <div id="tv-main" style="display:none;">
+      <div id="tv-left"></div>
+      <div id="tv-center"></div>
+      <div id="tv-right"></div>
+    </div>
+
+    <!-- Footer -->
+    <div id="tv-footer">
+      <div class="footer-cell footer-left">
+        <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=https%3A%2F%2Fccbractivix.github.io%2FRGP%2Fgo4launch%2Findex.html" alt="QR Code to Go4Launch app">
+        <div class="footer-left-text">The Go4Launch app has all the information you need for launch viewing at the resort!</div>
+      </div>
+      <div class="footer-cell footer-center">
+        Rocket launches are subject to wind, weather, mechanical and other conditions that may delay, postpone, or cancel a launch at any time. Follow the Go4Launch app for the latest information.
+      </div>
+      <div class="footer-cell"></div>
+    </div>
+  </div>
+
+  <div id="tv-status"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var metaTag = document.querySelector('meta[name="api-base"]');
+      var API_BASE = (metaTag && metaTag.getAttribute('content')) || '';
+      var REFRESH_MS = 300000; // 5 minutes
+      var RETRY_MS   = 60000;  // 1 minute on error
+      var RTL_GRACE_MS = 120 * 60 * 1000; // 120 minutes after RTL time
+
+      var countdownTimer = null;
+
+      // ── Utilities ──────────────────────────────────────────
+
+      function esc(str) {
+        if (!str) return '';
+        var d = document.createElement('div');
+        d.textContent = String(str);
+        return d.innerHTML;
+      }
+
+      function statusClass(status) {
+        if (!status) return 'status-tbd';
+        switch (status.id) {
+          case 1: return 'status-go';
+          case 2: return 'status-tbd';
+          case 3: return 'status-success';
+          case 4: return 'status-failure';
+          case 5: return 'status-hold';
+          case 6: return 'status-inflight';
+          case 7: return 'status-failure';
+          case 8: return 'status-tbc';
+          default: return 'status-tbd';
+        }
+      }
+
+      function statusLabel(status) {
+        if (!status) return 'TBD';
+        return status.abbrev || status.name || 'TBD';
+      }
+
+      function isCompleted(launch) {
+        var id = launch.status && launch.status.id;
+        return id === 3 || id === 4 || id === 7;
+      }
+
+      function getImageUrl(launch, cms) {
+        if (cms && cms.card_image_path) {
+          return 'images/launches/' + cms.card_image_path;
+        }
+        var img = launch.image;
+        if (img && img.image_url) return img.image_url;
+        if (img && img.thumbnail_url) return img.thumbnail_url;
+        var cfg = launch.rocket && launch.rocket.configuration;
+        if (cfg && cfg.image_url) return cfg.image_url;
+        return null;
+      }
+
+      function formatDateET(dateStr) {
+        var d = new Date(dateStr);
+        return d.toLocaleDateString('en-US', {
+          timeZone: 'America/New_York',
+          month: 'long', day: 'numeric', year: 'numeric'
+        });
+      }
+
+      function formatTimeET(dateStr) {
+        var d = new Date(dateStr);
+        return d.toLocaleTimeString('en-US', {
+          timeZone: 'America/New_York',
+          hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+        });
+      }
+
+      function formatDateTimeET(dateStr) {
+        return formatDateET(dateStr) + ' \u2014 ' + formatTimeET(dateStr);
+      }
+
+      // ── RTL lookup ─────────────────────────────────────────
+
+      function findNextRTL(cmsContent) {
+        var now = Date.now();
+        var candidates = [];
+
+        for (var launchId in cmsContent) {
+          if (!Object.prototype.hasOwnProperty.call(cmsContent, launchId)) continue;
+          var cms = cmsContent[launchId];
+          if (cms && cms.rtl_datetime) {
+            var rtlTime = new Date(cms.rtl_datetime).getTime();
+            // Show if the RTL is upcoming or within 120 min of having passed
+            if (rtlTime + RTL_GRACE_MS > now) {
+              candidates.push({ datetime: cms.rtl_datetime, time: rtlTime });
+            }
+          }
+        }
+
+        if (!candidates.length) return null;
+
+        // Earliest qualifying RTL
+        candidates.sort(function (a, b) { return a.time - b.time; });
+        return candidates[0];
+      }
+
+      // ── Card builders ──────────────────────────────────────
+
+      function buildFeaturedCard(launch, cms) {
+        var imgUrl = getImageUrl(launch, cms);
+        var provider = (launch.launch_service_provider && launch.launch_service_provider.name) || '';
+        var location = (launch.pad && launch.pad.location && launch.pad.location.name) || (launch.pad && launch.pad.name) || '';
+        var net = new Date(launch.net);
+        var launched = isCompleted(launch);
+
+        var html = '<div class="featured-card">';
+
+        // CMS Headline at top of card
+        if (cms && cms.headline) {
+          html += '<div class="featured-headline">' + esc(cms.headline) + '</div>';
+        }
+
+        // Image
+        if (imgUrl) {
+          html += '<div class="featured-image">' +
+            '<img src="' + esc(imgUrl) + '" alt="' + esc(launch.name) + '"' +
+            ' onerror="this.parentElement.style.display=\'none\'">' +
+            '</div>';
+        }
+
+        html += '<div class="featured-body">';
+
+        // Mission name
+        html += '<div class="featured-mission">' + esc(launch.name || 'Unknown Mission') + '</div>';
+
+        // Status badge
+        html += '<div><span class="featured-badge ' + statusClass(launch.status) + '">' +
+          esc(statusLabel(launch.status)) + '</span></div>';
+
+        // Provider & Location
+        if (provider) html += '<div class="featured-meta">' + esc(provider) + '</div>';
+        if (location) html += '<div class="featured-meta">' + esc(location) + '</div>';
+
+        // Countdown or Launched
+        if (launched) {
+          html += '<div class="countdown-launched">\uD83D\uDE80 Launched!</div>';
+        } else {
+          html += '<div class="featured-countdown" data-net="' + net.toISOString() + '">' +
+            '<span class="cd-prefix">T\u2013</span>' +
+            '<div class="cd-group"><span class="cd-value" data-unit="d">--</span><span class="cd-label">Days</span></div>' +
+            '<span class="cd-sep">:</span>' +
+            '<div class="cd-group"><span class="cd-value" data-unit="h">--</span><span class="cd-label">Hours</span></div>' +
+            '<span class="cd-sep">:</span>' +
+            '<div class="cd-group"><span class="cd-value" data-unit="m">--</span><span class="cd-label">Mins</span></div>' +
+            '<span class="cd-sep">:</span>' +
+            '<div class="cd-group"><span class="cd-value" data-unit="s">--</span><span class="cd-label">Secs</span></div>' +
+            '</div>';
+        }
+
+        // Date
+        html += '<div class="featured-date">' + esc(formatDateTimeET(launch.net)) + '</div>';
+
+        html += '</div>'; // featured-body
+
+        // CMS Chris Says at bottom of card
+        if (cms && cms.chris_says) {
+          html += '<div class="featured-chris-says">' +
+            '<div class="cs-label">\uD83D\uDD2D Chris Says</div>' +
+            '<div class="cs-text">' + esc(cms.chris_says) + '</div>' +
+            '</div>';
+        }
+
+        html += '</div>'; // featured-card
+        return html;
+      }
+
+      function buildCompactCard(launch, cms) {
+        var imgUrl = getImageUrl(launch, cms);
+        var vehicle = (launch.rocket && launch.rocket.configuration && launch.rocket.configuration.full_name) || '';
+        var missionName = (launch.mission && launch.mission.name) || launch.name || 'Unknown Mission';
+
+        var html = '<div class="compact-card">';
+
+        // CMS Headline at top if present
+        if (cms && cms.headline) {
+          html += '<div class="compact-headline">' + esc(cms.headline) + '</div>';
+        }
+
+        html += '<div class="compact-card-inner">';
+
+        // Image on the left
+        if (imgUrl) {
+          html += '<div class="compact-image">' +
+            '<img src="' + esc(imgUrl) + '" alt="' + esc(launch.name) + '"' +
+            ' onerror="this.parentElement.style.display=\'none\'">' +
+            '</div>';
+        }
+
+        // Text on the right
+        html += '<div class="compact-info">';
+        if (vehicle) html += '<div class="compact-vehicle">' + esc(vehicle) + '</div>';
+        html += '<div class="compact-mission">' + esc(missionName) + '</div>';
+        html += '<div class="compact-datetime">' + esc(formatDateET(launch.net)) + ' \u2014 ' + esc(formatTimeET(launch.net)) + '</div>';
+        html += '<span class="compact-status ' + statusClass(launch.status) + '">' + esc(statusLabel(launch.status)) + '</span>';
+        html += '</div>'; // compact-info
+
+        html += '</div>'; // compact-card-inner
+        html += '</div>'; // compact-card
+
+        return html;
+      }
+
+      // ── Countdown system ───────────────────────────────────
+
+      function startCountdowns() {
+        if (countdownTimer) clearInterval(countdownTimer);
+        updateCountdowns();
+        countdownTimer = setInterval(updateCountdowns, 1000);
+      }
+
+      function updateCountdowns() {
+        var rows = document.querySelectorAll('[data-net]');
+        var now = Date.now();
+
+        rows.forEach(function (row) {
+          var net = new Date(row.dataset.net).getTime();
+          var diff = net - now;
+
+          var dEl = row.querySelector('[data-unit="d"]');
+          if (!dEl) return;
+
+          if (diff <= 0) {
+            row.outerHTML = '<div class="countdown-launched">\uD83D\uDE80 Liftoff!</div>';
+            return;
+          }
+
+          var d = Math.floor(diff / 86400000);
+          var h = Math.floor((diff % 86400000) / 3600000);
+          var m = Math.floor((diff % 3600000) / 60000);
+          var s = Math.floor((diff % 60000) / 1000);
+
+          dEl.textContent = String(d).padStart(2, '0');
+          row.querySelector('[data-unit="h"]').textContent = String(h).padStart(2, '0');
+          row.querySelector('[data-unit="m"]').textContent = String(m).padStart(2, '0');
+          row.querySelector('[data-unit="s"]').textContent = String(s).padStart(2, '0');
+        });
+      }
+
+      // ── Render ─────────────────────────────────────────────
+
+      function render(launches, cmsContent) {
+        var mainEl    = document.getElementById('tv-main');
+        var loadingEl = document.getElementById('tv-loading');
+        var leftEl    = document.getElementById('tv-left');
+        var centerEl  = document.getElementById('tv-center');
+        var rightEl   = document.getElementById('tv-right');
+        var statusEl  = document.getElementById('tv-status');
+
+        // Stop existing countdowns
+        if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
+
+        // Filter to upcoming (non-completed) launches, sorted by NET
+        var upcoming = launches.filter(function (l) { return !isCompleted(l); });
+        upcoming.sort(function (a, b) { return new Date(a.net) - new Date(b.net); });
+
+        // === LEFT CELL: Featured next launch ===
+        if (upcoming.length > 0) {
+          var next = upcoming[0];
+          var cms = cmsContent[next.id] || {};
+          leftEl.innerHTML = buildFeaturedCard(next, cms);
+        } else {
+          leftEl.innerHTML = '<div class="no-data">No upcoming launches scheduled</div>';
+        }
+
+        // === CENTER CELL: Additional launches as compact cards ===
+        if (upcoming.length > 1) {
+          var centerHtml = '';
+          for (var i = 1; i < upcoming.length; i++) {
+            var launch = upcoming[i];
+            var lcms = cmsContent[launch.id] || {};
+            centerHtml += buildCompactCard(launch, lcms);
+          }
+          centerEl.innerHTML = centerHtml;
+        } else {
+          centerEl.innerHTML = '<div class="no-data">No additional launches scheduled</div>';
+        }
+
+        // === RIGHT CELL: Rocket Talk LIVE! ===
+        var nextRTL = findNextRTL(cmsContent);
+        if (nextRTL) {
+          rightEl.innerHTML =
+            '<img class="rtl-image" src="../theater-web/static/RTL.png" alt="Rocket Talk LIVE!">' +
+            '<div class="rtl-label">Rocket Talk LIVE!</div>' +
+            '<div class="rtl-datetime">' +
+              esc(formatDateET(nextRTL.datetime)) + '<br>' +
+              esc(formatTimeET(nextRTL.datetime)) +
+            '</div>';
+        } else {
+          rightEl.innerHTML = '';
+        }
+
+        // Show content, hide loading
+        loadingEl.style.display = 'none';
+        mainEl.style.display = 'flex';
+
+        // Start live countdowns
+        startCountdowns();
+
+        // Timestamp
+        var now = new Date();
+        statusEl.textContent = 'Updated ' + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      }
+
+      // ── Fetch & refresh loop ───────────────────────────────
+
+      function fetchAndRender() {
+        Promise.all([
+          fetch(API_BASE + '/api/launches').then(function (r) {
+            if (!r.ok) throw new Error('Launches HTTP ' + r.status);
+            return r.json();
+          }),
+          fetch(API_BASE + '/api/content').then(function (r) {
+            if (!r.ok) throw new Error('Content HTTP ' + r.status);
+            return r.json();
+          })
+        ])
+        .then(function (results) {
+          render(results[0] || [], results[1] || {});
+          setTimeout(fetchAndRender, REFRESH_MS);
+        })
+        .catch(function (err) {
+          console.error('[go4launch-tv] Fetch failed:', err);
+          var loading = document.getElementById('tv-loading');
+          loading.textContent = 'Loading\u2026';
+          loading.style.display = 'flex';
+          document.getElementById('tv-main').style.display = 'none';
+          setTimeout(fetchAndRender, RETRY_MS);
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', fetchAndRender);
+    })();
+  </script>
+</body>
+</html>
