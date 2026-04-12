@@ -45,30 +45,33 @@
     /* ===== HEADER ===== */
     #tv-header {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 14px 24px 10px;
+      padding: 10px 24px;
       border-bottom: 1px solid var(--card-border);
       flex-shrink: 0;
     }
 
+    #header-logo {
+      flex: 0 0 33.333%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #header-logo img {
+      max-height: 64px;
+      max-width: 90%;
+      height: auto;
+      width: auto;
+    }
+
     #header-title {
+      flex: 0 0 66.666%;
       font-size: clamp(22px, 3vw, 42px);
       font-weight: 700;
       letter-spacing: 4px;
       color: var(--accent-gold);
       text-transform: uppercase;
-      text-align: center;
-    }
-
-    #header-subtitle {
-      font-size: clamp(11px, 1.2vw, 18px);
-      color: var(--text-muted);
-      font-weight: 400;
-      letter-spacing: 1px;
-      margin-top: 2px;
-      text-align: center;
     }
 
     /* ===== MAIN CONTENT ===== */
@@ -80,31 +83,12 @@
       gap: 20px;
     }
 
-    /* Left cell — QR gutter */
+    /* Left cell — Featured launch card */
     #tv-left {
-      flex: 0 0 20%;
+      flex: 0 0 28%;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
       overflow: hidden;
-    }
-
-    #tv-left .gutter-qr {
-      width: clamp(100px, 10vw, 160px);
-      height: clamp(100px, 10vw, 160px);
-      border-radius: 8px;
-      background: #fff;
-      padding: 6px;
-    }
-
-    #tv-left .gutter-text {
-      font-size: clamp(11px, 1vw, 16px);
-      color: var(--text-muted);
-      text-align: center;
-      line-height: 1.5;
-      padding: 0 8px;
     }
 
     /* Center cell — Compact launch cards */
@@ -469,8 +453,10 @@
   <div id="tv-page">
     <!-- Header -->
     <div id="tv-header">
+      <div id="header-logo">
+        <img src="images/Go4Launch_autograph_lg.jpg" alt="Go4Launch" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span style=&quot;color:#4caf50;font-weight:700;font-size:clamp(16px,1.8vw,28px);&quot;>GO4LAUNCH</span>')">
+      </div>
       <div id="header-title">ROCKET LAUNCH DASHBOARD</div>
-      <div id="header-subtitle">Powered by the Go4Launch app</div>
     </div>
 
     <!-- Loading -->
@@ -763,23 +749,26 @@
         var upcoming = launches.filter(function (l) { return !isCompleted(l); });
         upcoming.sort(function (a, b) { return new Date(a.net) - new Date(b.net); });
 
-        // === LEFT CELL: QR gutter ===
-        leftEl.innerHTML =
-          '<img class="gutter-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=https%3A%2F%2Frocketbeachresort.com" alt="QR Code">' +
-          '<div class="gutter-text">Scan the QR code or visit <strong>rocketbeachresort.com</strong></div>';
-
-        // === CENTER CELL: Next 5 upcoming launches as compact cards ===
+        // === LEFT CELL: Featured next launch ===
         if (upcoming.length > 0) {
+          var next = upcoming[0];
+          var cms = cmsContent[next.id] || {};
+          leftEl.innerHTML = buildFeaturedCard(next, cms);
+        } else {
+          leftEl.innerHTML = '<div class="no-data">No upcoming launches scheduled</div>';
+        }
+
+        // === CENTER CELL: Additional launches as compact cards ===
+        if (upcoming.length > 1) {
           var centerHtml = '';
-          var count = Math.min(upcoming.length, 5);
-          for (var i = 0; i < count; i++) {
+          for (var i = 1; i < upcoming.length; i++) {
             var launch = upcoming[i];
             var lcms = cmsContent[launch.id] || {};
             centerHtml += buildCompactCard(launch, lcms);
           }
           centerEl.innerHTML = centerHtml;
         } else {
-          centerEl.innerHTML = '<div class="no-data">No upcoming launches scheduled</div>';
+          centerEl.innerHTML = '<div class="no-data">No additional launches scheduled</div>';
         }
 
         // === RIGHT CELL: Rocket Talk LIVE! ===
