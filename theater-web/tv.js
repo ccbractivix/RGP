@@ -111,6 +111,12 @@
           html += '<div class="tv-show-item">';
           html += '<span class="tv-show-time">' + escapeHtml(show.time) + '</span>';
           html += '<span class="tv-show-title">' + escapeHtml(show.title) + (show.year ? ' (' + escapeHtml(show.year) + ')' : '') + '</span>';
+          if (show.titleLine2) {
+            html += '<span class="tv-show-title">' + escapeHtml(show.titleLine2) + '</span>';
+          }
+          if (show.titleLine3) {
+            html += '<span class="tv-show-title">' + escapeHtml(show.titleLine3) + '</span>';
+          }
           if (meta.length) {
             html += '<span class="tv-show-meta">' + escapeHtml(meta.join(' · ')) + '</span>';
           }

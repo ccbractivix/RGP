@@ -31,7 +31,8 @@ function calcEndTime(t, min) {
 async function getRange(startDate, endDate) {
   const r = await db.query(
     `SELECT s.id, s.date, s.start_time, s.notes, s.is_inherited,
-            l.id AS library_id, l.title, l.type, l.mpaa_rating,
+            l.id AS library_id, l.title, l.title_line2, l.title_line3,
+            l.type, l.mpaa_rating,
             l.runtime_min, l.genres, l.imdb_rating, l.poster_url,
             l.ticket_url, l.custom_art, l.release_year
      FROM schedule s JOIN library l ON l.id = s.library_id
@@ -54,6 +55,8 @@ function buildDays(rows) {
     const imdbId = isLive ? null : row.library_id;
     map.get(ds).shows.push({
       title: row.title,
+      titleLine2: row.title_line2 || '',
+      titleLine3: row.title_line3 || '',
       time: formatTime(row.start_time),
       endTime: calcEndTime(row.start_time, row.runtime_min),
       runtime: row.runtime_min,
@@ -61,7 +64,7 @@ function buildDays(rows) {
       year: row.release_year || '',
       genre: (row.genres || []).join(', '),
       poster: isLive && row.custom_art
-        ? '/live-event-art/' + row.custom_art
+        ? 'static/' + row.custom_art
         : (row.poster_url || ''),
       imdbId,
       imdbRating: row.imdb_rating || null,

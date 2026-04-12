@@ -1,6 +1,8 @@
 CREATE TABLE IF NOT EXISTS library (
   id             TEXT PRIMARY KEY,
   title          TEXT NOT NULL,
+  title_line2    TEXT,
+  title_line3    TEXT,
   type           TEXT NOT NULL CHECK (type IN ('movie', 'live_event')),
   mpaa_rating    TEXT,
   runtime_min    INT,
