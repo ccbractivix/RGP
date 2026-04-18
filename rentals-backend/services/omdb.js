@@ -45,8 +45,10 @@ function formatResponse(data) {
   };
 }
 
-async function lookupByTitle(title) {
-  const data = await omdbGet({ t: title });
+async function lookupByTitle(title, year) {
+  const params = { t: title };
+  if (year) params.y = String(year);
+  const data = await omdbGet(params);
   return formatResponse(data);
 }
 
