@@ -437,6 +437,8 @@
   <div class="action-bar">
     <button class="btn btn-gold" onclick="openAddMovieModal()">＋ Add Movie</button>
     <button class="btn" onclick="openAddEventModal()" style="color:var(--green);border-color:rgba(92,184,92,0.4)">＋ Add Live Event</button>
+    <button class="btn" onclick="triggerCsvImport()" style="color:var(--blue);border-color:rgba(74,144,217,0.4)">📥 Import CSV</button>
+    <input type="file" id="csv-file-input" accept=".csv,.tsv,.txt" style="display:none" />
     <button class="btn" id="btn-refresh-all" onclick="refreshAll()">🔄 Refresh All</button>
     <span id="refresh-status"></span>
   </div>
@@ -533,6 +535,38 @@
       <div class="modal-footer">
         <button class="btn" onclick="closeModal('modal-event')">Cancel</button>
         <button class="btn btn-gold" onclick="addEvent()">Add Event</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import CSV Modal -->
+  <div class="modal-overlay" id="modal-csv">
+    <div class="modal-card" style="max-width:520px">
+      <div class="modal-header">
+        <div class="modal-title">📥 Import CSV</div>
+        <button class="modal-close" onclick="closeModal('modal-csv')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="csv-preview-info" class="preview-box visible" style="margin-bottom:0.75rem">
+          <strong id="csv-row-count"></strong>
+          <div id="csv-sample" style="margin-top:0.4rem;font-size:0.75rem;color:var(--text-dim)"></div>
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.6rem">
+          Each row will be looked up on OMDB by title &amp; year to fetch runtime, genres, IMDB rating, and poster.
+          The MPAA rating from your CSV takes priority.
+        </p>
+        <div id="csv-progress" style="display:none;margin-top:0.5rem">
+          <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.4rem" id="csv-progress-label">Importing…</div>
+          <div style="background:var(--card);border-radius:4px;height:6px;overflow:hidden;border:1px solid var(--border)">
+            <div id="csv-progress-bar" style="height:100%;width:0%;background:var(--gold);transition:width 0.3s"></div>
+          </div>
+        </div>
+        <div id="csv-result" style="display:none;margin-top:0.75rem;font-size:0.82rem"></div>
+        <div class="modal-error" id="csv-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" id="btn-csv-cancel" onclick="closeModal('modal-csv')">Cancel</button>
+        <button class="btn btn-gold" id="btn-csv-confirm" onclick="runCsvImport()">Import</button>
       </div>
     </div>
   </div>
@@ -997,6 +1031,159 @@
         .replace(/'/g,'&#39;');
     }
 
+    /* ── CSV Import ── */
+    let _csvRows = [];
+
+    function parseCsv(text) {
+      // Detect delimiter: tab if any tab found in first line, else comma
+      const firstLine = text.split(/\r?\n/)[0] || '';
+      const delim = firstLine.includes('\t') ? '\t' : ',';
+
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      if (lines.length < 2) return [];
+
+      // Parse header — normalise to lowercase, strip spaces/underscores
+      const headers = lines[0].split(delim).map(h => h.trim().toLowerCase().replace(/[\s_]/g, ''));
+
+      const titleIdx  = headers.findIndex(h => h === 'title');
+      const yearIdx   = headers.findIndex(h => h === 'year');
+      const mpaaIdx   = headers.findIndex(h => h === 'mpaarating');
+
+      if (titleIdx === -1) return null; // signal missing required column
+
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        // Simple split — handles quoted fields with commas by checking for quotes
+        const cols = splitCsvLine(lines[i], delim);
+        const title = (cols[titleIdx] || '').trim();
+        if (!title) continue;
+        rows.push({
+          title,
+          year:       yearIdx  !== -1 ? (cols[yearIdx]  || '').trim() : '',
+          mpaaRating: mpaaIdx  !== -1 ? (cols[mpaaIdx]  || '').trim() : '',
+        });
+      }
+      return rows;
+    }
+
+    function splitCsvLine(line, delim) {
+      if (delim === '\t') return line.split('\t').map(c => c.trim());
+      // CSV split respecting double-quoted fields (handles "" escaped quotes)
+      const result = [];
+      let cur = '', inQuote = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuote && line[i + 1] === '"') { cur += '"'; i++; } // escaped quote
+          else { inQuote = !inQuote; }
+        } else if (ch === delim && !inQuote) { result.push(cur); cur = ''; }
+        else { cur += ch; }
+      }
+      result.push(cur);
+      return result.map(c => c.trim().replace(/^"|"$/g, ''));
+    }
+
+    function triggerCsvImport() {
+      const input = document.getElementById('csv-file-input');
+      input.value = '';
+      input.onchange = function () {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const rows = parseCsv(e.target.result);
+          if (rows === null) {
+            showToast('CSV must have a "Title" column', 'error');
+            return;
+          }
+          if (rows.length === 0) {
+            showToast('No valid rows found in CSV', 'error');
+            return;
+          }
+          _csvRows = rows;
+
+          // Show preview modal
+          document.getElementById('csv-row-count').textContent =
+            `${rows.length} movie${rows.length !== 1 ? 's' : ''} found in "${file.name}"`;
+
+          const sample = rows.slice(0, 3).map(r =>
+            r.title + (r.year ? ` (${r.year})` : '') + (r.mpaaRating ? ` — ${r.mpaaRating}` : '')
+          ).join('\n');
+          document.getElementById('csv-sample').textContent =
+            sample + (rows.length > 3 ? `\n…and ${rows.length - 3} more` : '');
+
+          document.getElementById('csv-error').className = 'modal-error';
+          document.getElementById('csv-result').style.display = 'none';
+          document.getElementById('csv-progress').style.display = 'none';
+          document.getElementById('btn-csv-confirm').disabled = false;
+          document.getElementById('btn-csv-confirm').textContent = 'Import';
+          openModal('modal-csv');
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
+
+    async function runCsvImport() {
+      if (!_csvRows.length) return;
+
+      const confirmBtn = document.getElementById('btn-csv-confirm');
+      const cancelBtn  = document.getElementById('btn-csv-cancel');
+      const progressEl = document.getElementById('csv-progress');
+      const barEl      = document.getElementById('csv-progress-bar');
+      const labelEl    = document.getElementById('csv-progress-label');
+      const resultEl   = document.getElementById('csv-result');
+      const errEl      = document.getElementById('csv-error');
+
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<span class="spinner-inline"></span> Importing…';
+      cancelBtn.disabled   = true;
+      progressEl.style.display = 'block';
+      resultEl.style.display   = 'none';
+      errEl.className = 'modal-error';
+      barEl.style.width = '5%';
+      labelEl.textContent = `Importing ${_csvRows.length} movies… (this may take a while)`;
+
+      try {
+        const res = await apiFetch('/admin/library/import-csv', {
+          method: 'POST',
+          body: JSON.stringify({ rows: _csvRows })
+        });
+
+        barEl.style.width = '100%';
+
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          errEl.textContent = d.error || 'Import failed';
+          errEl.className = 'modal-error visible';
+        } else {
+          const d = await res.json();
+          let html = `<strong style="color:var(--success)">✓ Import complete</strong><br/>`;
+          html += `Added: <strong>${d.added}</strong> &nbsp; Updated: <strong>${d.updated}</strong> &nbsp; `;
+          html += `Errors: <strong style="color:${d.errors > 0 ? 'var(--red)' : 'inherit'}">${d.errors}</strong>`;
+          if (d.errorList && d.errorList.length > 0) {
+            html += `<details style="margin-top:0.5rem;font-size:0.75rem;color:var(--red)">
+              <summary style="cursor:pointer">Show errors (${d.errorList.length})</summary>
+              <div style="max-height:120px;overflow-y:auto;margin-top:0.3rem">` +
+              d.errorList.map(e => `<div>${esc(e.title)}: ${esc(e.reason)}</div>`).join('') +
+              `</div></details>`;
+          }
+          resultEl.innerHTML = html;
+          resultEl.style.display = 'block';
+          showToast(`Import done: ${d.added} added, ${d.updated} updated, ${d.errors} errors`, d.errors > 0 ? '' : 'success');
+          loadLibrary();
+        }
+      } catch (e) {
+        errEl.textContent = 'Network error during import';
+        errEl.className = 'modal-error visible';
+      }
+
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Import';
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = 'Close';
+    }
+
     /* ── Expose for inline onclick handlers ── */
     window.sortBy          = sortBy;
     window.openAddMovieModal = openAddMovieModal;
@@ -1008,6 +1195,8 @@
     window.refreshItem     = refreshItem;
     window.deleteItem      = deleteItem;
     window.refreshAll      = refreshAll;
+    window.triggerCsvImport = triggerCsvImport;
+    window.runCsvImport    = runCsvImport;
 
     /* ── Boot ── */
     document.addEventListener('DOMContentLoaded', loadLibrary);
