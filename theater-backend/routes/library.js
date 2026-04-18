@@ -1,7 +1,7 @@
 'use strict';
 const express = require('express');
 const db      = require('../db/db');
-const { fetchMovie  } = require('../services/omdb');
+const { fetchMovie, fetchMovieByTitle } = require('../services/omdb');
 const { fetchPoster } = require('../services/tmdb');
 const router = express.Router();
 
@@ -92,6 +92,63 @@ router.post('/refresh-all', async (_req, res) => {
     }
     return res.json({ ok: true, updated, errors });
   } catch (e) { return res.status(500).json({ error: e.message }); }
+});
+
+router.post('/import-csv', async (req, res) => {
+  const { rows } = req.body;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ error: 'No rows provided' });
+  }
+  if (rows.length > 500) {
+    return res.status(400).json({ error: 'Too many rows (max 500)' });
+  }
+
+  let added = 0, updated = 0, errors = 0;
+  const errorList = [];
+
+  // Process in batches of 5 with a 200ms pause between batches to respect
+  // OMDB rate limits without making the import unbearably slow.
+  const BATCH = 5;
+  for (let i = 0; i < rows.length; i += BATCH) {
+    if (i > 0) await new Promise(r => setTimeout(r, 200));
+
+    const batch = rows.slice(i, i + BATCH);
+    await Promise.all(batch.map(async (row) => {
+      const title = (row.title || '').trim();
+      const year  = (row.year  || '').toString().trim();
+      const csvMpaaRating = (row.mpaaRating || '').trim();
+
+      if (!title) {
+        errors++;
+        errorList.push({ title: '(blank)', reason: 'Title is required' });
+        return;
+      }
+
+      try {
+        const movie  = await fetchMovieByTitle(title, year);
+        const imdbId = movie.imdbId;
+        if (!imdbId) throw new Error('OMDB did not return an IMDB ID');
+
+        const poster = await fetchPoster(imdbId).catch(() => null) || movie.poster;
+        // Prefer the rating from the CSV if provided; fall back to OMDB
+        const mpaaRating = csvMpaaRating || movie.mpaaRating;
+
+        const exists = await db.query('SELECT id FROM library WHERE id = $1', [imdbId]);
+        await db.query(
+          `INSERT INTO library (id, title, type, mpaa_rating, runtime_min, genres, imdb_rating, poster_url, release_year, last_updated)
+           VALUES ($1,$2,'movie',$3,$4,$5,$6,$7,$8,NOW())
+           ON CONFLICT (id) DO UPDATE SET title=$2, mpaa_rating=$3, runtime_min=$4, genres=$5, imdb_rating=$6, poster_url=$7, release_year=$8, last_updated=NOW()`,
+          [imdbId, movie.title, mpaaRating, movie.runtimeMin, movie.genres, movie.imdbRating, poster, movie.year || year || null]
+        );
+        if (exists.rows.length > 0) { updated++; } else { added++; }
+      } catch (e) {
+        errors++;
+        errorList.push({ title, reason: e.message });
+      }
+    }));
+  }
+
+  return res.json({ ok: true, added, updated, errors, errorList });
 });
 
 module.exports = router;
