@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://rentals-backend.onrender.com">
+  <title>Disc Rentals – Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f172a;
+      --card:      #1e293b;
+      --border:    #334155;
+      --text:      #e2e8f0;
+      --muted:     #94a3b8;
+      --green:     #22c55e;
+      --green-dim: rgba(34,197,94,0.15);
+      --red:       #ef4444;
+      --red-dim:   rgba(239,68,68,0.15);
+      --amber:     #f59e0b;
+      --amber-dim: rgba(245,158,11,0.15);
+      --blue:      #3b82f6;
+      --blue-dim:  rgba(59,130,246,0.15);
+      --purple:    #a855f7;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+    }
+
+    /* ── Login ─────────────────────────────────────────────────────── */
+    #login-screen {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 100vh; padding: 20px;
+    }
+    #login-screen h1 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    #login-screen p  { color: var(--muted); margin-bottom: 24px; font-size: 13px; }
+
+    .code-input {
+      width: 160px; padding: 14px; font-size: 24px; font-family: inherit;
+      text-align: center; letter-spacing: 8px; background: var(--card);
+      color: var(--text); border: 2px solid var(--border); border-radius: 10px; outline: none;
+    }
+    .code-input:focus { border-color: var(--blue); }
+
+    .login-btn {
+      margin-top: 16px; padding: 12px 40px; font-size: 15px; font-weight: 600;
+      background: var(--blue); color: #fff; border: none; border-radius: 8px; cursor: pointer;
+    }
+    .login-error { color: var(--red); margin-top: 12px; font-size: 13px; min-height: 20px; }
+
+    /* ── Dashboard ─────────────────────────────────────────────────── */
+    #dashboard { display: none; }
+
+    .dash-header {
+      background: #020617; padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50;
+    }
+    .dash-header h1 { font-size: 15px; font-weight: 700; }
+    .logout-btn {
+      font-size: 12px; color: var(--muted); background: none;
+      border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; cursor: pointer;
+    }
+
+    /* ── Tab navigation ─────────────────────────────────────────────── */
+    .tab-bar {
+      display: flex; gap: 0; background: #020617;
+      border-bottom: 1px solid var(--border); overflow-x: auto;
+      scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    }
+    .tab-bar::-webkit-scrollbar { display: none; }
+
+    .tab-btn {
+      flex-shrink: 0; padding: 11px 14px; font-size: 12px; font-weight: 600;
+      color: var(--muted); background: none; border: none; border-bottom: 2px solid transparent;
+      cursor: pointer; white-space: nowrap;
+    }
+    .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    /* ── Tab panels ─────────────────────────────────────────────────── */
+    .tab-panel { display: none; padding: 16px 14px 80px; }
+    .tab-panel.active { display: block; }
+
+    /* ── Forms & inputs ─────────────────────────────────────────────── */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px; margin-bottom: 14px;
+    }
+    .card h2 { font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--muted); margin-bottom: 4px;
+    }
+
+    input[type=text], input[type=search], select, textarea {
+      width: 100%; padding: 9px 11px; font-size: 13px;
+      background: var(--bg); color: var(--text);
+      border: 1px solid var(--border); border-radius: 6px; outline: none;
+      margin-bottom: 11px; font-family: inherit;
+    }
+    input[type=text]:focus, input[type=search]:focus, select:focus { border-color: var(--blue); }
+
+    .radio-row {
+      display: flex; gap: 10px; margin-bottom: 14px;
+    }
+    .radio-option {
+      flex: 1; display: flex; align-items: center; gap: 7px;
+      background: var(--bg); border: 2px solid var(--border); border-radius: 8px;
+      padding: 10px 12px; cursor: pointer;
+    }
+    .radio-option.selected { border-color: var(--blue); background: var(--blue-dim); }
+    .radio-option input { width: auto; margin: 0; padding: 0; }
+    .radio-option span { font-size: 14px; font-weight: 600; }
+
+    /* Buttons */
+    .btn {
+      padding: 9px 16px; font-size: 13px; font-weight: 600;
+      border: none; border-radius: 6px; cursor: pointer; white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn:active   { opacity: 0.8; }
+    .btn-blue   { background: var(--blue); color: #fff; }
+    .btn-green  { background: var(--green); color: #000; }
+    .btn-red    { background: var(--red);  color: #fff; }
+    .btn-amber  { background: var(--amber);color: #000; }
+    .btn-outline { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+    /* OMDB preview */
+    .preview-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 13px; margin-bottom: 12px; display: none;
+    }
+    .preview-card.visible { display: block; }
+    .preview-title  { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .preview-meta   { font-size: 12px; color: var(--muted); line-height: 1.7; margin-bottom: 8px; }
+    .preview-meta span + span::before { content: ' · '; }
+    .preview-links  { font-size: 12px; }
+    .preview-links a { color: var(--blue); text-decoration: none; margin-right: 10px; }
+
+    /* Error / success messages */
+    .msg-box {
+      border-radius: 6px; padding: 9px 12px; font-size: 12px; margin-bottom: 10px;
+    }
+    .msg-error   { background: var(--red-dim);   border: 1px solid var(--red);   color: var(--red);   }
+    .msg-success { background: var(--green-dim); border: 1px solid var(--green); color: var(--green); }
+
+    /* ── Library list ────────────────────────────────────────────────── */
+    .search-row {
+      position: relative; margin-bottom: 10px;
+    }
+    .search-row input { margin-bottom: 0; }
+
+    .title-item {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; margin-bottom: 8px; overflow: hidden;
+    }
+    .title-item-header {
+      display: flex; align-items: center; padding: 11px 13px;
+      cursor: pointer; gap: 8px;
+    }
+    .title-item-header:hover { background: rgba(255,255,255,0.03); }
+    .title-item-name { flex: 1; font-size: 14px; font-weight: 600; }
+    .title-item-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .title-item-badge {
+      padding: 2px 8px; font-size: 10px; font-weight: 700;
+      border-radius: 999px; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    .badge-movie { background: var(--blue-dim); color: var(--blue); }
+    .badge-game  { background: rgba(168,85,247,0.15); color: var(--purple); }
+    .title-item-expand-icon { color: var(--muted); font-size: 12px; flex-shrink: 0; }
+    .title-item-body {
+      display: none; padding: 0 13px 13px; border-top: 1px solid var(--border);
+    }
+    .title-item-body.open { display: block; }
+    .copy-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 0; border-bottom: 1px solid var(--border);
+    }
+    .copy-row:last-of-type { border-bottom: none; }
+    .copy-label { font-size: 13px; font-weight: 600; flex: 1; }
+    .copy-status {
+      font-size: 11px; font-weight: 600; padding: 2px 7px;
+      border-radius: 999px; text-transform: uppercase;
+    }
+    .cs-available { background: var(--green-dim); color: var(--green); }
+    .cs-out       { background: var(--red-dim);   color: var(--red);   }
+    .cs-damaged   { background: rgba(100,100,100,0.2); color: var(--muted); }
+    .title-item-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+
+    /* ── Tables ──────────────────────────────────────────────────────── */
+    .data-table {
+      width: 100%; border-collapse: collapse; font-size: 12px;
+    }
+    .data-table th, .data-table td {
+      text-align: left; padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table th { color: var(--muted); font-weight: 600; }
+    .data-table tr:last-child td { border-bottom: none; }
+
+    /* ── Toast ───────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #334155; color: #fff; padding: 10px 20px;
+      border-radius: 8px; font-size: 13px; font-weight: 500;
+      z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+
+    .divider { margin: 12px 0; border: none; border-top: 1px solid var(--border); }
+    .hidden  { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Login -->
+  <div id="login-screen">
+    <h1>🎬 Admin Panel</h1>
+    <p>Disc Rentals — Enter your 4-digit admin code</p>
+    <input type="tel" maxlength="4" pattern="\d{4}" class="code-input" id="code-input" inputmode="numeric" autocomplete="off">
+    <button class="login-btn" id="login-btn">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard">
+    <div class="dash-header">
+      <h1>🎬 Admin Panel</h1>
+      <button class="logout-btn" id="logout-btn">Sign Out</button>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="add">Add Title</button>
+      <button class="tab-btn" data-tab="library">Library</button>
+      <button class="tab-btn" data-tab="checkedout">Checked Out</button>
+      <button class="tab-btn" data-tab="damaged">Damaged</button>
+    </div>
+
+    <!-- ── ADD TITLE ── -->
+    <div class="tab-panel active" id="tab-add">
+
+      <!-- Format selector -->
+      <div class="card">
+        <h2>Format</h2>
+        <div class="radio-row">
+          <label class="radio-option selected" id="opt-movie">
+            <input type="radio" name="format" value="movie" checked>
+            <span>🎬 Movie</span>
+          </label>
+          <label class="radio-option" id="opt-game">
+            <input type="radio" name="format" value="game">
+            <span>🎮 Game</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Movie lookup section -->
+      <div id="section-movie">
+        <div class="card">
+          <h2>Movie Lookup (OMDB)</h2>
+          <label>Search by Title</label>
+          <input type="text" id="omdb-title" placeholder="e.g. Inception">
+          <div style="text-align:center;font-size:11px;color:var(--muted);margin:-6px 0 10px">— or —</div>
+          <label>IMDB ID</label>
+          <input type="text" id="omdb-id" placeholder="e.g. tt1375666">
+          <div id="omdb-error" class="msg-box msg-error hidden"></div>
+          <div class="btn-row">
+            <button class="btn btn-blue" id="omdb-lookup-btn">Look Up</button>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-card card" id="omdb-preview">
+          <div class="preview-title" id="pv-title"></div>
+          <div class="preview-meta">
+            <span id="pv-year"></span>
+            <span id="pv-rated"></span>
+            <span id="pv-runtime"></span>
+            <span id="pv-genres"></span>
+            <span id="pv-rating"></span>
+          </div>
+          <div class="preview-links">
+            <a id="pv-imdb" href="#" target="_blank" rel="noopener">IMDB ↗</a>
+            <a id="pv-pg" href="#" target="_blank" rel="noopener">Parents' Guide ↗</a>
+          </div>
+          <hr class="divider">
+          <div id="add-movie-msg" class="hidden"></div>
+          <div class="btn-row">
+            <button class="btn btn-green" id="add-movie-btn">Add to Library</button>
+            <button class="btn btn-outline" id="clear-preview-btn">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game section -->
+      <div id="section-game" class="hidden">
+        <div class="card">
+          <h2>Add Game</h2>
+          <label>Title</label>
+          <input type="text" id="game-title" placeholder="Game title">
+          <label>Year</label>
+          <input type="text" id="game-year" placeholder="e.g. 2023">
+          <label>Genres (comma-separated)</label>
+          <input type="text" id="game-genres" placeholder="e.g. Action, RPG">
+          <label>ESRB Rating</label>
+          <select id="game-esrb">
+            <option value="">— Select —</option>
+            <option value="E">E – Everyone</option>
+            <option value="E10+">E10+ – Everyone 10+</option>
+            <option value="T">T – Teen</option>
+            <option value="M">M – Mature 17+</option>
+            <option value="AO">AO – Adults Only 18+</option>
+            <option value="RP">RP – Rating Pending</option>
+          </select>
+          <div id="add-game-msg" class="hidden"></div>
+          <div class="btn-row">
+            <button class="btn btn-green" id="add-game-btn">Add to Library</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-add -->
+
+    <!-- ── LIBRARY ── -->
+    <div class="tab-panel" id="tab-library">
+      <div class="search-row">
+        <input type="search" id="lib-search" placeholder="Filter library…">
+      </div>
+      <div id="lib-meta" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
+      <div id="lib-list"></div>
+    </div>
+
+    <!-- ── CHECKED OUT ── -->
+    <div class="tab-panel" id="tab-checkedout">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div id="co-meta" style="font-size:12px;color:var(--muted)"></div>
+        <button class="btn btn-outline" id="co-refresh-btn" style="font-size:11px;padding:5px 10px">Refresh</button>
+      </div>
+      <div id="co-list">
+        <div class="card" style="text-align:center;color:var(--muted);padding:30px">Loading…</div>
+      </div>
+    </div>
+
+    <!-- ── DAMAGED ── -->
+    <div class="tab-panel" id="tab-damaged">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div id="dmg-meta" style="font-size:12px;color:var(--muted)"></div>
+        <button class="btn btn-outline" id="dmg-refresh-btn" style="font-size:11px;padding:5px 10px">Refresh</button>
+      </div>
+      <div id="dmg-list">
+        <div class="card" style="text-align:center;color:var(--muted);padding:30px">Loading…</div>
+      </div>
+    </div>
+
+  </div><!-- /dashboard -->
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var metaTag  = document.querySelector('meta[name="api-url"]');
+    var BASE_URL = (metaTag && metaTag.getAttribute('content')) || '';
+
+    var authCode  = localStorage.getItem('admin_code') || '';
+    var allTitles = [];
+    var libSearch = '';
+    var pendingMovieData = null;
+    var expandedTitles = {};
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    function esc(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(function () { t.classList.remove('show'); }, 2500);
+    }
+
+    function apiCall(method, path, body) {
+      var opts = {
+        method: method,
+        headers: { 'Content-Type': 'application/json', 'X-Auth-Code': authCode },
+      };
+      if (body) opts.body = JSON.stringify(body);
+      return fetch(BASE_URL + path, opts).then(function (r) {
+        if (r.status === 401) { localStorage.removeItem('admin_code'); authCode = ''; showLogin(); throw new Error('Unauthorized'); }
+        return r.json();
+      });
+    }
+
+    function showMsg(id, type, msg) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.className = 'msg-box msg-' + type;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function clearMsg(id) {
+      var el = document.getElementById(id);
+      if (el) { el.textContent = ''; el.classList.add('hidden'); }
+    }
+
+    // ── Auth ──────────────────────────────────────────────────────────────────
+
+    function showLogin() {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('dashboard').style.display = 'none';
+    }
+
+    function showDashboard() {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      loadLibrary();
+    }
+
+    document.getElementById('login-btn').addEventListener('click', function () {
+      var code = document.getElementById('code-input').value.trim();
+      if (!/^\d{4}$/.test(code)) { document.getElementById('login-error').textContent = 'Enter a 4-digit code'; return; }
+      fetch(BASE_URL + '/admin/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code }),
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d.valid) {
+          authCode = code;
+          localStorage.setItem('admin_code', code);
+          document.getElementById('login-error').textContent = '';
+          showDashboard();
+        } else {
+          document.getElementById('login-error').textContent = 'Invalid admin code';
+        }
+      }).catch(function () { document.getElementById('login-error').textContent = 'Connection error'; });
+    });
+
+    document.getElementById('code-input').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('login-btn').click();
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', function () {
+      localStorage.removeItem('admin_code'); authCode = ''; showLogin();
+    });
+
+    // ── Tab navigation ────────────────────────────────────────────────────────
+
+    document.querySelector('.tab-bar').addEventListener('click', function (e) {
+      var btn = e.target.closest('.tab-btn');
+      if (!btn) return;
+      var tab = btn.getAttribute('data-tab');
+      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('tab-' + tab).classList.add('active');
+      if (tab === 'checkedout') loadCheckedOut();
+      if (tab === 'damaged')    loadDamaged();
+      if (tab === 'library')    loadLibrary();
+    });
+
+    // ── Format toggle ─────────────────────────────────────────────────────────
+
+    document.querySelectorAll('input[name="format"]').forEach(function (radio) {
+      radio.addEventListener('change', function () {
+        var isMovie = this.value === 'movie';
+        document.getElementById('section-movie').classList.toggle('hidden', !isMovie);
+        document.getElementById('section-game').classList.toggle('hidden', isMovie);
+        document.getElementById('opt-movie').classList.toggle('selected', isMovie);
+        document.getElementById('opt-game').classList.toggle('selected', !isMovie);
+      });
+    });
+
+    document.querySelectorAll('.radio-option').forEach(function (opt) {
+      opt.addEventListener('click', function () {
+        var radio = this.querySelector('input[type=radio]');
+        if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
+      });
+    });
+
+    // ── OMDB Lookup ───────────────────────────────────────────────────────────
+
+    document.getElementById('omdb-lookup-btn').addEventListener('click', function () {
+      var title = document.getElementById('omdb-title').value.trim();
+      var id    = document.getElementById('omdb-id').value.trim();
+      if (!title && !id) { showMsg('omdb-error', 'error', 'Enter a title or IMDB ID'); return; }
+      clearMsg('omdb-error');
+      this.disabled = true;
+      this.textContent = 'Looking up…';
+      var self = this;
+
+      var body = id ? { imdb_id: id } : { title: title };
+      apiCall('POST', '/admin/lookup', body).then(function (d) {
+        if (d.ok) {
+          pendingMovieData = d.data;
+          showPreview(d.data);
+        } else {
+          showMsg('omdb-error', 'error', d.error || 'Not found');
+        }
+      }).catch(function (e) {
+        if (e.message !== 'Unauthorized') showMsg('omdb-error', 'error', 'Lookup failed');
+      }).finally(function () { self.disabled = false; self.textContent = 'Look Up'; });
+    });
+
+    document.getElementById('omdb-title').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('omdb-lookup-btn').click();
+    });
+
+    document.getElementById('omdb-id').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('omdb-lookup-btn').click();
+    });
+
+    function showPreview(data) {
+      document.getElementById('pv-title').textContent   = data.title || '';
+      document.getElementById('pv-year').textContent    = data.year   || '';
+      document.getElementById('pv-rated').textContent   = data.mpaa_rating ? 'Rated ' + data.mpaa_rating : '';
+      document.getElementById('pv-runtime').textContent = data.runtime  || '';
+      document.getElementById('pv-genres').textContent  = data.genres   || '';
+      document.getElementById('pv-rating').textContent  = data.imdb_rating ? '⭐ ' + data.imdb_rating + '/10' : '';
+      var imdbEl = document.getElementById('pv-imdb');
+      var pgEl   = document.getElementById('pv-pg');
+      imdbEl.href = data.imdb_link || '#';
+      pgEl.href   = data.parents_guide_link || '#';
+      imdbEl.style.display = data.imdb_link ? '' : 'none';
+      pgEl.style.display   = data.parents_guide_link ? '' : 'none';
+      clearMsg('add-movie-msg');
+      document.getElementById('omdb-preview').classList.add('visible');
+    }
+
+    document.getElementById('clear-preview-btn').addEventListener('click', function () {
+      pendingMovieData = null;
+      document.getElementById('omdb-preview').classList.remove('visible');
+      document.getElementById('omdb-title').value = '';
+      document.getElementById('omdb-id').value = '';
+    });
+
+    document.getElementById('add-movie-btn').addEventListener('click', function () {
+      if (!pendingMovieData) return;
+      this.disabled = true;
+      var self = this;
+      apiCall('POST', '/admin/titles', Object.assign({ format: 'movie', add_copy: true }, pendingMovieData))
+        .then(function (d) {
+          if (d.ok) {
+            showMsg('add-movie-msg', 'success', '✅ "' + (d.title.title || '') + '" added (Copy ' + (d.copy ? d.copy.copy_label : '') + ')');
+            pendingMovieData = null;
+            document.getElementById('omdb-title').value = '';
+            document.getElementById('omdb-id').value = '';
+            document.getElementById('omdb-preview').classList.remove('visible');
+            loadLibrary();
+          } else {
+            showMsg('add-movie-msg', 'error', d.error || 'Failed to add');
+          }
+        }).catch(function () { showMsg('add-movie-msg', 'error', 'Connection error'); })
+        .finally(function () { self.disabled = false; });
+    });
+
+    // ── Add Game ──────────────────────────────────────────────────────────────
+
+    document.getElementById('add-game-btn').addEventListener('click', function () {
+      var title  = document.getElementById('game-title').value.trim();
+      var year   = document.getElementById('game-year').value.trim();
+      var genres = document.getElementById('game-genres').value.trim();
+      var esrb   = document.getElementById('game-esrb').value;
+      if (!title) { showMsg('add-game-msg', 'error', 'Title is required'); return; }
+      this.disabled = true;
+      var self = this;
+      apiCall('POST', '/admin/titles', { format: 'game', title: title, year: year, genres: genres, esrb_rating: esrb, add_copy: true })
+        .then(function (d) {
+          if (d.ok) {
+            showMsg('add-game-msg', 'success', '✅ "' + (d.title.title || '') + '" added');
+            document.getElementById('game-title').value  = '';
+            document.getElementById('game-year').value   = '';
+            document.getElementById('game-genres').value = '';
+            document.getElementById('game-esrb').value   = '';
+            loadLibrary();
+          } else {
+            showMsg('add-game-msg', 'error', d.error || 'Failed to add');
+          }
+        }).catch(function () { showMsg('add-game-msg', 'error', 'Connection error'); })
+        .finally(function () { self.disabled = false; });
+    });
+
+    document.getElementById('game-title').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('add-game-btn').click();
+    });
+
+    // ── Library tab ───────────────────────────────────────────────────────────
+
+    function loadLibrary() {
+      apiCall('GET', '/admin/titles').then(function (d) {
+        allTitles = d.titles || [];
+        renderLibrary();
+      }).catch(function (e) {
+        if (e.message !== 'Unauthorized') showToast('Failed to load library');
+      });
+    }
+
+    document.getElementById('lib-search').addEventListener('input', function () {
+      libSearch = this.value;
+      renderLibrary();
+    });
+
+    function renderLibrary() {
+      var q = libSearch.toLowerCase().trim();
+      var filtered = q ? allTitles.filter(function (t) { return t.title.toLowerCase().includes(q); }) : allTitles;
+      document.getElementById('lib-meta').textContent = filtered.length + ' title' + (filtered.length !== 1 ? 's' : '');
+
+      if (filtered.length === 0) {
+        document.getElementById('lib-list').innerHTML =
+          '<div style="text-align:center;color:var(--muted);padding:30px">No titles found</div>';
+        return;
+      }
+
+      var html = '';
+      filtered.forEach(function (t) {
+        var sub = t.year || '';
+        if (t.format === 'movie' && t.mpaaRating) sub += (sub ? ' · ' : '') + 'Rated ' + t.mpaaRating;
+        if (t.format === 'game' && t.esrbRating)  sub += (sub ? ' · ' : '') + 'ESRB: ' + t.esrbRating;
+        sub += (sub ? ' · ' : '') + t.availableCount + ' avail / ' + t.outCount + ' out / ' + t.damagedCount + ' dmg';
+        var expanded = expandedTitles[t.id] ? ' open' : '';
+
+        html += '<div class="title-item" data-id="' + t.id + '">';
+        html += '  <div class="title-item-header">';
+        html += '    <div style="flex:1;min-width:0">';
+        html += '      <div class="title-item-name">' + esc(t.title) + '</div>';
+        html += '      <div class="title-item-sub">' + esc(sub) + '</div>';
+        html += '    </div>';
+        html += '    <span class="title-item-badge badge-' + t.format + '">' + (t.format === 'movie' ? 'Movie' : 'Game') + '</span>';
+        html += '    <span class="title-item-expand-icon">' + (expanded ? '▲' : '▼') + '</span>';
+        html += '  </div>';
+        html += '  <div class="title-item-body' + expanded + '">';
+
+        // Copy rows  
+        if (t.availableCount + t.outCount + t.damagedCount === 0) {
+          html += '  <div style="color:var(--muted);font-size:12px;padding:8px 0">No copies yet</div>';
+        }
+        // Copies are loaded on expand via API call
+        html += '  <div class="copies-placeholder" id="copies-' + t.id + '"></div>';
+
+        // Actions
+        html += '  <div class="title-item-actions">';
+        html += '    <button class="btn btn-blue btn-add-copy" data-id="' + t.id + '" style="font-size:11px;padding:6px 10px">+ Add Copy</button>';
+        html += '    <button class="btn btn-red btn-del-title" data-id="' + t.id + '" data-name="' + esc(t.title) + '" style="font-size:11px;padding:6px 10px">Delete Title</button>';
+        if (t.imdbLink)  html += '    <a href="' + esc(t.imdbLink) + '" target="_blank" rel="noopener" style="font-size:11px;color:var(--blue);align-self:center;text-decoration:none">IMDB ↗</a>';
+        html += '  </div>';
+        html += '  </div>';
+        html += '</div>';
+      });
+
+      document.getElementById('lib-list').innerHTML = html;
+      bindLibraryActions();
+
+      // Load copies for already-expanded items
+      filtered.forEach(function (t) {
+        if (expandedTitles[t.id]) loadCopiesFor(t.id);
+      });
+    }
+
+    function loadCopiesFor(titleId) {
+      apiCall('GET', '/operator/copies/' + titleId).then(function (d) {
+        var copies = d.copies || [];
+        var container = document.getElementById('copies-' + titleId);
+        if (!container) return;
+        if (copies.length === 0) { container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">No copies</div>'; return; }
+        var html = '';
+        copies.forEach(function (c) {
+          var stCls = c.status === 'available' ? 'cs-available' : c.status === 'out' ? 'cs-out' : 'cs-damaged';
+          var stTxt = c.status.charAt(0).toUpperCase() + c.status.slice(1);
+          html += '<div class="copy-row">';
+          html += '  <span class="copy-label">' + esc(c.copyLabel) + '</span>';
+          html += '  <span class="copy-status ' + stCls + '">' + stTxt + '</span>';
+          if (c.status === 'out') {
+            html += '  <span style="font-size:11px;color:var(--muted)">Room ' + esc(c.roomNumber||'?') + '</span>';
+          }
+          if (c.status !== 'out') {
+            html += '  <button class="btn btn-red btn-del-copy" data-id="' + c.id + '" style="font-size:10px;padding:3px 7px">Remove</button>';
+          }
+          html += '</div>';
+        });
+        container.innerHTML = html;
+
+        // Bind delete-copy buttons
+        container.querySelectorAll('.btn-del-copy').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var cid = this.getAttribute('data-id');
+            if (!confirm('Remove this copy from the library?')) return;
+            this.disabled = true;
+            var self = this;
+            apiCall('DELETE', '/admin/copies/' + cid).then(function (d) {
+              if (d.ok) { showToast('Copy removed'); loadLibrary(); }
+              else { showToast('Error: ' + (d.error || 'Failed')); self.disabled = false; }
+            }).catch(function () { showToast('Connection error'); self.disabled = false; });
+          });
+        });
+      }).catch(function () {});
+    }
+
+    function bindLibraryActions() {
+      // Expand/collapse
+      document.querySelectorAll('.title-item-header').forEach(function (hdr) {
+        hdr.addEventListener('click', function (e) {
+          if (e.target.closest('.btn')) return; // don't expand if clicking a button
+          var item  = this.closest('.title-item');
+          var id    = item.getAttribute('data-id');
+          var body  = item.querySelector('.title-item-body');
+          var icon  = item.querySelector('.title-item-expand-icon');
+          var open  = body.classList.toggle('open');
+          expandedTitles[id] = open;
+          icon.textContent = open ? '▲' : '▼';
+          if (open) loadCopiesFor(id);
+        });
+      });
+
+      // Add copy
+      document.querySelectorAll('.btn-add-copy').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var id = this.getAttribute('data-id');
+          this.disabled = true;
+          var self = this;
+          apiCall('POST', '/admin/titles/' + id + '/copies').then(function (d) {
+            if (d.ok) { showToast('Copy ' + d.copy.copy_label + ' added'); loadLibrary(); }
+            else { showToast('Error: ' + (d.error || 'Failed')); self.disabled = false; }
+          }).catch(function () { showToast('Connection error'); self.disabled = false; });
+        });
+      });
+
+      // Delete title
+      document.querySelectorAll('.btn-del-title').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var id   = this.getAttribute('data-id');
+          var name = this.getAttribute('data-name');
+          if (!confirm('Delete "' + name + '" and ALL its copies? This cannot be undone.')) return;
+          this.disabled = true;
+          var self = this;
+          apiCall('DELETE', '/admin/titles/' + id).then(function (d) {
+            if (d.ok) { showToast('"' + name + '" deleted'); delete expandedTitles[id]; loadLibrary(); }
+            else { showToast('Error: ' + (d.error || 'Failed')); self.disabled = false; }
+          }).catch(function () { showToast('Connection error'); self.disabled = false; });
+        });
+      });
+    }
+
+    // ── Checked Out ───────────────────────────────────────────────────────────
+
+    function loadCheckedOut() {
+      document.getElementById('co-list').innerHTML = '<div class="card" style="text-align:center;color:var(--muted);padding:30px">Loading…</div>';
+      apiCall('GET', '/admin/checked-out').then(function (d) {
+        var checkouts = d.checkouts || [];
+        document.getElementById('co-meta').textContent = checkouts.length + ' disc' + (checkouts.length !== 1 ? 's' : '') + ' currently out';
+        if (checkouts.length === 0) {
+          document.getElementById('co-list').innerHTML =
+            '<div class="card" style="text-align:center;color:var(--muted);padding:30px">No discs currently checked out</div>';
+          return;
+        }
+        var html = '<div class="card" style="padding:0;overflow:hidden"><table class="data-table">';
+        html += '<thead><tr><th>Title</th><th>Copy</th><th>Room</th><th>Last Name</th><th>Out Since</th></tr></thead><tbody>';
+        checkouts.forEach(function (co) {
+          var date = new Date(co.checked_out_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+          html += '<tr>';
+          html += '<td><strong>' + esc(co.title) + '</strong></td>';
+          html += '<td>' + esc(co.copy_label) + '</td>';
+          html += '<td>' + esc(co.room_number) + '</td>';
+          html += '<td>' + esc(co.last_name) + '</td>';
+          html += '<td>' + date + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+        document.getElementById('co-list').innerHTML = html;
+      }).catch(function (e) {
+        if (e.message !== 'Unauthorized')
+          document.getElementById('co-list').innerHTML = '<div class="card" style="color:var(--red);padding:16px">Failed to load</div>';
+      });
+    }
+
+    document.getElementById('co-refresh-btn').addEventListener('click', loadCheckedOut);
+
+    // ── Damaged ───────────────────────────────────────────────────────────────
+
+    function loadDamaged() {
+      document.getElementById('dmg-list').innerHTML = '<div class="card" style="text-align:center;color:var(--muted);padding:30px">Loading…</div>';
+      apiCall('GET', '/admin/damaged').then(function (d) {
+        var damaged = d.damaged || [];
+        document.getElementById('dmg-meta').textContent = damaged.length + ' damaged disc' + (damaged.length !== 1 ? 's' : '');
+        if (damaged.length === 0) {
+          document.getElementById('dmg-list').innerHTML =
+            '<div class="card" style="text-align:center;color:var(--muted);padding:30px">No damaged discs</div>';
+          return;
+        }
+        var html = '';
+        damaged.forEach(function (c) {
+          html += '<div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:8px">';
+          html += '  <div style="flex:1">';
+          html += '    <div style="font-size:14px;font-weight:600">' + esc(c.title) + '</div>';
+          html += '    <div style="font-size:11px;color:var(--muted)">' + esc(c.copy_label) + ' · ' + (c.format === 'movie' ? 'Movie' : 'Game') + (c.year ? ' · ' + esc(c.year) : '') + '</div>';
+          html += '  </div>';
+          html += '  <button class="btn btn-red btn-del-copy" data-cid="' + c.id + '" style="font-size:11px;padding:6px 10px">Remove from Library</button>';
+          html += '</div>';
+        });
+        document.getElementById('dmg-list').innerHTML = html;
+
+        document.querySelectorAll('#dmg-list .btn-del-copy').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var cid = this.getAttribute('data-cid');
+            if (!confirm('Permanently remove this damaged disc from the library?')) return;
+            this.disabled = true;
+            var self = this;
+            apiCall('DELETE', '/admin/copies/' + cid).then(function (d) {
+              if (d.ok) { showToast('Disc removed'); loadDamaged(); }
+              else { showToast('Error: ' + (d.error || 'Failed')); self.disabled = false; }
+            }).catch(function () { showToast('Connection error'); self.disabled = false; });
+          });
+        });
+      }).catch(function (e) {
+        if (e.message !== 'Unauthorized')
+          document.getElementById('dmg-list').innerHTML = '<div class="card" style="color:var(--red);padding:16px">Failed to load</div>';
+      });
+    }
+
+    document.getElementById('dmg-refresh-btn').addEventListener('click', loadDamaged);
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    if (authCode) { showDashboard(); } else { showLogin(); }
+  })();
+  </script>
+</body>
+</html>
