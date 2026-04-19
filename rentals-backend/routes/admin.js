@@ -215,7 +215,7 @@ router.post('/import-csv', async (req, res) => {
           }
         }
 
-        await addTitle({
+        const titleRow = await addTitle({
           format:             'movie',
           title:              data.title,
           year:               data.year,
@@ -228,6 +228,7 @@ router.post('/import-csv', async (req, res) => {
           runtime:            data.runtime,
           esrb_rating:        null,
         });
+        await addCopy(titleRow.id);
         added++;
       } catch (e) {
         errors++;
