@@ -763,7 +763,7 @@
     // ── Init ──────────────────────────────────────────────────────────────────
     loadTitles();
     // Refresh the library every 5 minutes so new additions appear automatically
-    setInterval(loadTitles, 5 * 60 * 1000);
+    var refreshInterval = setInterval(loadTitles, 5 * 60 * 1000);
   })();
   </script>
 </body>
