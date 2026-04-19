@@ -384,9 +384,14 @@ async function createCollection(name) {
   const trimmed = (name || '').trim();
   if (!trimmed) throw new Error('Collection name is required');
   const result = await db.query(
-    `INSERT INTO rental_collections (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *`,
+    `INSERT INTO rental_collections (name) VALUES ($1) ON CONFLICT (name) DO NOTHING RETURNING *`,
     [trimmed]
   );
+  if (result.rows.length === 0) {
+    // Already exists, fetch the existing row
+    const existing = await db.query(`SELECT * FROM rental_collections WHERE name = $1`, [trimmed]);
+    return existing.rows[0];
+  }
   return result.rows[0];
 }
 
