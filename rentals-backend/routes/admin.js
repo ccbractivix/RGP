@@ -1,5 +1,6 @@
 'use strict';
 const express = require('express');
+const db      = require('../db/db');
 const { lookupByTitle, lookupById } = require('../services/omdb');
 const {
   getAllTitles,
@@ -150,6 +151,76 @@ router.get('/damaged', async (_req, res) => {
   } catch (e) {
     return res.status(500).json({ error: e.message });
   }
+});
+
+// ── POST /admin/import-csv ────────────────────────────────────────────────────
+// Body: { rows: [{ title, year, mpaaRating }] }  (max 500 rows)
+router.post('/import-csv', async (req, res) => {
+  const { rows } = req.body;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ error: 'No rows provided' });
+  }
+  if (rows.length > 500) {
+    return res.status(400).json({ error: 'Too many rows (max 500)' });
+  }
+
+  let added = 0, skipped = 0, errors = 0;
+  const errorList = [];
+
+  // Process in batches of 5 with a 200ms pause between batches to respect OMDB rate limits.
+  const BATCH = 5;
+  for (let i = 0; i < rows.length; i += BATCH) {
+    if (i > 0) await new Promise(r => setTimeout(r, 200));
+
+    const batch = rows.slice(i, i + BATCH);
+    await Promise.all(batch.map(async (row) => {
+      const title        = (row.title      || '').trim();
+      const year         = (row.year       || '').toString().trim();
+      const csvMpaaRating = (row.mpaaRating || '').trim();
+
+      if (!title) {
+        errors++;
+        errorList.push({ title: '(blank)', reason: 'Title is required' });
+        return;
+      }
+
+      try {
+        const data = await lookupByTitle(title, year);
+
+        // Skip if a title with the same IMDB ID already exists
+        if (data.imdb_id) {
+          const dup = await db.query(
+            'SELECT id FROM rental_titles WHERE imdb_id = $1',
+            [data.imdb_id]
+          );
+          if (dup.rows.length > 0) {
+            skipped++;
+            return;
+          }
+        }
+
+        await addTitle({
+          format:             'movie',
+          title:              data.title,
+          year:               data.year,
+          genres:             data.genres,
+          imdb_id:            data.imdb_id,
+          imdb_link:          data.imdb_link,
+          imdb_rating:        data.imdb_rating,
+          parents_guide_link: data.parents_guide_link,
+          mpaa_rating:        csvMpaaRating || data.mpaa_rating,
+          runtime:            data.runtime,
+          esrb_rating:        null,
+        });
+        added++;
+      } catch (e) {
+        errors++;
+        errorList.push({ title, reason: e.message });
+      }
+    }));
+  }
+
+  return res.json({ ok: true, added, skipped, errors, errorList });
 });
 
 module.exports = router;

@@ -300,6 +300,35 @@
             <button class="btn btn-outline" id="clear-preview-btn">Clear</button>
           </div>
         </div>
+
+        <!-- CSV bulk import -->
+        <div class="card" id="csv-import-card">
+          <h2>📥 Bulk Import Movies from CSV</h2>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+            Upload a CSV with <strong>Title</strong>, <strong>Year</strong>, and <strong>MPAA_Rating</strong> columns.
+            Each row is looked up on OMDB automatically. Movies already in the library (matched by IMDB ID) are skipped.
+          </p>
+          <input type="file" id="csv-file-input" accept=".csv,.tsv,.txt" style="display:none">
+          <div class="btn-row">
+            <button class="btn btn-blue" id="csv-choose-btn">Choose CSV File</button>
+          </div>
+
+          <div id="csv-preview-section" class="hidden" style="margin-top:12px">
+            <div id="csv-preview-info" style="font-size:13px;font-weight:600;margin-bottom:4px"></div>
+            <div id="csv-sample" style="font-size:11px;color:var(--muted);white-space:pre-line;margin-bottom:12px"></div>
+            <div id="csv-progress-wrap" class="hidden" style="margin-bottom:8px">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:4px" id="csv-progress-label">Importing…</div>
+              <div style="background:var(--bg);border-radius:4px;height:6px;overflow:hidden;border:1px solid var(--border)">
+                <div id="csv-progress-bar" style="height:100%;width:0%;background:var(--blue);transition:width 0.3s"></div>
+              </div>
+            </div>
+            <div id="csv-result" class="hidden" style="font-size:12px;margin-bottom:10px"></div>
+            <div class="btn-row">
+              <button class="btn btn-green" id="csv-import-btn">Import All Movies</button>
+              <button class="btn btn-outline" id="csv-cancel-btn">Cancel</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Game section -->
@@ -833,6 +862,155 @@
     }
 
     document.getElementById('dmg-refresh-btn').addEventListener('click', loadDamaged);
+
+    // ── CSV Bulk Import ───────────────────────────────────────────────────────
+
+    var _csvRows = [];
+
+    function parseCsv(text) {
+      var firstLine = text.split(/\r?\n/)[0] || '';
+      var delim = firstLine.includes('\t') ? '\t' : ',';
+      var lines = text.split(/\r?\n/).filter(function (l) { return l.trim(); });
+      if (lines.length < 2) return [];
+
+      var headers = lines[0].split(delim).map(function (h) {
+        return h.trim().toLowerCase().replace(/[\s_]/g, '');
+      });
+
+      var titleIdx = headers.findIndex(function (h) { return h === 'title'; });
+      var yearIdx  = headers.findIndex(function (h) { return h === 'year'; });
+      var mpaaIdx  = headers.findIndex(function (h) { return h === 'mpaarating'; });
+
+      if (titleIdx === -1) return null;
+
+      var rows = [];
+      for (var i = 1; i < lines.length; i++) {
+        var cols  = splitCsvLine(lines[i], delim);
+        var title = (cols[titleIdx] || '').trim();
+        if (!title) continue;
+        rows.push({
+          title:      title,
+          year:       yearIdx !== -1 ? (cols[yearIdx]  || '').trim() : '',
+          mpaaRating: mpaaIdx !== -1 ? (cols[mpaaIdx] || '').trim() : '',
+        });
+      }
+      return rows;
+    }
+
+    function splitCsvLine(line, delim) {
+      if (delim === '\t') return line.split('\t').map(function (c) { return c.trim(); });
+      var result = [], cur = '', inQuote = false;
+      for (var i = 0; i < line.length; i++) {
+        var ch = line[i];
+        if (ch === '"') {
+          if (inQuote && i + 1 < line.length && line[i + 1] === '"') { cur += '"'; i++; }
+          else { inQuote = !inQuote; }
+        } else if (ch === delim && !inQuote) { result.push(cur); cur = ''; }
+        else { cur += ch; }
+      }
+      result.push(cur);
+      return result.map(function (c) { return c.trim().replace(/^"|"$/, ''); });
+    }
+
+    document.getElementById('csv-choose-btn').addEventListener('click', function () {
+      var input = document.getElementById('csv-file-input');
+      input.value = '';
+      input.click();
+    });
+
+    document.getElementById('csv-file-input').addEventListener('change', function () {
+      var file = this.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        var rows = parseCsv(e.target.result);
+        if (rows === null) {
+          showToast('CSV must have a "Title" column');
+          return;
+        }
+        if (rows.length === 0) {
+          showToast('No valid rows found in CSV');
+          return;
+        }
+        _csvRows = rows;
+
+        document.getElementById('csv-preview-info').textContent =
+          rows.length + ' movie' + (rows.length !== 1 ? 's' : '') + ' found in "' + file.name + '"';
+
+        var sample = rows.slice(0, 3).map(function (r) {
+          return r.title + (r.year ? ' (' + r.year + ')' : '') + (r.mpaaRating ? ' — ' + r.mpaaRating : '');
+        }).join('\n') + (rows.length > 3 ? '\n…and ' + (rows.length - 3) + ' more' : '');
+        document.getElementById('csv-sample').textContent = sample;
+
+        document.getElementById('csv-result').classList.add('hidden');
+        document.getElementById('csv-progress-wrap').classList.add('hidden');
+        document.getElementById('csv-import-btn').disabled = false;
+        document.getElementById('csv-import-btn').textContent = 'Import All Movies';
+        document.getElementById('csv-cancel-btn').disabled = false;
+        document.getElementById('csv-preview-section').classList.remove('hidden');
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('csv-cancel-btn').addEventListener('click', function () {
+      _csvRows = [];
+      document.getElementById('csv-preview-section').classList.add('hidden');
+      document.getElementById('csv-file-input').value = '';
+    });
+
+    document.getElementById('csv-import-btn').addEventListener('click', function () {
+      if (!_csvRows.length) return;
+
+      var importBtn   = document.getElementById('csv-import-btn');
+      var cancelBtn   = document.getElementById('csv-cancel-btn');
+      var progressWrap = document.getElementById('csv-progress-wrap');
+      var barEl       = document.getElementById('csv-progress-bar');
+      var labelEl     = document.getElementById('csv-progress-label');
+      var resultEl    = document.getElementById('csv-result');
+
+      importBtn.disabled  = true;
+      importBtn.innerHTML = 'Importing…';
+      cancelBtn.disabled  = true;
+      progressWrap.classList.remove('hidden');
+      resultEl.classList.add('hidden');
+      barEl.style.width   = '5%';
+      labelEl.textContent = 'Importing ' + _csvRows.length + ' movies… (this may take a while)';
+
+      apiCall('POST', '/admin/import-csv', { rows: _csvRows })
+        .then(function (d) {
+          barEl.style.width = '100%';
+          if (d.ok) {
+            var html = '<strong style="color:var(--green)">✓ Import complete</strong><br/>';
+            html += 'Added: <strong>' + d.added + '</strong> &nbsp; ';
+            html += 'Skipped: <strong>' + d.skipped + '</strong> &nbsp; ';
+            html += 'Errors: <strong style="color:' + (d.errors > 0 ? 'var(--red)' : 'inherit') + '">' + d.errors + '</strong>';
+            if (d.errorList && d.errorList.length > 0) {
+              html += '<details style="margin-top:6px"><summary style="cursor:pointer;color:var(--red)">Show errors (' + d.errorList.length + ')</summary>';
+              html += '<div style="max-height:100px;overflow-y:auto;margin-top:4px">';
+              d.errorList.forEach(function (err) { html += '<div>' + esc(err.title) + ': ' + esc(err.reason) + '</div>'; });
+              html += '</div></details>';
+            }
+            resultEl.innerHTML = html;
+            resultEl.classList.remove('hidden');
+            showToast('Import done: ' + d.added + ' added, ' + d.skipped + ' skipped, ' + d.errors + ' errors');
+            loadLibrary();
+          } else {
+            resultEl.innerHTML = '<span style="color:var(--red)">' + esc(d.error || 'Import failed') + '</span>';
+            resultEl.classList.remove('hidden');
+          }
+          importBtn.disabled = true;
+          cancelBtn.disabled = false;
+          cancelBtn.textContent = 'Close';
+        })
+        .catch(function () {
+          barEl.style.width = '100%';
+          resultEl.innerHTML = '<span style="color:var(--red)">Network error during import</span>';
+          resultEl.classList.remove('hidden');
+          importBtn.disabled = true;
+          cancelBtn.disabled = false;
+          cancelBtn.textContent = 'Close';
+        });
+    });
 
     // ── Init ──────────────────────────────────────────────────────────────────
     if (authCode) { showDashboard(); } else { showLogin(); }
