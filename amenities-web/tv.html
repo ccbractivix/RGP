@@ -7,14 +7,14 @@
   <title>Amenities Status Display</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       width: 100%; height: 100%;
-      background: #111;
-      color: #eee;
+      background: #FFF8F0;
+      color: #3D3128;
       font-family: 'Inter', sans-serif;
       overflow: hidden;
     }
@@ -32,8 +32,9 @@
       padding: 18px 0 10px;
       font-size: clamp(28px, 3.5vw, 48px);
       font-weight: 700;
+      font-family: 'Fredoka', sans-serif;
       letter-spacing: 6px;
-      color: #c8a45a;
+      color: #4A7A36;
       text-transform: uppercase;
       flex-shrink: 0;
     }
@@ -50,8 +51,8 @@
     }
 
     .tv-amenity {
-      background: #1a1a1a;
-      border: 1px solid #2a2a2a;
+      background: #FFFFFF;
+      border: 1px solid #E8D5C0;
       border-radius: 10px;
       display: flex;
       flex-direction: column;
@@ -62,18 +63,18 @@
     }
 
     .tv-amenity.is-open {
-      border-color: #166534;
-      background: rgba(22,101,52,0.12);
+      border-color: #4A7A36;
+      background: rgba(74,122,54,0.08);
     }
 
     .tv-amenity.is-closed {
-      border-color: #991b1b;
-      background: rgba(153,27,27,0.15);
+      border-color: #E37433;
+      background: rgba(227,116,51,0.08);
     }
 
     .tv-amenity.is-outside {
-      border-color: #334155;
-      background: rgba(51,65,85,0.1);
+      border-color: #E8D5C0;
+      background: rgba(232,213,192,0.2);
     }
 
     .tv-amenity-name {
@@ -89,19 +90,19 @@
       line-height: 1.3;
     }
 
-    .tv-amenity-status.open { color: #22c55e; }
-    .tv-amenity-status.closed { color: #ef4444; }
-    .tv-amenity-status.outside { color: #64748b; }
+    .tv-amenity-status.open { color: #4A7A36; }
+    .tv-amenity-status.closed { color: #E37433; }
+    .tv-amenity-status.outside { color: #7A6B5A; }
 
     .tv-amenity-detail {
       font-size: clamp(10px, 0.9vw, 14px);
-      color: #888;
+      color: #7A6B5A;
       margin-top: 4px;
     }
 
     .tv-amenity-hours {
       font-size: clamp(9px, 0.8vw, 12px);
-      color: #555;
+      color: #B8A898;
       margin-top: 4px;
     }
 
@@ -110,7 +111,7 @@
       text-align: center;
       font-size: clamp(12px, 1.2vw, 18px);
       font-weight: 600;
-      color: #f59e0b;
+      color: #E37433;
       padding: 4px 0;
       flex-shrink: 0;
     }
@@ -124,7 +125,7 @@
       flex-direction: row;
       align-items: center;
       padding: 12px 24px 16px;
-      border-top: 1px solid #2a2a2a;
+      border-top: 1px solid #E8D5C0;
       gap: 16px;
     }
 
@@ -149,13 +150,13 @@
     .gutter-promo-headline {
       font-size: clamp(13px, 1.3vw, 20px);
       font-weight: 700;
-      color: #c8a45a;
+      color: #E37433;
       line-height: 1.3;
     }
 
     .gutter-promo-subline {
       font-size: clamp(10px, 0.9vw, 14px);
-      color: #bbb;
+      color: #7A6B5A;
       line-height: 1.3;
       margin-top: 3px;
     }
@@ -179,7 +180,7 @@
 
     .gutter-qr-text {
       font-size: clamp(10px, 1vw, 15px);
-      color: #bbb;
+      color: #7A6B5A;
       margin-top: 6px;
       line-height: 1.3;
       max-width: 220px;
@@ -201,13 +202,13 @@
     .gutter-arcade-headline {
       font-size: clamp(13px, 1.3vw, 20px);
       font-weight: 700;
-      color: #c8a45a;
+      color: #E37433;
       line-height: 1.3;
     }
 
     .gutter-arcade-subline {
       font-size: clamp(10px, 0.9vw, 14px);
-      color: #bbb;
+      color: #7A6B5A;
       line-height: 1.3;
       margin-top: 3px;
     }
@@ -224,7 +225,7 @@
       bottom: 4px;
       right: 14px;
       font-size: 10px;
-      color: #333;
+      color: #B8A898;
     }
 
     #tv-loading {
@@ -233,7 +234,7 @@
       justify-content: center;
       flex: 1;
       font-size: 18px;
-      color: #555;
+      color: #7A6B5A;
     }
   </style>
 </head>
