@@ -363,6 +363,75 @@ async function getReservationsForTitle(titleId) {
   return result.rows;
 }
 
+// ── Collections ───────────────────────────────────────────────────────────────
+
+async function getCollections() {
+  const result = await db.query(`
+    SELECT c.*,
+           (SELECT COUNT(*) FROM rental_collection_titles ct WHERE ct.collection_id = c.id)::int AS title_count
+      FROM rental_collections c
+     ORDER BY c.name ASC
+  `);
+  return result.rows.map(r => ({
+    id:         r.id,
+    name:       r.name,
+    createdAt:  r.created_at,
+    titleCount: parseInt(r.title_count, 10) || 0,
+  }));
+}
+
+async function createCollection(name) {
+  const trimmed = (name || '').trim();
+  if (!trimmed) throw new Error('Collection name is required');
+  const result = await db.query(
+    `INSERT INTO rental_collections (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *`,
+    [trimmed]
+  );
+  return result.rows[0];
+}
+
+async function deleteCollection(collectionId) {
+  await db.query(`DELETE FROM rental_collections WHERE id = $1`, [collectionId]);
+}
+
+async function addTitleToCollection(collectionId, titleId) {
+  await db.query(
+    `INSERT INTO rental_collection_titles (collection_id, title_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+    [collectionId, titleId]
+  );
+}
+
+async function removeTitleFromCollection(collectionId, titleId) {
+  await db.query(
+    `DELETE FROM rental_collection_titles WHERE collection_id = $1 AND title_id = $2`,
+    [collectionId, titleId]
+  );
+}
+
+async function getCollectionTitles(collectionId) {
+  await expireReservations();
+  const result = await db.query(`
+    SELECT ${TITLE_COLS}
+      FROM rental_titles t
+      JOIN rental_collection_titles ct ON ct.title_id = t.id
+     WHERE ct.collection_id = $1
+       AND (SELECT COUNT(*) FROM rental_copies c2 WHERE c2.title_id = t.id AND c2.status <> 'damaged') > 0
+     ORDER BY t.title ASC
+  `, [collectionId]);
+  return result.rows.map(mapTitle);
+}
+
+async function getCollectionsForTitle(titleId) {
+  const result = await db.query(`
+    SELECT c.id, c.name
+      FROM rental_collections c
+      JOIN rental_collection_titles ct ON ct.collection_id = c.id
+     WHERE ct.title_id = $1
+     ORDER BY c.name ASC
+  `, [titleId]);
+  return result.rows;
+}
+
 module.exports = {
   ensureSchema,
   expireReservations,
@@ -381,4 +450,11 @@ module.exports = {
   createReservation,
   cancelReservation,
   getReservationsForTitle,
+  getCollections,
+  createCollection,
+  deleteCollection,
+  addTitleToCollection,
+  removeTitleFromCollection,
+  getCollectionTitles,
+  getCollectionsForTitle,
 };

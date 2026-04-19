@@ -1,6 +1,6 @@
 'use strict';
 const express = require('express');
-const { getPublicTitles, createReservation } = require('../services/library');
+const { getPublicTitles, createReservation, getCollections, getCollectionTitles } = require('../services/library');
 
 const router = express.Router();
 
@@ -43,6 +43,28 @@ router.post('/reserve', async (req, res) => {
   } catch (e) {
     const status = e.message.includes('3 active reservations') ? 409 : 400;
     return res.status(status).json({ error: e.message });
+  }
+});
+
+// ── GET /api/collections ──────────────────────────────────────────────────────
+router.get('/collections', async (_req, res) => {
+  try {
+    const collections = await getCollections();
+    return res.json({ collections });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to load collections' });
+  }
+});
+
+// ── GET /api/collections/:id/titles ───────────────────────────────────────────
+router.get('/collections/:id/titles', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid collection id' });
+  try {
+    const titles = await getCollectionTitles(id);
+    return res.json({ titles });
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to load collection titles' });
   }
 });
 
