@@ -12,6 +12,12 @@ const {
   getDamagedCopies,
   getCopiesForTitle,
   getReservationsForTitle,
+  getCollections,
+  createCollection,
+  deleteCollection,
+  addTitleToCollection,
+  removeTitleFromCollection,
+  getCollectionsForTitle,
 } = require('../services/library');
 
 const router = express.Router();
@@ -238,6 +244,80 @@ router.post('/import-csv', async (req, res) => {
   }
 
   return res.json({ ok: true, added, skipped, errors, errorList });
+});
+
+// ── Collections ───────────────────────────────────────────────────────────────
+
+// GET /admin/collections
+router.get('/collections', async (_req, res) => {
+  try {
+    const collections = await getCollections();
+    return res.json({ collections });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /admin/collections  { name }
+router.post('/collections', async (req, res) => {
+  const { name } = req.body || {};
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required' });
+  try {
+    const collection = await createCollection(name);
+    return res.json({ ok: true, collection });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE /admin/collections/:id
+router.delete('/collections/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid collection id' });
+  try {
+    await deleteCollection(id);
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /admin/collections/:id/titles  { title_id }
+router.post('/collections/:id/titles', async (req, res) => {
+  const collectionId = parseInt(req.params.id, 10);
+  const titleId      = parseInt((req.body || {}).title_id, 10);
+  if (isNaN(collectionId) || isNaN(titleId)) return res.status(400).json({ error: 'Invalid IDs' });
+  try {
+    await addTitleToCollection(collectionId, titleId);
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// DELETE /admin/collections/:collectionId/titles/:titleId
+router.delete('/collections/:collectionId/titles/:titleId', async (req, res) => {
+  const collectionId = parseInt(req.params.collectionId, 10);
+  const titleId      = parseInt(req.params.titleId, 10);
+  if (isNaN(collectionId) || isNaN(titleId)) return res.status(400).json({ error: 'Invalid IDs' });
+  try {
+    await removeTitleFromCollection(collectionId, titleId);
+    return res.json({ ok: true });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /admin/titles/:id/collections
+router.get('/titles/:id/collections', async (req, res) => {
+  const titleId = parseInt(req.params.id, 10);
+  if (isNaN(titleId)) return res.status(400).json({ error: 'Invalid title id' });
+  try {
+    const collections = await getCollectionsForTitle(titleId);
+    return res.json({ collections });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
 });
 
 module.exports = router;

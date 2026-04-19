@@ -242,6 +242,7 @@
     <div class="tab-bar">
       <button class="tab-btn active" data-tab="add">Add Title</button>
       <button class="tab-btn" data-tab="library">Library</button>
+      <button class="tab-btn" data-tab="collections">Collections</button>
       <button class="tab-btn" data-tab="checkedout">Checked Out</button>
       <button class="tab-btn" data-tab="damaged">Damaged</button>
     </div>
@@ -367,6 +368,38 @@
       </div>
       <div id="lib-meta" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
       <div id="lib-list"></div>
+    </div>
+
+    <!-- ── COLLECTIONS ── -->
+    <div class="tab-panel" id="tab-collections">
+      <div class="card">
+        <h2>Create Collection</h2>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="coll-new-name" placeholder="Collection name" style="flex:1;margin-bottom:0">
+          <button class="btn btn-green" id="coll-create-btn">Create</button>
+        </div>
+        <div id="coll-create-msg" class="hidden" style="margin-top:8px"></div>
+      </div>
+      <div id="coll-meta" style="font-size:11px;color:var(--muted);margin-bottom:8px"></div>
+      <div id="coll-list"></div>
+
+      <!-- Collection detail view (manage titles in a collection) -->
+      <div id="coll-detail" class="hidden">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <button class="btn btn-outline" id="coll-back-btn" style="font-size:11px;padding:5px 10px">← Back</button>
+          <h2 id="coll-detail-name" style="font-size:16px;font-weight:700;flex:1;margin:0"></h2>
+          <button class="btn btn-red" id="coll-delete-btn" style="font-size:11px;padding:5px 10px">Delete Collection</button>
+        </div>
+
+        <div class="card">
+          <h2>Add Title to Collection</h2>
+          <input type="search" id="coll-title-search" placeholder="Search titles to add…" style="margin-bottom:8px">
+          <div id="coll-title-results" style="max-height:200px;overflow-y:auto"></div>
+        </div>
+
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px" id="coll-titles-meta"></div>
+        <div id="coll-titles-list"></div>
+      </div>
     </div>
 
     <!-- ── CHECKED OUT ── -->
@@ -501,6 +534,7 @@
       if (tab === 'checkedout') loadCheckedOut();
       if (tab === 'damaged')    loadDamaged();
       if (tab === 'library')    loadLibrary();
+      if (tab === 'collections') loadCollections();
     });
 
     // ── Format toggle ─────────────────────────────────────────────────────────
@@ -863,6 +897,236 @@
     }
 
     document.getElementById('dmg-refresh-btn').addEventListener('click', loadDamaged);
+
+    // ── Collections ───────────────────────────────────────────────────────────
+
+    var _collections    = [];
+    var _activeCollId   = null;
+    var _collTitleSearch = '';
+
+    var DEFAULT_COLLECTIONS = [
+      'Christmas', 'Kids Movies', 'Inspiring Movies for Kids',
+      'MARVEL', 'Harry Potter', 'Jurassic Park', 'Fast and Furious'
+    ];
+
+    function loadCollections() {
+      apiCall('GET', '/admin/collections').then(function (d) {
+        _collections = d.collections || [];
+        renderCollectionsList();
+      }).catch(function (e) {
+        if (e.message !== 'Unauthorized') showToast('Failed to load collections');
+      });
+    }
+
+    function renderCollectionsList() {
+      // Show the list view, hide detail view
+      document.getElementById('coll-list').classList.remove('hidden');
+      document.getElementById('coll-meta').classList.remove('hidden');
+      document.querySelector('#tab-collections > .card').classList.remove('hidden');
+      document.getElementById('coll-detail').classList.add('hidden');
+
+      document.getElementById('coll-meta').textContent = _collections.length + ' collection' + (_collections.length !== 1 ? 's' : '');
+
+      if (_collections.length === 0) {
+        document.getElementById('coll-list').innerHTML =
+          '<div style="text-align:center;color:var(--muted);padding:30px">No collections yet. Create one above or seed defaults below.</div>' +
+          '<div style="text-align:center;margin-top:8px"><button class="btn btn-blue" id="coll-seed-btn">Seed Default Collections</button></div>';
+        var seedBtn = document.getElementById('coll-seed-btn');
+        if (seedBtn) seedBtn.addEventListener('click', seedDefaults);
+        return;
+      }
+
+      var html = '';
+      _collections.forEach(function (c) {
+        html += '<div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:8px;cursor:pointer" data-coll-id="' + c.id + '">';
+        html += '  <div style="flex:1">';
+        html += '    <div style="font-size:14px;font-weight:600">' + esc(c.name) + '</div>';
+        html += '    <div style="font-size:11px;color:var(--muted)">' + c.titleCount + ' title' + (c.titleCount !== 1 ? 's' : '') + '</div>';
+        html += '  </div>';
+        html += '  <span style="color:var(--muted);font-size:12px">▶</span>';
+        html += '</div>';
+      });
+
+      // Add seed defaults button if some defaults are missing
+      var existingNames = _collections.map(function (c) { return c.name; });
+      var missing = DEFAULT_COLLECTIONS.filter(function (n) { return existingNames.indexOf(n) === -1; });
+      if (missing.length > 0) {
+        html += '<div style="text-align:center;margin-top:8px"><button class="btn btn-outline" id="coll-seed-btn" style="font-size:11px">+ Seed Missing Defaults (' + missing.length + ')</button></div>';
+      }
+
+      document.getElementById('coll-list').innerHTML = html;
+
+      // Bind click on collection cards
+      document.querySelectorAll('[data-coll-id]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          var id = parseInt(this.getAttribute('data-coll-id'), 10);
+          openCollectionDetail(id);
+        });
+      });
+
+      var seedBtn = document.getElementById('coll-seed-btn');
+      if (seedBtn) seedBtn.addEventListener('click', seedDefaults);
+    }
+
+    function seedDefaults() {
+      var existingNames = _collections.map(function (c) { return c.name; });
+      var missing = DEFAULT_COLLECTIONS.filter(function (n) { return existingNames.indexOf(n) === -1; });
+      if (missing.length === 0) { showToast('All default collections already exist'); return; }
+
+      var promises = missing.map(function (name) {
+        return apiCall('POST', '/admin/collections', { name: name });
+      });
+      Promise.all(promises).then(function () {
+        showToast(missing.length + ' collection(s) created');
+        loadCollections();
+      }).catch(function () { showToast('Error creating collections'); });
+    }
+
+    // Create collection
+    document.getElementById('coll-create-btn').addEventListener('click', function () {
+      var name = document.getElementById('coll-new-name').value.trim();
+      if (!name) { showMsg('coll-create-msg', 'error', 'Enter a name'); return; }
+      this.disabled = true;
+      var self = this;
+      apiCall('POST', '/admin/collections', { name: name }).then(function (d) {
+        if (d.ok) {
+          document.getElementById('coll-new-name').value = '';
+          clearMsg('coll-create-msg');
+          showToast('Collection "' + name + '" created');
+          loadCollections();
+        } else {
+          showMsg('coll-create-msg', 'error', d.error || 'Failed');
+        }
+      }).catch(function () { showMsg('coll-create-msg', 'error', 'Connection error'); })
+        .finally(function () { self.disabled = false; });
+    });
+
+    document.getElementById('coll-new-name').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') document.getElementById('coll-create-btn').click();
+    });
+
+    // Open collection detail
+    function openCollectionDetail(collId) {
+      _activeCollId = collId;
+      var coll = _collections.find(function (c) { return c.id === collId; });
+      if (!coll) return;
+
+      document.getElementById('coll-list').classList.add('hidden');
+      document.getElementById('coll-meta').classList.add('hidden');
+      document.querySelector('#tab-collections > .card').classList.add('hidden');
+      document.getElementById('coll-detail').classList.remove('hidden');
+      document.getElementById('coll-detail-name').textContent = coll.name;
+      document.getElementById('coll-title-search').value = '';
+      document.getElementById('coll-title-results').innerHTML = '';
+      _collTitleSearch = '';
+
+      loadCollectionTitles(collId);
+    }
+
+    // Back button
+    document.getElementById('coll-back-btn').addEventListener('click', function () {
+      _activeCollId = null;
+      loadCollections();
+    });
+
+    // Delete collection
+    document.getElementById('coll-delete-btn').addEventListener('click', function () {
+      if (!_activeCollId) return;
+      var coll = _collections.find(function (c) { return c.id === _activeCollId; });
+      if (!confirm('Delete collection "' + (coll ? coll.name : '') + '"?')) return;
+      apiCall('DELETE', '/admin/collections/' + _activeCollId).then(function (d) {
+        if (d.ok) {
+          showToast('Collection deleted');
+          _activeCollId = null;
+          loadCollections();
+        } else {
+          showToast('Error: ' + (d.error || 'Failed'));
+        }
+      }).catch(function () { showToast('Connection error'); });
+    });
+
+    // Load titles in a collection
+    function loadCollectionTitles(collId) {
+      apiCall('GET', '/admin/collections').then(function () {
+        // Just get the updated count, then fetch the titles via public endpoint
+        return fetch(BASE_URL + '/api/collections/' + collId + '/titles', { cache: 'no-store' });
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        var titles = d.titles || [];
+        document.getElementById('coll-titles-meta').textContent = titles.length + ' title' + (titles.length !== 1 ? 's' : '') + ' in this collection';
+        if (titles.length === 0) {
+          document.getElementById('coll-titles-list').innerHTML =
+            '<div style="text-align:center;color:var(--muted);padding:20px">No titles in this collection yet. Search above to add titles.</div>';
+        } else {
+          var html = '';
+          titles.forEach(function (t) {
+            html += '<div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:10px 13px">';
+            html += '  <div style="flex:1">';
+            html += '    <div style="font-size:13px;font-weight:600">' + esc(t.title) + '</div>';
+            html += '    <div style="font-size:11px;color:var(--muted)">' + esc(t.year || '') + (t.format === 'movie' ? ' · Movie' : ' · Game') + '</div>';
+            html += '  </div>';
+            html += '  <button class="btn btn-red" data-remove-tid="' + t.id + '" style="font-size:10px;padding:4px 8px">Remove</button>';
+            html += '</div>';
+          });
+          document.getElementById('coll-titles-list').innerHTML = html;
+
+          // Bind remove buttons
+          document.querySelectorAll('[data-remove-tid]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var tid = parseInt(this.getAttribute('data-remove-tid'), 10);
+              apiCall('DELETE', '/admin/collections/' + collId + '/titles/' + tid).then(function (d) {
+                if (d.ok) { showToast('Title removed from collection'); loadCollectionTitles(collId); }
+                else { showToast('Error: ' + (d.error || 'Failed')); }
+              }).catch(function () { showToast('Connection error'); });
+            });
+          });
+        }
+      }).catch(function () {
+        document.getElementById('coll-titles-list').innerHTML = '<div style="color:var(--red);padding:10px">Failed to load</div>';
+      });
+    }
+
+    // Search titles to add to collection
+    document.getElementById('coll-title-search').addEventListener('input', function () {
+      _collTitleSearch = this.value.trim().toLowerCase();
+      if (!_collTitleSearch) {
+        document.getElementById('coll-title-results').innerHTML = '';
+        return;
+      }
+
+      // Filter from allTitles (loaded from library)
+      var matches = allTitles.filter(function (t) {
+        return t.title.toLowerCase().includes(_collTitleSearch);
+      }).slice(0, 20);
+
+      if (matches.length === 0) {
+        document.getElementById('coll-title-results').innerHTML =
+          '<div style="color:var(--muted);font-size:12px;padding:6px">No matching titles</div>';
+        return;
+      }
+
+      var html = '';
+      matches.forEach(function (t) {
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">';
+        html += '  <div style="flex:1;font-size:12px">' + esc(t.title) + ' <span style="color:var(--muted)">(' + esc(t.year || '') + ')</span></div>';
+        html += '  <button class="btn btn-green" data-add-tid="' + t.id + '" style="font-size:10px;padding:3px 8px">+ Add</button>';
+        html += '</div>';
+      });
+      document.getElementById('coll-title-results').innerHTML = html;
+
+      // Bind add buttons
+      document.querySelectorAll('[data-add-tid]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var tid = parseInt(this.getAttribute('data-add-tid'), 10);
+          var self = this;
+          self.disabled = true;
+          apiCall('POST', '/admin/collections/' + _activeCollId + '/titles', { title_id: tid }).then(function (d) {
+            if (d.ok) { showToast('Title added to collection'); loadCollectionTitles(_activeCollId); }
+            else { showToast('Error: ' + (d.error || 'Failed')); }
+          }).catch(function () { showToast('Connection error'); })
+            .finally(function () { self.disabled = false; });
+        });
+      });
+    });
 
     // ── CSV Bulk Import ───────────────────────────────────────────────────────
 

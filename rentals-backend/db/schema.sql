@@ -49,3 +49,18 @@ CREATE TABLE IF NOT EXISTS rental_reservations (
   expires_at   TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '24 hours'),
   cancelled_at TIMESTAMPTZ
 );
+
+-- Collections of titles (curated groups)
+CREATE TABLE IF NOT EXISTS rental_collections (
+  id         SERIAL      PRIMARY KEY,
+  name       TEXT        NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Junction table: which titles belong to which collections
+CREATE TABLE IF NOT EXISTS rental_collection_titles (
+  id            SERIAL PRIMARY KEY,
+  collection_id INT    NOT NULL REFERENCES rental_collections(id) ON DELETE CASCADE,
+  title_id      INT    NOT NULL REFERENCES rental_titles(id) ON DELETE CASCADE,
+  UNIQUE (collection_id, title_id)
+);
