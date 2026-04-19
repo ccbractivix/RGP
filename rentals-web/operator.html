@@ -229,6 +229,19 @@
       border: 1px solid var(--border);
     }
 
+    .btn-xs {
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-xs:active { opacity: 0.8; }
+
     /* Status badge */
     .status-badge {
       padding: 3px 9px;
@@ -622,6 +635,9 @@
         html += '    <div class="title-row-name">' + esc(t.title) + '</div>';
         html += '    <div class="title-row-sub">' + esc(sub) + '</div>';
         html += '  </div>';
+        if (t.status === 'out') {
+          html += '  <button class="btn-xs btn-green" data-checkin-title="' + esc(String(t.id)) + '">Check In</button>';
+        }
         html += '  <span class="status-badge ' + badgeCls + '">' + badgeTxt + '</span>';
         html += '</div>';
       });
@@ -630,6 +646,13 @@
 
       document.querySelectorAll('.title-row').forEach(function (row) {
         row.addEventListener('click', function () { openModal(this.getAttribute('data-id')); });
+      });
+
+      document.querySelectorAll('[data-checkin-title]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          openModal(this.getAttribute('data-checkin-title'));
+        });
       });
     }
 
