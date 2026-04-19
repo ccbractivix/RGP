@@ -26,8 +26,8 @@ async function expireReservations() {
 function computeStatus(row) {
   const avail = parseInt(row.available_count, 10) || 0;
   const res   = parseInt(row.reservation_count, 10) || 0;
-  if (avail > 0) return 'available';
   if (res   > 0) return 'reserved';
+  if (avail > 0) return 'available';
   return 'out';
 }
 
