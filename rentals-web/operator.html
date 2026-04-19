@@ -635,7 +635,7 @@
         html += '    <div class="title-row-name">' + esc(t.title) + '</div>';
         html += '    <div class="title-row-sub">' + esc(sub) + '</div>';
         html += '  </div>';
-        if (t.status === 'out') {
+        if (t.outCount > 0) {
           html += '  <button class="btn-xs btn-green" data-checkin-title="' + esc(String(t.id)) + '">Check In</button>';
         }
         html += '  <span class="status-badge ' + badgeCls + '">' + badgeTxt + '</span>';
