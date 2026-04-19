@@ -560,7 +560,7 @@
     // ── Load ──────────────────────────────────────────────────────────────────
 
     function loadTitles() {
-      fetch(BASE_URL + '/api/titles')
+      fetch(BASE_URL + '/api/titles', { cache: 'no-store' })
         .then(function (r) { return r.json(); })
         .then(function (d) {
           allTitles = d.titles || [];
@@ -762,6 +762,8 @@
 
     // ── Init ──────────────────────────────────────────────────────────────────
     loadTitles();
+    // Refresh the library every 5 minutes so new additions appear automatically
+    setInterval(loadTitles, 5 * 60 * 1000);
   })();
   </script>
 </body>

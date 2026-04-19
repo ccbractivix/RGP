@@ -450,6 +450,7 @@
     // ── Auth ──────────────────────────────────────────────────────────────────
 
     function showLogin() {
+      expandedTitles = {};
       document.getElementById('login-screen').style.display = 'flex';
       document.getElementById('dashboard').style.display = 'none';
     }
@@ -700,7 +701,7 @@
     }
 
     function loadCopiesFor(titleId) {
-      apiCall('GET', '/operator/copies/' + titleId).then(function (d) {
+      apiCall('GET', '/admin/titles/' + titleId + '/copies').then(function (d) {
         var copies = d.copies || [];
         var container = document.getElementById('copies-' + titleId);
         if (!container) return;

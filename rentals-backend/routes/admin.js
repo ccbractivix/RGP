@@ -10,6 +10,8 @@ const {
   deleteCopy,
   getActiveCheckouts,
   getDamagedCopies,
+  getCopiesForTitle,
+  getReservationsForTitle,
 } = require('../services/library');
 
 const router = express.Router();
@@ -94,6 +96,20 @@ router.post('/titles', async (req, res) => {
   } catch (e) {
     console.error('[admin] add title error:', e);
     return res.status(500).json({ error: e.message });
+  }
+});
+
+// ── GET /admin/titles/:id/copies ──────────────────────────────────────────────
+router.get('/titles/:id/copies', async (req, res) => {
+  const titleId = parseInt(req.params.id, 10);
+  if (isNaN(titleId)) return res.status(400).json({ error: 'Invalid title id' });
+  try {
+    const copies       = await getCopiesForTitle(titleId);
+    const reservations = await getReservationsForTitle(titleId);
+    return res.json({ copies, reservations });
+  } catch (e) {
+    console.error('[admin] /titles/:id/copies error:', e);
+    return res.status(500).json({ error: 'Failed to load copies' });
   }
 });
 
