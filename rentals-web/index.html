@@ -177,6 +177,36 @@
       font-weight: 600;
     }
 
+    /* ── Context bar (for filtered views) ─────────────────────────── */
+    .context-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--amber-bg);
+      border-bottom: 1px solid #fcd34d;
+    }
+
+    .context-bar.hidden { display: none; }
+
+    .context-bar .context-text {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--amber);
+    }
+
+    .context-bar .context-close {
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--amber);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--amber);
+      cursor: pointer;
+    }
+
     /* ── Title count + list ───────────────────────────────────────── */
     .list-meta {
       padding: 0 16px 6px;
@@ -191,21 +221,27 @@
       gap: 10px;
     }
 
-    /* ── Card ─────────────────────────────────────────────────────── */
+    /* ── Title-only card (simplified) ────────────────────────────── */
     .title-card {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 14px 14px 12px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: box-shadow 0.15s;
+    }
+
+    .title-card:active {
+      box-shadow: 0 1px 6px rgba(0,0,0,0.12);
     }
 
     .card-top {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
       gap: 8px;
-      margin-bottom: 6px;
     }
 
     .card-badges {
@@ -239,67 +275,6 @@
       flex: 1;
     }
 
-    .card-meta {
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 8px;
-      line-height: 1.7;
-    }
-
-    .card-meta span + span::before { content: ' · '; }
-
-    .card-genres {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-bottom: 10px;
-    }
-
-    .genre-tag {
-      padding: 2px 8px;
-      font-size: 11px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      color: var(--muted);
-    }
-
-    .card-links {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 10px;
-      font-size: 12px;
-    }
-
-    .card-links a {
-      color: var(--accent);
-      text-decoration: none;
-    }
-
-    .card-links a:hover { text-decoration: underline; }
-
-    .card-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .reserve-btn {
-      padding: 8px 18px;
-      font-size: 13px;
-      font-weight: 600;
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    .reserve-btn:active { background: var(--accent-dk); }
-    .reserve-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
     /* ── Empty / Error states ─────────────────────────────────────── */
     .state-msg {
       text-align: center;
@@ -310,7 +285,7 @@
     .state-msg .icon { font-size: 40px; margin-bottom: 12px; }
     .state-msg p     { font-size: 14px; }
 
-    /* ── Modal ────────────────────────────────────────────────────── */
+    /* ── Modal (base) ────────────────────────────────────────────── */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -330,6 +305,8 @@
       padding: 24px 20px 36px;
       width: 100%;
       max-width: 500px;
+      max-height: 85vh;
+      overflow-y: auto;
       box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
     }
 
@@ -418,6 +395,81 @@
 
     .modal-error { color: var(--red); font-size: 13px; margin-bottom: 10px; }
 
+    /* ── Detail popup ────────────────────────────────────────────── */
+    .detail-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      line-height: 1.7;
+    }
+
+    .detail-meta span + span::before { content: ' · '; }
+
+    .detail-genres {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 10px;
+    }
+
+    .genre-tag {
+      padding: 2px 8px;
+      font-size: 11px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted);
+    }
+
+    .detail-links {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-size: 12px;
+    }
+
+    .detail-links a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .detail-links a:hover { text-decoration: underline; }
+
+    .detail-status {
+      margin-bottom: 16px;
+    }
+
+    /* ── Picker modal (genres / collections) ─────────────────────── */
+    .picker-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+
+    .picker-list li {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .picker-list li:last-child { border-bottom: none; }
+
+    .picker-list li:active {
+      background: var(--bg);
+    }
+
+    .picker-list li .picker-count {
+      font-size: 11px;
+      color: var(--muted);
+      float: right;
+      margin-top: 2px;
+    }
+
     /* ── Toast ────────────────────────────────────────────────────── */
     .toast {
       position: fixed;
@@ -458,11 +510,19 @@
     </div>
 
     <div class="filter-row" id="filter-row">
-      <button class="pill active" data-filter="all">All</button>
-      <button class="pill" data-filter="movie">Movies</button>
+      <button class="pill" data-filter="all">All</button>
+      <button class="pill active" data-filter="movie">Movies</button>
       <button class="pill" data-filter="game">Games</button>
+      <button class="pill" data-filter="genres" id="genres-pill">🏷 Genres</button>
+      <button class="pill" data-filter="collections" id="collections-pill">📚 Collections</button>
     </div>
   </header>
+
+  <!-- Context bar (visible when viewing a genre or collection) -->
+  <div class="context-bar hidden" id="context-bar">
+    <span class="context-text" id="context-text"></span>
+    <button class="context-close" id="context-close">✕ Clear</button>
+  </div>
 
   <!-- Sort bar -->
   <div class="sort-bar" id="sort-bar">
@@ -477,6 +537,13 @@
 
   <!-- Title list -->
   <div id="title-list"><div class="state-msg"><div class="icon">⏳</div><p>Loading library…</p></div></div>
+
+  <!-- Title Detail Modal -->
+  <div class="modal-overlay hidden" id="detail-overlay">
+    <div class="modal" id="detail-modal">
+      <div id="detail-content"></div>
+    </div>
+  </div>
 
   <!-- Reserve Modal -->
   <div class="modal-overlay hidden" id="modal-overlay">
@@ -504,6 +571,30 @@
     </div>
   </div>
 
+  <!-- Genre Picker Modal -->
+  <div class="modal-overlay hidden" id="genre-overlay">
+    <div class="modal">
+      <h2>Select a Genre</h2>
+      <div class="modal-subtitle">Filter titles by genre</div>
+      <ul class="picker-list" id="genre-list"></ul>
+      <div style="margin-top:14px">
+        <button class="btn-secondary" id="genre-cancel" style="width:100%">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collections Picker Modal -->
+  <div class="modal-overlay hidden" id="collections-overlay">
+    <div class="modal">
+      <h2>Select a Collection</h2>
+      <div class="modal-subtitle">Browse curated title collections</div>
+      <ul class="picker-list" id="collections-list"></ul>
+      <div style="margin-top:14px">
+        <button class="btn-secondary" id="collections-cancel" style="width:100%">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
@@ -513,11 +604,14 @@
     var metaTag  = document.querySelector('meta[name="api-url"]');
     var BASE_URL = (metaTag && metaTag.getAttribute('content')) || '';
 
-    var allTitles    = [];
-    var activeFilter = 'all';
-    var activeSort   = 'title';
-    var searchQuery  = '';
-    var reservingId  = null;
+    var allTitles       = [];
+    var activeFilter    = 'movie'; // Default to Movies
+    var activeSort      = 'title';
+    var searchQuery     = '';
+    var reservingId     = null;
+    var activeGenre     = null;
+    var activeCollection = null;
+    var collectionTitles = null; // Titles loaded for active collection
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -557,6 +651,24 @@
       setTimeout(function () { t.classList.remove('show'); }, 2500);
     }
 
+    // ── Genre extraction ──────────────────────────────────────────────────────
+
+    function extractGenres(titles) {
+      var genreMap = {};
+      titles.forEach(function (t) {
+        if (!t.genres) return;
+        t.genres.split(',').forEach(function (g) {
+          var trimmed = g.trim();
+          if (trimmed) {
+            var key = trimmed.toLowerCase();
+            if (!genreMap[key]) genreMap[key] = { name: trimmed, count: 0 };
+            genreMap[key].count++;
+          }
+        });
+      });
+      return Object.keys(genreMap).sort().map(function (k) { return genreMap[k]; });
+    }
+
     // ── Load ──────────────────────────────────────────────────────────────────
 
     function loadTitles() {
@@ -572,6 +684,33 @@
         });
     }
 
+    // ── Context bar (for genre/collection filters) ────────────────────────────
+
+    function showContextBar(text) {
+      var bar = document.getElementById('context-bar');
+      document.getElementById('context-text').textContent = text;
+      bar.classList.remove('hidden');
+    }
+
+    function hideContextBar() {
+      document.getElementById('context-bar').classList.add('hidden');
+    }
+
+    function clearSpecialFilters() {
+      activeGenre = null;
+      activeCollection = null;
+      collectionTitles = null;
+      hideContextBar();
+    }
+
+    document.getElementById('context-close').addEventListener('click', function () {
+      clearSpecialFilters();
+      // Reset to Movies filter
+      activeFilter = 'movie';
+      updatePillUI();
+      render();
+    });
+
     // ── Render ────────────────────────────────────────────────────────────────
 
     function statusBadge(status) {
@@ -581,8 +720,20 @@
     }
 
     function render() {
-      var filtered = allTitles.filter(function (t) {
-        if (activeFilter !== 'all' && t.format !== activeFilter) return false;
+      var source = collectionTitles !== null ? collectionTitles : allTitles;
+
+      var filtered = source.filter(function (t) {
+        // Format filter (only when not in collection mode)
+        if (collectionTitles === null && activeFilter !== 'all' && activeFilter !== 'genres' && activeFilter !== 'collections') {
+          if (t.format !== activeFilter) return false;
+        }
+        // Genre filter
+        if (activeGenre) {
+          if (!t.genres) return false;
+          var genres = t.genres.split(',').map(function (g) { return g.trim().toLowerCase(); });
+          if (genres.indexOf(activeGenre.toLowerCase()) === -1) return false;
+        }
+        // Search
         return fuzzy(t.title, t.genres, searchQuery);
       });
 
@@ -597,28 +748,10 @@
         return;
       }
 
+      // Simplified card: show only title + type/status badges
       var html = '';
       sorted.forEach(function (t) {
-        var canReserve = (t.status === 'available' || t.status === 'out' || t.status === 'reserved');
-        var genreList  = t.genres ? t.genres.split(',').map(function (g) {
-          return '<span class="genre-tag">' + esc(g.trim()) + '</span>';
-        }).join('') : '';
-
-        var metaParts = [];
-        if (t.year)       metaParts.push('<span>' + esc(t.year) + '</span>');
-        if (t.format === 'movie') {
-          if (t.mpaaRating)  metaParts.push('<span>Rated ' + esc(t.mpaaRating) + '</span>');
-          if (t.runtime)     metaParts.push('<span>' + esc(t.runtime) + '</span>');
-          if (t.imdbRating)  metaParts.push('<span>⭐ ' + esc(t.imdbRating) + '/10</span>');
-        } else {
-          if (t.esrbRating)  metaParts.push('<span>ESRB: ' + esc(t.esrbRating) + '</span>');
-        }
-
-        var links = '';
-        if (t.imdbLink)        links += '<a href="' + esc(t.imdbLink) + '" target="_blank" rel="noopener">IMDB ↗</a>';
-        if (t.parentsGuideLink) links += '<a href="' + esc(t.parentsGuideLink) + '" target="_blank" rel="noopener">Parents\' Guide ↗</a>';
-
-        html += '<div class="title-card">';
+        html += '<div class="title-card" data-id="' + t.id + '">';
         html += '  <div class="card-top">';
         html += '    <div class="card-title">' + esc(t.title) + '</div>';
         html += '    <div class="card-badges">';
@@ -626,39 +759,140 @@
         html += '      ' + statusBadge(t.status);
         html += '    </div>';
         html += '  </div>';
-        if (metaParts.length > 0) html += '<div class="card-meta">' + metaParts.join('') + '</div>';
-        if (genreList) html += '<div class="card-genres">' + genreList + '</div>';
-        if (links) html += '<div class="card-links">' + links + '</div>';
-        html += '  <div class="card-footer">';
-        if (canReserve) {
-          html += '<button class="reserve-btn" data-id="' + t.id + '" data-title="' + esc(t.title) + '">Reserve</button>';
-        } else {
-          html += '<span></span>';
-        }
-        html += '  </div>';
         html += '</div>';
       });
 
       document.getElementById('title-list').innerHTML = html;
 
-      // Bind reserve buttons
-      var btns = document.querySelectorAll('.reserve-btn');
-      for (var i = 0; i < btns.length; i++) {
-        btns[i].addEventListener('click', function () {
+      // Bind click on title cards to open detail popup
+      var cards = document.querySelectorAll('.title-card');
+      for (var i = 0; i < cards.length; i++) {
+        cards[i].addEventListener('click', function () {
+          var id = parseInt(this.getAttribute('data-id'), 10);
+          openDetailPopup(id);
+        });
+      }
+    }
+
+    // ── Title Detail Popup ────────────────────────────────────────────────────
+
+    function openDetailPopup(titleId) {
+      var source = collectionTitles !== null ? collectionTitles : allTitles;
+      var t = source.find(function (item) { return item.id === titleId; });
+      if (!t) return;
+
+      var html = '';
+      html += '<h2 style="color:var(--accent);margin-bottom:2px">' + esc(t.title) + '</h2>';
+      html += '<div style="margin-bottom:10px">';
+      html += '  <span class="badge badge-' + t.format + '">' + (t.format === 'movie' ? 'Movie' : 'Game') + '</span> ';
+      html += '  ' + statusBadge(t.status);
+      html += '</div>';
+
+      // Meta info
+      var metaParts = [];
+      if (t.year) metaParts.push('<span>' + esc(t.year) + '</span>');
+      if (t.format === 'movie') {
+        if (t.mpaaRating)  metaParts.push('<span>Rated ' + esc(t.mpaaRating) + '</span>');
+        if (t.runtime)     metaParts.push('<span>' + esc(t.runtime) + '</span>');
+        if (t.imdbRating)  metaParts.push('<span>⭐ ' + esc(t.imdbRating) + '/10</span>');
+      } else {
+        if (t.esrbRating)  metaParts.push('<span>ESRB: ' + esc(t.esrbRating) + '</span>');
+      }
+      if (metaParts.length > 0) {
+        html += '<div class="detail-meta">' + metaParts.join('') + '</div>';
+      }
+
+      // Genres
+      if (t.genres) {
+        html += '<div class="detail-genres">';
+        t.genres.split(',').forEach(function (g) {
+          html += '<span class="genre-tag">' + esc(g.trim()) + '</span>';
+        });
+        html += '</div>';
+      }
+
+      // Links
+      var hasLinks = t.imdbLink || t.parentsGuideLink;
+      if (hasLinks) {
+        html += '<div class="detail-links">';
+        if (t.imdbLink) html += '<a href="' + esc(t.imdbLink) + '" target="_blank" rel="noopener">IMDB ↗</a>';
+        if (t.parentsGuideLink) html += '<a href="' + esc(t.parentsGuideLink) + '" target="_blank" rel="noopener">Parents\' Guide ↗</a>';
+        html += '</div>';
+      }
+
+      // Reserve button
+      var canReserve = (t.status === 'available' || t.status === 'out' || t.status === 'reserved');
+      html += '<div class="modal-actions" style="margin-top:8px">';
+      html += '  <button class="btn-secondary" id="detail-close-btn">Close</button>';
+      if (canReserve) {
+        html += '  <button class="btn-primary" id="detail-reserve-btn" data-id="' + t.id + '" data-title="' + esc(t.title) + '">Reserve</button>';
+      }
+      html += '</div>';
+
+      document.getElementById('detail-content').innerHTML = html;
+      document.getElementById('detail-overlay').classList.remove('hidden');
+
+      // Bind close
+      document.getElementById('detail-close-btn').addEventListener('click', closeDetailPopup);
+
+      // Bind reserve
+      var reserveBtn = document.getElementById('detail-reserve-btn');
+      if (reserveBtn) {
+        reserveBtn.addEventListener('click', function () {
+          closeDetailPopup();
           openReserveModal(this.getAttribute('data-id'), this.getAttribute('data-title'));
         });
       }
     }
 
+    function closeDetailPopup() {
+      document.getElementById('detail-overlay').classList.add('hidden');
+    }
+
+    document.getElementById('detail-overlay').addEventListener('click', function (e) {
+      if (e.target === this) closeDetailPopup();
+    });
+
     // ── Controls ──────────────────────────────────────────────────────────────
+
+    function updatePillUI() {
+      document.querySelectorAll('#filter-row .pill').forEach(function (p) {
+        var filter = p.getAttribute('data-filter');
+        if (filter === 'genres' || filter === 'collections') {
+          // These are action buttons, highlight them when active
+          if (filter === 'genres' && activeGenre) {
+            p.classList.add('active');
+          } else if (filter === 'collections' && activeCollection) {
+            p.classList.add('active');
+          } else {
+            p.classList.remove('active');
+          }
+        } else {
+          p.classList.toggle('active', filter === activeFilter && !activeGenre && !activeCollection);
+        }
+      });
+    }
 
     // Filter pills
     document.getElementById('filter-row').addEventListener('click', function (e) {
       var btn = e.target.closest('.pill');
       if (!btn) return;
-      activeFilter = btn.getAttribute('data-filter');
-      document.querySelectorAll('.pill').forEach(function (p) { p.classList.remove('active'); });
-      btn.classList.add('active');
+      var filter = btn.getAttribute('data-filter');
+
+      if (filter === 'genres') {
+        openGenrePicker();
+        return;
+      }
+
+      if (filter === 'collections') {
+        openCollectionsPicker();
+        return;
+      }
+
+      // Regular format filter
+      clearSpecialFilters();
+      activeFilter = filter;
+      updatePillUI();
       render();
     });
 
@@ -687,6 +921,119 @@
       searchQuery = '';
       searchClear.style.display = 'none';
       render();
+    });
+
+    // ── Genre Picker ──────────────────────────────────────────────────────────
+
+    function openGenrePicker() {
+      var genres = extractGenres(allTitles);
+      var listEl = document.getElementById('genre-list');
+
+      if (genres.length === 0) {
+        listEl.innerHTML = '<li style="color:var(--muted);cursor:default">No genres found</li>';
+      } else {
+        var html = '';
+        genres.forEach(function (g) {
+          html += '<li data-genre="' + esc(g.name) + '">' + esc(g.name) + '<span class="picker-count">' + g.count + '</span></li>';
+        });
+        listEl.innerHTML = html;
+
+        // Bind genre selection
+        listEl.querySelectorAll('li').forEach(function (li) {
+          li.addEventListener('click', function () {
+            var genreName = this.getAttribute('data-genre');
+            if (!genreName) return;
+            activeGenre = genreName;
+            activeCollection = null;
+            collectionTitles = null;
+            activeFilter = 'genres';
+            showContextBar('Genre: ' + genreName);
+            updatePillUI();
+            render();
+            closeGenrePicker();
+          });
+        });
+      }
+
+      document.getElementById('genre-overlay').classList.remove('hidden');
+    }
+
+    function closeGenrePicker() {
+      document.getElementById('genre-overlay').classList.add('hidden');
+    }
+
+    document.getElementById('genre-cancel').addEventListener('click', closeGenrePicker);
+    document.getElementById('genre-overlay').addEventListener('click', function (e) {
+      if (e.target === this) closeGenrePicker();
+    });
+
+    // ── Collections Picker ────────────────────────────────────────────────────
+
+    function openCollectionsPicker() {
+      var listEl = document.getElementById('collections-list');
+      listEl.innerHTML = '<li style="color:var(--muted);cursor:default">Loading…</li>';
+      document.getElementById('collections-overlay').classList.remove('hidden');
+
+      fetch(BASE_URL + '/api/collections', { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var collections = d.collections || [];
+          if (collections.length === 0) {
+            listEl.innerHTML = '<li style="color:var(--muted);cursor:default">No collections available</li>';
+            return;
+          }
+          var html = '';
+          collections.forEach(function (c) {
+            html += '<li data-coll-id="' + c.id + '" data-coll-name="' + esc(c.name) + '">' + esc(c.name) + '<span class="picker-count">' + c.titleCount + ' titles</span></li>';
+          });
+          listEl.innerHTML = html;
+
+          listEl.querySelectorAll('li').forEach(function (li) {
+            li.addEventListener('click', function () {
+              var collId   = parseInt(this.getAttribute('data-coll-id'), 10);
+              var collName = this.getAttribute('data-coll-name');
+              if (!collId) return;
+              selectCollection(collId, collName);
+              closeCollectionsPicker();
+            });
+          });
+        })
+        .catch(function () {
+          listEl.innerHTML = '<li style="color:var(--muted);cursor:default">Failed to load collections</li>';
+        });
+    }
+
+    function selectCollection(collId, collName) {
+      activeCollection = { id: collId, name: collName };
+      activeGenre = null;
+      activeFilter = 'collections';
+      showContextBar('Collection: ' + collName);
+      updatePillUI();
+
+      // Load collection titles
+      document.getElementById('title-list').innerHTML =
+        '<div class="state-msg"><div class="icon">⏳</div><p>Loading collection…</p></div>';
+
+      fetch(BASE_URL + '/api/collections/' + collId + '/titles', { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          collectionTitles = d.titles || [];
+          render();
+        })
+        .catch(function () {
+          collectionTitles = [];
+          render();
+          showToast('Failed to load collection');
+        });
+    }
+
+    function closeCollectionsPicker() {
+      document.getElementById('collections-overlay').classList.add('hidden');
+    }
+
+    document.getElementById('collections-cancel').addEventListener('click', closeCollectionsPicker);
+    document.getElementById('collections-overlay').addEventListener('click', function (e) {
+      if (e.target === this) closeCollectionsPicker();
     });
 
     // ── Reserve Modal ─────────────────────────────────────────────────────────
