@@ -255,8 +255,19 @@
           statusClass = 'closed';
           dotClass = 'closed';
           cardClass = 'closed-card';
-          statusText = 'Closed';
-          detail = formatReopenTime(a.reopenAt);
+          if (a.closureType === 'delay') {
+            var reopenDate = a.reopenAt ? new Date(a.reopenAt) : null;
+            statusText = 'Opens at ' + (reopenDate
+              ? reopenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
+              : 'TBD');
+            detail = '';
+          } else if (a.closureMinutes != null && a.closureMinutes < 1440) {
+            statusText = 'Closed';
+            detail = formatReopenTime(a.reopenAt);
+          } else {
+            statusText = 'Closed';
+            detail = 'Closed temporarily, watch for updates';
+          }
         } else if (!withinHours) {
           statusClass = 'outside';
           dotClass = 'outside';
