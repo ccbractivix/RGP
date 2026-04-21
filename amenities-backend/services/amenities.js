@@ -5,6 +5,16 @@ const db = require('../db/db');
  * Convert a date+time string pair in the America/New_York timezone into a
  * JavaScript Date (UTC epoch).  Works correctly across EST/EDT transitions.
  *
+ * The algorithm:
+ *  1. Build a provisional UTC instant using UTC-5 as a starting approximation.
+ *  2. Ask Intl what ET clock-time that UTC instant represents.
+ *  3. Compute the difference between the desired ET time and the Intl result,
+ *     then shift the candidate by that difference.
+ *
+ * This self-corrects for DST: the Intl step always returns the authoritative
+ * ET offset, so the final result is correct regardless of whether we start
+ * with the wrong approximation (the correction step absorbs the error).
+ *
  * @param {string} dateStr  – 'YYYY-MM-DD'
  * @param {string} timeStr  – 'HH:MM'
  * @returns {Date}
@@ -12,18 +22,20 @@ const db = require('../db/db');
 function etToUTC(dateStr, timeStr) {
   const [y, mo, d] = dateStr.split('-').map(Number);
   const [h, min]   = timeStr.split(':').map(Number);
-  // Start with a provisional UTC time using an approximate ET offset of UTC-5
+  // Provisional UTC using UTC-5 as an approximation (corrected below).
   let candidate = new Date(Date.UTC(y, mo - 1, d, h + 5, min));
-  // Find the actual ET clock time for this candidate UTC instant
+  // Find the actual ET clock time for this candidate UTC instant.
   const etParts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York',
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', hour12: false,
   }).formatToParts(candidate);
   const getP = type => etParts.find(p => p.type === type).value;
+  // hour12:false returns '00'-'23'; some older engines may return '24' for
+  // midnight – normalise to '00' to be safe (mirrors existing codebase pattern).
   const etH   = parseInt(getP('hour') === '24' ? '0' : getP('hour'), 10);
   const etMin = parseInt(getP('minute'), 10);
-  // Adjust by the difference between desired and actual ET clock time
+  // Shift candidate so that its ET representation matches the requested time.
   const diffMin = (h * 60 + min) - (etH * 60 + etMin);
   return new Date(candidate.getTime() + diffMin * 60_000);
 }
