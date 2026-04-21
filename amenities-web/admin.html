@@ -521,6 +521,12 @@
         now.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
 
       var list = document.getElementById('amenity-list');
+
+      // If any hours form is currently open, skip the re-render to avoid
+      // closing the dialogue while the user is entering fields.
+      var openForm = list.querySelector('.hours-form[style*="block"]');
+      if (openForm) return;
+
       var html = '';
 
       amenities.forEach(function (a) {
