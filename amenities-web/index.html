@@ -257,7 +257,7 @@
           cardClass = 'closed-card';
           if (a.closureType === 'delay') {
             var reopenDate = a.reopenAt ? new Date(a.reopenAt) : null;
-            statusText = 'Opens at ' + (reopenDate
+            statusText = 'Opening Time Delayed to ' + (reopenDate
               ? reopenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
               : 'TBD');
             detail = '';

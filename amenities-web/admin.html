@@ -538,7 +538,7 @@
         html += '<div class="amenity-status">';
         if (isClosed) {
           if (a.closureType === 'delay') {
-            html += '<span class="open-text">Opens at ';
+            html += '<span class="open-text">Opening Time Delayed to ';
             if (a.reopenAt) {
               var reopenDate = new Date(a.reopenAt);
               html += reopenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
@@ -594,30 +594,29 @@
         }
         html += '</div>';
 
-        // Change Hours section — Water Slide only
-        if (a.id === 'water-slide') {
-          html += '<div class="hours-override-section">';
-          html += '<button class="btn btn-outline btn-hours" data-id="water-slide" style="font-size:11px;padding:6px 10px;margin-top:8px;">Change Hours</button>';
-          html += '<div class="hours-form" data-id="water-slide" style="display:none;">';
-          html += '<div class="hours-form-row">';
-          html += '<span class="hours-label">Date</span>';
-          html += '<input type="date" class="hours-date hours-input" data-id="water-slide">';
-          html += '<span class="hours-label">Effective from</span>';
-          html += '<input type="time" class="hours-start hours-input" data-id="water-slide">';
-          html += '</div>';
-          html += '<div class="hours-form-row">';
-          html += '<span class="hours-label">Open</span>';
-          html += '<input type="time" class="hours-open hours-input" data-id="water-slide">';
-          html += '<span class="hours-label">Close</span>';
-          html += '<input type="time" class="hours-close hours-input" data-id="water-slide">';
-          html += '</div>';
-          html += '<div class="hours-form-row">';
-          html += '<button class="btn btn-blue btn-hours-submit" data-id="water-slide" style="font-size:12px;padding:8px 14px;">Save Hours</button>';
-          html += '<button class="btn btn-outline btn-hours-cancel" data-id="water-slide" style="font-size:12px;padding:8px 14px;">Cancel</button>';
-          html += '</div>';
-          html += '</div>';
-          html += '</div>';
-        }
+        // Change Hours section — all amenities
+        var aid = escapeHtml(a.id);
+        html += '<div class="hours-override-section">';
+        html += '<button class="btn btn-outline btn-hours" data-id="' + aid + '" style="font-size:11px;padding:6px 10px;margin-top:8px;">Change Hours</button>';
+        html += '<div class="hours-form" data-id="' + aid + '" style="display:none;">';
+        html += '<div class="hours-form-row">';
+        html += '<span class="hours-label">Effective from</span>';
+        html += '<input type="date" class="hours-date hours-input" data-id="' + aid + '">';
+        html += '<span class="hours-label">at</span>';
+        html += '<input type="time" class="hours-start hours-input" data-id="' + aid + '">';
+        html += '</div>';
+        html += '<div class="hours-form-row">';
+        html += '<span class="hours-label">Open</span>';
+        html += '<input type="time" class="hours-open hours-input" data-id="' + aid + '">';
+        html += '<span class="hours-label">Close</span>';
+        html += '<input type="time" class="hours-close hours-input" data-id="' + aid + '">';
+        html += '</div>';
+        html += '<div class="hours-form-row">';
+        html += '<button class="btn btn-blue btn-hours-submit" data-id="' + aid + '" style="font-size:12px;padding:8px 14px;">Save Hours</button>';
+        html += '<button class="btn btn-outline btn-hours-cancel" data-id="' + aid + '" style="font-size:12px;padding:8px 14px;">Cancel</button>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
 
         html += '</div>';
       });
