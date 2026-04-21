@@ -345,12 +345,27 @@
         if (a.status === 'closed') {
           cardClass = 'is-closed';
           statusClass = 'closed';
-          statusText = 'CLOSED';
-          if (a.reopenAt) {
-            var reopen = new Date(a.reopenAt);
-            detail = 'Est. reopen: ' + reopen.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+          if (a.closureType === 'delay') {
+            var reopenDate = a.reopenAt ? new Date(a.reopenAt) : null;
+            statusText = 'Opens at ' + (reopenDate
+              ? reopenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
+              : 'TBD');
+            detail = '';
           } else {
-            detail = 'Closed indefinitely';
+            var typeLabel = { wind: 'Wind Closure', maintenance: 'Maintenance Closure' }[a.closureType] || '';
+            statusText = 'CLOSED' + (typeLabel ? ' — ' + typeLabel : '');
+            if (a.closureMinutes != null && a.closureMinutes < 1440) {
+              if (a.reopenAt) {
+                var reopenDate = new Date(a.reopenAt);
+                detail = 'Est. reopen: ' + reopenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+              } else {
+                detail = '';
+              }
+            } else {
+              detail = a.closureMinutes == null ? 'Indeterminate' :
+                       a.closureMinutes === 1440 ? '24 hours' :
+                       a.closureMinutes === 2880 ? '48 hours' : '72 hours';
+            }
           }
         } else if (!withinHours) {
           cardClass = 'is-outside';

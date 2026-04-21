@@ -4,10 +4,12 @@ const {
   AMENITY_DEFS,
   LIGHTNING_IDS,
   VALID_CLOSURE_MINUTES,
+  VALID_CLOSURE_TYPES,
   closeAmenity,
   openAmenity,
   updateNow,
   getAllStatus,
+  setHoursOverride,
 } = require('../services/amenities');
 
 const router = express.Router();
@@ -51,12 +53,20 @@ router.post('/close/:id', async (req, res) => {
   if (!AMENITY_DEFS.find(a => a.id === id)) {
     return res.status(404).json({ error: 'Amenity not found' });
   }
-  const minutes = req.body.minutes;
+  const minutes     = req.body.minutes;
+  const closureType = req.body.closureType || 'close';
+
   if (minutes != null && !VALID_CLOSURE_MINUTES.includes(Number(minutes))) {
     return res.status(400).json({ error: 'Invalid closure duration' });
   }
+  if (!VALID_CLOSURE_TYPES.includes(closureType)) {
+    return res.status(400).json({ error: 'Invalid closure type' });
+  }
+  if (closureType === 'delay' && minutes == null) {
+    return res.status(400).json({ error: 'Delay Opening requires a specific duration' });
+  }
   try {
-    await closeAmenity(id, minutes != null ? Number(minutes) : null, false);
+    await closeAmenity(id, minutes != null ? Number(minutes) : null, false, closureType);
     return res.json({ ok: true });
   } catch (e) {
     console.error('[admin] close error:', e);
@@ -95,6 +105,36 @@ router.post('/update-now/:id', async (req, res) => {
   } catch (e) {
     console.error('[admin] update-now error:', e);
     return res.status(500).json({ error: 'Failed to update' });
+  }
+});
+
+// ── POST /admin/hours/:id — set a date-specific hours override ──────────────
+router.post('/hours/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!AMENITY_DEFS.find(a => a.id === id)) {
+    return res.status(404).json({ error: 'Amenity not found' });
+  }
+  const { date, openTime, closeTime, startTime } = req.body;
+  if (!date || !openTime || !closeTime || !startTime) {
+    return res.status(400).json({ error: 'date, openTime, closeTime, and startTime are required' });
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({ error: 'Invalid date format (expected YYYY-MM-DD)' });
+  }
+  const isValidTime = t => {
+    if (!/^\d{2}:\d{2}$/.test(t)) return false;
+    const [h, m] = t.split(':').map(Number);
+    return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+  };
+  if (!isValidTime(openTime) || !isValidTime(closeTime) || !isValidTime(startTime)) {
+    return res.status(400).json({ error: 'Invalid time value (expected HH:MM with valid hours 00-23 and minutes 00-59)' });
+  }
+  try {
+    await setHoursOverride(id, date, openTime, closeTime, startTime);
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[admin] hours error:', e);
+    return res.status(500).json({ error: 'Failed to set hours override' });
   }
 });
 

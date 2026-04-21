@@ -268,6 +268,32 @@
 
     .amenity-actions .btn { padding: 8px 12px; font-size: 12px; }
 
+    .hours-form-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .hours-label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .hours-input {
+      padding: 6px 8px;
+      font-size: 12px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .hours-input[type="date"] { min-width: 130px; }
+    .hours-input[type="time"] { min-width: 100px; }
+
     .updated-at {
       font-size: 11px;
       color: var(--amber);
@@ -511,13 +537,31 @@
         // Status info
         html += '<div class="amenity-status">';
         if (isClosed) {
-          html += '<span class="closed-text">CLOSED</span>';
-          if (a.lightning) html += ' <span style="color:var(--amber)">⚡</span>';
-          if (a.reopenAt) {
-            var reopen = new Date(a.reopenAt);
-            html += ' — Est. reopen: ' + reopen.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+          if (a.closureType === 'delay') {
+            html += '<span class="open-text">Opens at ';
+            if (a.reopenAt) {
+              var reopenDate = new Date(a.reopenAt);
+              html += reopenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+            } else {
+              html += 'TBD';
+            }
+            html += '</span>';
           } else {
-            html += ' — Indeterminate';
+            html += '<span class="closed-text">CLOSED</span>';
+            var typeLabels = { wind: 'Wind Closure', maintenance: 'Maintenance Closure' };
+            if (typeLabels[a.closureType]) html += ' — ' + typeLabels[a.closureType];
+            if (a.lightning) html += ' <span style="color:var(--amber)">⚡</span>';
+            if (a.closureMinutes != null && a.closureMinutes < 1440) {
+              if (a.reopenAt) {
+                var reopenDate = new Date(a.reopenAt);
+                html += ' — Est. reopen: ' + reopenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+              }
+            } else {
+              var durLabel = a.closureMinutes == null ? 'Indeterminate' :
+                             a.closureMinutes === 1440 ? '24 hours' :
+                             a.closureMinutes === 2880 ? '48 hours' : '72 hours';
+              html += ' — ' + durLabel;
+            }
           }
         } else {
           html += '<span class="open-text">OPEN</span>';
@@ -540,9 +584,40 @@
           }
         } else {
           html += '<select class="close-duration" data-id="' + escapeHtml(a.id) + '"></select>';
-          html += '<button class="btn btn-red btn-close" data-id="' + escapeHtml(a.id) + '">Close</button>';
+          html += '<select class="close-type" data-id="' + escapeHtml(a.id) + '">';
+          html += '<option value="close">Close</option>';
+          html += '<option value="wind">Wind Closure</option>';
+          html += '<option value="maintenance">Maintenance Closure</option>';
+          html += '<option value="delay">Delay Opening</option>';
+          html += '</select>';
+          html += '<button class="btn btn-red btn-close" data-id="' + escapeHtml(a.id) + '">Apply</button>';
         }
         html += '</div>';
+
+        // Change Hours section — Water Slide only
+        if (a.id === 'water-slide') {
+          html += '<div class="hours-override-section">';
+          html += '<button class="btn btn-outline btn-hours" data-id="water-slide" style="font-size:11px;padding:6px 10px;margin-top:8px;">Change Hours</button>';
+          html += '<div class="hours-form" data-id="water-slide" style="display:none;">';
+          html += '<div class="hours-form-row">';
+          html += '<span class="hours-label">Date</span>';
+          html += '<input type="date" class="hours-date hours-input" data-id="water-slide">';
+          html += '<span class="hours-label">Effective from</span>';
+          html += '<input type="time" class="hours-start hours-input" data-id="water-slide">';
+          html += '</div>';
+          html += '<div class="hours-form-row">';
+          html += '<span class="hours-label">Open</span>';
+          html += '<input type="time" class="hours-open hours-input" data-id="water-slide">';
+          html += '<span class="hours-label">Close</span>';
+          html += '<input type="time" class="hours-close hours-input" data-id="water-slide">';
+          html += '</div>';
+          html += '<div class="hours-form-row">';
+          html += '<button class="btn btn-blue btn-hours-submit" data-id="water-slide" style="font-size:12px;padding:8px 14px;">Save Hours</button>';
+          html += '<button class="btn btn-outline btn-hours-cancel" data-id="water-slide" style="font-size:12px;padding:8px 14px;">Cancel</button>';
+          html += '</div>';
+          html += '</div>';
+          html += '</div>';
+        }
 
         html += '</div>';
       });
@@ -566,11 +641,17 @@
         closeBtns[i].addEventListener('click', function () {
           var id = this.getAttribute('data-id');
           var select = container.querySelector('.close-duration[data-id="' + id + '"]');
+          var typeSelect = container.querySelector('.close-type[data-id="' + id + '"]');
           var val = select.value;
+          var closureType = typeSelect ? typeSelect.value : 'close';
           var minutes = val === 'null' ? null : Number(val);
+          if (closureType === 'delay' && val === 'null') {
+            showToast('Delay Opening requires a specific duration');
+            return;
+          }
           var self = this;
           self.disabled = true;
-          apiCall('POST', '/admin/close/' + id, { minutes: minutes })
+          apiCall('POST', '/admin/close/' + id, { minutes: minutes, closureType: closureType })
             .then(function () { showToast(id + ' closed'); loadStatus(); })
             .catch(function () { showToast('Error closing ' + id); })
             .finally(function () { self.disabled = false; });
@@ -601,6 +682,57 @@
           apiCall('POST', '/admin/update-now/' + id)
             .then(function () { showToast('Extended +15 min'); loadStatus(); })
             .catch(function () { showToast('Error updating'); })
+            .finally(function () { self.disabled = false; });
+        });
+      }
+
+      // Change Hours toggle buttons
+      var hoursBtns = container.querySelectorAll('.btn-hours');
+      for (var i = 0; i < hoursBtns.length; i++) {
+        hoursBtns[i].addEventListener('click', function () {
+          var id = this.getAttribute('data-id');
+          var form = container.querySelector('.hours-form[data-id="' + id + '"]');
+          if (!form) return;
+          var showing = form.style.display !== 'none';
+          form.style.display = showing ? 'none' : 'block';
+          if (!showing) {
+            // Pre-fill date to today in ET timezone
+            var today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+            var dateInput = form.querySelector('.hours-date');
+            if (dateInput && !dateInput.value) dateInput.value = today;
+          }
+        });
+      }
+
+      // Change Hours cancel buttons
+      var cancelBtns = container.querySelectorAll('.btn-hours-cancel');
+      for (var i = 0; i < cancelBtns.length; i++) {
+        cancelBtns[i].addEventListener('click', function () {
+          var id = this.getAttribute('data-id');
+          var form = container.querySelector('.hours-form[data-id="' + id + '"]');
+          if (form) form.style.display = 'none';
+        });
+      }
+
+      // Change Hours submit buttons
+      var submitBtns = container.querySelectorAll('.btn-hours-submit');
+      for (var i = 0; i < submitBtns.length; i++) {
+        submitBtns[i].addEventListener('click', function () {
+          var id = this.getAttribute('data-id');
+          var form = container.querySelector('.hours-form[data-id="' + id + '"]');
+          var date      = form.querySelector('.hours-date').value;
+          var startTime = form.querySelector('.hours-start').value;
+          var openTime  = form.querySelector('.hours-open').value;
+          var closeTime = form.querySelector('.hours-close').value;
+          if (!date || !startTime || !openTime || !closeTime) {
+            showToast('All fields are required');
+            return;
+          }
+          var self = this;
+          self.disabled = true;
+          apiCall('POST', '/admin/hours/' + id, { date: date, openTime: openTime, closeTime: closeTime, startTime: startTime })
+            .then(function () { showToast('Hours updated'); form.style.display = 'none'; loadStatus(); })
+            .catch(function () { showToast('Error updating hours'); })
             .finally(function () { self.disabled = false; });
         });
       }
