@@ -1,6 +1,33 @@
 'use strict';
 const db = require('../db/db');
 
+/**
+ * Convert a date+time string pair in the America/New_York timezone into a
+ * JavaScript Date (UTC epoch).  Works correctly across EST/EDT transitions.
+ *
+ * @param {string} dateStr  – 'YYYY-MM-DD'
+ * @param {string} timeStr  – 'HH:MM'
+ * @returns {Date}
+ */
+function etToUTC(dateStr, timeStr) {
+  const [y, mo, d] = dateStr.split('-').map(Number);
+  const [h, min]   = timeStr.split(':').map(Number);
+  // Start with a provisional UTC time using an approximate ET offset of UTC-5
+  let candidate = new Date(Date.UTC(y, mo - 1, d, h + 5, min));
+  // Find the actual ET clock time for this candidate UTC instant
+  const etParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(candidate);
+  const getP = type => etParts.find(p => p.type === type).value;
+  const etH   = parseInt(getP('hour') === '24' ? '0' : getP('hour'), 10);
+  const etMin = parseInt(getP('minute'), 10);
+  // Adjust by the difference between desired and actual ET clock time
+  const diffMin = (h * 60 + min) - (etH * 60 + etMin);
+  return new Date(candidate.getTime() + diffMin * 60_000);
+}
+
 const AMENITY_DEFS = [
   { id: 'main-pool',      name: 'Main Pool',      openTime: '08:00', closeTime: '22:00', order: 1 },
   { id: 'main-spa',       name: 'Main Spa',       openTime: '08:00', closeTime: '22:00', order: 2 },
@@ -59,14 +86,49 @@ async function ensureSchema() {
     console.warn('[schema] Could not add closure_type column (may already exist):', e.message);
   });
 
+  // Migrate hours_overrides from old schema (PK: amenity_id, date) to new
+  // schema (PK: amenity_id only, persistent overrides).
+  try {
+    const colCheck = await db.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'hours_overrides' AND column_name = 'date'
+    `);
+    if (colCheck.rows.length > 0) {
+      // Old schema detected – create migration target, copy newest row per
+      // amenity, drop old table, rename new one.
+      await db.query(`
+        CREATE TABLE IF NOT EXISTS hours_overrides_new (
+          amenity_id     TEXT PRIMARY KEY,
+          effective_date DATE NOT NULL,
+          effective_time TEXT NOT NULL,
+          open_time      TEXT NOT NULL,
+          close_time     TEXT NOT NULL
+        )
+      `);
+      await db.query(`
+        INSERT INTO hours_overrides_new
+               (amenity_id, effective_date, effective_time, open_time, close_time)
+        SELECT DISTINCT ON (amenity_id)
+               amenity_id, date AS effective_date, start_time AS effective_time,
+               open_time, close_time
+        FROM   hours_overrides
+        ORDER  BY amenity_id, date DESC, start_time DESC
+        ON CONFLICT (amenity_id) DO NOTHING
+      `);
+      await db.query('DROP TABLE hours_overrides');
+      await db.query('ALTER TABLE hours_overrides_new RENAME TO hours_overrides');
+    }
+  } catch (e) {
+    console.warn('[schema] hours_overrides migration error (may be benign):', e.message);
+  }
+
   await db.query(`
     CREATE TABLE IF NOT EXISTS hours_overrides (
-      amenity_id TEXT NOT NULL,
-      date       DATE NOT NULL,
-      open_time  TEXT NOT NULL,
-      close_time TEXT NOT NULL,
-      start_time TEXT NOT NULL,
-      PRIMARY KEY (amenity_id, date)
+      amenity_id     TEXT PRIMARY KEY,
+      effective_date DATE NOT NULL,
+      effective_time TEXT NOT NULL,
+      open_time      TEXT NOT NULL,
+      close_time     TEXT NOT NULL
     )
   `);
 }
@@ -115,14 +177,13 @@ async function getAllStatus() {
 
   const { date: todayET, time: nowTimeET } = getETDateAndTime();
 
-  // Remove overrides whose date has passed
-  await db.query(`DELETE FROM hours_overrides WHERE date < $1`, [todayET]);
-
-  // Fetch active overrides for today where start_time <= current ET time
+  // Fetch the active override for each amenity (effective_date+time <= now ET).
+  // Overrides persist indefinitely until replaced by a new one.
   const overrideRes = await db.query(`
     SELECT amenity_id, open_time, close_time
     FROM hours_overrides
-    WHERE date = $1 AND start_time <= $2
+    WHERE effective_date < $1::date
+       OR (effective_date = $1::date AND effective_time <= $2)
   `, [todayET, nowTimeET]);
 
   const overrideMap = {};
@@ -152,10 +213,37 @@ async function getAllStatus() {
 
 /**
  * Close a single amenity.
+ * When closureType is 'delay', reopenAt is calculated as the amenity's
+ * scheduled opening time on today's date (ET) plus the delay in minutes.
  */
 async function closeAmenity(id, minutes, isLightning, closureType) {
   const now = new Date();
-  const reopenAt = minutes != null ? new Date(now.getTime() + minutes * 60_000) : null;
+  let reopenAt;
+
+  if (closureType === 'delay' && minutes != null) {
+    // Determine the effective open time for this amenity (respects overrides)
+    const { date: todayET, time: nowTimeET } = getETDateAndTime();
+
+    const amenityRes = await db.query('SELECT open_time FROM amenities WHERE id = $1', [id]);
+    let openTimeStr = amenityRes.rows.length > 0 ? amenityRes.rows[0].open_time : '08:00';
+
+    // Check for an active hours override
+    const overrideRes = await db.query(`
+      SELECT open_time FROM hours_overrides
+      WHERE amenity_id = $1
+        AND (effective_date < $2::date
+          OR (effective_date = $2::date AND effective_time <= $3))
+    `, [id, todayET, nowTimeET]);
+    if (overrideRes.rows.length > 0) {
+      openTimeStr = overrideRes.rows[0].open_time;
+    }
+
+    // Compute: today's opening time (in ET) converted to UTC + delay
+    reopenAt = new Date(etToUTC(todayET, openTimeStr).getTime() + minutes * 60_000);
+  } else {
+    reopenAt = minutes != null ? new Date(now.getTime() + minutes * 60_000) : null;
+  }
+
   await db.query(`
     UPDATE amenities
     SET status          = 'closed',
@@ -187,19 +275,20 @@ async function openAmenity(id) {
 }
 
 /**
- * Set (or replace) a date-specific hours override for an amenity.
- * The override applies only on `date` and is removed automatically the following day.
- * `startTime` is when the override becomes active on that date (HH:MM).
+ * Set (or replace) the hours override for an amenity.
+ * The override becomes active on `effectiveDate` at `effectiveTime` (ET) and
+ * remains in effect until a new override is submitted.
  */
-async function setHoursOverride(amenityId, date, openTime, closeTime, startTime) {
+async function setHoursOverride(amenityId, effectiveDate, openTime, closeTime, effectiveTime) {
   await db.query(`
-    INSERT INTO hours_overrides (amenity_id, date, open_time, close_time, start_time)
+    INSERT INTO hours_overrides (amenity_id, effective_date, effective_time, open_time, close_time)
     VALUES ($1, $2, $3, $4, $5)
-    ON CONFLICT (amenity_id, date) DO UPDATE SET
-      open_time  = EXCLUDED.open_time,
-      close_time = EXCLUDED.close_time,
-      start_time = EXCLUDED.start_time
-  `, [amenityId, date, openTime, closeTime, startTime]);
+    ON CONFLICT (amenity_id) DO UPDATE SET
+      effective_date = EXCLUDED.effective_date,
+      effective_time = EXCLUDED.effective_time,
+      open_time      = EXCLUDED.open_time,
+      close_time     = EXCLUDED.close_time
+  `, [amenityId, effectiveDate, effectiveTime, openTime, closeTime]);
 }
 
 /**
