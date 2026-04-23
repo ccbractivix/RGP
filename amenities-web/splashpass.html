@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://amenities-web.onrender.com/api/status">
+  <title>Pool Status</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    .status-dot {
+      flex-shrink: 0;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+    }
+    .status-dot.open    { background-color: #198754; }
+    .status-dot.closed  { background-color: #dc3545; }
+    .status-dot.outside { background-color: #6c757d; }
+
+    .status-text.open    { color: #198754; }
+    .status-text.closed  { color: #dc3545; }
+    .status-text.outside { color: #6c757d; }
+
+    .card.closed-card  { background-color: #fff5f5; border-color: #f5c2c7; }
+    .card.outside-card { background-color: #f8f9fa; border-color: #dee2e6; }
+
+    .amenity-name   { font-weight: 600; font-size: 15px; }
+    .amenity-hours  { font-size: 12px; color: #6c757d; margin-top: 1px; }
+    .status-text    { font-size: 13px; font-weight: 600; line-height: 1.3; }
+    .status-detail  { font-size: 11px; color: #6c757d; margin-top: 2px; }
+
+    .lightning-banner {
+      background-color: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 12px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: #664d03;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="javascript:history.back()">
+        <i class="bi bi-arrow-left me-1"></i>🏊 SplashPass
+      </a>
+      <span class="navbar-text text-white-50 small" id="server-time"></span>
+    </div>
+  </nav>
+
+  <div class="container mt-3" style="max-width:540px;">
+    <div id="content">
+      <div class="text-center text-muted py-5">Loading amenity status…</div>
+    </div>
+    <div class="text-center small text-muted mt-2" id="refresh-note"></div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var metaTag = document.querySelector('meta[name="api-url"]');
+    var API_URL = (metaTag && metaTag.getAttribute('content')) || '/api/status';
+    var refreshTimer = null;
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatTime12(t) {
+      if (!t) return '';
+      var parts = t.split(':');
+      var h = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      var ampm = h >= 12 ? 'PM' : 'AM';
+      if (h === 0) h = 12;
+      else if (h > 12) h -= 12;
+      if (m === 0) return h + ' ' + ampm;
+      return h + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+    }
+
+    function parseServerTime(serverTimeStr) {
+      return new Date(serverTimeStr);
+    }
+
+    function getETNow(serverTimeStr) {
+      return parseServerTime(serverTimeStr);
+    }
+
+    function isWithinHours(now, openTime, closeTime) {
+      var h = now.getHours();
+      var m = now.getMinutes();
+      var current = h * 60 + m;
+      var openParts = openTime.split(':');
+      var closeParts = closeTime.split(':');
+      var open = parseInt(openParts[0], 10) * 60 + parseInt(openParts[1], 10);
+      var close = parseInt(closeParts[0], 10) * 60 + parseInt(closeParts[1], 10);
+      return current >= open && current < close;
+    }
+
+    function formatReopenTime(reopenAt) {
+      if (!reopenAt) return 'Indefinitely';
+      var d = new Date(reopenAt);
+      return 'Est. reopen: ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+    }
+
+    function render(data) {
+      var amenities = data.amenities;
+      var serverTime = data.serverTime;
+      var now = getETNow(serverTime);
+      var content = document.getElementById('content');
+
+      document.getElementById('server-time').textContent =
+        now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
+
+      var hasLightning = amenities.some(function (a) { return a.lightning; });
+      var hasShortClosure = amenities.some(function (a) {
+        return a.status === 'closed' && a.closureMinutes != null && a.closureMinutes <= 60;
+      });
+
+      var html = '';
+
+      if (hasLightning) {
+        html += '<div class="lightning-banner">⚡ Weather closure in effect — some amenities temporarily closed</div>';
+      }
+
+      amenities.forEach(function (a) {
+        var withinHours = isWithinHours(now, a.openTime, a.closeTime);
+        var statusClass, dotClass, cardClass, statusText, detail;
+
+        if (a.status === 'closed') {
+          statusClass = 'closed';
+          dotClass = 'closed';
+          cardClass = 'closed-card';
+          if (a.closureType === 'delay') {
+            var reopenDate = a.reopenAt ? new Date(a.reopenAt) : null;
+            statusText = 'Opening Time Delayed to ' + (reopenDate
+              ? reopenDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
+              : 'TBD');
+            detail = '';
+          } else if (a.closureMinutes != null && a.closureMinutes < 1440) {
+            statusText = 'Closed';
+            detail = formatReopenTime(a.reopenAt);
+          } else {
+            statusText = 'Closed';
+            detail = 'Closed temporarily, watch for updates';
+          }
+        } else if (!withinHours) {
+          statusClass = 'outside';
+          dotClass = 'outside';
+          cardClass = 'outside-card';
+          statusText = 'Opens at ' + formatTime12(a.openTime);
+          detail = '';
+        } else {
+          statusClass = 'open';
+          dotClass = 'open';
+          cardClass = '';
+          statusText = 'Open';
+          detail = 'Until ' + formatTime12(a.closeTime);
+        }
+
+        html += '<div class="card ' + cardClass + ' mb-2">';
+        html += '<div class="card-body d-flex align-items-center gap-3 py-3">';
+        html += '<div class="status-dot ' + dotClass + '"></div>';
+        html += '<div class="flex-grow-1 min-width-0">';
+        html += '<div class="amenity-name">' + escapeHtml(a.name) + '</div>';
+        html += '<div class="amenity-hours">' + formatTime12(a.openTime) + ' – ' + formatTime12(a.closeTime) + '</div>';
+        html += '</div>';
+        html += '<div class="text-end">';
+        html += '<div class="status-text ' + statusClass + '">' + escapeHtml(statusText) + '</div>';
+        if (detail) html += '<div class="status-detail">' + escapeHtml(detail) + '</div>';
+        html += '</div>';
+        html += '</div>';
+        html += '</div>';
+      });
+
+      content.innerHTML = html;
+
+      var refreshNote = document.getElementById('refresh-note');
+      if (hasShortClosure) {
+        if (!refreshTimer) {
+          refreshTimer = setInterval(fetchAndRender, 30000);
+        }
+        refreshNote.innerHTML = '<span class="text-success fw-semibold">● Live</span> Auto-refreshing';
+      } else {
+        if (refreshTimer) {
+          clearInterval(refreshTimer);
+          refreshTimer = null;
+        }
+        refreshNote.textContent = '';
+      }
+    }
+
+    function fetchAndRender() {
+      fetch(API_URL)
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          render(data);
+        })
+        .catch(function (err) {
+          console.error('[amenities] Fetch failed:', err);
+          document.getElementById('content').innerHTML =
+            '<div class="text-center text-danger py-5">Unable to load amenity status. Please try again later.</div>';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchAndRender);
+  })();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
