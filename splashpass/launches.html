@@ -341,7 +341,7 @@
     function renderList() {
       var content = document.getElementById('content');
       if (!launches.length) {
-        content.innerHTML = '<div class="no-launches">🔭 No upcoming Florida launches with confirmed dates.</div>';
+        content.innerHTML = '<div class="no-launches">🔭 No upcoming Florida launches found.</div>';
         return;
       }
 
@@ -474,7 +474,7 @@
           return r.json();
         })
         .then(function (data) {
-          launches = (data.results || []).filter(hasHardDate);
+          launches = data.results || [];
           renderList();
           document.getElementById('last-updated').textContent =
             'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
