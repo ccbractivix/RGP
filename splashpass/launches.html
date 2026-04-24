@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Florida Launches</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    body { background: #f0f4f8; }
+
+    /* ── Launch card ── */
+    .launch-card {
+      background: #fff;
+      border: 1px solid #d4dde8;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+    .launch-card:active {
+      transform: scale(0.98);
+    }
+    .launch-card:hover {
+      box-shadow: 0 3px 12px rgba(13,110,253,0.12);
+    }
+
+    .launch-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+      width: 36px;
+      text-align: center;
+    }
+
+    .launch-info { flex: 1; min-width: 0; }
+
+    .launch-vehicle {
+      font-weight: 600;
+      font-size: 15px;
+      color: #1a2535;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .launch-date {
+      font-size: 12px;
+      color: #5a6a80;
+      margin-top: 2px;
+    }
+
+    .launch-countdown {
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    .countdown-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0d6efd;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .countdown-value.urgent { color: #dc3545; }
+    .countdown-value.launched { color: #198754; }
+
+    .launch-tap-hint {
+      font-size: 10px;
+      color: #adb5bd;
+      margin-top: 2px;
+    }
+
+    /* ── Status badge ── */
+    .status-pill {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 1px 7px;
+      border-radius: 20px;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+    .pill-go      { background: rgba(25,135,84,0.12);  color: #198754; border: 1px solid rgba(25,135,84,0.25); }
+    .pill-tbd     { background: rgba(255,193,7,0.15);  color: #856404; border: 1px solid rgba(255,193,7,0.3); }
+    .pill-hold    { background: rgba(253,126,20,0.15); color: #7a3800; border: 1px solid rgba(253,126,20,0.3); }
+    .pill-tbc     { background: rgba(13,110,253,0.12); color: #084298; border: 1px solid rgba(13,110,253,0.2); }
+    .pill-success { background: rgba(25,135,84,0.12);  color: #198754; border: 1px solid rgba(25,135,84,0.25); }
+    .pill-failure { background: rgba(220,53,69,0.12);  color: #842029; border: 1px solid rgba(220,53,69,0.25); }
+
+    /* ── Modal overrides ── */
+    .modal-header { border-bottom: none; padding-bottom: 4px; }
+    .modal-footer { border-top: none; }
+
+    .modal-thumbnail {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 14px;
+      background: #e9ecef;
+    }
+    .modal-thumbnail-placeholder {
+      width: 100%;
+      height: 140px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #0d6efd22, #0d6efd08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      margin-bottom: 14px;
+    }
+
+    .modal-countdown {
+      background: #e7f0ff;
+      border: 1px solid #b6ccf5;
+      border-radius: 8px;
+      padding: 10px 14px;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+    .modal-countdown .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6c757d;
+    }
+    .modal-countdown .timer {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #0d6efd;
+      font-variant-numeric: tabular-nums;
+    }
+    .modal-countdown .timer.urgent { color: #dc3545; }
+    .modal-countdown .timer.launched { color: #198754; }
+
+    .modal-meta { font-size: 13px; color: #495057; margin-bottom: 10px; }
+    .modal-meta dt { font-weight: 600; color: #1a2535; float: left; width: 72px; clear: left; }
+    .modal-meta dd { margin-left: 80px; margin-bottom: 4px; }
+
+    .modal-description {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #495057;
+      margin-bottom: 14px;
+    }
+
+    .stream-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #212529;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      transition: background 0.15s;
+    }
+    .stream-link:hover { background: #e9ecef; color: #212529; }
+    .stream-link .bi { font-size: 18px; color: #ff0000; }
+    .stream-link .bi-play-circle { color: #0d6efd; }
+
+    .no-launches {
+      text-align: center;
+      color: #6c757d;
+      padding: 60px 20px;
+      font-size: 15px;
+    }
+    .error-msg {
+      text-align: center;
+      color: #dc3545;
+      padding: 60px 20px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-dark bg-primary">
+    <div class="container">
+      <a class="navbar-brand" href="javascript:history.back()">
+        <i class="bi bi-arrow-left me-1"></i>🚀 Florida Launches
+      </a>
+      <span class="navbar-text text-white-50 small" id="last-updated"></span>
+    </div>
+  </nav>
+
+  <div class="container mt-3" style="max-width:540px;">
+    <div id="content">
+      <div class="text-center text-muted py-5">Loading launches…</div>
+    </div>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal fade" id="launchModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle" style="font-size:16px;font-weight:700;line-height:1.3;"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    var LL2_URL = 'https://ll.thespacedevs.com/2.2.0/launch/upcoming/'
+      + '?location__ids=12,27&limit=25&ordering=net';
+
+    var launches = [];
+    var countdownTimer = null;
+    var activeModal = null;
+
+    // ── Helpers ────────────────────────────────────────────────
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function getLaunchImage(launch) {
+      var img = launch.image;
+      if (!img) return null;
+      if (typeof img === 'object') return img.thumbnail_url || img.image_url || null;
+      return img;
+    }
+
+    function getVehicleName(launch) {
+      return (launch.rocket && launch.rocket.configuration && launch.rocket.configuration.name)
+        || launch.name
+        || 'Unknown Vehicle';
+    }
+
+    function hasHardDate(launch) {
+      // tbddate===false means the date (month+day) is confirmed
+      return launch.tbddate === false;
+    }
+
+    function formatDate(isoStr) {
+      if (!isoStr) return 'TBD';
+      var d = new Date(isoStr);
+      return d.toLocaleDateString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
+        timeZone: 'America/New_York'
+      });
+    }
+
+    function formatDateTime(isoStr) {
+      if (!isoStr) return 'TBD';
+      var d = new Date(isoStr);
+      return d.toLocaleString('en-US', {
+        weekday: 'short', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+        timeZone: 'America/New_York'
+      });
+    }
+
+    function formatCountdown(ms) {
+      if (ms <= 0) return null; // launched
+      var s = Math.floor(ms / 1000);
+      var d = Math.floor(s / 86400);
+      var h = Math.floor((s % 86400) / 3600);
+      var m = Math.floor((s % 3600) / 60);
+      var sec = s % 60;
+      var parts = [];
+      if (d > 0) parts.push(d + 'd');
+      parts.push(h + 'h');
+      parts.push(String(m).padStart(2, '0') + 'm');
+      parts.push(String(sec).padStart(2, '0') + 's');
+      return 'T\u2212 ' + parts.join(' ');
+    }
+
+    function getStatusClass(abbrev) {
+      var map = {
+        go: 'pill-go', tbd: 'pill-tbd', hold: 'pill-hold',
+        tbc: 'pill-tbc', success: 'pill-success', failure: 'pill-failure'
+      };
+      return map[(abbrev || '').toLowerCase()] || 'pill-tbd';
+    }
+
+    function getStatusLabel(abbrev) {
+      return (abbrev || 'TBD').toUpperCase();
+    }
+
+    // ── Countdown tick ─────────────────────────────────────────
+
+    function tickCountdowns() {
+      var now = Date.now();
+
+      document.querySelectorAll('.card-countdown[data-net]').forEach(function (el) {
+        var net = parseInt(el.dataset.net, 10);
+        var diff = net - now;
+        var cdEl = el.querySelector('.countdown-value');
+        if (!cdEl) return;
+        if (diff <= 0) {
+          cdEl.textContent = 'Launched';
+          cdEl.className = 'countdown-value launched';
+        } else {
+          cdEl.textContent = formatCountdown(diff);
+          cdEl.className = 'countdown-value' + (diff < 3600000 ? ' urgent' : '');
+        }
+      });
+
+      var modalTimer = document.getElementById('modal-timer');
+      if (modalTimer && modalTimer.dataset.net) {
+        var net = parseInt(modalTimer.dataset.net, 10);
+        var diff = net - now;
+        if (diff <= 0) {
+          modalTimer.textContent = 'Launched!';
+          modalTimer.className = 'timer launched';
+        } else {
+          modalTimer.textContent = formatCountdown(diff);
+          modalTimer.className = 'timer' + (diff < 3600000 ? ' urgent' : '');
+        }
+      }
+    }
+
+    // ── Render list ─────────────────────────────────────────────
+
+    function renderList() {
+      var content = document.getElementById('content');
+      if (!launches.length) {
+        content.innerHTML = '<div class="no-launches">🔭 No upcoming Florida launches with confirmed dates.</div>';
+        return;
+      }
+
+      var html = '';
+      launches.forEach(function (launch, idx) {
+        var vehicle = getVehicleName(launch);
+        var net = launch.net ? new Date(launch.net).getTime() : null;
+        var dateStr = formatDate(launch.net);
+        var abbrev = launch.status && launch.status.abbrev ? launch.status.abbrev : '';
+        var pillClass = getStatusClass(abbrev);
+        var pillLabel = getStatusLabel(abbrev);
+        var isSuccessOrFail = ['success', 'failure'].indexOf((abbrev).toLowerCase()) !== -1;
+
+        html += '<div class="launch-card" data-idx="' + idx + '">';
+        html += '<div class="launch-icon">🚀</div>';
+        html += '<div class="launch-info">';
+        html += '<div class="launch-vehicle">' + escapeHtml(vehicle);
+        html += '<span class="status-pill ' + pillClass + '">' + escapeHtml(pillLabel) + '</span>';
+        html += '</div>';
+        html += '<div class="launch-date">' + escapeHtml(dateStr) + '</div>';
+        html += '</div>';
+
+        html += '<div class="launch-countdown">';
+        if (net && !isSuccessOrFail) {
+          html += '<div class="card-countdown" data-net="' + net + '">';
+          var diff = net - Date.now();
+          var cdText = diff <= 0 ? 'Launched' : formatCountdown(diff);
+          var cdClass = diff <= 0 ? 'launched' : (diff < 3600000 ? 'urgent' : '');
+          html += '<div class="countdown-value ' + cdClass + '">' + escapeHtml(cdText) + '</div>';
+          html += '</div>';
+        } else if (isSuccessOrFail) {
+          html += '<div class="countdown-value launched">' + escapeHtml(pillLabel) + '</div>';
+        }
+        html += '<div class="launch-tap-hint">tap for details</div>';
+        html += '</div>';
+
+        html += '</div>'; // .launch-card
+      });
+
+      content.innerHTML = html;
+
+      // Attach click handlers
+      document.querySelectorAll('.launch-card').forEach(function (card) {
+        card.addEventListener('click', function () {
+          openModal(parseInt(card.dataset.idx, 10));
+        });
+      });
+    }
+
+    // ── Modal ───────────────────────────────────────────────────
+
+    function openModal(idx) {
+      var launch = launches[idx];
+      if (!launch) return;
+
+      var vehicle = getVehicleName(launch);
+      var abbrev = launch.status && launch.status.abbrev ? launch.status.abbrev : '';
+      var net = launch.net ? new Date(launch.net).getTime() : null;
+      var imgUrl = getLaunchImage(launch);
+      var mission = launch.mission && launch.mission.description ? launch.mission.description : '';
+      var padName = launch.pad && launch.pad.name ? launch.pad.name : '';
+      var vidURLs = launch.vidURLs || [];
+
+      document.getElementById('modalTitle').innerHTML =
+        escapeHtml(vehicle) +
+        ' <span class="status-pill ' + getStatusClass(abbrev) + '">' + escapeHtml(getStatusLabel(abbrev)) + '</span>';
+
+      var body = '';
+
+      // Thumbnail
+      if (imgUrl) {
+        body += '<img class="modal-thumbnail" src="' + escapeHtml(imgUrl) + '" alt="' + escapeHtml(vehicle) + '" onerror="this.style.display=\'none\'">';
+      } else {
+        body += '<div class="modal-thumbnail-placeholder">🚀</div>';
+      }
+
+      // Countdown
+      body += '<div class="modal-countdown">';
+      body += '<div class="label">Countdown</div>';
+      if (net) {
+        var diff = net - Date.now();
+        var timerText = diff <= 0 ? 'Launched!' : formatCountdown(diff);
+        var timerClass = diff <= 0 ? 'launched' : (diff < 3600000 ? 'urgent' : '');
+        body += '<div class="timer ' + timerClass + '" id="modal-timer" data-net="' + net + '">' + escapeHtml(timerText) + '</div>';
+      } else {
+        body += '<div class="timer">NET TBD</div>';
+      }
+      body += '</div>';
+
+      // Meta
+      body += '<dl class="modal-meta">';
+      body += '<dt>T-0</dt><dd>' + escapeHtml(formatDateTime(launch.net)) + '</dd>';
+      if (padName) body += '<dt>Pad</dt><dd>' + escapeHtml(padName) + '</dd>';
+      body += '</dl>';
+
+      // Description
+      if (mission) {
+        body += '<div class="modal-description">' + escapeHtml(mission) + '</div>';
+      }
+
+      // Livestreams
+      if (vidURLs.length) {
+        body += '<div class="fw-semibold mb-2" style="font-size:13px;">Livestreams</div>';
+        vidURLs.forEach(function (v) {
+          var url = v.url || v;
+          var src = v.source || '';
+          var title = v.title || src || 'Watch';
+          var isYoutube = url.toLowerCase().indexOf('youtube') !== -1 || url.toLowerCase().indexOf('youtu.be') !== -1;
+          body += '<a class="stream-link" href="' + escapeHtml(url) + '" target="_blank" rel="noopener">';
+          body += '<i class="bi ' + (isYoutube ? 'bi-youtube' : 'bi-play-circle') + '"></i>';
+          body += escapeHtml(title);
+          body += '</a>';
+        });
+      }
+
+      document.getElementById('modalBody').innerHTML = body;
+
+      if (!activeModal) {
+        activeModal = new bootstrap.Modal(document.getElementById('launchModal'));
+      }
+      activeModal.show();
+    }
+
+    // ── Fetch ───────────────────────────────────────────────────
+
+    function fetchLaunches() {
+      fetch(LL2_URL)
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function (data) {
+          launches = (data.results || []).filter(hasHardDate);
+          renderList();
+          document.getElementById('last-updated').textContent =
+            'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        })
+        .catch(function (err) {
+          console.error('[launches] Fetch failed:', err);
+          document.getElementById('content').innerHTML =
+            '<div class="error-msg">Unable to load launch data. Please try again later.</div>';
+        });
+    }
+
+    // ── Boot ────────────────────────────────────────────────────
+
+    document.addEventListener('DOMContentLoaded', function () {
+      fetchLaunches();
+      countdownTimer = setInterval(tickCountdowns, 1000);
+    });
+
+  })();
+  </script>
+
+</body>
+</html>
