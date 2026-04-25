@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resort Weather</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #FFF8F0;
+      color: #3D3128;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+
+    #tv-page {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ===== HEADLINE ===== */
+    #tv-headline {
+      text-align: center;
+      padding: 14px 0 6px;
+      font-size: clamp(24px, 3vw, 44px);
+      font-weight: 700;
+      font-family: 'Fredoka', sans-serif;
+      letter-spacing: 6px;
+      color: #4A7A36;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    #tv-subhead {
+      text-align: center;
+      font-size: clamp(11px, 1vw, 15px);
+      color: #7A6B5A;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      flex-shrink: 0;
+      margin-bottom: 10px;
+    }
+
+    /* ===== CURRENT PERIOD CARD ===== */
+    #tv-current {
+      display: none;
+      flex-direction: row;
+      align-items: stretch;
+      margin: 0 24px 12px;
+      background: #FFFFFF;
+      border: 1px solid #E8D5C0;
+      border-radius: 12px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    #current-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px 24px;
+      background: rgba(74, 122, 54, 0.06);
+      border-right: 1px solid #E8D5C0;
+      min-width: 180px;
+      flex-shrink: 0;
+    }
+
+    #current-icon {
+      font-size: clamp(52px, 6.5vw, 88px);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    #current-period-name {
+      font-family: 'Fredoka', sans-serif;
+      font-size: clamp(14px, 1.4vw, 20px);
+      color: #4A7A36;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-align: center;
+    }
+
+    #current-temp {
+      font-size: clamp(42px, 5.5vw, 76px);
+      font-weight: 700;
+      color: #E37433;
+      line-height: 1;
+      margin: 4px 0 2px;
+    }
+
+    #current-short {
+      font-size: clamp(13px, 1.2vw, 17px);
+      font-weight: 600;
+      color: #3D3128;
+      text-align: center;
+    }
+
+    #current-middle {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 14px 20px;
+      overflow: hidden;
+    }
+
+    #current-detail {
+      font-size: clamp(11px, 1.05vw, 15px);
+      color: #7A6B5A;
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    #current-right {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 12px;
+      padding: 16px 20px 16px 12px;
+      border-left: 1px solid #E8D5C0;
+      min-width: 160px;
+      flex-shrink: 0;
+    }
+
+    .current-meta-block {
+      text-align: right;
+    }
+
+    .current-meta-label {
+      font-size: clamp(9px, 0.8vw, 11px);
+      color: #B8A898;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    .current-meta-value {
+      font-size: clamp(13px, 1.25vw, 18px);
+      font-weight: 600;
+      color: #3D3128;
+      margin-top: 1px;
+    }
+
+    /* ===== 6-DAY GRID ===== */
+    #tv-grid {
+      display: none;
+      flex: 1;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      padding: 0 24px 10px;
+      min-height: 0;
+    }
+
+    .day-card {
+      background: #FFFFFF;
+      border: 1px solid #E8D5C0;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 6px;
+      gap: 5px;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .day-card.is-today {
+      border-color: #4A7A36;
+      background: rgba(74, 122, 54, 0.06);
+    }
+
+    .day-name {
+      font-family: 'Fredoka', sans-serif;
+      font-size: clamp(14px, 1.5vw, 21px);
+      color: #4A7A36;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      line-height: 1;
+    }
+
+    .day-date {
+      font-size: clamp(10px, 0.9vw, 13px);
+      color: #7A6B5A;
+      line-height: 1;
+    }
+
+    .day-divider {
+      width: 80%;
+      height: 1px;
+      background: #E8D5C0;
+    }
+
+    .day-icon {
+      font-size: clamp(30px, 3.8vw, 52px);
+      line-height: 1;
+    }
+
+    .day-temps {
+      font-size: clamp(15px, 1.5vw, 21px);
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .day-high { color: #E37433; }
+    .day-sep  { color: #B8A898; font-weight: 400; }
+    .day-low  { color: #7A6B5A; }
+
+    .day-pop {
+      font-size: clamp(11px, 1vw, 14px);
+      color: #3D3128;
+      font-weight: 500;
+    }
+
+    .day-wind {
+      font-size: clamp(10px, 0.85vw, 12px);
+      color: #7A6B5A;
+      line-height: 1.3;
+    }
+
+    /* ===== BOTTOM BAR ===== */
+    #tv-bottom {
+      display: none;
+      flex-shrink: 0;
+      text-align: center;
+      padding: 7px 0 10px;
+      border-top: 1px solid #E8D5C0;
+      font-size: clamp(10px, 0.9vw, 13px);
+      color: #B8A898;
+    }
+
+    /* ===== LOADING ===== */
+    #tv-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      font-size: clamp(16px, 1.5vw, 22px);
+      color: #7A6B5A;
+    }
+
+    /* ===== STATUS STAMP ===== */
+    #tv-status {
+      position: fixed;
+      bottom: 4px;
+      right: 14px;
+      font-size: 10px;
+      color: #B8A898;
+    }
+  </style>
+</head>
+<body>
+  <div id="tv-page">
+    <div id="tv-headline">RESORT WEATHER</div>
+    <div id="tv-subhead">Cocoa Beach, FL &nbsp;·&nbsp; Space Coast</div>
+
+    <div id="tv-loading">Loading weather data…</div>
+
+    <!-- Current 12-hour period -->
+    <div id="tv-current">
+      <div id="current-left">
+        <div id="current-icon">⛅</div>
+        <div id="current-period-name">—</div>
+        <div id="current-temp">—°F</div>
+        <div id="current-short">—</div>
+      </div>
+      <div id="current-middle">
+        <div id="current-detail">—</div>
+      </div>
+      <div id="current-right">
+        <div class="current-meta-block" id="meta-wind">
+          <div class="current-meta-label">Wind</div>
+          <div class="current-meta-value">—</div>
+        </div>
+        <div class="current-meta-block" id="meta-precip">
+          <div class="current-meta-label">Precipitation</div>
+          <div class="current-meta-value">—</div>
+        </div>
+        <div class="current-meta-block" id="meta-humidity">
+          <div class="current-meta-label">Humidity</div>
+          <div class="current-meta-value">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6-day grid -->
+    <div id="tv-grid"></div>
+
+    <div id="tv-bottom"></div>
+  </div>
+  <div id="tv-status"></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var LAT      = 28.404919;
+    var LON      = -80.597154;
+    var TIMEZONE = 'America/New_York';
+    var REFRESH_MS = 3600000; // 1 hour
+
+    // Cached URLs from the /points endpoint
+    var forecastUrl     = null;
+    var gridDataUrl     = null;
+
+    // Note: User-Agent is a forbidden header in browser fetch; weather.gov recommends it
+    // but it cannot be set programmatically from a browser context.
+    var FETCH_OPTS = { headers: { 'Accept': 'application/geo+json,application/json' } };
+
+    // ── Utilities ────────────────────────────────────────────────────────────
+
+    function escHtml(s) {
+      if (s == null) return '';
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function cToF(c) {
+      return Math.round(c * 9 / 5 + 32);
+    }
+
+    function kmhToMph(kmh) {
+      return Math.round(kmh * 0.621371);
+    }
+
+    function degToCompass(d) {
+      var dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+      return dirs[Math.round(d / 22.5) % 16];
+    }
+
+    // Parse ISO 8601 duration string (e.g. "PT1H", "PT6H", "P1D", "P1DT12H") → milliseconds
+    function parseDurationMs(dur) {
+      var ms = 0;
+      var dm = dur.match(/(\d+)D/);
+      var hm = dur.match(/T(\d+)H/);
+      if (dm) ms += parseInt(dm[1], 10) * 86400000;
+      if (hm) ms += parseInt(hm[1], 10) * 3600000;
+      return ms || 3600000;
+    }
+
+    // Return "YYYY-MM-DD" string for a Date object in the given IANA timezone
+    function localDateStr(date, tz) {
+      return date.toLocaleDateString('en-CA', { timeZone: tz }); // en-CA gives YYYY-MM-DD
+    }
+
+    // Pick a weather emoji from avg sky-cover % (0–100) and condition keyword
+    function weatherEmoji(skyCover, condition) {
+      var c = (condition || '').toLowerCase();
+      if (c.indexOf('thunderstorm') !== -1 || c.indexOf('thunder') !== -1) return '⛈️';
+      if (c.indexOf('tropical') !== -1) return '🌀';
+      if (c.indexOf('blizzard') !== -1 || c.indexOf('snow') !== -1) return '❄️';
+      if (c.indexOf('sleet') !== -1 || c.indexOf('ice') !== -1) return '🌨️';
+      if (c.indexOf('rain') !== -1 || c.indexOf('shower') !== -1 || c.indexOf('drizzle') !== -1) return '🌧️';
+      if (c.indexOf('fog') !== -1 || c.indexOf('mist') !== -1 || c.indexOf('haze') !== -1) return '🌫️';
+      if (skyCover < 20)  return '☀️';
+      if (skyCover < 40)  return '🌤️';
+      if (skyCover < 65)  return '⛅';
+      if (skyCover < 85)  return '🌥️';
+      return '☁️';
+    }
+
+    // Pick a weather emoji from an NWS icon URL (used for current period)
+    function emojiFromForecast(shortForecast, isDaytime) {
+      var s = (shortForecast || '').toLowerCase();
+      if (s.indexOf('thunder') !== -1) return '⛈️';
+      if (s.indexOf('tropical') !== -1) return '🌀';
+      if (s.indexOf('snow') !== -1) return '❄️';
+      if (s.indexOf('sleet') !== -1 || s.indexOf('ice') !== -1) return '🌨️';
+      if (s.indexOf('rain') !== -1 || s.indexOf('shower') !== -1 || s.indexOf('drizzle') !== -1) return '🌧️';
+      if (s.indexOf('fog') !== -1 || s.indexOf('mist') !== -1 || s.indexOf('haze') !== -1) return '🌫️';
+      if (s.indexOf('sunny') !== -1 || s.indexOf('clear') !== -1) return isDaytime ? '☀️' : '🌙';
+      if (s.indexOf('mostly clear') !== -1 || s.indexOf('mostly sunny') !== -1) return isDaytime ? '🌤️' : '🌙';
+      if (s.indexOf('partly') !== -1) return '⛅';
+      if (s.indexOf('cloud') !== -1 || s.indexOf('overcast') !== -1) return '☁️';
+      return isDaytime ? '⛅' : '🌙';
+    }
+
+    // ── Grid Data Processing ─────────────────────────────────────────────────
+
+    // Expand a validTime interval string into per-hour {time, value} entries grouped by local date
+    function groupByDay(valuesArray, tz) {
+      var result = {};
+      (valuesArray || []).forEach(function (entry) {
+        if (entry.value === null || entry.value === undefined) return;
+        var slash  = entry.validTime.indexOf('/');
+        var start  = new Date(entry.validTime.slice(0, slash));
+        var durMs  = parseDurationMs(entry.validTime.slice(slash + 1));
+        var hours  = Math.max(1, Math.round(durMs / 3600000));
+        for (var h = 0; h < hours; h++) {
+          var t = new Date(start.getTime() + h * 3600000);
+          var d = localDateStr(t, tz);
+          if (!result[d]) result[d] = [];
+          result[d].push({ time: t, value: entry.value });
+        }
+      });
+      return result;
+    }
+
+    // Same expansion but for the weather condition arrays (value is an array of objects)
+    function groupWeatherByDay(valuesArray, tz) {
+      var result = {};
+      (valuesArray || []).forEach(function (entry) {
+        var slash  = entry.validTime.indexOf('/');
+        var start  = new Date(entry.validTime.slice(0, slash));
+        var durMs  = parseDurationMs(entry.validTime.slice(slash + 1));
+        var hours  = Math.max(1, Math.round(durMs / 3600000));
+        for (var h = 0; h < hours; h++) {
+          var t = new Date(start.getTime() + h * 3600000);
+          var d = localDateStr(t, tz);
+          if (!result[d]) result[d] = [];
+          if (Array.isArray(entry.value)) {
+            entry.value.forEach(function (w) {
+              if (w.weather && w.weather !== 'none') result[d].push(w.weather);
+            });
+          }
+        }
+      });
+      return result;
+    }
+
+    // Find the most-frequent element in an array of strings
+    function mostFrequent(arr) {
+      if (!arr || !arr.length) return '';
+      var freq = {};
+      arr.forEach(function (x) { freq[x] = (freq[x] || 0) + 1; });
+      return Object.keys(freq).sort(function (a, b) { return freq[b] - freq[a]; })[0] || '';
+    }
+
+    // Build 6-day summary objects from forecastGridData
+    function buildDailySummaries(gridData) {
+      var props = gridData.properties;
+      var now   = new Date();
+
+      // Target days: today + 5 more in Eastern time
+      var days = [];
+      for (var i = 0; i < 6; i++) {
+        days.push(localDateStr(new Date(now.getTime() + i * 86400000), TIMEZONE));
+      }
+
+      var tempByDay     = groupByDay(props.temperature.values,                 TIMEZONE);
+      var popByDay      = groupByDay(props.probabilityOfPrecipitation.values,  TIMEZONE);
+      var windSpeedByDay= groupByDay(props.windSpeed.values,                   TIMEZONE);
+      var windDirByDay  = groupByDay(props.windDirection.values,               TIMEZONE);
+      var skyByDay      = groupByDay(props.skyCover.values,                    TIMEZONE);
+      var weatherByDay  = groupWeatherByDay(
+        (props.weather && props.weather.values) ? props.weather.values : [], TIMEZONE);
+
+      return days.map(function (dayStr, idx) {
+        var temps  = (tempByDay[dayStr]      || []).filter(function(e){ return e.value !== null; });
+        var pops   = (popByDay[dayStr]       || []).filter(function(e){ return e.value !== null; });
+        var winds  = (windSpeedByDay[dayStr] || []).filter(function(e){ return e.value !== null; });
+        var wdirs  = (windDirByDay[dayStr]   || []).filter(function(e){ return e.value !== null; });
+        var skies  = (skyByDay[dayStr]       || []).filter(function(e){ return e.value !== null; });
+        var conds  = weatherByDay[dayStr] || [];
+
+        var high = temps.length ? cToF(Math.max.apply(null, temps.map(function(e){ return e.value; }))) : null;
+        var low  = temps.length ? cToF(Math.min.apply(null, temps.map(function(e){ return e.value; }))) : null;
+        var pop  = pops.length  ? Math.round(Math.max.apply(null, pops.map(function(e){ return e.value || 0; }))) : 0;
+
+        // Max wind speed and direction at that hour — match by timestamp for accuracy
+        var wdirByTime = {};
+        wdirs.forEach(function (e) { wdirByTime[e.time.getTime()] = e.value; });
+        var maxWindVal = 0, maxWindDirDeg = null;
+        winds.forEach(function (e) {
+          if ((e.value || 0) > maxWindVal) {
+            maxWindVal = e.value;
+            var dirVal = wdirByTime[e.time.getTime()];
+            maxWindDirDeg = dirVal !== undefined ? dirVal : null;
+          }
+        });
+
+        // Average sky cover across all hours
+        var avgSky = skies.length
+          ? Math.round(skies.reduce(function(s,e){ return s + (e.value||0); }, 0) / skies.length)
+          : 50;
+
+        var dominantCond = mostFrequent(conds);
+
+        // Build a representative UTC-noon Date for display formatting (noon UTC = 8 AM ET, always the same local day)
+        var parts = dayStr.split('-');
+        var dateObj = new Date(Date.UTC(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10), 12, 0, 0));
+
+        return {
+          dayStr:   dayStr,
+          dateObj:  dateObj,
+          isToday:  idx === 0,
+          high:     high,
+          low:      low,
+          pop:      pop,
+          windMph:  kmhToMph(maxWindVal),
+          windDir:  maxWindDirDeg !== null ? degToCompass(maxWindDirDeg) : '',
+          avgSky:   avgSky,
+          condition:dominantCond,
+          emoji:    weatherEmoji(avgSky, dominantCond)
+        };
+      });
+    }
+
+    // ── Rendering ────────────────────────────────────────────────────────────
+
+    function renderCurrent(period) {
+      document.getElementById('current-icon').textContent        = emojiFromForecast(period.shortForecast, period.isDaytime);
+      document.getElementById('current-period-name').textContent  = period.name || '';
+      document.getElementById('current-temp').textContent         = period.temperature + '°' + (period.temperatureUnit || 'F');
+      document.getElementById('current-short').textContent        = period.shortForecast || '';
+      document.getElementById('current-detail').textContent       = period.detailedForecast || '';
+
+      var windEl = document.getElementById('meta-wind');
+      windEl.children[1].textContent = (period.windDirection || '') + ' ' + (period.windSpeed || '—');
+
+      var precipEl = document.getElementById('meta-precip');
+      var popVal = period.probabilityOfPrecipitation && period.probabilityOfPrecipitation.value != null
+        ? period.probabilityOfPrecipitation.value + '%'
+        : '—';
+      precipEl.children[1].textContent = popVal;
+
+      var humEl = document.getElementById('meta-humidity');
+      var relHum = period.relativeHumidity && period.relativeHumidity.value != null
+        ? period.relativeHumidity.value + '%'
+        : '—';
+      humEl.children[1].textContent = relHum;
+
+      document.getElementById('tv-current').style.display = 'flex';
+    }
+
+    function renderGrid(summaries) {
+      var html = '';
+      summaries.forEach(function (day) {
+        var dayName  = day.isToday
+          ? 'Today'
+          : day.dateObj.toLocaleDateString('en-US', { weekday: 'short', timeZone: TIMEZONE });
+        var dateStr  = day.dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: TIMEZONE });
+        var highDisp = day.high !== null ? day.high + '°' : '—';
+        var lowDisp  = day.low  !== null ? day.low  + '°' : '—';
+        var windDisp = day.windMph + ' mph' + (day.windDir ? ' ' + escHtml(day.windDir) : '');
+
+        html += '<div class="day-card' + (day.isToday ? ' is-today' : '') + '">';
+        html += '<div class="day-name">'  + escHtml(dayName)  + '</div>';
+        html += '<div class="day-date">'  + escHtml(dateStr)  + '</div>';
+        html += '<div class="day-divider"></div>';
+        html += '<div class="day-icon">'  + day.emoji         + '</div>';
+        html += '<div class="day-temps">';
+        html += '<span class="day-high">' + escHtml(highDisp) + '</span>';
+        html += '<span class="day-sep"> / </span>';
+        html += '<span class="day-low">'  + escHtml(lowDisp)  + '</span>';
+        html += '</div>';
+        html += '<div class="day-pop">💧 ' + day.pop + '%</div>';
+        html += '<div class="day-wind">💨 ' + escHtml(windDisp) + '</div>';
+        html += '</div>';
+      });
+
+      var grid = document.getElementById('tv-grid');
+      grid.innerHTML = html;
+      grid.style.display = 'grid';
+    }
+
+    function renderPage(forecastData, gridData) {
+      document.getElementById('tv-loading').style.display = 'none';
+
+      // Current period: first period from /forecast
+      var periods = forecastData.properties.periods;
+      if (periods && periods.length > 0) {
+        renderCurrent(periods[0]);
+      }
+
+      // 6-day grid from forecastGridData
+      var summaries = buildDailySummaries(gridData);
+      renderGrid(summaries);
+
+      var now = new Date();
+      var timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: TIMEZONE });
+      document.getElementById('tv-bottom').textContent = 'Data from weather.gov  ·  Updated ' + timeStr;
+      document.getElementById('tv-bottom').style.display = 'block';
+      document.getElementById('tv-status').textContent = 'Updated ' + timeStr;
+    }
+
+    // ── API Fetching ─────────────────────────────────────────────────────────
+
+    function fetchData() {
+      Promise.all([
+        fetch(forecastUrl,  FETCH_OPTS).then(function(r){ if(!r.ok) throw new Error('forecast HTTP '+r.status); return r.json(); }),
+        fetch(gridDataUrl,  FETCH_OPTS).then(function(r){ if(!r.ok) throw new Error('griddata HTTP '+r.status); return r.json(); })
+      ])
+      .then(function(results) {
+        renderPage(results[0], results[1]);
+        setTimeout(fetchData, REFRESH_MS);
+      })
+      .catch(function(err) {
+        console.error('[weather] Data fetch failed:', err);
+        var loading = document.getElementById('tv-loading');
+        loading.textContent = 'Weather data unavailable — retrying…';
+        loading.style.display = 'flex';
+        setTimeout(fetchData, 60000);
+      });
+    }
+
+    function init() {
+      fetch('https://api.weather.gov/points/' + LAT + ',' + LON, FETCH_OPTS)
+        .then(function(r){ if(!r.ok) throw new Error('points HTTP '+r.status); return r.json(); })
+        .then(function(data) {
+          forecastUrl  = data.properties.forecast;
+          gridDataUrl  = data.properties.forecastGridData;
+          fetchData();
+        })
+        .catch(function(err) {
+          console.error('[weather] Points lookup failed:', err);
+          var loading = document.getElementById('tv-loading');
+          loading.textContent = 'Unable to reach weather.gov — retrying in 2 min…';
+          loading.style.display = 'flex';
+          setTimeout(init, 120000);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  })();
+  </script>
+</body>
+</html>
