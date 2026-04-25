@@ -48,15 +48,15 @@ async function seed() {
  * Optionally filter by building_number.
  */
 async function listActive(building) {
-  const params = ['NOW()'];
-  let where = 'WHERE checkout_at > $1';
   if (building) {
-    params.push(building);
-    where += ` AND building_number = $${params.length}`;
+    const r = await db.query(
+      'SELECT * FROM celebrations WHERE checkout_at > NOW() AND building_number = $1 ORDER BY created_at DESC',
+      [building]
+    );
+    return r.rows;
   }
   const r = await db.query(
-    `SELECT * FROM celebrations ${where} ORDER BY created_at DESC`,
-    params
+    'SELECT * FROM celebrations WHERE checkout_at > NOW() ORDER BY created_at DESC'
   );
   return r.rows;
 }
@@ -76,7 +76,7 @@ async function listAll() {
 async function createCelebration(data) {
   // Slides stay up until noon (12:00) UTC on the checkout date
   if (!/^\d{4}-\d{2}-\d{2}$/.test(data.checkout_date)) {
-    throw new Object({ code: 'INVALID_DATE', message: 'checkout_date must be YYYY-MM-DD' });
+    throw new Error('checkout_date must be YYYY-MM-DD');
   }
   const checkoutAt = new Date(`${data.checkout_date}T12:00:00Z`);
 

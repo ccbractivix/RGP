@@ -599,9 +599,9 @@
       ta.style.opacity = '0';
       document.body.appendChild(ta);
       ta.select();
-      document.execCommand('copy');
+      const copied = document.execCommand('copy');
       document.body.removeChild(ta);
-      toast('URL copied!', 'success');
+      toast(copied ? 'URL copied!' : 'Could not copy — please copy manually.', copied ? 'success' : 'info');
     }
   });
 
@@ -662,14 +662,15 @@
         const url = btn.dataset.url;
         try {
           await navigator.clipboard.writeText(url);
+          toast('URL copied!', 'success');
         } catch {
           const ta = document.createElement('textarea');
           ta.value = url;
           ta.style.position = 'fixed'; ta.style.opacity = '0';
           document.body.appendChild(ta); ta.select();
-          document.execCommand('copy'); document.body.removeChild(ta);
+          const copied = document.execCommand('copy'); document.body.removeChild(ta);
+          toast(copied ? 'URL copied!' : 'Could not copy — please copy manually.', copied ? 'success' : 'info');
         }
-        toast('URL copied!', 'success');
       });
     });
   }
