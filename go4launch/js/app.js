@@ -78,6 +78,14 @@ function formatDateET(dateStr) {
     });
 }
 
+function getDayOfWeekET(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', {
+        timeZone: 'America/New_York',
+        weekday: 'long',
+    });
+}
+
 function getLivestreamLinks(launch) {
     const vidUrls = launch.vid_urls || launch.vidURLs || [];
     if (!vidUrls.length) return [];
@@ -387,7 +395,13 @@ function buildCard(launch) {
     }
 
     // Date
+    html += `<div class="card-day-of-week">${esc(getDayOfWeekET(launch.net))}</div>`;
     html += `<div class="card-date">${esc(formatDateET(launch.net))}</div>`;
+
+    // Rocket Talk LIVE! teaser
+    if (cms?.rtl_datetime) {
+        html += `<a href="#/launch/${encodeURIComponent(launch.id)}" class="rtl-card-teaser" aria-label="Rocket Talk LIVE! — tap for more info"><span class="rtl-teaser-icon">🎙️</span> Rocket Talk LIVE!</a>`;
+    }
 
     // Actions
     html += '<div class="card-actions">';
@@ -658,7 +672,8 @@ function buildRecentCard(entry) {
 
     // Date
     if (entry.launch_date) {
-        html += `<div class="card-date" style="font-size:0.85rem;margin:0.3rem 0 0;">${esc(formatDateET(entry.launch_date))}</div>`;
+        html += `<div class="card-day-of-week" style="font-size:0.8rem;">${esc(getDayOfWeekET(entry.launch_date))}</div>`;
+        html += `<div class="card-date" style="font-size:0.85rem;margin:0 0 0;">${esc(formatDateET(entry.launch_date))}</div>`;
     }
 
     html += '</div>'; // recent-card-info

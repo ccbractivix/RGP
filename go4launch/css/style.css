@@ -241,11 +241,51 @@ body {
 }
 
 /* --- Launch Date --- */
+.card-day-of-week {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 0.5rem;
+}
+
 .card-date {
     font-size: 1rem;
     color: var(--accent-gold);
     font-weight: 500;
-    margin: 0.5rem 0 1rem;
+    margin: 0.15rem 0 1rem;
+}
+
+/* --- Rocket Talk LIVE! card teaser --- */
+.rtl-card-teaser {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: linear-gradient(135deg, var(--accent-purple), #5e35b1);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 0.4rem 1.1rem;
+    border-radius: 20px;
+    margin-bottom: 0.9rem;
+    letter-spacing: 0.03em;
+    animation: rtl-pulse 1.8s ease-in-out infinite;
+    transition: opacity 0.2s;
+}
+
+.rtl-card-teaser:hover {
+    opacity: 0.85;
+}
+
+.rtl-teaser-icon {
+    font-size: 1rem;
+}
+
+@keyframes rtl-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(124,77,255,0.5); }
+    50%       { box-shadow: 0 0 0 7px rgba(124,77,255,0); }
 }
 
 /* --- Card Actions --- */
