@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Celebration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Playfair+Display:ital,wght@0,700;0,800;1,700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+    }
+
+    /* ── Slide shell ───────────────────────────────────────────────────────── */
+    #slide {
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6vh 8vw;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── Decorative top/bottom bands ───────────────────────────────────────── */
+    .band {
+      position: absolute;
+      left: 0; right: 0;
+      height: 10px;
+      opacity: 0.35;
+    }
+    .band-top    { top: 0; }
+    .band-bottom { bottom: 0; }
+
+    /* ── Emoji decoration row ──────────────────────────────────────────────── */
+    .deco {
+      font-size: clamp(28px, 4vw, 60px);
+      margin-bottom: clamp(12px, 2vh, 28px);
+      letter-spacing: 0.15em;
+      user-select: none;
+      line-height: 1;
+    }
+
+    /* ── Headline ──────────────────────────────────────────────────────────── */
+    .headline {
+      font-size: clamp(32px, 4.5vw, 76px);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: clamp(10px, 1.5vh, 22px);
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Name ──────────────────────────────────────────────────────────────── */
+    .names {
+      font-size: clamp(44px, 7vw, 110px);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: clamp(8px, 1.2vh, 18px);
+    }
+
+    /* ── Family / sub-line ─────────────────────────────────────────────────── */
+    .family {
+      font-size: clamp(20px, 2.8vw, 48px);
+      font-weight: 600;
+      opacity: 0.85;
+      line-height: 1.3;
+      margin-top: clamp(4px, 0.8vh, 12px);
+    }
+
+    /* ── Divider ───────────────────────────────────────────────────────────── */
+    .divider {
+      width: clamp(60px, 10vw, 160px);
+      height: 3px;
+      border-radius: 2px;
+      margin: clamp(10px, 1.5vh, 22px) auto;
+      opacity: 0.5;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════
+       PER-TYPE THEMES
+       ══════════════════════════════════════════════════════════════════════ */
+
+    /* birthday-kids ─────────────────────────────────────────────────────────── */
+    .theme-birthday-kids {
+      background: linear-gradient(135deg, #FF6B6B 0%, #FFE66D 45%, #4ECDC4 100%);
+      color: #1a1a1a;
+      font-family: 'Fredoka', sans-serif;
+    }
+    .theme-birthday-kids .band { background: #fff; }
+    .theme-birthday-kids .divider { background: #1a1a1a; }
+
+    /* birthday-adults ──────────────────────────────────────────────────────── */
+    .theme-birthday-adults {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #f0e6d3;
+      font-family: 'Playfair Display', serif;
+    }
+    .theme-birthday-adults .band { background: #f0e6d3; }
+    .theme-birthday-adults .divider { background: #c9a96e; }
+
+    /* birthday-seniors ─────────────────────────────────────────────────────── */
+    .theme-birthday-seniors {
+      background: linear-gradient(135deg, #3d1c0e 0%, #7a3d12 40%, #c47a2f 100%);
+      color: #fdf3e3;
+      font-family: 'Playfair Display', serif;
+    }
+    .theme-birthday-seniors .band { background: #fdf3e3; }
+    .theme-birthday-seniors .divider { background: #ffd080; }
+
+    /* anniversary ──────────────────────────────────────────────────────────── */
+    .theme-anniversary {
+      background: linear-gradient(135deg, #2d1b69 0%, #7b2d8b 45%, #c93f8c 100%);
+      color: #fce4ec;
+      font-family: 'Playfair Display', serif;
+    }
+    .theme-anniversary .band { background: #fce4ec; }
+    .theme-anniversary .divider { background: #f48fb1; }
+
+    /* baby-pink ────────────────────────────────────────────────────────────── */
+    .theme-baby-pink {
+      background: linear-gradient(135deg, #f8a5c2 0%, #fce4ec 50%, #fff9fb 100%);
+      color: #6d1b47;
+      font-family: 'Fredoka', sans-serif;
+    }
+    .theme-baby-pink .band { background: #e91e8c; }
+    .theme-baby-pink .divider { background: #e91e8c; }
+
+    /* baby-blue ────────────────────────────────────────────────────────────── */
+    .theme-baby-blue {
+      background: linear-gradient(135deg, #90caf9 0%, #e3f2fd 50%, #f0f8ff 100%);
+      color: #0d2b6e;
+      font-family: 'Fredoka', sans-serif;
+    }
+    .theme-baby-blue .band { background: #1565c0; }
+    .theme-baby-blue .divider { background: #1565c0; }
+
+    /* graduate ─────────────────────────────────────────────────────────────── */
+    .theme-graduate {
+      background: linear-gradient(135deg, #1a3a1a 0%, #2d6a4f 45%, #52b788 100%);
+      color: #f0fff4;
+      font-family: 'Playfair Display', serif;
+    }
+    .theme-graduate .band { background: #f0fff4; }
+    .theme-graduate .divider { background: #b7e4c7; }
+
+    /* retirement ────────────────────────────────────────────────────────────── */
+    .theme-retirement {
+      background: linear-gradient(135deg, #3d2b00 0%, #8b6914 40%, #daa520 80%, #ffd700 100%);
+      color: #fff9e6;
+      font-family: 'Playfair Display', serif;
+    }
+    .theme-retirement .band { background: #fff9e6; }
+    .theme-retirement .divider { background: #ffd700; }
+
+    /* ── CSS confetti for kids (purely decorative) ──────────────────────────── */
+    @keyframes float-1 { 0%,100% { transform: translateY(0)   rotate(0deg); }   50% { transform: translateY(-18px) rotate(8deg); } }
+    @keyframes float-2 { 0%,100% { transform: translateY(0)   rotate(0deg); }   50% { transform: translateY(-12px) rotate(-6deg); } }
+    @keyframes float-3 { 0%,100% { transform: translateY(0)   rotate(0deg); }   50% { transform: translateY(-22px) rotate(12deg); } }
+
+    .deco span { display: inline-block; }
+    .deco span:nth-child(1) { animation: float-1 3.0s ease-in-out infinite; }
+    .deco span:nth-child(2) { animation: float-2 2.5s ease-in-out infinite 0.4s; }
+    .deco span:nth-child(3) { animation: float-3 2.8s ease-in-out infinite 0.8s; }
+    .deco span:nth-child(4) { animation: float-1 3.2s ease-in-out infinite 1.2s; }
+    .deco span:nth-child(5) { animation: float-2 2.6s ease-in-out infinite 0.2s; }
+
+    /* ── Image support (background, swap in when provided) ─────────────────── */
+    /* To add a background image for a type, set:
+         .theme-[type] { background-image: url('...'); background-size: cover; background-position: center; }
+       The gradient will serve as a fallback / overlay base.                   */
+  </style>
+</head>
+<body>
+  <div id="slide">
+    <div class="band band-top"></div>
+    <div class="deco" id="deco"></div>
+    <div class="headline" id="headline"></div>
+    <div class="divider"></div>
+    <div class="names" id="names"></div>
+    <div class="family" id="family"></div>
+    <div class="band band-bottom"></div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── Helpers ──────────────────────────────────────────────────────────────── */
+
+  function ordinal(n) {
+    const s   = ['th', 'st', 'nd', 'rd'];
+    const v   = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  const ANNIVERSARY_NAMES = {
+    25: 'Silver',
+    50: 'Golden',
+    60: 'Diamond',
+  };
+
+  function anniversaryTitle(n) {
+    const special = n ? ANNIVERSARY_NAMES[n] : null;
+    if (special) return `Happy ${special} Anniversary!`;
+    if (n)       return `Happy ${ordinal(n)} Anniversary!`;
+    return 'Happy Anniversary!';
+  }
+
+  /* ── Type configuration ─────────────────────────────────────────────────── */
+
+  const TYPE_CONFIG = {
+    'birthday-kids': {
+      theme:   'birthday-kids',
+      deco:    ['🎈', '🎂', '🎉', '🎈', '🎊'],
+      headline: (p) => p.birthday
+        ? `Happy ${ordinal(parseInt(p.birthday, 10))} Birthday!`
+        : 'Happy Birthday!',
+    },
+    'birthday-adults': {
+      theme:   'birthday-adults',
+      deco:    ['🎂', '✨', '🥂'],
+      headline: () => 'Happy Birthday!',
+    },
+    'birthday-seniors': {
+      theme:   'birthday-seniors',
+      deco:    ['🎂', '🌹', '✨'],
+      headline: () => 'Happy Birthday!',
+    },
+    'anniversary': {
+      theme:   'anniversary',
+      deco:    ['💕', '🥂', '💍'],
+      headline: (p) => anniversaryTitle(p.anniversary ? parseInt(p.anniversary, 10) : 0),
+    },
+    'baby-pink': {
+      theme:   'baby-pink',
+      deco:    ['👶', '🩷', '🌸', '🩷'],
+      headline: () => 'Welcome to the World!',
+    },
+    'baby-blue': {
+      theme:   'baby-blue',
+      deco:    ['👶', '💙', '⭐', '💙'],
+      headline: () => 'Welcome to the World!',
+    },
+    'graduate': {
+      theme:   'graduate',
+      deco:    ['🎓', '📜', '🌟'],
+      headline: () => 'Congratulations Graduate!',
+    },
+    'retirement': {
+      theme:   'retirement',
+      deco:    ['🌟', '🥂', '✨', '🌟'],
+      headline: () => 'Happy Retirement!',
+    },
+  };
+
+  /* ── Read URL params ────────────────────────────────────────────────────── */
+
+  const p = Object.fromEntries(new URLSearchParams(window.location.search));
+
+  const type   = (p.type   || '').trim();
+  const name1  = (p.name1  || '').trim();
+  const name2  = (p.name2  || '').trim();
+  const family = (p.family || '').trim();
+
+  const cfg = TYPE_CONFIG[type] || TYPE_CONFIG['birthday-adults'];
+
+  /* ── Apply theme ────────────────────────────────────────────────────────── */
+
+  const slide = document.getElementById('slide');
+  slide.classList.add(`theme-${cfg.theme}`);
+
+  /* ── Decoration emojis ──────────────────────────────────────────────────── */
+
+  const decoEl = document.getElementById('deco');
+  decoEl.innerHTML = cfg.deco.map(e => `<span>${e}</span>`).join(' ');
+
+  /* ── Headline ───────────────────────────────────────────────────────────── */
+
+  const headlineEl = document.getElementById('headline');
+  headlineEl.textContent = cfg.headline(p);
+  document.title = headlineEl.textContent;
+
+  /* ── Names ──────────────────────────────────────────────────────────────── */
+
+  const namesEl = document.getElementById('names');
+  if (name1 || name2) {
+    namesEl.textContent = name2 ? `${name1} & ${name2}` : name1;
+  } else {
+    namesEl.style.display = 'none';
+  }
+
+  /* ── Family / sub-line ──────────────────────────────────────────────────── */
+
+  const familyEl = document.getElementById('family');
+  if (family) {
+    familyEl.textContent = family;
+  } else {
+    familyEl.style.display = 'none';
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://celebrations-backend.onrender.com">
+  <title>Celebrations Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f172a;
+      --card:        #1e293b;
+      --card-border: #334155;
+      --text:        #e2e8f0;
+      --text-muted:  #94a3b8;
+      --green:       #22c55e;
+      --green-dim:   rgba(34,197,94,0.15);
+      --red:         #ef4444;
+      --red-dim:     rgba(239,68,68,0.15);
+      --amber:       #f59e0b;
+      --amber-dim:   rgba(245,158,11,0.15);
+      --blue:        #3b82f6;
+      --blue-dim:    rgba(59,130,246,0.15);
+      --purple:      #a855f7;
+      --purple-dim:  rgba(168,85,247,0.15);
+      --pink:        #ec4899;
+      --pink-dim:    rgba(236,72,153,0.15);
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+    }
+
+    /* ── Login Screen ──────────────────────────────────────────────────────── */
+    #login-screen {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 100vh; padding: 20px;
+    }
+    #login-screen h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    #login-screen .subtitle { color: var(--text-muted); margin-bottom: 24px; font-size: 13px; }
+
+    .code-input {
+      width: 160px; padding: 14px; font-size: 24px;
+      font-family: 'Inter', sans-serif; text-align: center; letter-spacing: 8px;
+      background: var(--card); color: var(--text);
+      border: 2px solid var(--card-border); border-radius: 10px; outline: none;
+    }
+    .code-input:focus { border-color: var(--blue); }
+
+    .login-btn {
+      margin-top: 16px; padding: 12px 40px; font-size: 15px; font-weight: 600;
+      background: var(--blue); color: #fff; border: none; border-radius: 8px; cursor: pointer;
+    }
+    .login-btn:active { opacity: 0.8; }
+    .login-error { color: var(--red); margin-top: 12px; font-size: 13px; min-height: 20px; }
+
+    /* ── Dashboard ─────────────────────────────────────────────────────────── */
+    #dashboard { display: none; }
+
+    .dash-header {
+      background: #020617; padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .dash-header h1 { font-size: 16px; font-weight: 700; }
+
+    /* ── Buttons ───────────────────────────────────────────────────────────── */
+    .btn {
+      padding: 8px 16px; font-size: 13px; font-weight: 600; border: none;
+      border-radius: 6px; cursor: pointer; font-family: 'Inter', sans-serif;
+    }
+    .btn-blue   { background: var(--blue);   color: #fff; }
+    .btn-green  { background: var(--green);  color: #fff; }
+    .btn-red    { background: var(--red);    color: #fff; }
+    .btn-purple { background: var(--purple); color: #fff; }
+    .btn-ghost  { background: transparent; color: var(--text-muted); border: 1px solid var(--card-border); }
+    .btn-sm     { padding: 5px 10px; font-size: 12px; }
+    .btn:active { opacity: 0.8; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Tabs ──────────────────────────────────────────────────────────────── */
+    .tabs {
+      display: flex; background: #020617;
+      border-bottom: 1px solid var(--card-border); padding: 0 16px;
+    }
+    .tab {
+      padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer;
+      color: var(--text-muted); border-bottom: 2px solid transparent;
+      background: none; border-top: none; border-left: none; border-right: none;
+      font-family: 'Inter', sans-serif;
+    }
+    .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+    .tab:hover  { color: var(--text); }
+
+    .tab-content { display: none; padding: 20px 16px; }
+    .tab-content.active { display: block; }
+
+    /* ── Form ──────────────────────────────────────────────────────────────── */
+    .form-card {
+      background: var(--card); border: 1px solid var(--card-border);
+      border-radius: 10px; padding: 24px; max-width: 700px;
+    }
+    .form-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group.full { grid-column: 1 / -1; }
+
+    .form-group label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%; padding: 10px 12px; font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg); color: var(--text);
+      border: 1px solid var(--card-border); border-radius: 6px; outline: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus { border-color: var(--blue); }
+    .form-group .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    .conditional { display: none; }
+    .conditional.visible { display: block; }
+
+    /* ── Slide URL result box ──────────────────────────────────────────────── */
+    #url-result {
+      display: none; margin-top: 20px;
+      background: var(--bg); border: 1px solid var(--green);
+      border-radius: 8px; padding: 16px;
+    }
+    #url-result.show { display: block; }
+    #url-result h3 { font-size: 13px; font-weight: 600; color: var(--green); margin-bottom: 10px; }
+    #url-result .url-text {
+      font-size: 12px; word-break: break-all; color: var(--text-muted);
+      background: var(--card); padding: 10px; border-radius: 6px;
+      border: 1px solid var(--card-border); margin-bottom: 10px; line-height: 1.5;
+    }
+    #url-result .url-actions { display: flex; gap: 8px; }
+
+    /* ── Celebrations list ─────────────────────────────────────────────────── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+    }
+    .section-header h2 { font-size: 16px; font-weight: 700; }
+
+    .celebration-card {
+      background: var(--card); border: 1px solid var(--card-border);
+      border-radius: 10px; padding: 16px; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .celebration-card.expired { opacity: 0.5; }
+
+    .cel-type-badge {
+      flex-shrink: 0; padding: 4px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .cel-info { flex: 1; min-width: 0; }
+    .cel-name { font-size: 15px; font-weight: 700; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cel-meta { font-size: 12px; color: var(--text-muted); display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .cel-status {
+      flex-shrink: 0; font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 8px;
+    }
+    .cel-status.active   { background: var(--green-dim);  color: var(--green); }
+    .cel-status.expired  { background: var(--red-dim);    color: var(--red); }
+
+    .cel-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* ── Filter bar ─────────────────────────────────────────────────────────── */
+    .filter-bar {
+      display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;
+    }
+    .filter-bar select, .filter-bar input {
+      padding: 7px 10px; font-size: 13px; font-family: 'Inter', sans-serif;
+      background: var(--card); color: var(--text);
+      border: 1px solid var(--card-border); border-radius: 6px; outline: none;
+    }
+    .filter-bar select:focus, .filter-bar input:focus { border-color: var(--blue); }
+
+    /* ── Toast ─────────────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--card); color: var(--text); padding: 12px 24px;
+      border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 3000;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4); display: none; white-space: nowrap;
+    }
+    #toast.success { border-left: 4px solid var(--green); }
+    #toast.error   { border-left: 4px solid var(--red); }
+    #toast.info    { border-left: 4px solid var(--blue); }
+    #toast.show    { display: block; }
+
+    /* ── Responsive ─────────────────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .form-row { grid-template-columns: 1fr; }
+      .celebration-card { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════ LOGIN ═══════════════════ -->
+  <div id="login-screen">
+    <h1>🎉 Celebrations Manager</h1>
+    <p class="subtitle">Enter your access code</p>
+    <input type="password" class="code-input" id="code-input"
+           maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+    <button class="login-btn" id="login-btn">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+
+  <!-- ═══════════════════ DASHBOARD ═══════════════════ -->
+  <div id="dashboard">
+    <div class="dash-header">
+      <h1>🎉 Celebrations Manager</h1>
+      <button class="btn btn-ghost" id="logout-btn">Logout</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="create">Create Celebration</button>
+      <button class="tab" data-tab="manage">Manage Celebrations</button>
+    </div>
+
+    <!-- ─── Create Tab ─── -->
+    <div class="tab-content active" id="tab-create">
+      <div class="form-card">
+        <h2>New Celebration Slide</h2>
+
+        <div class="form-group">
+          <label for="cel-type">Celebration Type *</label>
+          <select id="cel-type">
+            <option value="">— Select a type —</option>
+            <option value="birthday-kids">🎈 Birthday (Kids)</option>
+            <option value="birthday-adults">🎂 Birthday (Adults)</option>
+            <option value="birthday-seniors">🌹 Birthday (Seniors)</option>
+            <option value="anniversary">💕 Anniversary</option>
+            <option value="baby-pink">🩷 Welcome Baby (Pink)</option>
+            <option value="baby-blue">💙 Welcome Baby (Blue)</option>
+            <option value="graduate">🎓 Congratulations Graduate!</option>
+            <option value="retirement">🌟 Retirement</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cel-name1">Name 1 *</label>
+            <input type="text" id="cel-name1" placeholder="e.g. Emma">
+          </div>
+          <div class="form-group">
+            <label for="cel-name2">Name 2</label>
+            <input type="text" id="cel-name2" placeholder="e.g. Jack  (optional)">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="cel-family">Family Name</label>
+            <input type="text" id="cel-family" placeholder="e.g. The Smiths  (optional)">
+          </div>
+          <div class="form-group">
+            <label for="cel-building">Building Number *</label>
+            <input type="text" id="cel-building" placeholder="e.g. 2">
+            <div class="hint">Used to route the slide to the correct channel</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <!-- Birthday number — kids only -->
+          <div class="form-group conditional" id="field-birthday">
+            <label for="cel-birthday">Birthday Number</label>
+            <input type="number" id="cel-birthday" min="1" max="17" placeholder="e.g. 8">
+            <div class="hint">Age being celebrated</div>
+          </div>
+
+          <!-- Anniversary number — anniversary only -->
+          <div class="form-group conditional" id="field-anniversary">
+            <label for="cel-anniversary">Anniversary Number</label>
+            <input type="number" id="cel-anniversary" min="1" placeholder="e.g. 25">
+            <div class="hint">Year milestone (25 = Silver, 50 = Golden, 60 = Diamond)</div>
+          </div>
+
+          <div class="form-group">
+            <label for="cel-checkout">Check Out Date *</label>
+            <input type="date" id="cel-checkout">
+            <div class="hint">Slide exits rotation at noon on this date</div>
+          </div>
+        </div>
+
+        <button class="btn btn-green" id="create-btn" style="width:100%;padding:12px;font-size:15px;margin-top:4px;">
+          Create Celebration Slide
+        </button>
+
+        <!-- Slide URL result -->
+        <div id="url-result">
+          <h3>✅ Celebration Created — Slide URL</h3>
+          <div class="url-text" id="url-display"></div>
+          <div class="url-actions">
+            <button class="btn btn-blue btn-sm" id="copy-url-btn">📋 Copy URL</button>
+            <a id="preview-link" href="#" target="_blank" rel="noopener noreferrer">
+              <button class="btn btn-ghost btn-sm" type="button">👁 Preview</button>
+            </a>
+            <span style="font-size:12px;color:var(--text-muted);align-self:center;margin-left:4px;">
+              Paste this URL into Channel Manager to add to a channel.
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Manage Tab ─── -->
+    <div class="tab-content" id="tab-manage">
+      <div class="section-header">
+        <h2>All Celebrations</h2>
+        <button class="btn btn-ghost btn-sm" id="refresh-btn">↻ Refresh</button>
+      </div>
+
+      <div class="filter-bar">
+        <select id="filter-status">
+          <option value="all">All statuses</option>
+          <option value="active">Active only</option>
+          <option value="expired">Expired only</option>
+        </select>
+        <select id="filter-type">
+          <option value="">All types</option>
+          <option value="birthday-kids">Birthday (Kids)</option>
+          <option value="birthday-adults">Birthday (Adults)</option>
+          <option value="birthday-seniors">Birthday (Seniors)</option>
+          <option value="anniversary">Anniversary</option>
+          <option value="baby-pink">Welcome Baby (Pink)</option>
+          <option value="baby-blue">Welcome Baby (Blue)</option>
+          <option value="graduate">Graduate</option>
+          <option value="retirement">Retirement</option>
+        </select>
+        <input type="text" id="filter-building" placeholder="Filter by building…" style="width:180px;">
+      </div>
+
+      <div id="celebrations-list">
+        <p style="color:var(--text-muted);font-size:13px;">Loading…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── Config ──────────────────────────────────────────────────────────────── */
+  const API_BASE  = document.querySelector('meta[name="api-url"]')?.content || '';
+  const SLIDE_BASE = 'https://ccbractivix.github.io/RGP/celebrations-web/slide.html';
+  const AUTH_KEY   = 'celebrations_auth_code';
+
+  /* ── Ordinal / anniversary helpers ─────────────────────────────────────── */
+  function ordinal(n) {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+
+  const ANNIVERSARY_NAMES = { 25: 'Silver', 50: 'Golden', 60: 'Diamond' };
+
+  const TYPE_LABELS = {
+    'birthday-kids':    '🎈 Birthday (Kids)',
+    'birthday-adults':  '🎂 Birthday (Adults)',
+    'birthday-seniors': '🌹 Birthday (Seniors)',
+    'anniversary':      '💕 Anniversary',
+    'baby-pink':        '🩷 Welcome Baby (Pink)',
+    'baby-blue':        '💙 Welcome Baby (Blue)',
+    'graduate':         '🎓 Graduate',
+    'retirement':       '🌟 Retirement',
+  };
+
+  const TYPE_COLORS = {
+    'birthday-kids':    { bg: 'rgba(255,107,107,0.2)',  text: '#ff6b6b' },
+    'birthday-adults':  { bg: 'rgba(59,130,246,0.2)',   text: '#60a5fa' },
+    'birthday-seniors': { bg: 'rgba(202,138,4,0.2)',    text: '#eab308' },
+    'anniversary':      { bg: 'rgba(168,85,247,0.2)',   text: '#c084fc' },
+    'baby-pink':        { bg: 'rgba(236,72,153,0.2)',   text: '#f472b6' },
+    'baby-blue':        { bg: 'rgba(59,130,246,0.15)',  text: '#93c5fd' },
+    'graduate':         { bg: 'rgba(34,197,94,0.2)',    text: '#4ade80' },
+    'retirement':       { bg: 'rgba(245,158,11,0.2)',   text: '#fbbf24' },
+  };
+
+  /* ── Auth state ─────────────────────────────────────────────────────────── */
+  let authCode = sessionStorage.getItem(AUTH_KEY) || '';
+  let allCelebrations = [];
+
+  /* ── DOM refs ───────────────────────────────────────────────────────────── */
+  const loginScreen  = document.getElementById('login-screen');
+  const dashboard    = document.getElementById('dashboard');
+  const codeInput    = document.getElementById('code-input');
+  const loginBtn     = document.getElementById('login-btn');
+  const loginError   = document.getElementById('login-error');
+  const logoutBtn    = document.getElementById('logout-btn');
+  const createBtn    = document.getElementById('create-btn');
+  const urlResult    = document.getElementById('url-result');
+  const urlDisplay   = document.getElementById('url-display');
+  const copyUrlBtn   = document.getElementById('copy-url-btn');
+  const previewLink  = document.getElementById('preview-link');
+  const celList      = document.getElementById('celebrations-list');
+  const refreshBtn   = document.getElementById('refresh-btn');
+  const toastEl      = document.getElementById('toast');
+
+  /* ── Toast ──────────────────────────────────────────────────────────────── */
+  let toastTimer;
+  function toast(msg, type = 'info') {
+    clearTimeout(toastTimer);
+    toastEl.textContent = msg;
+    toastEl.className = `show ${type}`;
+    toastTimer = setTimeout(() => { toastEl.className = ''; }, 3000);
+  }
+
+  /* ── Login ──────────────────────────────────────────────────────────────── */
+  async function login(code) {
+    try {
+      const res = await fetch(`${API_BASE}/admin/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+        signal: AbortSignal.timeout(8000),
+      });
+      const data = await res.json();
+      return data.valid === true;
+    } catch {
+      return false;
+    }
+  }
+
+  function showDashboard() {
+    loginScreen.style.display = 'none';
+    dashboard.style.display = 'block';
+    loadCelebrations();
+  }
+
+  loginBtn.addEventListener('click', async () => {
+    const code = codeInput.value.trim();
+    if (!code) { loginError.textContent = 'Please enter your access code.'; return; }
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Verifying…';
+    loginError.textContent = '';
+    const valid = await login(code);
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Sign In';
+    if (valid) {
+      authCode = code;
+      sessionStorage.setItem(AUTH_KEY, code);
+      showDashboard();
+    } else {
+      loginError.textContent = 'Invalid access code. Please try again.';
+      codeInput.value = '';
+    }
+  });
+
+  codeInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loginBtn.click(); });
+
+  logoutBtn.addEventListener('click', () => {
+    authCode = '';
+    sessionStorage.removeItem(AUTH_KEY);
+    dashboard.style.display = 'none';
+    loginScreen.style.display = '';
+    codeInput.value = '';
+    loginError.textContent = '';
+  });
+
+  // Auto-login if session code is stored
+  if (authCode) {
+    login(authCode).then(valid => {
+      if (valid) showDashboard();
+      else {
+        authCode = '';
+        sessionStorage.removeItem(AUTH_KEY);
+      }
+    });
+  }
+
+  /* ── Tabs ───────────────────────────────────────────────────────────────── */
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+      if (tab.dataset.tab === 'manage') loadCelebrations();
+    });
+  });
+
+  /* ── Conditional fields ─────────────────────────────────────────────────── */
+  const celType = document.getElementById('cel-type');
+
+  celType.addEventListener('change', updateConditionalFields);
+
+  function updateConditionalFields() {
+    const type = celType.value;
+    document.getElementById('field-birthday').classList.toggle('visible', type === 'birthday-kids');
+    document.getElementById('field-anniversary').classList.toggle('visible', type === 'anniversary');
+  }
+
+  /* ── Build slide URL ────────────────────────────────────────────────────── */
+  function buildSlideUrl(data) {
+    const p = new URLSearchParams();
+    p.set('type', data.type);
+    p.set('name1', data.name1);
+    if (data.name2)          p.set('name2', data.name2);
+    if (data.family_name)    p.set('family', data.family_name);
+    if (data.anniversary_num) p.set('anniversary', data.anniversary_num);
+    if (data.birthday_num)   p.set('birthday', data.birthday_num);
+    return `${SLIDE_BASE}?${p.toString()}`;
+  }
+
+  /* ── Create celebration ─────────────────────────────────────────────────── */
+  createBtn.addEventListener('click', async () => {
+    const type     = document.getElementById('cel-type').value.trim();
+    const name1    = document.getElementById('cel-name1').value.trim();
+    const name2    = document.getElementById('cel-name2').value.trim();
+    const family   = document.getElementById('cel-family').value.trim();
+    const building = document.getElementById('cel-building').value.trim();
+    const checkout = document.getElementById('cel-checkout').value;
+    const birthday   = document.getElementById('cel-birthday').value.trim();
+    const anniversary = document.getElementById('cel-anniversary').value.trim();
+
+    if (!type)     { toast('Please select a celebration type.', 'error'); return; }
+    if (!name1)    { toast('Name 1 is required.', 'error'); return; }
+    if (!building) { toast('Building number is required.', 'error'); return; }
+    if (!checkout) { toast('Check out date is required.', 'error'); return; }
+
+    const body = {
+      type,
+      name1,
+      name2:            name2 || undefined,
+      family_name:      family || undefined,
+      building_number:  building,
+      checkout_date:    checkout,
+      anniversary_num:  anniversary ? parseInt(anniversary, 10) : undefined,
+      birthday_num:     birthday    ? parseInt(birthday, 10)    : undefined,
+    };
+
+    createBtn.disabled = true;
+    createBtn.textContent = 'Creating…';
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/celebrations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Auth-Code': authCode,
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(10000),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast(data.error || 'Failed to create celebration.', 'error');
+        return;
+      }
+
+      // Show the slide URL
+      const slideUrl = buildSlideUrl(data.celebration);
+      urlDisplay.textContent = slideUrl;
+      previewLink.href = slideUrl;
+      urlResult.classList.add('show');
+      toast('Celebration created!', 'success');
+      urlResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    } catch (e) {
+      toast('Network error — please try again.', 'error');
+    } finally {
+      createBtn.disabled = false;
+      createBtn.textContent = 'Create Celebration Slide';
+    }
+  });
+
+  /* ── Copy URL ───────────────────────────────────────────────────────────── */
+  copyUrlBtn.addEventListener('click', async () => {
+    const url = urlDisplay.textContent;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('URL copied to clipboard!', 'success');
+    } catch {
+      // Fallback for non-https or denied clipboard
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast('URL copied!', 'success');
+    }
+  });
+
+  /* ── Load celebrations ──────────────────────────────────────────────────── */
+  async function loadCelebrations() {
+    celList.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">Loading…</p>';
+    try {
+      const res = await fetch(`${API_BASE}/admin/celebrations`, {
+        headers: { 'X-Auth-Code': authCode },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      allCelebrations = data.celebrations || [];
+      renderCelebrations();
+    } catch (e) {
+      celList.innerHTML = '<p style="color:var(--red);font-size:13px;">Failed to load celebrations.</p>';
+    }
+  }
+
+  refreshBtn.addEventListener('click', loadCelebrations);
+
+  /* ── Filters ────────────────────────────────────────────────────────────── */
+  document.getElementById('filter-status').addEventListener('change', renderCelebrations);
+  document.getElementById('filter-type').addEventListener('change', renderCelebrations);
+  document.getElementById('filter-building').addEventListener('input', renderCelebrations);
+
+  function renderCelebrations() {
+    const filterStatus   = document.getElementById('filter-status').value;
+    const filterType     = document.getElementById('filter-type').value;
+    const filterBuilding = document.getElementById('filter-building').value.trim().toLowerCase();
+    const now            = Date.now();
+
+    let list = allCelebrations.filter(c => {
+      const active = new Date(c.checkout_at).getTime() > now;
+      if (filterStatus === 'active'  && !active) return false;
+      if (filterStatus === 'expired' &&  active) return false;
+      if (filterType     && c.type !== filterType) return false;
+      if (filterBuilding && !c.building_number.toLowerCase().includes(filterBuilding)) return false;
+      return true;
+    });
+
+    if (list.length === 0) {
+      celList.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No celebrations found.</p>';
+      return;
+    }
+
+    celList.innerHTML = list.map(c => celebrationCard(c, now)).join('');
+
+    // Attach delete listeners
+    celList.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => deleteCelebration(parseInt(btn.dataset.id, 10)));
+    });
+
+    // Attach copy listeners
+    celList.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const url = btn.dataset.url;
+        try {
+          await navigator.clipboard.writeText(url);
+        } catch {
+          const ta = document.createElement('textarea');
+          ta.value = url;
+          ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta);
+        }
+        toast('URL copied!', 'success');
+      });
+    });
+  }
+
+  function celebrationCard(c, now) {
+    const active    = new Date(c.checkout_at).getTime() > now;
+    const color     = TYPE_COLORS[c.type] || { bg: 'var(--card-border)', text: 'var(--text-muted)' };
+    const label     = TYPE_LABELS[c.type]  || c.type;
+    const slideUrl  = buildSlideUrl(c);
+    const checkoutFmt = new Date(c.checkout_at).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+    });
+
+    let displayName = c.name1;
+    if (c.name2) displayName += ` & ${c.name2}`;
+    if (c.family_name) displayName += ` · ${c.family_name}`;
+
+    let details = `Building ${c.building_number}`;
+    if (c.birthday_num)   details += ` · Birthday #${c.birthday_num}`;
+    if (c.anniversary_num) {
+      const special = { 25: 'Silver', 50: 'Golden', 60: 'Diamond' }[c.anniversary_num];
+      details += ` · ${special ? special + ' ' : ordinal(c.anniversary_num) + ' '}Anniversary`;
+    }
+    details += ` · Expires ${checkoutFmt}`;
+
+    return `
+      <div class="celebration-card${active ? '' : ' expired'}">
+        <span class="cel-type-badge" style="background:${color.bg};color:${color.text};">${label}</span>
+        <div class="cel-info">
+          <div class="cel-name">${escHtml(displayName)}</div>
+          <div class="cel-meta"><span>${escHtml(details)}</span></div>
+        </div>
+        <span class="cel-status ${active ? 'active' : 'expired'}">${active ? 'Active' : 'Expired'}</span>
+        <div class="cel-actions">
+          <a href="${escHtml(slideUrl)}" target="_blank" rel="noopener noreferrer">
+            <button class="btn btn-ghost btn-sm" type="button">👁</button>
+          </a>
+          <button class="btn btn-ghost btn-sm copy-btn" type="button" data-url="${escHtml(slideUrl)}">📋</button>
+          <button class="btn btn-red btn-sm delete-btn" type="button" data-id="${c.id}">✕</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /* ── Delete celebration ─────────────────────────────────────────────────── */
+  async function deleteCelebration(id) {
+    if (!confirm('Remove this celebration?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/admin/celebrations/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-Auth-Code': authCode },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) { toast('Failed to delete.', 'error'); return; }
+      allCelebrations = allCelebrations.filter(c => c.id !== id);
+      renderCelebrations();
+      toast('Celebration removed.', 'success');
+    } catch {
+      toast('Network error.', 'error');
+    }
+  }
+
+})();
+</script>
+</body>
+</html>
