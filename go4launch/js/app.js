@@ -940,9 +940,8 @@ function checkAndShowRTLPopup() {
 
     // Find the associated launch for vehicle and mission info
     soonestLaunch = allLaunches.find(l => l.id === soonestRTL.launchId) || null;
-    const vehicle = soonestLaunch?.rocket?.configuration?.full_name
-        || soonestLaunch?.rocket?.configuration?.name
-        || '';
+    const rocketConfig = soonestLaunch?.rocket?.configuration;
+    const vehicle = rocketConfig?.full_name || rocketConfig?.name || '';
     const mission = soonestLaunch?.name || '';
     const vehicleMission = [vehicle, mission].filter(Boolean).join(' | ');
 

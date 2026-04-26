@@ -522,6 +522,7 @@
       var TV_CACHE_TTL = 3600000; // 1 hour
 
       var countdownTimer = null;
+      var refreshTimer = null;
 
       // ── Utilities ──────────────────────────────────────────
 
@@ -917,11 +918,13 @@
       }
 
       function fetchAndRender() {
+        if (refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null; }
+
         var cached = loadTvCache();
         if (cached) {
           render(cached.launches, cached.content);
           // Schedule next fetch when the cache expires
-          setTimeout(fetchAndRender, TV_CACHE_TTL - cached.age);
+          refreshTimer = setTimeout(fetchAndRender, TV_CACHE_TTL - cached.age);
           return;
         }
 
@@ -934,7 +937,7 @@
           var content = results[1] || {};
           saveTvCache(launches, content);
           render(launches, content);
-          setTimeout(fetchAndRender, REFRESH_MS);
+          refreshTimer = setTimeout(fetchAndRender, REFRESH_MS);
         })
         .catch(function (err) {
           console.error('[go4launch-tv] Fetch failed:', err);
@@ -942,7 +945,7 @@
           loading.textContent = 'Loading\u2026';
           loading.style.display = 'flex';
           document.getElementById('tv-main').style.display = 'none';
-          setTimeout(fetchAndRender, RETRY_MS);
+          refreshTimer = setTimeout(fetchAndRender, RETRY_MS);
         });
       }
 
