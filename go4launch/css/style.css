@@ -467,6 +467,44 @@ body {
 #saw-it-status.success { color: var(--accent-green); }
 #saw-it-status.error   { color: var(--accent-red); }
 
+/* --- Rocket Talk LIVE! Popup --- */
+.rtl-popup-card {
+    border-color: var(--accent-purple);
+    animation: rtl-popup-glow 2s ease-in-out infinite;
+}
+
+@keyframes rtl-popup-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(124,77,255,0.4); }
+    50%       { box-shadow: 0 0 20px 6px rgba(124,77,255,0.25); }
+}
+
+.rtl-popup-card h3 {
+    color: var(--accent-purple);
+    font-size: 1.3rem;
+}
+
+.rtl-popup-datetime {
+    color: var(--accent-gold) !important;
+    font-size: 1rem !important;
+    font-weight: 600;
+    margin-bottom: 0.75rem !important;
+}
+
+.rtl-popup-supporting {
+    color: var(--text-muted) !important;
+    font-size: 0.8rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.3rem !important;
+}
+
+.rtl-popup-vehicle {
+    color: #fff !important;
+    font-size: 1rem !important;
+    font-weight: 700;
+    margin-bottom: 0 !important;
+}
+
 /* ============================================================
    DETAIL PAGE (More Info)
    ============================================================ */

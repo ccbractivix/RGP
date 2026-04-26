@@ -513,12 +513,16 @@
       var API_BASE = (metaTag && metaTag.getAttribute('content')) || '';
       var LL2_BASE = 'https://lldev.thespacedevs.com/2.3.0';
       var LOCATION_IDS = '12,27';
-      var REFRESH_MS = 300000; // 5 minutes
+      var REFRESH_MS = 3600000; // 1 hour
       var RETRY_MS   = 60000;  // 1 minute on error
       var RTL_GRACE_MS = 120 * 60 * 1000; // 120 minutes after RTL time
       var MAX_CENTER_LAUNCHES = 5;
 
+      var TV_CACHE_KEY = 'go4launch_tv_v1';
+      var TV_CACHE_TTL = 3600000; // 1 hour
+
       var countdownTimer = null;
+      var refreshTimer = null;
 
       // ── Utilities ──────────────────────────────────────────
 
@@ -892,14 +896,48 @@
           });
       }
 
+      function loadTvCache() {
+        try {
+          var item = localStorage.getItem(TV_CACHE_KEY);
+          if (!item) return null;
+          var parsed = JSON.parse(item);
+          if (!parsed || !parsed.launches || !parsed.content || !parsed.ts) return null;
+          if (Date.now() - parsed.ts > TV_CACHE_TTL) return null;
+          return { launches: parsed.launches, content: parsed.content, age: Date.now() - parsed.ts };
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function saveTvCache(launches, content) {
+        try {
+          localStorage.setItem(TV_CACHE_KEY, JSON.stringify({ launches: launches, content: content, ts: Date.now() }));
+        } catch (e) {
+          console.warn('[go4launch-tv] Cache save failed:', e);
+        }
+      }
+
       function fetchAndRender() {
+        if (refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null; }
+
+        var cached = loadTvCache();
+        if (cached) {
+          render(cached.launches, cached.content);
+          // Schedule next fetch when the cache expires
+          refreshTimer = setTimeout(fetchAndRender, TV_CACHE_TTL - cached.age);
+          return;
+        }
+
         Promise.all([
           fetchLaunches(),
           fetchContent()
         ])
         .then(function (results) {
-          render(results[0] || [], results[1] || {});
-          setTimeout(fetchAndRender, REFRESH_MS);
+          var launches = results[0] || [];
+          var content = results[1] || {};
+          saveTvCache(launches, content);
+          render(launches, content);
+          refreshTimer = setTimeout(fetchAndRender, REFRESH_MS);
         })
         .catch(function (err) {
           console.error('[go4launch-tv] Fetch failed:', err);
@@ -907,7 +945,7 @@
           loading.textContent = 'Loading\u2026';
           loading.style.display = 'flex';
           document.getElementById('tv-main').style.display = 'none';
-          setTimeout(fetchAndRender, RETRY_MS);
+          refreshTimer = setTimeout(fetchAndRender, RETRY_MS);
         });
       }
 
