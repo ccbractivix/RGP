@@ -46,9 +46,14 @@ async function ensureSchema() {
       url             TEXT UNIQUE NOT NULL,
       label           TEXT NOT NULL,
       description     TEXT,
-      thumbnail_url   TEXT
+      thumbnail_url   TEXT,
+      expires_at      TIMESTAMPTZ,
+      source          TEXT DEFAULT 'manual'
     )
   `);
+  // Migrate existing tables that may not yet have the new columns
+  await db.query(`ALTER TABLE available_slides ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`);
+  await db.query(`ALTER TABLE available_slides ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'manual'`);
   await db.query(`
     CREATE TABLE IF NOT EXISTS channel_slides (
       id              SERIAL PRIMARY KEY,
@@ -203,20 +208,47 @@ async function replaceChannelSlides(channelId, slides) {
 /* ── Available Slides ──────────────────────────────────────────────────────── */
 
 async function listAvailableSlides() {
+  await deleteExpiredSlides();
   const r = await db.query('SELECT * FROM available_slides ORDER BY label');
   return r.rows;
 }
 
-async function createAvailableSlide(url, label, description, thumbnailUrl) {
+async function createAvailableSlide(url, label, description, thumbnailUrl, expiresAt, source) {
   const r = await db.query(`
-    INSERT INTO available_slides (url, label, description, thumbnail_url)
-    VALUES ($1, $2, $3, $4) RETURNING *
-  `, [url, label, description || null, thumbnailUrl || null]);
+    INSERT INTO available_slides (url, label, description, thumbnail_url, expires_at, source)
+    VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+  `, [url, label, description || null, thumbnailUrl || null, expiresAt || null, source || 'manual']);
   return r.rows[0];
 }
 
 async function deleteAvailableSlide(id) {
   await db.query('DELETE FROM available_slides WHERE id = $1', [id]);
+}
+
+/**
+ * Deletes all available slides whose expires_at is in the past and also
+ * removes any matching slide_url entries from channel playlists.
+ * Returns the number of slides purged.
+ */
+async function deleteExpiredSlides() {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: expired } = await client.query(
+      `DELETE FROM available_slides WHERE expires_at IS NOT NULL AND expires_at < NOW() RETURNING url`
+    );
+    if (expired.length > 0) {
+      const urls = expired.map(r => r.url);
+      await client.query(`DELETE FROM channel_slides WHERE slide_url = ANY($1)`, [urls]);
+    }
+    await client.query('COMMIT');
+    return expired.length;
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 }
 
 /* ── Breakthroughs ─────────────────────────────────────────────────────────── */
@@ -326,6 +358,7 @@ module.exports = {
   listAvailableSlides,
   createAvailableSlide,
   deleteAvailableSlide,
+  deleteExpiredSlides,
   listBreakthroughs,
   createBreakthrough,
   updateBreakthrough,

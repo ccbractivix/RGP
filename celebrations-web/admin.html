@@ -313,7 +313,7 @@
               <button class="btn btn-ghost btn-sm" type="button">👁 Preview</button>
             </a>
             <span style="font-size:12px;color:var(--text-muted);align-self:center;margin-left:4px;">
-              Paste this URL into Channel Manager to add to a channel.
+              Slide is auto-registered in Channel Manager — add to a channel playlist there.
             </span>
           </div>
         </div>
@@ -361,9 +361,10 @@
   'use strict';
 
   /* ── Config ──────────────────────────────────────────────────────────────── */
-  const API_BASE  = document.querySelector('meta[name="api-url"]')?.content || '';
-  const SLIDE_BASE = 'https://ccbractivix.github.io/RGP/celebrations-web/slide.html';
-  const AUTH_KEY   = 'celebrations_auth_code';
+  const API_BASE    = document.querySelector('meta[name="api-url"]')?.content || '';
+  const CHANNEL_API = 'https://channel-backend-uu2s.onrender.com';
+  const SLIDE_BASE  = 'https://ccbractivix.github.io/RGP/celebrations-web/slide.html';
+  const AUTH_KEY    = 'celebrations_auth_code';
 
   /* ── Ordinal / anniversary helpers ─────────────────────────────────────── */
   function ordinal(n) {
@@ -510,6 +511,29 @@
     document.getElementById('field-anniversary').classList.toggle('visible', type === 'anniversary');
   }
 
+  /* ── Register a slide in the Channel Manager library ───────────────────── */
+  async function registerSlideInChannelLibrary(slideUrl, celData) {
+    const typeLabel = TYPE_LABELS[celData.type] || celData.type;
+    let name = celData.name1;
+    if (celData.name2) name += ` & ${celData.name2}`;
+    const label = `${typeLabel} — ${name}`;
+    const description = `Building ${celData.building_number} · Auto-registered from Celebrations`;
+    const expiresAt = `${celData.checkout_date}T12:00:00Z`;
+    try {
+      const res = await fetch(`${CHANNEL_API}/admin/slides`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Auth-Code': authCode },
+        body: JSON.stringify({ url: slideUrl, label, description, expires_at: expiresAt, source: 'celebration' }),
+        signal: AbortSignal.timeout(12000),
+      });
+      if (res.status === 409) return 'duplicate';
+      if (!res.ok) return 'error';
+      return 'ok';
+    } catch {
+      return 'error';
+    }
+  }
+
   /* ── Build slide URL ────────────────────────────────────────────────────── */
   function buildSlideUrl(data) {
     const p = new URLSearchParams();
@@ -574,8 +598,17 @@
       urlDisplay.textContent = slideUrl;
       previewLink.href = slideUrl;
       urlResult.classList.add('show');
-      toast('Celebration created!', 'success');
       urlResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      // Auto-register in Channel Manager slide library
+      const regStatus = await registerSlideInChannelLibrary(slideUrl, { ...data.celebration, checkout_date: checkout });
+      if (regStatus === 'ok') {
+        toast('Celebration created and registered in Channel Manager!', 'success');
+      } else if (regStatus === 'duplicate') {
+        toast('Celebration created! (Slide already in Channel Manager library)', 'success');
+      } else {
+        toast('Celebration created! (Could not auto-register in Channel Manager — add manually)', 'info');
+      }
 
     } catch (e) {
       toast('Network error — please try again.', 'error');
