@@ -892,6 +892,14 @@ async function submitSawIt() {
 
 // Modal event listeners
 document.addEventListener('DOMContentLoaded', () => {
+    // RTL popup close
+    document.getElementById('rtl-popup-close').addEventListener('click', () => {
+        document.getElementById('rtl-popup').classList.remove('active');
+    });
+    document.getElementById('rtl-popup').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) document.getElementById('rtl-popup').classList.remove('active');
+    });
+
     document.getElementById('modal-close').addEventListener('click', closeSawIt);
     document.getElementById('saw-it-submit').addEventListener('click', submitSawIt);
     document.getElementById('saw-it-modal').addEventListener('click', (e) => {
@@ -901,6 +909,50 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') submitSawIt();
     });
 });
+
+// ============================================================
+// ROCKET TALK LIVE! POPUP
+// ============================================================
+function checkAndShowRTLPopup() {
+    // Only show once per session
+    if (sessionStorage.getItem('rtl_popup_shown')) return;
+
+    const now = Date.now();
+    const window48h = 48 * 60 * 60 * 1000;
+    let soonestRTL = null;
+    let soonestLaunch = null;
+
+    for (const launchId in cmsContent) {
+        if (!Object.prototype.hasOwnProperty.call(cmsContent, launchId)) continue;
+        const cms = cmsContent[launchId];
+        if (!cms || !cms.rtl_datetime) continue;
+
+        const rtlTime = new Date(cms.rtl_datetime).getTime();
+        // Only show for upcoming RTLs within 48 hours
+        if (rtlTime > now && rtlTime - now <= window48h) {
+            if (!soonestRTL || rtlTime < soonestRTL.time) {
+                soonestRTL = { datetime: cms.rtl_datetime, time: rtlTime, launchId };
+            }
+        }
+    }
+
+    if (!soonestRTL) return;
+
+    // Find the associated launch for vehicle and mission info
+    soonestLaunch = allLaunches.find(l => l.id === soonestRTL.launchId) || null;
+    const vehicle = soonestLaunch?.rocket?.configuration?.full_name
+        || soonestLaunch?.rocket?.configuration?.name
+        || '';
+    const mission = soonestLaunch?.name || '';
+    const vehicleMission = [vehicle, mission].filter(Boolean).join(' | ');
+
+    const popup = document.getElementById('rtl-popup');
+    document.getElementById('rtl-popup-datetime').textContent = formatDateET(soonestRTL.datetime);
+    document.getElementById('rtl-popup-vehicle').textContent = vehicleMission;
+    popup.classList.add('active');
+
+    sessionStorage.setItem('rtl_popup_shown', '1');
+}
 
 // ============================================================
 // INITIALIZATION
@@ -914,6 +966,7 @@ async function init() {
 
         allLaunches = launches;
         handleRoute();
+        checkAndShowRTLPopup();
     } catch (e) {
         console.error('Init failed:', e);
         document.getElementById('app').innerHTML =
