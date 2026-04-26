@@ -218,6 +218,20 @@
     }
     .section-header h2 { font-size: 16px; font-weight: 700; }
 
+    /* ── Slide expiry warning ─────────────────────────────────────────────── */
+    .slide-expiry {
+      font-size: 11px; margin-top: 6px;
+    }
+    .slide-expiry.expiring-soon { color: var(--amber); }
+    .slide-expiry.active-expiry { color: var(--text-muted); }
+
+    .source-badge {
+      display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px;
+      border-radius: 8px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .source-badge.celebration { background: var(--purple-dim); color: var(--purple); }
+    .source-badge.manual      { background: var(--blue-dim);   color: var(--blue); }
+
     /* ── Lightning status badge ───────────────────────────────────────────── */
     .lightning-badge {
       display: inline-flex; align-items: center; gap: 4px;
@@ -274,7 +288,10 @@
     <div class="tab-content" id="tab-slides">
       <div class="section-header">
         <h2>Available Slides</h2>
-        <button class="btn btn-blue" id="new-slide-btn">+ Register Slide</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" id="clean-expired-btn">🗑 Clean Expired</button>
+          <button class="btn btn-blue" id="new-slide-btn">+ Register Slide</button>
+        </div>
       </div>
       <div class="card-grid" id="slide-grid"></div>
     </div>
@@ -749,15 +766,40 @@
 
   function renderSlides() {
     slideGrid.innerHTML = '';
+    if (allSlides.length === 0) {
+      slideGrid.innerHTML = '<div style="color:var(--text-muted);padding:20px">No slides registered yet.</div>';
+      return;
+    }
+    const now = Date.now();
     allSlides.forEach(s => {
       const card = document.createElement('div');
       card.className = 'card';
+
+      const source = s.source || 'manual';
+      const sourceBadge = `<span class="source-badge ${source}">${source === 'celebration' ? '🎉 Celebration' : 'Manual'}</span>`;
+
+      let expiryHtml = '';
+      if (s.expires_at) {
+        const exp = new Date(s.expires_at);
+        const diff = exp.getTime() - now;
+        const fmtExp = exp.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        if (diff <= 0) {
+          expiryHtml = `<div class="slide-expiry" style="color:var(--red)">⚠ Expired ${fmtExp}</div>`;
+        } else if (diff < 86400000) {
+          expiryHtml = `<div class="slide-expiry expiring-soon">⏳ Expires today (${fmtExp})</div>`;
+        } else {
+          expiryHtml = `<div class="slide-expiry active-expiry">Expires ${fmtExp}</div>`;
+        }
+      }
+
       card.innerHTML = `
+        ${sourceBadge}
         <div class="card-title">${esc(s.label)}</div>
         <div class="card-subtitle" style="word-break:break-all">${esc(s.url)}</div>
         <div class="card-meta">
           <span>${esc(s.description || '')}</span>
         </div>
+        ${expiryHtml}
         <div style="margin-top:8px">
           <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" data-del="${s.id}">Remove</button>
         </div>
@@ -781,6 +823,16 @@
   const slUrl    = document.getElementById('sl-url');
   const slLabel  = document.getElementById('sl-label');
   const slDesc   = document.getElementById('sl-desc');
+
+  document.getElementById('clean-expired-btn').addEventListener('click', async () => {
+    try {
+      const data = await api('DELETE', '/admin/slides/expired');
+      toast(data.purged > 0 ? `Removed ${data.purged} expired slide${data.purged !== 1 ? 's' : ''} from library and playlists.` : 'No expired slides found.', 'success');
+      loadAll();
+    } catch (e) {
+      toast('Clean failed: ' + e.message, 'error');
+    }
+  });
 
   document.getElementById('new-slide-btn').addEventListener('click', () => {
     slUrl.value = ''; slLabel.value = ''; slDesc.value = '';

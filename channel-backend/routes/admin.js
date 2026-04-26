@@ -11,6 +11,7 @@ const {
   listAvailableSlides,
   createAvailableSlide,
   deleteAvailableSlide,
+  deleteExpiredSlides,
   listBreakthroughs,
   createBreakthrough,
   updateBreakthrough,
@@ -142,15 +143,28 @@ router.get('/slides', async (_req, res) => {
 });
 
 router.post('/slides', async (req, res) => {
-  const { url, label, description, thumbnail_url } = req.body;
+  const { url, label, description, thumbnail_url, expires_at, source } = req.body;
   if (!url || !label) return res.status(400).json({ error: 'url and label required' });
+  if (expires_at && isNaN(Date.parse(expires_at))) {
+    return res.status(400).json({ error: 'expires_at must be a valid ISO 8601 date' });
+  }
   try {
-    const slide = await createAvailableSlide(url, label, description, thumbnail_url);
+    const slide = await createAvailableSlide(url, label, description, thumbnail_url, expires_at || null, source || 'manual');
     return res.status(201).json({ slide });
   } catch (e) {
     if (e.code === '23505') return res.status(409).json({ error: 'Slide URL already exists' });
     console.error('[admin] create slide error:', e);
     return res.status(500).json({ error: 'Failed to create slide' });
+  }
+});
+
+router.delete('/slides/expired', async (_req, res) => {
+  try {
+    const count = await deleteExpiredSlides();
+    return res.json({ ok: true, purged: count });
+  } catch (e) {
+    console.error('[admin] purge expired slides error:', e);
+    return res.status(500).json({ error: 'Failed to purge expired slides' });
   }
 });
 
