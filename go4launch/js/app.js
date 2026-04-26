@@ -919,6 +919,7 @@ function checkAndShowRTLPopup() {
 
     const now = Date.now();
     const window48h = 48 * 60 * 60 * 1000;
+    const window60m = 60 * 60 * 1000;
     let soonestRTL = null;
     let soonestLaunch = null;
 
@@ -928,8 +929,8 @@ function checkAndShowRTLPopup() {
         if (!cms || !cms.rtl_datetime) continue;
 
         const rtlTime = new Date(cms.rtl_datetime).getTime();
-        // Only show for upcoming RTLs within 48 hours
-        if (rtlTime > now && rtlTime - now <= window48h) {
+        // Show for upcoming RTLs within 48 hours, or up to 60 minutes after the scheduled time
+        if (rtlTime > now - window60m && rtlTime - now <= window48h) {
             if (!soonestRTL || rtlTime < soonestRTL.time) {
                 soonestRTL = { datetime: cms.rtl_datetime, time: rtlTime, launchId };
             }
