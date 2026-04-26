@@ -946,6 +946,10 @@ function checkAndShowRTLPopup() {
     const vehicleMission = [vehicle, mission].filter(Boolean).join(' | ');
 
     const popup = document.getElementById('rtl-popup');
+    const rtlDateET = new Date(soonestRTL.datetime).toLocaleDateString('en-US', { timeZone: 'America/New_York' });
+    const todayET = new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York' });
+    const dayLabel = rtlDateET === todayET ? 'Today' : getDayOfWeekET(soonestRTL.datetime);
+    document.getElementById('rtl-popup-day').textContent = dayLabel;
     document.getElementById('rtl-popup-datetime').textContent = formatDateET(soonestRTL.datetime);
     document.getElementById('rtl-popup-vehicle').textContent = vehicleMission;
     popup.classList.add('active');
