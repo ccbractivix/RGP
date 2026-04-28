@@ -376,7 +376,10 @@ router.post('/saw-it', async (req, res) => {
 // ============================================================
 
 async function trySendSawItEmail(launchId, email) {
-  if (!process.env.SENDGRID_API_KEY) return;
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn('[go4launch] trySendSawItEmail: SENDGRID_API_KEY is not set — skipping email to', email);
+    return;
+  }
 
   try {
     const { rows } = await db.query(
@@ -404,9 +407,16 @@ async function trySendSawItEmail(launchId, email) {
 
 async function sendGalleryEmail(email, launchName, archiveUrl, galleryUrl) {
   const apiKey = process.env.SENDGRID_API_KEY;
-  const fromEmail = process.env.SENDGRID_FROM || 'noreply@go4launch.com';
+  const fromEmail = process.env.SENDGRID_FROM;
 
-  if (!apiKey) return false;
+  if (!apiKey) {
+    console.warn('[go4launch] sendGalleryEmail: SENDGRID_API_KEY is not set');
+    return false;
+  }
+  if (!fromEmail) {
+    console.warn('[go4launch] sendGalleryEmail: SENDGRID_FROM is not set — email cannot be sent without a verified sender address');
+    return false;
+  }
 
   const gallerySection = galleryUrl
     ? `<p style="margin-top:16px;"><a href="${galleryUrl}" style="color:#7c4dff;font-weight:bold;">📸 View Photo Gallery</a></p>`
