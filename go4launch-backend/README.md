@@ -17,8 +17,8 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 | `GITHUB_TOKEN` | For image uploads | GitHub personal access token |
 | `GITHUB_REPO` | For image uploads | GitHub repo (e.g. `ccbractivix/RGP`) |
 | `GITHUB_BRANCH` | No | Branch for image commits (default: `main`) |
-| `SENDGRID_API_KEY` | For emails | SendGrid API key |
-| `SENDGRID_FROM` | No | Sender email (default: `noreply@go4launch.com`) |
+| `SENDGRID_API_KEY` | For emails | SendGrid API key (requires Mail Send permission) |
+| `SENDGRID_FROM` | For emails | Verified sender email address in your SendGrid account (required when `SENDGRID_API_KEY` is set) |
 | `GO4LAUNCH_ARCHIVE_URL` | No | Public frontend URL (default: `https://ccbractivix.github.io/RGP/go4launch`) |
 | `CORS_ORIGIN` | No | Additional allowed CORS origins (comma-separated) |
 | `PORT` | No | Server port (default: `3002`) |
