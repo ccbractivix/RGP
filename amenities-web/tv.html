@@ -190,33 +190,23 @@
     #tv-gutter-right {
       flex: 1;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: flex-end;
-      gap: 7px;
-    }
-
-    .gutter-arcade-text {
-      text-align: right;
-    }
-
-    .gutter-arcade-headline {
-      font-size: clamp(13px, 1.3vw, 20px);
-      font-weight: 700;
-      color: #E37433;
-      line-height: 1.3;
-    }
-
-    .gutter-arcade-subline {
-      font-size: clamp(10px, 0.9vw, 14px);
-      color: #7A6B5A;
-      line-height: 1.3;
-      margin-top: 3px;
+      justify-content: center;
+      gap: 4px;
     }
 
     #tv-gutter-right img {
-      width: clamp(80px, 9vw, 140px);
+      width: clamp(70px, 8vw, 120px);
       height: auto;
       border-radius: 6px;
+    }
+
+    .gutter-arcade-hours {
+      font-size: clamp(10px, 0.9vw, 14px);
+      color: #7A6B5A;
+      text-align: center;
+      line-height: 1.3;
     }
 
     /* ===== STATUS ===== */
@@ -263,11 +253,8 @@
 
       <!-- Right: Arcade -->
       <div id="tv-gutter-right">
-        <div class="gutter-arcade-text">
-          <div class="gutter-arcade-headline">Arcade</div>
-          <div class="gutter-arcade-subline">Hours Daily<br>8 AM – 11 PM</div>
-        </div>
-        <img src="../theater-web/static/MVN.jpg" alt="Arcade (placeholder image)">
+        <img src="../theater-web/static/arcadecorrected2.png" alt="Arcade">
+        <div class="gutter-arcade-hours">Hours 8:00 am to 11:00 pm</div>
       </div>
     </div>
   </div>

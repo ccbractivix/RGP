@@ -391,10 +391,10 @@
     #tv-footer {
       display: flex;
       align-items: center;
-      padding: 5px 12px 7px;
+      padding: 2.5px 6px 3.5px;
       border-top: 1px solid var(--card-border);
       flex-shrink: 0;
-      gap: 10px;
+      gap: 5px;
     }
 
     .footer-cell {
@@ -404,26 +404,26 @@
     .footer-left {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 3px;
     }
 
     .footer-left .qr-code {
-      width: clamp(80px, 8vw, 120px);
-      height: clamp(80px, 8vw, 120px);
-      border-radius: 6px;
+      width: clamp(40px, 4vw, 60px);
+      height: clamp(40px, 4vw, 60px);
+      border-radius: 3px;
       background: #fff;
-      padding: 4px;
+      padding: 2px;
       flex-shrink: 0;
     }
 
     .footer-left-text {
-      font-size: clamp(10px, 0.85vw, 13px);
+      font-size: clamp(5px, 0.425vw, 6.5px);
       color: var(--text-muted);
       line-height: 1.5;
     }
 
     .footer-center {
-      font-size: clamp(9px, 0.75vw, 12px);
+      font-size: clamp(4.5px, 0.375vw, 6px);
       color: var(--text-dim);
       line-height: 1.5;
       font-style: italic;
@@ -437,7 +437,7 @@
     }
 
     .footer-right-logo {
-      max-height: clamp(60px, 7vw, 100px);
+      max-height: clamp(30px, 3.5vw, 50px);
       width: auto;
       object-fit: contain;
     }
@@ -590,7 +590,7 @@
         var d = new Date(dateStr);
         return d.toLocaleTimeString('en-US', {
           timeZone: 'America/New_York',
-          hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+          hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
         });
       }
 
