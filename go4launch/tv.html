@@ -391,10 +391,10 @@
     #tv-footer {
       display: flex;
       align-items: center;
-      padding: 10px 24px 14px;
+      padding: 5px 12px 7px;
       border-top: 1px solid var(--card-border);
       flex-shrink: 0;
-      gap: 20px;
+      gap: 10px;
     }
 
     .footer-cell {
@@ -404,12 +404,12 @@
     .footer-left {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 6px;
     }
 
     .footer-left .qr-code {
-      width: clamp(160px, 16vw, 240px);
-      height: clamp(160px, 16vw, 240px);
+      width: clamp(80px, 8vw, 120px);
+      height: clamp(80px, 8vw, 120px);
       border-radius: 6px;
       background: #fff;
       padding: 4px;
@@ -417,13 +417,13 @@
     }
 
     .footer-left-text {
-      font-size: clamp(20px, 1.7vw, 26px);
+      font-size: clamp(10px, 0.85vw, 13px);
       color: var(--text-muted);
       line-height: 1.5;
     }
 
     .footer-center {
-      font-size: clamp(18px, 1.5vw, 24px);
+      font-size: clamp(9px, 0.75vw, 12px);
       color: var(--text-dim);
       line-height: 1.5;
       font-style: italic;
@@ -437,7 +437,7 @@
     }
 
     .footer-right-logo {
-      max-height: clamp(120px, 14vw, 200px);
+      max-height: clamp(60px, 7vw, 100px);
       width: auto;
       object-fit: contain;
     }
@@ -570,6 +570,14 @@
         return null;
       }
 
+      function formatDateWithDayET(dateStr) {
+        var d = new Date(dateStr);
+        return d.toLocaleDateString('en-US', {
+          timeZone: 'America/New_York',
+          weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+        });
+      }
+
       function formatDateET(dateStr) {
         var d = new Date(dateStr);
         return d.toLocaleDateString('en-US', {
@@ -619,10 +627,7 @@
 
       function buildFeaturedCard(launch, cms) {
         var imgUrl = getImageUrl(launch, cms);
-        var provider = (launch.launch_service_provider && launch.launch_service_provider.name) || '';
-        var location = (launch.pad && launch.pad.location && launch.pad.location.name) || (launch.pad && launch.pad.name) || '';
-        var net = new Date(launch.net);
-        var launched = isCompleted(launch);
+        var vehicle = (launch.rocket && launch.rocket.configuration && launch.rocket.configuration.full_name) || '';
 
         var html = '<div class="featured-card">';
 
@@ -641,46 +646,13 @@
 
         html += '<div class="featured-body">';
 
-        // Mission name
-        html += '<div class="featured-mission">' + esc(launch.name || 'Unknown Mission') + '</div>';
+        // Launch vehicle
+        if (vehicle) html += '<div class="featured-meta">' + esc(vehicle) + '</div>';
 
-        // Status badge
-        html += '<div><span class="featured-badge ' + statusClass(launch.status) + '">' +
-          esc(statusLabel(launch.status)) + '</span></div>';
-
-        // Provider & Location
-        if (provider) html += '<div class="featured-meta">' + esc(provider) + '</div>';
-        if (location) html += '<div class="featured-meta">' + esc(location) + '</div>';
-
-        // Countdown or Launched
-        if (launched) {
-          html += '<div class="countdown-launched">\uD83D\uDE80 Launched!</div>';
-        } else {
-          html += '<div class="featured-countdown" data-net="' + net.toISOString() + '">' +
-            '<span class="cd-prefix">T\u2013</span>' +
-            '<div class="cd-group"><span class="cd-value" data-unit="d">--</span><span class="cd-label">Days</span></div>' +
-            '<span class="cd-sep">:</span>' +
-            '<div class="cd-group"><span class="cd-value" data-unit="h">--</span><span class="cd-label">Hours</span></div>' +
-            '<span class="cd-sep">:</span>' +
-            '<div class="cd-group"><span class="cd-value" data-unit="m">--</span><span class="cd-label">Mins</span></div>' +
-            '<span class="cd-sep">:</span>' +
-            '<div class="cd-group"><span class="cd-value" data-unit="s">--</span><span class="cd-label">Secs</span></div>' +
-            '</div>';
-        }
-
-        // Date
-        html += '<div class="featured-date">' + esc(formatDateTimeET(launch.net)) + '</div>';
+        // Date and time with day of week
+        html += '<div class="featured-date">' + esc(formatDateWithDayET(launch.net)) + ' \u2014 ' + esc(formatTimeET(launch.net)) + '</div>';
 
         html += '</div>'; // featured-body
-
-        // CMS Chris Says at bottom of card
-        if (cms && cms.chris_says) {
-          html += '<div class="featured-chris-says">' +
-            '<div class="cs-label">\uD83D\uDD2D Chris Says</div>' +
-            '<div class="cs-text">' + esc(cms.chris_says) + '</div>' +
-            '</div>';
-        }
-
         html += '</div>'; // featured-card
         return html;
       }
