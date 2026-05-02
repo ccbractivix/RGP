@@ -171,6 +171,24 @@ async function autoArchiveCompleted(launches) {
     // Migration: add trajectory column if missing
     await db.query('ALTER TABLE go4launch_content ADD COLUMN IF NOT EXISTS trajectory TEXT');
 
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS blog_posts (
+        id               SERIAL PRIMARY KEY,
+        slug             TEXT UNIQUE NOT NULL,
+        title            TEXT NOT NULL,
+        excerpt          TEXT,
+        body             TEXT NOT NULL DEFAULT '',
+        header_image_url TEXT,
+        published_at     TIMESTAMPTZ,
+        is_library       BOOLEAN DEFAULT FALSE,
+        is_published     BOOLEAN DEFAULT FALSE,
+        tags             TEXT[] DEFAULT '{}',
+        reading_time_min INT DEFAULT 1,
+        created_at       TIMESTAMPTZ DEFAULT NOW(),
+        updated_at       TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
     console.log('[go4launch] Tables ready.');
   } catch (err) {
     console.error('[go4launch] Table creation error:', err.message);
@@ -456,3 +474,44 @@ async function sendGalleryEmail(email, launchName, archiveUrl, galleryUrl) {
 module.exports = router;
 module.exports.sendGalleryEmail = sendGalleryEmail;
 module.exports.ARCHIVE_BASE_URL = ARCHIVE_BASE_URL;
+
+// ============================================================
+// BLOG — PUBLIC ROUTES
+// ============================================================
+
+// GET /api/blog — list of published posts (metadata, no body), newest first
+router.get('/blog', async (_req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT id, slug, title, excerpt, header_image_url,
+             published_at, is_library, tags, reading_time_min
+      FROM blog_posts
+      WHERE is_published = TRUE
+      ORDER BY published_at DESC NULLS LAST
+    `);
+    return res.json(rows);
+  } catch (err) {
+    console.error('[go4launch] GET /api/blog error:', err.message);
+    return res.status(500).json({ error: 'Failed to load blog' });
+  }
+});
+
+// GET /api/blog/:slug — single published post (full body for rendering)
+router.get('/blog/:slug', async (req, res) => {
+  const slug = req.params.slug;
+  // Validate slug: lowercase letters, digits, hyphens only
+  if (!slug || !/^[a-z0-9][a-z0-9-]{0,118}[a-z0-9]?$/.test(slug)) {
+    return res.status(400).json({ error: 'Invalid slug' });
+  }
+  try {
+    const { rows } = await db.query(
+      'SELECT * FROM blog_posts WHERE slug = $1 AND is_published = TRUE',
+      [slug]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Post not found' });
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('[go4launch] GET /api/blog/:slug error:', err.message);
+    return res.status(500).json({ error: 'Failed to load post' });
+  }
+});

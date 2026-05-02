@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>go4launch — Blog Editor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a14;
+      --card: #14142a;
+      --border: #1e1e3a;
+      --text: #e8e8f0;
+      --muted: #8888a0;
+      --dim: #555570;
+      --purple: #7c4dff;
+      --green: #4caf50;
+      --red: #e53935;
+      --gold: #f0c040;
+      --blue: #42a5f5;
+      --orange: #ff9800;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+
+    .container { max-width: 780px; margin: 0 auto; }
+
+    h1 { font-size: 1.4rem; margin-bottom: 0.25rem; color: #fff; }
+    h1 span { color: var(--gold); }
+    .subtitle { font-size: 0.8rem; color: var(--muted); margin-bottom: 1.5rem; }
+
+    .top-links { display: flex; gap: 1rem; margin-bottom: 1rem; }
+    .top-link { font-size: 0.8rem; color: var(--muted); text-decoration: none; }
+    .top-link:hover { color: #fff; }
+
+    label {
+      display: block; font-size: 0.75rem; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+      margin: 1rem 0 0.35rem;
+    }
+
+    select, input[type="text"], input[type="url"], input[type="datetime-local"],
+    input[type="password"], textarea {
+      width: 100%; padding: 0.6rem 0.8rem;
+      background: #0e0e1a; border: 1px solid var(--border);
+      border-radius: 6px; color: var(--text); font-size: 0.9rem;
+      font-family: inherit; outline: none; transition: border-color 0.2s;
+    }
+    select:focus, input:focus, textarea:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(124,77,255,0.15);
+    }
+    textarea { min-height: 220px; resize: vertical; line-height: 1.6; }
+    select option { background: #0e0e1a; color: var(--text); }
+
+    .checkbox-row {
+      display: flex; align-items: center; gap: 0.6rem;
+      margin-top: 0.35rem;
+    }
+    .checkbox-row input[type="checkbox"] {
+      width: 16px; height: 16px; cursor: pointer; accent-color: var(--purple);
+    }
+    .checkbox-row label { margin: 0; text-transform: none; font-size: 0.85rem; color: var(--text); }
+
+    .panel {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem;
+    }
+    .panel-title {
+      font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .panel-title-icon { font-size: 1.1rem; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.6rem 1.1rem; border-radius: 6px; border: none;
+      font-size: 0.85rem; font-weight: 700; cursor: pointer;
+      font-family: inherit; letter-spacing: 0.04em; transition: opacity 0.2s, transform 0.15s;
+    }
+    .btn:hover { opacity: 0.85; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-purple { background: var(--purple); color: #fff; }
+    .btn-green  { background: var(--green);  color: #fff; }
+    .btn-red    { background: var(--red);    color: #fff; }
+    .btn-gold   { background: var(--gold);   color: #0a0a14; }
+    .btn-ghost  { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { color: #fff; border-color: var(--muted); }
+
+    .btn-row { display: flex; gap: 0.75rem; margin-top: 1.25rem; flex-wrap: wrap; align-items: center; }
+
+    /* Status / toast */
+    .status {
+      font-size: 0.8rem; margin-top: 0.75rem; min-height: 1.2em; padding: 0.4rem 0;
+    }
+    .status.success { color: var(--green); }
+    .status.error   { color: var(--red); }
+    .status.info    { color: var(--muted); }
+
+    /* Auth screen */
+    #auth-screen { max-width: 380px; margin: 4rem auto; text-align: center; }
+    #auth-screen h2 { font-size: 1.2rem; color: #fff; margin-bottom: 1.5rem; }
+    #auth-code { text-align: center; font-size: 1.4rem; letter-spacing: 0.25em; }
+
+    /* Post list */
+    .post-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .post-item {
+      background: #0e0e1a; border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.75rem 1rem;
+      display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+    }
+    .post-item-info { flex: 1; min-width: 0; }
+    .post-item-title {
+      font-size: 0.9rem; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .post-item-meta { font-size: 0.75rem; color: var(--dim); margin-top: 0.15rem; }
+    .post-item-badges { display: flex; gap: 0.35rem; }
+    .badge {
+      font-size: 0.6rem; font-weight: 700; padding: 0.15rem 0.5rem;
+      border-radius: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .badge-pub   { background: rgba(76,175,80,0.2);  color: var(--green); }
+    .badge-draft { background: rgba(136,136,160,0.2); color: var(--muted); }
+    .badge-lib   { background: rgba(240,192,64,0.2);  color: var(--gold); }
+    .post-item-actions { display: flex; gap: 0.4rem; }
+
+    /* Slug hint */
+    .slug-hint { font-size: 0.72rem; color: var(--dim); margin-top: 0.3rem; }
+
+    /* Reading time preview */
+    .rt-preview { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; }
+
+    /* Divider */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+    /* Empty state */
+    .empty { text-align: center; color: var(--dim); padding: 2rem; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<!-- Auth Screen -->
+<div id="auth-screen">
+  <h2>🔒 Blog Editor</h2>
+  <label for="auth-code">Enter admin code</label>
+  <input type="password" id="auth-code" maxlength="6" placeholder="••••" autocomplete="off">
+  <div class="btn-row" style="justify-content:center;margin-top:1rem;">
+    <button class="btn btn-purple" id="auth-btn">Unlock</button>
+  </div>
+  <div class="status" id="auth-status"></div>
+</div>
+
+<!-- Main App -->
+<div id="main-app" style="display:none">
+  <div class="container">
+
+    <div class="top-links">
+      <a href="/admin-ui/index.html" class="top-link">← Launch Dashboard</a>
+    </div>
+
+    <h1>📝 <span>Blog</span> Editor</h1>
+    <p class="subtitle">Create and manage Chris' Blog posts</p>
+
+    <!-- Post List Panel -->
+    <div class="panel">
+      <div class="panel-title">
+        <span class="panel-title-icon">📋</span> All Posts
+        <button class="btn btn-purple" id="new-post-btn" style="margin-left:auto;padding:0.4rem 0.85rem;font-size:0.8rem;">+ New Post</button>
+      </div>
+      <ul class="post-list" id="post-list">
+        <li class="empty">Loading posts…</li>
+      </ul>
+    </div>
+
+    <!-- Create / Edit Panel -->
+    <div class="panel" id="editor-panel" style="display:none">
+      <div class="panel-title">
+        <span class="panel-title-icon" id="editor-icon">✏️</span>
+        <span id="editor-title">New Post</span>
+        <button class="btn btn-ghost" id="cancel-edit-btn" style="margin-left:auto;padding:0.35rem 0.75rem;font-size:0.75rem;">Cancel</button>
+      </div>
+
+      <input type="hidden" id="post-id">
+
+      <label for="post-title">Title *</label>
+      <input type="text" id="post-title" placeholder="e.g. My Thoughts on Today's Launch" maxlength="200">
+
+      <label for="post-slug">URL Slug *</label>
+      <input type="text" id="post-slug" placeholder="e.g. my-thoughts-on-todays-launch" maxlength="120">
+      <div class="slug-hint" id="slug-hint">Auto-generated from title — you can edit it. Use lowercase letters, numbers, and hyphens only.</div>
+
+      <label for="post-excerpt">Excerpt (short preview shown in list)</label>
+      <textarea id="post-excerpt" rows="3" maxlength="500" placeholder="One or two sentences that appear in the post list as a preview…" style="min-height:80px;"></textarea>
+
+      <label for="post-body">Post Body * (HTML is supported)</label>
+      <textarea id="post-body" placeholder="Write your post here. You can use basic HTML: &lt;b&gt;bold&lt;/b&gt;, &lt;i&gt;italic&lt;/i&gt;, &lt;a href=&quot;…&quot;&gt;links&lt;/a&gt;, &lt;br&gt; for line breaks…"></textarea>
+      <div class="rt-preview" id="rt-preview">Estimated reading time: — min</div>
+
+      <label for="post-header-img">Header Image URL (optional)</label>
+      <input type="url" id="post-header-img" placeholder="https://…">
+
+      <label for="post-tags">Tags (comma-separated, optional)</label>
+      <input type="text" id="post-tags" placeholder="e.g. Falcon 9, SpaceX, Starlink">
+
+      <label for="post-pub-at">Published Date (optional — defaults to now when publishing)</label>
+      <input type="datetime-local" id="post-pub-at">
+
+      <hr class="divider">
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="post-is-library">
+        <label for="post-is-library">📚 Add to Chris' Library (curated/evergreen post — shown in the Library shelf)</label>
+      </div>
+
+      <div class="checkbox-row" style="margin-top:0.75rem;">
+        <input type="checkbox" id="post-is-published">
+        <label for="post-is-published">✅ Published (guests can see this post)</label>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-green" id="save-post-btn">💾 Save Post</button>
+        <button class="btn btn-ghost" id="cancel-edit-btn2">Cancel</button>
+        <button class="btn btn-red" id="delete-post-btn" style="display:none;margin-left:auto;">🗑 Delete</button>
+      </div>
+      <div class="status" id="editor-status"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const API = ''; // same-origin
+
+  // ── Auth ─────────────────────────────────────────────────────────
+  let authCode = '';
+
+  function headers() {
+    return { 'Content-Type': 'application/json', 'X-Auth-Code': authCode };
+  }
+
+  async function doAuth() {
+    const code = document.getElementById('auth-code').value.trim();
+    if (!code) return;
+    const st = document.getElementById('auth-status');
+    st.textContent = 'Checking…'; st.className = 'status info';
+    try {
+      const res = await fetch('/admin/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        authCode = code;
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        await loadPosts();
+      } else {
+        st.textContent = 'Invalid code.'; st.className = 'status error';
+      }
+    } catch (e) {
+      st.textContent = 'Connection error.'; st.className = 'status error';
+    }
+  }
+
+  document.getElementById('auth-btn').addEventListener('click', doAuth);
+  document.getElementById('auth-code').addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
+
+  // ── Post List ─────────────────────────────────────────────────────
+  let posts = [];
+
+  async function loadPosts() {
+    const list = document.getElementById('post-list');
+    list.innerHTML = '<li class="empty">Loading…</li>';
+    try {
+      const res = await fetch('/admin/blog', { headers: headers() });
+      posts = await res.json();
+      renderPostList();
+    } catch (e) {
+      list.innerHTML = '<li class="empty" style="color:var(--red)">Failed to load posts.</li>';
+    }
+  }
+
+  function renderPostList() {
+    const list = document.getElementById('post-list');
+    if (!posts.length) {
+      list.innerHTML = '<li class="empty">No posts yet. Click "+ New Post" to get started.</li>';
+      return;
+    }
+    list.innerHTML = posts.map(p => {
+      const dateStr = p.published_at ? new Date(p.published_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : 'Draft';
+      return `<li class="post-item">
+        <div class="post-item-info">
+          <div class="post-item-title">${esc(p.title)}</div>
+          <div class="post-item-meta">${dateStr} &bull; /${p.slug} &bull; ${p.reading_time_min || 1} min read</div>
+        </div>
+        <div class="post-item-badges">
+          ${p.is_published ? '<span class="badge badge-pub">Published</span>' : '<span class="badge badge-draft">Draft</span>'}
+          ${p.is_library ? '<span class="badge badge-lib">Library</span>' : ''}
+        </div>
+        <div class="post-item-actions">
+          <button class="btn btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.75rem;" onclick="editPost(${p.id})">Edit</button>
+        </div>
+      </li>`;
+    }).join('');
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = String(str);
+    return d.innerHTML;
+  }
+
+  // ── Slug generation ───────────────────────────────────────────────
+  let slugManuallyEdited = false;
+
+  document.getElementById('post-title').addEventListener('input', () => {
+    if (!slugManuallyEdited || !document.getElementById('post-id').value) {
+      const slug = document.getElementById('post-title').value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 120);
+      document.getElementById('post-slug').value = slug;
+    }
+  });
+
+  document.getElementById('post-slug').addEventListener('input', () => {
+    slugManuallyEdited = true;
+  });
+
+  // ── Reading time preview ──────────────────────────────────────────
+  document.getElementById('post-body').addEventListener('input', () => {
+    const body = document.getElementById('post-body').value;
+    const words = body.trim() ? body.trim().split(/\s+/).length : 0;
+    const rt = Math.max(1, Math.round(words / 200));
+    document.getElementById('rt-preview').textContent = words
+      ? `Estimated reading time: ${rt} min (~${words.toLocaleString()} words)`
+      : 'Estimated reading time: — min';
+  });
+
+  // ── Editor open/close ─────────────────────────────────────────────
+  function openEditor(post) {
+    slugManuallyEdited = false;
+    const panel = document.getElementById('editor-panel');
+    document.getElementById('editor-icon').textContent = post ? '✏️' : '✨';
+    document.getElementById('editor-title').textContent = post ? 'Edit Post' : 'New Post';
+    document.getElementById('post-id').value = post ? post.id : '';
+    document.getElementById('post-title').value = post ? post.title : '';
+    document.getElementById('post-slug').value = post ? post.slug : '';
+    document.getElementById('post-excerpt').value = post ? (post.excerpt || '') : '';
+    document.getElementById('post-body').value = post ? (post.body || '') : '';
+    document.getElementById('post-header-img').value = post ? (post.header_image_url || '') : '';
+    document.getElementById('post-tags').value = post && post.tags ? post.tags.join(', ') : '';
+    document.getElementById('post-pub-at').value = post && post.published_at
+      ? new Date(post.published_at).toISOString().slice(0, 16) : '';
+    document.getElementById('post-is-library').checked = post ? !!post.is_library : false;
+    document.getElementById('post-is-published').checked = post ? !!post.is_published : false;
+    document.getElementById('delete-post-btn').style.display = post ? 'inline-flex' : 'none';
+    document.getElementById('editor-status').textContent = '';
+    document.getElementById('editor-status').className = 'status';
+
+    // Trigger reading time preview
+    document.getElementById('post-body').dispatchEvent(new Event('input'));
+
+    panel.style.display = 'block';
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (post) slugManuallyEdited = true;
+  }
+
+  function closeEditor() {
+    document.getElementById('editor-panel').style.display = 'none';
+    document.getElementById('post-id').value = '';
+  }
+
+  document.getElementById('new-post-btn').addEventListener('click', () => openEditor(null));
+  document.getElementById('cancel-edit-btn').addEventListener('click', closeEditor);
+  document.getElementById('cancel-edit-btn2').addEventListener('click', closeEditor);
+
+  async function editPost(id) {
+    const st = setEditorStatus('Loading…', 'info');
+    document.getElementById('editor-panel').style.display = 'block';
+    try {
+      const res = await fetch(`/admin/blog/${id}`, { headers: headers() });
+      const post = await res.json();
+      openEditor(post);
+    } catch (e) {
+      setEditorStatus('Failed to load post.', 'error');
+    }
+  }
+
+  // ── Save post ─────────────────────────────────────────────────────
+  document.getElementById('save-post-btn').addEventListener('click', async () => {
+    const id = document.getElementById('post-id').value;
+    const slug = document.getElementById('post-slug').value.trim();
+    const title = document.getElementById('post-title').value.trim();
+    const excerpt = document.getElementById('post-excerpt').value.trim();
+    const body = document.getElementById('post-body').value;
+    const header_image_url = document.getElementById('post-header-img').value.trim();
+    const tags = document.getElementById('post-tags').value.trim();
+    const pub_at_raw = document.getElementById('post-pub-at').value;
+    const is_library = document.getElementById('post-is-library').checked;
+    const is_published = document.getElementById('post-is-published').checked;
+
+    if (!title) return setEditorStatus('Title is required.', 'error');
+    if (!slug) return setEditorStatus('Slug is required.', 'error');
+    if (!/^[a-z0-9][a-z0-9-]{0,118}[a-z0-9]?$/.test(slug)) {
+      return setEditorStatus('Invalid slug — use lowercase letters, numbers, and hyphens only.', 'error');
+    }
+
+    const published_at = pub_at_raw ? new Date(pub_at_raw).toISOString() : null;
+    const payload = { slug, title, excerpt: excerpt || null, body, header_image_url: header_image_url || null,
+                      published_at, is_library, is_published, tags };
+
+    setEditorStatus('Saving…', 'info');
+    document.getElementById('save-post-btn').disabled = true;
+
+    try {
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `/admin/blog/${id}` : '/admin/blog';
+      const res = await fetch(url, { method, headers: headers(), body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditorStatus(data.error || 'Save failed.', 'error');
+      } else {
+        setEditorStatus(id ? '✓ Post updated.' : '✓ Post created.', 'success');
+        await loadPosts();
+        if (!id && data.id) {
+          // After creating, switch to edit mode so user can keep editing
+          setTimeout(() => editPost(data.id), 1200);
+        }
+      }
+    } catch (e) {
+      setEditorStatus('Network error. Please try again.', 'error');
+    } finally {
+      document.getElementById('save-post-btn').disabled = false;
+    }
+  });
+
+  // ── Delete post ───────────────────────────────────────────────────
+  document.getElementById('delete-post-btn').addEventListener('click', async () => {
+    const id = document.getElementById('post-id').value;
+    const title = document.getElementById('post-title').value.trim();
+    if (!confirm(`Delete "${title}"?\n\nThis cannot be undone.`)) return;
+
+    setEditorStatus('Deleting…', 'info');
+    try {
+      const res = await fetch(`/admin/blog/${id}`, { method: 'DELETE', headers: headers() });
+      if (res.ok) {
+        closeEditor();
+        await loadPosts();
+      } else {
+        const data = await res.json();
+        setEditorStatus(data.error || 'Delete failed.', 'error');
+      }
+    } catch (e) {
+      setEditorStatus('Network error.', 'error');
+    }
+  });
+
+  function setEditorStatus(msg, type) {
+    const el = document.getElementById('editor-status');
+    el.textContent = msg;
+    el.className = 'status ' + (type || '');
+  }
+</script>
+</body>
+</html>

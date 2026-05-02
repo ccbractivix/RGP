@@ -200,3 +200,121 @@ router.post('/send-gallery-emails', async (req, res) => {
 });
 
 module.exports = router;
+
+// ============================================================
+// BLOG — ADMIN ROUTES (auth required, applied via router.use above)
+// ============================================================
+
+function calcReadingTime(body) {
+  if (!body) return 1;
+  return Math.max(1, Math.round(body.trim().split(/\s+/).length / 200));
+}
+
+function parseSlug(slug) {
+  return typeof slug === 'string' && /^[a-z0-9][a-z0-9-]{0,118}[a-z0-9]?$/.test(slug);
+}
+
+function parseTags(tags) {
+  if (Array.isArray(tags)) return tags.map(t => String(t).trim()).filter(Boolean);
+  return String(tags || '').split(',').map(t => t.trim()).filter(Boolean);
+}
+
+// GET /admin/blog — list all posts (including unpublished) for admin editor
+router.get('/blog', async (_req, res) => {
+  try {
+    const { rows } = await db.query(`
+      SELECT id, slug, title, excerpt, header_image_url,
+             published_at, is_library, is_published, tags,
+             reading_time_min, created_at, updated_at
+      FROM blog_posts
+      ORDER BY COALESCE(published_at, created_at) DESC
+    `);
+    return res.json(rows);
+  } catch (err) {
+    console.error('[go4launch] GET /admin/blog error:', err.message);
+    return res.status(500).json({ error: 'Failed to load posts' });
+  }
+});
+
+// GET /admin/blog/:id — full post data for editing
+router.get('/blog/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ error: 'Invalid id' });
+  try {
+    const { rows } = await db.query('SELECT * FROM blog_posts WHERE id = $1', [id]);
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('[go4launch] GET /admin/blog/:id error:', err.message);
+    return res.status(500).json({ error: 'Failed to load post' });
+  }
+});
+
+// POST /admin/blog — create new post
+router.post('/blog', async (req, res) => {
+  const { slug, title, excerpt, body, header_image_url, published_at, is_library, is_published, tags } = req.body;
+  if (!slug || !title) return res.status(400).json({ error: 'slug and title are required' });
+  if (!parseSlug(slug)) return res.status(400).json({ error: 'Invalid slug (lowercase letters, digits, hyphens only)' });
+
+  const tagsArr = parseTags(tags);
+  const rt = calcReadingTime(body || '');
+  const pubAt = is_published && !published_at ? new Date().toISOString() : (published_at || null);
+
+  try {
+    const { rows } = await db.query(`
+      INSERT INTO blog_posts
+        (slug, title, excerpt, body, header_image_url, published_at, is_library, is_published, tags, reading_time_min)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      RETURNING id
+    `, [slug, title, excerpt || null, body || '', header_image_url || null,
+        pubAt, !!is_library, !!is_published, tagsArr, rt]);
+    return res.json({ ok: true, id: rows[0].id });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Slug already exists — choose a different one' });
+    console.error('[go4launch] POST /admin/blog error:', err.message);
+    return res.status(500).json({ error: 'Failed to create post' });
+  }
+});
+
+// PUT /admin/blog/:id — update post
+router.put('/blog/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ error: 'Invalid id' });
+  const { slug, title, excerpt, body, header_image_url, published_at, is_library, is_published, tags } = req.body;
+  if (!slug || !title) return res.status(400).json({ error: 'slug and title are required' });
+  if (!parseSlug(slug)) return res.status(400).json({ error: 'Invalid slug (lowercase letters, digits, hyphens only)' });
+
+  const tagsArr = parseTags(tags);
+  const rt = calcReadingTime(body || '');
+  const pubAt = is_published && !published_at ? new Date().toISOString() : (published_at || null);
+
+  try {
+    const result = await db.query(`
+      UPDATE blog_posts SET
+        slug = $1, title = $2, excerpt = $3, body = $4,
+        header_image_url = $5, published_at = $6, is_library = $7,
+        is_published = $8, tags = $9, reading_time_min = $10, updated_at = NOW()
+      WHERE id = $11
+    `, [slug, title, excerpt || null, body || '', header_image_url || null,
+        pubAt, !!is_library, !!is_published, tagsArr, rt, id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Post not found' });
+    return res.json({ ok: true });
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Slug already exists — choose a different one' });
+    console.error('[go4launch] PUT /admin/blog/:id error:', err.message);
+    return res.status(500).json({ error: 'Failed to update post' });
+  }
+});
+
+// DELETE /admin/blog/:id — delete post permanently
+router.delete('/blog/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!id) return res.status(400).json({ error: 'Invalid id' });
+  try {
+    await db.query('DELETE FROM blog_posts WHERE id = $1', [id]);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[go4launch] DELETE /admin/blog/:id error:', err.message);
+    return res.status(500).json({ error: 'Failed to delete post' });
+  }
+});
