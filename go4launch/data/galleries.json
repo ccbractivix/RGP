@@ -276,7 +276,7 @@
     "url": "https://sites.google.com/view/holidayinnclubcape/home/rocket-talk/galleries/2026/20260429_viasat-3",
     "cover": "",
     "description": "The 12th launch of Falcon Heavy",
-    "featured": false
+    "featured": true
   },
   {
     "id": "falcon9-starlink-10-38",
@@ -285,6 +285,6 @@
     "url": "hhttps://sites.google.com/view/holidayinnclubcape/home/rocket-talk/galleries/2026/20260501_10-68",
     "cover": "",
     "description": "",
-    "featured": false
+    "featured": true
   }
 ]
