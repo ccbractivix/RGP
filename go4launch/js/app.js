@@ -14,6 +14,7 @@ const CONFIG = {
     CACHE_TTL: 6 * 60 * 60 * 1000,
     MAX_LAUNCHES: 15,
     MAX_DAYS: 14,
+    GALLERIES_JSON: 'data/galleries.json',
 };
 
 // ============================================================
@@ -21,6 +22,8 @@ const CONFIG = {
 // ============================================================
 let allLaunches = [];
 let cmsContent = {};
+let blogPosts = [];    // published posts (metadata, no body) sorted newest-first
+let galleryData = [];  // all galleries from static JSON sorted newest-first
 let countdownTimer = null;
 let currentSawItLaunchId = null;
 
@@ -298,7 +301,17 @@ function handleRoute() {
         countdownTimer = null;
     }
 
-    if (hash.startsWith('#/recent/')) {
+    // Always re-render nav (active tab + badge state)
+    renderNavBar();
+
+    if (hash === '#/galleries') {
+        renderGalleriesPage();
+    } else if (hash === '#/blog') {
+        renderBlogPage();
+    } else if (hash.startsWith('#/blog/post/')) {
+        const slug = decodeURIComponent(hash.slice(12));
+        renderBlogPostPage(slug);
+    } else if (hash.startsWith('#/recent/')) {
         const id = decodeURIComponent(hash.slice(9));
         renderRecentDetailPage(id);
     } else if (hash === '#/recent') {
@@ -333,9 +346,13 @@ function renderMainPage() {
         });
     }
 
+    // Teasers: latest gallery + latest blog post
+    html += buildTeasers();
+
     // Footer
     html += `<div class="page-footer">
         <a href="https://sites.google.com/view/holidayinnclubcape/home" class="footer-link" target="_blank">🏠 Resort Home</a>
+        <a href="#/recent" class="footer-link">🕐 Recent Launches</a>
         <div class="footer-copy">Data from Launch Library 2 &bull; Not affiliated with any launch provider</div>
     </div>`;
 
@@ -963,12 +980,15 @@ function checkAndShowRTLPopup() {
 // ============================================================
 async function init() {
     try {
-        const [launches, _] = await Promise.all([
+        const [launches] = await Promise.all([
             loadLaunches(),
             loadCMS(),
+            loadBlog(),
+            loadGalleries(),
         ]);
 
         allLaunches = launches;
+        renderNavBar();
         handleRoute();
         checkAndShowRTLPopup();
     } catch (e) {
@@ -986,3 +1006,382 @@ async function init() {
 
 window.addEventListener('hashchange', handleRoute);
 document.addEventListener('DOMContentLoaded', init);
+
+// ============================================================
+// BLOG & GALLERY DATA LOADERS
+// ============================================================
+async function loadBlog() {
+    if (!CONFIG.BACKEND) return;
+    try {
+        const res = await fetch(`${CONFIG.BACKEND}/api/blog`);
+        if (res.ok) blogPosts = await res.json();
+    } catch (e) {
+        console.warn('Blog load failed:', e);
+    }
+}
+
+async function loadGalleries() {
+    try {
+        const res = await fetch(CONFIG.GALLERIES_JSON);
+        if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                // Sort newest-first by date
+                galleryData = data.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+            }
+        }
+    } catch (e) {
+        console.warn('Galleries load failed:', e);
+    }
+}
+
+// ============================================================
+// NAVIGATION BAR
+// ============================================================
+function renderNavBar() {
+    const nav = document.getElementById('g4l-nav');
+    if (!nav) return;
+
+    const hash = window.location.hash || '#/';
+    const isLaunches = hash === '#/' || hash.startsWith('#/launch/') ||
+                       hash === '#/recent' || hash.startsWith('#/recent/');
+    const isGalleries = hash === '#/galleries';
+    const isBlog = hash === '#/blog' || hash.startsWith('#/blog/post/');
+
+    const now = Date.now();
+    const sevenDays = 7 * 24 * 3600 * 1000;
+
+    // "NEW" badge for Blog: any published post within the last 7 days
+    const seenBlogTs = parseInt(localStorage.getItem('g4l_blog_seen') || '0', 10);
+    const latestBlogTs = blogPosts.reduce((max, p) => {
+        const t = p.published_at ? new Date(p.published_at).getTime() : 0;
+        return t > max ? t : max;
+    }, 0);
+    const showBlogBadge = !isBlog && (now - latestBlogTs < sevenDays) && (latestBlogTs > seenBlogTs);
+
+    // "NEW" badge for Galleries: any gallery dated within the last 7 days
+    const seenGalleryTs = parseInt(localStorage.getItem('g4l_gallery_seen') || '0', 10);
+    const latestGalleryTs = galleryData.reduce((max, g) => {
+        const t = g.date ? new Date(g.date).getTime() : 0;
+        return t > max ? t : max;
+    }, 0);
+    const showGalleryBadge = !isGalleries && (now - latestGalleryTs < sevenDays) && (latestGalleryTs > seenGalleryTs);
+
+    // Mark as seen when visiting the respective tab
+    if (isGalleries && latestGalleryTs) localStorage.setItem('g4l_gallery_seen', String(latestGalleryTs));
+    if (isBlog && latestBlogTs) localStorage.setItem('g4l_blog_seen', String(latestBlogTs));
+
+    nav.innerHTML = `<div class="g4l-nav" role="tablist">
+        <a href="#/" class="nav-tab${isLaunches ? ' active' : ''}" role="tab" aria-label="Launches">
+            <span class="nav-icon">🚀</span>
+            <span class="nav-label">Launches</span>
+        </a>
+        <a href="#/galleries" class="nav-tab${isGalleries ? ' active' : ''}" role="tab" aria-label="Galleries">
+            <span class="nav-icon">📷</span>
+            <span class="nav-label">Galleries</span>
+            ${showGalleryBadge ? '<span class="nav-badge" aria-label="New content">NEW</span>' : ''}
+        </a>
+        <a href="#/blog" class="nav-tab${isBlog ? ' active' : ''}" role="tab" aria-label="Blog">
+            <span class="nav-icon">📝</span>
+            <span class="nav-label">Blog</span>
+            ${showBlogBadge ? '<span class="nav-badge" aria-label="New content">NEW</span>' : ''}
+        </a>
+    </div>`;
+}
+
+// ============================================================
+// TEASERS (home page)
+// ============================================================
+function buildTeasers() {
+    let html = '';
+
+    // Latest gallery teaser (galleryData is already sorted newest-first)
+    const latestGallery = galleryData[0];
+    if (latestGallery) {
+        const dateStr = latestGallery.date ? formatGalleryDate(latestGallery.date) : '';
+        html += `<div class="teaser-card">
+            <div class="teaser-header"><span class="teaser-icon">📷</span> Latest Gallery</div>
+            <div class="teaser-title">${esc(latestGallery.title)}</div>
+            ${dateStr ? `<div class="teaser-date">${dateStr}</div>` : ''}
+            <div class="teaser-actions">
+                <a href="${esc(latestGallery.url)}" target="_blank" rel="noopener noreferrer" class="teaser-btn">Open Gallery →</a>
+                <a href="#/galleries" class="teaser-link">All Galleries</a>
+            </div>
+        </div>`;
+    }
+
+    // Latest non-library blog post teaser
+    const latestPost = blogPosts.find(p => !p.is_library) || blogPosts[0];
+    if (latestPost) {
+        const dateStr = latestPost.published_at ? formatBlogDate(latestPost.published_at) : '';
+        html += `<div class="teaser-card">
+            <div class="teaser-header"><span class="teaser-icon">📝</span> Latest Blog Post</div>
+            <div class="teaser-title">${esc(latestPost.title)}</div>
+            ${dateStr ? `<div class="teaser-date">${dateStr}</div>` : ''}
+            ${latestPost.excerpt ? `<div class="teaser-excerpt">${esc(latestPost.excerpt)}</div>` : ''}
+            <div class="teaser-actions">
+                <a href="#/blog/post/${encodeURIComponent(latestPost.slug)}" class="teaser-btn">Read More →</a>
+                <a href="#/blog" class="teaser-link">All Posts</a>
+            </div>
+        </div>`;
+    }
+
+    return html;
+}
+
+// ============================================================
+// GALLERIES PAGE
+// ============================================================
+function renderGalleriesPage() {
+    const app = document.getElementById('app');
+
+    let html = `<div class="page-header">
+        <div class="subtitle">Launch Photo Galleries</div>
+    </div>`;
+
+    if (!galleryData.length) {
+        html += `<div class="galleries-empty">📷 No galleries yet — check back after the next launch!</div>`;
+        html += buildStandardFooter();
+        app.innerHTML = html;
+        window.scrollTo(0, 0);
+        return;
+    }
+
+    const featured = galleryData.filter(g => g.featured);
+    const regular  = galleryData.filter(g => !g.featured);
+
+    // Featured galleries at the top (full-width banner cards)
+    featured.forEach(g => { html += buildFeaturedGalleryCard(g); });
+
+    // Remaining galleries grouped by year
+    if (regular.length) {
+        const byYear = {};
+        regular.forEach(g => {
+            const year = g.date ? String(new Date(g.date + 'T12:00:00Z').getFullYear()) : 'Other';
+            if (!byYear[year]) byYear[year] = [];
+            byYear[year].push(g);
+        });
+
+        Object.keys(byYear).sort((a, b) => b - a).forEach(year => {
+            html += `<div class="gallery-year-header">${year}</div>`;
+            html += `<div class="gallery-grid">`;
+            byYear[year].forEach(g => { html += buildGalleryCard(g); });
+            html += `</div>`;
+        });
+    }
+
+    html += buildStandardFooter();
+    app.innerHTML = html;
+    window.scrollTo(0, 0);
+}
+
+function buildFeaturedGalleryCard(g) {
+    const dateStr = g.date ? formatGalleryDate(g.date) : '';
+    return `<div class="gallery-featured-card">
+        ${g.cover
+            ? `<div class="gallery-featured-img"><img src="${esc(g.cover)}" alt="${esc(g.title)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`
+            : `<div class="gallery-featured-img-placeholder">📷</div>`}
+        <div class="gallery-featured-body">
+            <div class="gallery-featured-title">${esc(g.title)}</div>
+            ${dateStr ? `<div class="gallery-date">${dateStr}</div>` : ''}
+            ${g.description ? `<div class="gallery-description">${esc(g.description)}</div>` : ''}
+            <a href="${esc(g.url)}" target="_blank" rel="noopener noreferrer" class="gallery-open-btn">📸 Open Gallery →</a>
+        </div>
+    </div>`;
+}
+
+function buildGalleryCard(g) {
+    const dateStr = g.date ? formatGalleryDate(g.date) : '';
+    return `<div class="gallery-card">
+        ${g.cover
+            ? `<div class="gallery-card-img"><img src="${esc(g.cover)}" alt="${esc(g.title)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`
+            : `<div class="gallery-card-img-placeholder">📷</div>`}
+        <div class="gallery-card-body">
+            <div class="gallery-card-title">${esc(g.title)}</div>
+            ${dateStr ? `<div class="gallery-date" style="font-size:0.68rem;">${dateStr}</div>` : ''}
+            <a href="${esc(g.url)}" target="_blank" rel="noopener noreferrer" class="gallery-open-btn">Open Gallery →</a>
+        </div>
+    </div>`;
+}
+
+function formatGalleryDate(dateStr) {
+    const d = new Date(dateStr + 'T12:00:00Z');
+    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+// ============================================================
+// BLOG PAGE
+// ============================================================
+function renderBlogPage() {
+    const app = document.getElementById('app');
+
+    let html = `<div class="page-header">
+        <div class="subtitle">Chris' Blog</div>
+    </div>`;
+
+    if (!blogPosts.length) {
+        html += `<div class="no-launches">📝 No posts yet — check back soon!</div>`;
+        html += buildStandardFooter();
+        app.innerHTML = html;
+        window.scrollTo(0, 0);
+        return;
+    }
+
+    const libraryPosts = blogPosts.filter(p => p.is_library);
+    const feedPosts    = blogPosts.filter(p => !p.is_library);
+
+    // ── Library shelf ──────────────────────────────────────────
+    if (libraryPosts.length) {
+        html += `<div class="blog-library-shelf">
+            <div class="blog-library-title"><span>📚</span> Chris' Library</div>
+            <div class="blog-library-subtitle">Curated reads — great anytime during your stay</div>
+            <ul class="blog-library-list">`;
+        libraryPosts.forEach(p => {
+            const tagsHtml = (p.tags || []).slice(0, 3).map(t => `<span class="post-tag">${esc(t)}</span>`).join('');
+            html += `<li class="blog-library-item">
+                <a href="#/blog/post/${encodeURIComponent(p.slug)}" class="blog-library-link">
+                    <span class="blog-library-item-title">${esc(p.title)}</span>
+                    <span class="blog-library-item-meta">⏱ ${p.reading_time_min || 1} min</span>
+                </a>
+                ${tagsHtml ? `<div class="post-tags" style="margin-top:0.3rem;">${tagsHtml}</div>` : ''}
+            </li>`;
+        });
+        html += `</ul></div>`;
+    }
+
+    // ── Post feed ──────────────────────────────────────────────
+    if (feedPosts.length) {
+        html += `<div class="blog-feed-header">Latest Posts</div>`;
+        let lastYear = null;
+        feedPosts.forEach(p => {
+            const year = p.published_at ? new Date(p.published_at).getFullYear() : null;
+            if (year && year !== lastYear && lastYear !== null) {
+                html += `<div class="blog-year-header">${year}</div>`;
+            }
+            lastYear = year;
+            html += buildBlogCard(p);
+        });
+    }
+
+    html += buildStandardFooter();
+    app.innerHTML = html;
+    window.scrollTo(0, 0);
+}
+
+function buildBlogCard(post) {
+    const dateStr  = post.published_at ? formatBlogDate(post.published_at) : 'Draft';
+    const tagsHtml = (post.tags || []).slice(0, 3).map(t => `<span class="post-tag">${esc(t)}</span>`).join('');
+    return `<article class="blog-card">
+        ${post.header_image_url
+            ? `<div class="blog-card-img"><img src="${esc(post.header_image_url)}" alt="${esc(post.title)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`
+            : ''}
+        <div class="blog-card-body">
+            <div class="blog-card-date">${dateStr}</div>
+            <div class="blog-card-title">${esc(post.title)}</div>
+            ${post.excerpt ? `<div class="blog-card-excerpt">${esc(post.excerpt)}</div>` : ''}
+            <div class="blog-card-footer">
+                ${tagsHtml ? `<div class="post-tags">${tagsHtml}</div>` : '<span></span>'}
+                <a href="#/blog/post/${encodeURIComponent(post.slug)}" class="blog-read-more">Read more →</a>
+            </div>
+            <div class="blog-read-time">⏱ ${post.reading_time_min || 1} min read</div>
+        </div>
+    </article>`;
+}
+
+function formatBlogDate(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric', month: 'long', day: 'numeric',
+    });
+}
+
+// ============================================================
+// BLOG POST DETAIL PAGE
+// ============================================================
+async function renderBlogPostPage(slug) {
+    const app = document.getElementById('app');
+    app.innerHTML = `<div class="blog-post-page">
+        <a href="#/blog" class="detail-back">← Back to Blog</a>
+        <div class="no-launches">Loading…</div>
+    </div>`;
+
+    try {
+        const res = await fetch(`${CONFIG.BACKEND}/api/blog/${encodeURIComponent(slug)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const post = await res.json();
+
+        const dateStr  = post.published_at ? formatBlogDate(post.published_at) : '';
+        const tagsHtml = (post.tags || []).map(t => `<span class="post-tag">${esc(t)}</span>`).join('');
+
+        let html = '<div class="blog-post-page">';
+        html += `<a href="#/blog" class="detail-back">← Back to Blog</a>`;
+
+        if (post.header_image_url) {
+            html += `<div class="detail-hero"><img src="${esc(post.header_image_url)}" alt="${esc(post.title)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`;
+        }
+
+        html += `<div class="blog-post-header">`;
+        if (dateStr) html += `<div class="blog-post-date">${dateStr}</div>`;
+        html += `<h1 class="blog-post-title">${esc(post.title)}</h1>`;
+        html += `<div class="blog-post-meta">`;
+        html += `<span class="blog-read-time">⏱ ${post.reading_time_min || 1} min read</span>`;
+        if (post.is_library) html += `<span class="blog-library-badge">📚 Library</span>`;
+        html += `</div>`;
+        if (tagsHtml) html += `<div class="post-tags" style="margin-top:0.4rem;">${tagsHtml}</div>`;
+        html += `</div>`;
+
+        html += `<div class="blog-post-body">${sanitizeCmsHtml(post.body || '')}</div>`;
+
+        html += `<div class="blog-post-share">
+            <button class="card-action js-share-post" data-slug="${esc(post.slug)}" data-title="${esc(post.title)}">
+                <span class="action-icon">↗</span> SHARE
+            </button>
+        </div>`;
+
+        html += `</div>`;
+        app.innerHTML = html;
+
+        // Attach share handler after DOM is updated to avoid inline-script XSS risks
+        const shareBtn = app.querySelector('.js-share-post');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', () => {
+                shareBlogPost(shareBtn.dataset.slug, shareBtn.dataset.title);
+            });
+        }
+
+        window.scrollTo(0, 0);
+    } catch (e) {
+        app.innerHTML = `<div class="blog-post-page">
+            <a href="#/blog" class="detail-back">← Back to Blog</a>
+            <div class="no-launches">Post not found.</div>
+        </div>`;
+    }
+}
+
+window.shareBlogPost = function(slug, title) {
+    const url = window.location.origin + window.location.pathname + '#/blog/post/' + encodeURIComponent(slug);
+    if (navigator.share) {
+        navigator.share({ title, url }).catch(() => {});
+    } else {
+        navigator.clipboard.writeText(url).then(() => {
+            const btn = document.querySelector('.blog-post-share .card-action');
+            if (btn) {
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<span class="action-icon">✓</span> COPIED';
+                setTimeout(() => { btn.innerHTML = orig; }, 2000);
+            }
+        }).catch(() => {});
+    }
+};
+
+// ============================================================
+// SHARED FOOTER HELPER
+// ============================================================
+function buildStandardFooter() {
+    return `<div class="page-footer">
+        <a href="https://sites.google.com/view/holidayinnclubcape/home" class="footer-link" target="_blank">🏠 Resort Home</a>
+        <a href="#/recent" class="footer-link">🕐 Recent Launches</a>
+        <div class="footer-copy">Data from Launch Library 2 &bull; Not affiliated with any launch provider</div>
+    </div>`;
+}
