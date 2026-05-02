@@ -1334,13 +1334,22 @@ async function renderBlogPostPage(slug) {
         html += `<div class="blog-post-body">${sanitizeCmsHtml(post.body || '')}</div>`;
 
         html += `<div class="blog-post-share">
-            <button class="card-action" onclick="shareBlogPost('${esc(post.slug)}','${esc(post.title).replace(/'/g, "\\'")}')">
+            <button class="card-action js-share-post" data-slug="${esc(post.slug)}" data-title="${esc(post.title)}">
                 <span class="action-icon">↗</span> SHARE
             </button>
         </div>`;
 
         html += `</div>`;
         app.innerHTML = html;
+
+        // Attach share handler after DOM is updated to avoid inline-script XSS risks
+        const shareBtn = app.querySelector('.js-share-post');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', () => {
+                shareBlogPost(shareBtn.dataset.slug, shareBtn.dataset.title);
+            });
+        }
+
         window.scrollTo(0, 0);
     } catch (e) {
         app.innerHTML = `<div class="blog-post-page">
