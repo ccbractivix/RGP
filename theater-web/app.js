@@ -38,6 +38,21 @@
       });
   }
 
+  var MONTH_ABBR = {
+    January: 'Jan', February: 'Feb', March: 'Mar', April: 'Apr',
+    May: 'May', June: 'Jun', July: 'Jul', August: 'Aug',
+    September: 'Sep', October: 'Oct', November: 'Nov', December: 'Dec'
+  };
+
+  function parseDayLabel(label) {
+    // Expected format from API: "Monday, November 4" or "Monday, Nov 4"
+    var match = label.match(/^(\w+),\s+(\w+)\s+(\d+)$/);
+    if (!match) return { dayName: label, dateStr: '' };
+    var dayName = match[1];
+    var month = MONTH_ABBR[match[2]] || match[2].slice(0, 3);
+    return { dayName: dayName, dateStr: month + ' ' + match[3] };
+  }
+
   function formatRuntime(min) {
     if (!min) return '';
     var n = parseInt(min, 10);
@@ -65,7 +80,12 @@
 
     days.forEach(function (dayObj) {
       html += '<div class="day-section">';
-      html += '<div class="day-header">' + escapeHtml(dayObj.label) + '</div>';
+      var parsed = parseDayLabel(dayObj.label);
+      html += '<div class="day-header"><span class="day-name">' + escapeHtml(parsed.dayName) + '</span>';
+      if (parsed.dateStr) {
+        html += '<span class="day-date">' + escapeHtml(parsed.dateStr) + '</span>';
+      }
+      html += '</div>';
 
       var shows = dayObj.shows || [];
       shows.forEach(function (show) {

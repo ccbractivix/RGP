@@ -46,6 +46,16 @@ body {
   50% { transform: scale(1.4); opacity: 1; }
 }
 
+/* ===== PAGE HEADLINE ===== */
+.page-headline {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #2c2c2c;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
 /* ===== DAY SECTIONS ===== */
 .day-section {
   margin-bottom: 32px;
@@ -58,6 +68,15 @@ body {
   border-bottom: 2px solid #c8a45a;
   padding-bottom: 6px;
   margin-bottom: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.day-header .day-date {
+  font-size: 11px;
+  font-weight: 400;
+  color: #666;
 }
 
 /* ===== SHOWTIME CARDS ===== */
@@ -274,6 +293,10 @@ body {
 
   .day-header {
     font-size: 19px;
+  }
+
+  .day-header .day-date {
+    font-size: 9px;
   }
 
   .card-info .show-title {
