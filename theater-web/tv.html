@@ -30,7 +30,7 @@
     #tv-headline {
       text-align: center;
       padding: 18px 0 8px;
-      font-size: clamp(56px, 7vw, 96px);
+      font-size: clamp(28px, 3.5vw, 48px);
       font-weight: 700;
       font-family: 'Fredoka', sans-serif;
       letter-spacing: 6px;
@@ -62,19 +62,24 @@
       border-right: none;
     }
 
+    .tv-day-header {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
     .tv-day-name {
       font-size: clamp(18px, 1.8vw, 26px);
       font-weight: 700;
       color: #4A7A36;
       text-transform: uppercase;
       letter-spacing: 2px;
-      margin-bottom: 4px;
     }
 
     .tv-date {
-      font-size: clamp(14px, 1.3vw, 20px);
+      font-size: clamp(7px, 0.65vw, 10px);
       color: #7A6B5A;
-      margin-bottom: 5px;
       font-weight: 500;
     }
 

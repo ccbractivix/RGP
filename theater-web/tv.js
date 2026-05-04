@@ -27,6 +27,9 @@
     return m + 'm';
   }
 
+  var MONTH_NUMS = { JANUARY:1,FEBRUARY:2,MARCH:3,APRIL:4,MAY:5,JUNE:6,
+                     JULY:7,AUGUST:8,SEPTEMBER:9,OCTOBER:10,NOVEMBER:11,DECEMBER:12 };
+
   function parseDateLabel(label) {
     // label: "Monday, March 27" or "Monday, March 27, 2025"
     if (!label) return { dayName: '', dateStr: '' };
@@ -34,9 +37,10 @@
     var dayName = (parts[0] || '').trim().toUpperCase();
     var rest = (parts[1] || '').trim(); // e.g. "March 27"
     var rParts = rest.split(' ');
-    var month = rParts[0] ? rParts[0].substring(0, 3).toUpperCase() : '';
+    var monthNum = MONTH_NUMS[(rParts[0] || '').toUpperCase()] || 0;
     var day = rParts[1] || '';
-    return { dayName: dayName, dateStr: month + ' ' + day };
+    var dateStr = monthNum ? (monthNum + '/' + day) : rest;
+    return { dayName: dayName, dateStr: dateStr };
   }
 
   function findEvtMvnOnThursday(days) {
@@ -94,8 +98,7 @@
       var shows  = dayObj.shows || [];
 
       html += '<div class="tv-col">';
-      html += '<div class="tv-day-name">' + escapeHtml(parsed.dayName) + '</div>';
-      html += '<div class="tv-date">' + escapeHtml(parsed.dateStr) + '</div>';
+      html += '<div class="tv-day-header"><span class="tv-day-name">' + escapeHtml(parsed.dayName) + '</span><span class="tv-date">' + escapeHtml(parsed.dateStr) + '</span></div>';
       html += '<div class="tv-divider"></div>';
       html += '<div class="tv-show-list">';
 
