@@ -107,13 +107,14 @@
       } else {
         shows.forEach(function (show) {
           var meta = [];
+          if (show.year) meta.push(show.year);
           if (show.rating) meta.push(show.rating);
           var rt = formatRuntime(show.runtime);
           if (rt) meta.push(rt);
 
           html += '<div class="tv-show-item">';
           html += '<span class="tv-show-time">' + escapeHtml(show.time) + '</span>';
-          html += '<span class="tv-show-title">' + escapeHtml(show.title) + (show.year ? ' (' + escapeHtml(show.year) + ')' : '') + '</span>';
+          html += '<span class="tv-show-title">' + escapeHtml(show.title) + '</span>';
           if (show.titleLine2) {
             html += '<span class="tv-show-title">' + escapeHtml(show.titleLine2) + '</span>';
           }
