@@ -6,7 +6,7 @@ const { fetchMovie }  = require('../services/omdb');
 const router       = express.Router();
 
 function formatDateLabel(date) {
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/New_York' });
+  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'America/New_York' });
 }
 function formatTime(t) {
   if (!t) return '';
