@@ -95,7 +95,7 @@ function buildDays(rows, closures, startDate, endDate) {
     return v;
   });
 
-  // If no closures, filter out days with no shows (preserve original behaviour for non-closure days)
+  // Filter out empty days: include only days with shows or an active closure
   return sorted.filter(day => day.closure || day.shows.length > 0);
 }
 

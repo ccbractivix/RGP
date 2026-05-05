@@ -83,7 +83,7 @@
   function formatReopenTime(expectedReopen) {
     if (!expectedReopen) return null;
     var datePart = expectedReopen.split('T')[0];
-    var timePart = expectedReopen.indexOf('T') >= 0 ? expectedReopen.split('T')[1] : '';
+    var timePart = expectedReopen.includes('T') ? expectedReopen.split('T')[1] : '';
 
     var now = new Date();
     var todayStr    = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
