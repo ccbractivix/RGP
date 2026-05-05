@@ -128,7 +128,7 @@
           : 'Closed for Private Meeting';
         var reopenText = formatReopenTime(dayObj.closure.expectedReopen);
         html += '<div class="closure-banner">';
-        html += '<div class="closure-icon">🔒</div>';
+        html += '<div class="closure-icon">❗</div>';
         html += '<div class="closure-text">';
         html += '<div class="closure-type-label">' + escapeHtml(closureTypeLabel) + '</div>';
         if (reopenText) {

@@ -797,7 +797,7 @@
 
         if (closure) {
           const label = closure.type === 'maintenance' ? 'Maintenance' : 'Private Meeting';
-          html += `<div style="color:var(--red);font-size:0.65rem;text-align:center;padding:0.4rem 0;font-weight:600;">🔒 ${esc(label)}</div>`;
+          html += `<div style="color:var(--red);font-size:0.65rem;text-align:center;padding:0.4rem 0;font-weight:600;">❗ ${esc(label)}</div>`;
         }
 
         if (day.shows.length === 0) {
@@ -919,7 +919,7 @@
         </div>` : '';
 
       return `<div class="closure-card${isActive ? ' active' : ''}">
-        <div class="closure-card-title">🔒 Day Closure Override</div>
+        <div class="closure-card-title">❗ Day Closure Override</div>
         <div class="form-row" style="margin-bottom:0;">
           <select class="form-control" id="closure-type-select" onchange="onClosureTypeChange(this.value)">
             <option value="none"${typeVal === 'none' ? ' selected' : ''}>Open — no closure override</option>

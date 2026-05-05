@@ -142,7 +142,7 @@
           : 'CLOSED FOR PRIVATE MEETING';
         var reopenLabel = formatReopenTime(dayObj.closure.expectedReopen);
         html += '<div class="tv-closure">';
-        html += '<span class="tv-closure-type">🔒 ' + escapeHtml(closureLabel) + '</span>';
+        html += '<span class="tv-closure-type">❗ ' + escapeHtml(closureLabel) + '</span>';
         if (reopenLabel) {
           html += '<span class="tv-closure-reopen">Reopening: ' + escapeHtml(reopenLabel) + '</span>';
         }
