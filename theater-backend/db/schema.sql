@@ -29,3 +29,9 @@ CREATE TABLE IF NOT EXISTS settings (
   key            TEXT PRIMARY KEY,
   value          TEXT
 );
+
+CREATE TABLE IF NOT EXISTS theater_closures (
+  date             DATE PRIMARY KEY,
+  type             TEXT NOT NULL CHECK (type IN ('maintenance', 'private_meeting')),
+  expected_reopen  TEXT
+);

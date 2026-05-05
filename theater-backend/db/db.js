@@ -14,6 +14,11 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process
     await pool.query('ALTER TABLE library ADD COLUMN IF NOT EXISTS release_year TEXT');
     await pool.query('ALTER TABLE library ADD COLUMN IF NOT EXISTS title_line2 TEXT');
     await pool.query('ALTER TABLE library ADD COLUMN IF NOT EXISTS title_line3 TEXT');
+    await pool.query(`CREATE TABLE IF NOT EXISTS theater_closures (
+      date             DATE PRIMARY KEY,
+      type             TEXT NOT NULL CHECK (type IN ('maintenance', 'private_meeting')),
+      expected_reopen  TEXT
+    )`);
   } catch (_) { /* ignore — older Postgres or table doesn't exist yet */ }
 })();
 

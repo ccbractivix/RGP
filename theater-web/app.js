@@ -64,6 +64,40 @@
     return m + 'm';
   }
 
+  function formatReopenTime(expectedReopen) {
+    if (!expectedReopen) return null;
+    // expectedReopen is like "2025-11-05T15:00" or "2025-11-05"
+    var datePart = expectedReopen.split('T')[0];
+    var timePart = expectedReopen.includes('T') ? expectedReopen.split('T')[1] : '';
+
+    var today    = new Date().toLocaleDateString('en-CA');
+    var tomorrow = new Date(Date.now() + 86400000).toLocaleDateString('en-CA');
+
+    var dateLabel;
+    if (datePart === today) {
+      dateLabel = 'Today';
+    } else if (datePart === tomorrow) {
+      dateLabel = 'Tomorrow';
+    } else if (datePart) {
+      var d = new Date(datePart + 'T12:00:00Z');
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      dateLabel = months[d.getUTCMonth()] + ' ' + d.getUTCDate();
+    } else {
+      return null;
+    }
+
+    if (timePart) {
+      var hm = timePart.slice(0, 5).split(':');
+      var h = parseInt(hm[0], 10);
+      var m = parseInt(hm[1], 10);
+      var ampm = h >= 12 ? 'PM' : 'AM';
+      var h12 = h % 12 || 12;
+      var mStr = String(m).padStart(2, '0');
+      return dateLabel + ' at ' + h12 + ':' + mStr + ' ' + ampm;
+    }
+    return dateLabel;
+  }
+
   function renderSchedule(days) {
     var container = document.getElementById('schedule-container');
     var footer = document.getElementById('footer');
@@ -87,8 +121,24 @@
       }
       html += '</div>';
 
-      var shows = dayObj.shows || [];
-      shows.forEach(function (show) {
+      // Closure banner (if set, shown instead of shows)
+      if (dayObj.closure) {
+        var closureTypeLabel = dayObj.closure.type === 'maintenance'
+          ? 'Closed for Maintenance'
+          : 'Closed for Private Meeting';
+        var reopenText = formatReopenTime(dayObj.closure.expectedReopen);
+        html += '<div class="closure-banner">';
+        html += '<div class="closure-icon">❗</div>';
+        html += '<div class="closure-text">';
+        html += '<div class="closure-type-label">' + escapeHtml(closureTypeLabel) + '</div>';
+        if (reopenText) {
+          html += '<div class="closure-reopen-label">Expected to re-open: ' + escapeHtml(reopenText) + '</div>';
+        }
+        html += '</div>';
+        html += '</div>';
+      } else {
+        var shows = dayObj.shows || [];
+        shows.forEach(function (show) {
         var isLive = (show.contentType || '').toLowerCase() === 'live event';
 
         html += '<div class="showtime-card">';
@@ -168,7 +218,8 @@
 
         html += '</div>'; // close .card-info
         html += '</div>'; // close .showtime-card
-      });
+        });
+      } // end else (no closure)
 
       html += '</div>'; // close .day-section
     });

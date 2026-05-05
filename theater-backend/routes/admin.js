@@ -129,4 +129,50 @@ router.post('/slides/generate', async (_req, res) => {
   } catch (e) { return res.status(500).json({ error: 'Slide generation failed' }); }
 });
 
+// GET /admin/closures/:weekStart — returns closures for 7-day window
+router.get('/closures/:weekStart', async (req, res) => {
+  const { weekStart } = req.params;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) return res.status(400).json({ error: 'Invalid weekStart' });
+  try {
+    const start = new Date(weekStart + 'T12:00:00Z');
+    const end = new Date(start); end.setDate(end.getDate() + 6);
+    const endStr = end.toISOString().split('T')[0];
+    const r = await db.query(
+      `SELECT date, type, expected_reopen FROM theater_closures WHERE date >= $1 AND date <= $2 ORDER BY date`,
+      [weekStart, endStr]
+    );
+    return res.json(r.rows.map(row => ({
+      date: String(row.date).split('T')[0],
+      type: row.type,
+      expectedReopen: row.expected_reopen || null,
+    })));
+  } catch (e) { return res.status(500).json({ error: 'Failed to load closures' }); }
+});
+
+// PUT /admin/closures/:date — set or update a closure for a date
+router.put('/closures/:date', async (req, res) => {
+  const { date } = req.params;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Invalid date' });
+  const { type, expectedReopen } = req.body;
+  if (!['maintenance', 'private_meeting'].includes(type)) return res.status(400).json({ error: 'Invalid type' });
+  try {
+    await db.query(
+      `INSERT INTO theater_closures (date, type, expected_reopen) VALUES ($1, $2, $3)
+       ON CONFLICT (date) DO UPDATE SET type = EXCLUDED.type, expected_reopen = EXCLUDED.expected_reopen`,
+      [date, type, expectedReopen || null]
+    );
+    return res.json({ ok: true });
+  } catch (e) { return res.status(500).json({ error: 'Failed to save closure' }); }
+});
+
+// DELETE /admin/closures/:date — remove a closure
+router.delete('/closures/:date', async (req, res) => {
+  const { date } = req.params;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Invalid date' });
+  try {
+    await db.query('DELETE FROM theater_closures WHERE date = $1', [date]);
+    return res.json({ ok: true });
+  } catch (e) { return res.status(500).json({ error: 'Failed to delete closure' }); }
+});
+
 module.exports = router;

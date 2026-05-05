@@ -280,6 +280,41 @@ body {
   padding-bottom: 24px;
 }
 
+/* ===== CLOSURE BANNER ===== */
+.closure-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 16px;
+  background: #fff5f5;
+  border: 1px solid #f5c6c6;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+
+.closure-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.closure-text {
+  flex: 1;
+}
+
+.closure-type-label {
+  font-family: 'Playfair Display', serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #b82222;
+  margin-bottom: 4px;
+}
+
+.closure-reopen-label {
+  font-size: 13px;
+  color: #666;
+}
+
 /* ===== MOBILE ===== */
 @media (max-width: 500px) {
   body {
