@@ -43,8 +43,21 @@ async function getRange(startDate, endDate) {
   return r.rows;
 }
 
-function buildDays(rows) {
+function buildDays(rows, closures, startDate, endDate) {
   const map = new Map();
+
+  // Pre-populate all dates in the range so closure-only days are included
+  if (startDate && endDate) {
+    const cur = new Date(startDate + 'T12:00:00Z');
+    const last = new Date(endDate + 'T12:00:00Z');
+    while (cur <= last) {
+      const ds = cur.toISOString().split('T')[0];
+      const d = new Date(ds + 'T12:00:00Z');
+      map.set(ds, { label: formatDateLabel(d), shows: [] });
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+  }
+
   rows.forEach(row => {
     const ds = String(row.date).split('T')[0];
     if (!map.has(ds)) {
@@ -76,7 +89,14 @@ function buildDays(rows) {
       libraryId: row.library_id,
     });
   });
-  return Array.from(map.entries()).sort(([a],[b])=>a.localeCompare(b)).map(([,v])=>v);
+
+  const sorted = Array.from(map.entries()).sort(([a],[b])=>a.localeCompare(b)).map(([ds, v]) => {
+    if (closures && closures[ds]) v.closure = closures[ds];
+    return v;
+  });
+
+  // If no closures, filter out days with no shows (preserve original behaviour for non-closure days)
+  return sorted.filter(day => day.closure || day.shows.length > 0);
 }
 
 /**
@@ -125,15 +145,31 @@ async function backfillYears(rows) {
   }));
 }
 
+async function getClosures(startDate, endDate) {
+  const r = await db.query(
+    `SELECT date, type, expected_reopen FROM theater_closures WHERE date >= $1 AND date <= $2`,
+    [startDate, endDate]
+  );
+  const map = {};
+  r.rows.forEach(row => {
+    const ds = String(row.date).split('T')[0];
+    map[ds] = { type: row.type, expectedReopen: row.expected_reopen || null };
+  });
+  return map;
+}
+
 router.get('/schedule', async (_req, res) => {
   try {
     const now = new Date();
     const today = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const end = new Date(now); end.setDate(end.getDate() + 4);
     const endStr = end.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-    const rows = await getRange(today, endStr);
+    const [rows, closures] = await Promise.all([
+      getRange(today, endStr),
+      getClosures(today, endStr),
+    ]);
     await Promise.all([backfillPosters(rows), backfillYears(rows)]);
-    return res.json(buildDays(rows));
+    return res.json(buildDays(rows, closures, today, endStr));
   } catch (e) { console.error(e); return res.status(500).json({ error: 'Failed to load schedule' }); }
 });
 
@@ -143,9 +179,12 @@ router.get('/schedule/tv', async (_req, res) => {
     const today = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     const end = new Date(now); end.setDate(end.getDate() + 4);
     const endStr = end.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-    const rows = await getRange(today, endStr);
+    const [rows, closures] = await Promise.all([
+      getRange(today, endStr),
+      getClosures(today, endStr),
+    ]);
     await Promise.all([backfillPosters(rows), backfillYears(rows)]);
-    return res.json(buildDays(rows));
+    return res.json(buildDays(rows, closures, today, endStr));
   } catch (e) { console.error(e); return res.status(500).json({ error: 'Failed to load TV schedule' }); }
 });
 

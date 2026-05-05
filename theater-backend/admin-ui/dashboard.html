@@ -451,6 +451,77 @@
     }
     .no-day-icon { font-size: 2rem; }
     .no-day-text { font-size: 0.85rem; }
+
+    /* ── Closure badge on grid ── */
+    .closure-badge {
+      display: inline-block;
+      background: rgba(224,85,85,0.18);
+      color: var(--red);
+      border: 1px solid rgba(224,85,85,0.4);
+      border-radius: 3px;
+      font-size: 0.55rem;
+      font-weight: 700;
+      padding: 0 3px;
+      margin-left: 3px;
+      vertical-align: middle;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Closure editor card ── */
+    .closure-card {
+      background: var(--card);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      padding: 0.75rem 0.85rem;
+      margin-bottom: 0.75rem;
+    }
+    .closure-card.active {
+      border-color: rgba(224,85,85,0.5);
+      background: rgba(224,85,85,0.06);
+    }
+    .closure-card-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .reopen-row {
+      display: flex;
+      gap: 0.45rem;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    .reopen-row label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    .btn-day-preset {
+      background: var(--card);
+      color: var(--text-muted);
+      border: 1px solid var(--border-light);
+      border-radius: 5px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.28rem 0.6rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .btn-day-preset:hover,
+    .btn-day-preset.active { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); }
+    .closure-actions {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.6rem;
+      flex-wrap: wrap;
+    }
   </style>
 </head>
 <body>
@@ -511,6 +582,7 @@
     let currentWeekStart = '';   // YYYY-MM-DD (Monday)
     let libraryData      = [];   // [{id, title, runtime_min, type, …}]
     let weekData         = [];   // array of 7 {date, shows:[…], hasInherited}
+    let weekClosures     = {};   // { 'YYYY-MM-DD': { type, expectedReopen } }
     let selectedDay      = null; // 0-6
     let addFormOpen      = false;
     let sortField        = 'start_time';
@@ -659,37 +731,51 @@
       ]).catch(err => { if (err.message !== 'Unauthorized') showToast('Load error: ' + err.message, 'error'); });
     }
 
+    function loadClosures() {
+      return apiFetch('/admin/closures/' + currentWeekStart)
+        .then(r => r.ok ? r.json() : [])
+        .then(data => {
+          weekClosures = {};
+          (Array.isArray(data) ? data : []).forEach(c => { weekClosures[c.date] = { type: c.type, expectedReopen: c.expectedReopen || null }; });
+        })
+        .catch(() => { weekClosures = {}; });
+    }
+
     function loadWeekData() {
       document.getElementById('week-label').textContent = 'Loading…';
-      return apiFetch('/admin/schedule/' + currentWeekStart)
-        .then(r => r.ok ? r.json() : Promise.reject(new Error('Server error')))
-        .then(data => {
-          // Expect array of 7 or object with days array
-          const days = Array.isArray(data) ? data : (data.days || data.week || []);
-          weekData = [];
-          for (let i = 0; i < 7; i++) {
-            const dateStr = addDays(currentWeekStart, i);
-            const found = days.find(d => d.date === dateStr) || {};
-            weekData.push({
-              date: dateStr,
-              shows: Array.isArray(found.shows) ? found.shows : [],
-              hasInherited: !!found.hasInherited
-            });
-          }
-          document.getElementById('week-label').textContent = formatWeekLabel();
-          renderGrid();
-        })
-        .catch(err => {
-          if (err.message === 'Unauthorized') return;
-          // On error, build empty week still
-          weekData = [];
+      return Promise.all([
+        apiFetch('/admin/schedule/' + currentWeekStart)
+          .then(r => r.ok ? r.json() : Promise.reject(new Error('Server error')))
+          .then(data => {
+            const days = Array.isArray(data) ? data : (data.days || data.week || []);
+            weekData = [];
+            for (let i = 0; i < 7; i++) {
+              const dateStr = addDays(currentWeekStart, i);
+              const found = days.find(d => d.date === dateStr) || {};
+              weekData.push({
+                date: dateStr,
+                shows: Array.isArray(found.shows) ? found.shows : [],
+                hasInherited: !!found.hasInherited
+              });
+            }
+          }),
+        loadClosures()
+      ])
+      .then(() => {
+        document.getElementById('week-label').textContent = formatWeekLabel();
+        renderGrid();
+      })
+      .catch(err => {
+        if (err.message === 'Unauthorized') return;
+        if (weekData.length === 0) {
           for (let i = 0; i < 7; i++) {
             weekData.push({ date: addDays(currentWeekStart, i), shows: [], hasInherited: false });
           }
-          document.getElementById('week-label').textContent = formatWeekLabel();
-          renderGrid();
-          showToast('Could not load schedule', 'error');
-        });
+        }
+        document.getElementById('week-label').textContent = formatWeekLabel();
+        renderGrid();
+        showToast('Could not load schedule', 'error');
+      });
     }
 
     /* ── Render grid ── */
@@ -700,15 +786,22 @@
         const day = weekData[i];
         const isSelected = selectedDay === i;
         const shortDate = formatShortDate(day.date);
+        const closure = weekClosures[day.date];
+        const closureBadge = closure ? `<span class="closure-badge">CLOSED</span>` : '';
         html += `<div class="day-col">
           <div class="day-col-header${isSelected ? ' selected' : ''}" onclick="openEditor(${i})">
-            <div class="day-name">${DAY_NAMES[i]}${day.hasInherited ? '<span class="inherited-badge">↺</span>' : ''}</div>
+            <div class="day-name">${DAY_NAMES[i]}${day.hasInherited ? '<span class="inherited-badge">↺</span>' : ''}${closureBadge}</div>
             <div class="day-date-label">${shortDate}</div>
           </div>
           <div class="day-shows">`;
 
+        if (closure) {
+          const label = closure.type === 'maintenance' ? 'Maintenance' : 'Private Meeting';
+          html += `<div style="color:var(--red);font-size:0.65rem;text-align:center;padding:0.4rem 0;font-weight:600;">🔒 ${esc(label)}</div>`;
+        }
+
         if (day.shows.length === 0) {
-          html += `<div style="color:var(--text-dim);font-size:0.68rem;text-align:center;padding:0.5rem 0;">No shows</div>`;
+          if (!closure) html += `<div style="color:var(--text-dim);font-size:0.68rem;text-align:center;padding:0.5rem 0;">No shows</div>`;
         } else {
           const sorted = [...day.shows].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
           sorted.forEach((show, si) => {
@@ -744,6 +837,7 @@
       const day  = weekData[selectedDay];
       const label = DAY_LABELS[selectedDay] + ', ' + formatShortDate(day.date);
       const sorted = [...day.shows].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+      const closure = weekClosures[day.date] || null;
 
       let timelineHtml = '';
       if (sorted.length === 0) {
@@ -766,13 +860,15 @@
       }
 
       const formHtml = buildAddForm();
+      const closureHtml = buildClosureCard(day.date, closure);
 
       const editorHtml = `
         <div class="editor-header">
           <div class="editor-title">Editing: ${label}</div>
-          <div class="editor-subtitle">${sorted.length} show${sorted.length !== 1 ? 's' : ''} scheduled</div>
+          <div class="editor-subtitle">${sorted.length} show${sorted.length !== 1 ? 's' : ''} scheduled${closure ? ' · <span style="color:var(--red)">Closure active</span>' : ''}</div>
         </div>
         <div class="editor-body">
+          ${closureHtml}
           <div class="timeline-list" id="timeline-list">${timelineHtml}</div>
           <button class="btn btn-sm" id="btn-toggle-form" onclick="toggleAddForm()" style="margin-bottom:0.6rem">
             ${addFormOpen ? '✕ Cancel' : '＋ Add Show'}
@@ -786,6 +882,57 @@
         </div>`;
 
       document.getElementById('editor-inner').innerHTML = editorHtml;
+    }
+
+    function buildClosureCard(date, closure) {
+      const isActive = !!closure;
+      const typeVal  = closure ? closure.type : 'none';
+
+      // Parse expectedReopen into date + time parts
+      let reopenDate = '';
+      let reopenTime = '';
+      if (closure && closure.expectedReopen) {
+        const parts = closure.expectedReopen.split('T');
+        reopenDate = parts[0] || '';
+        reopenTime = (parts[1] || '').slice(0, 5);
+      }
+
+      const today    = todayStr();
+      const tomorrow = tomorrowStr();
+      const isToday    = reopenDate === today;
+      const isTomorrow = reopenDate === tomorrow;
+      const isCustom   = reopenDate && !isToday && !isTomorrow;
+
+      const reopenSection = isActive ? `
+        <div class="reopen-row">
+          <label>Expected Re-opening:</label>
+          <button class="btn-day-preset${isToday ? ' active' : ''}" onclick="setReopenDate('${esc(today)}')">Today</button>
+          <button class="btn-day-preset${isTomorrow ? ' active' : ''}" onclick="setReopenDate('${esc(tomorrow)}')">Tomorrow</button>
+        </div>
+        <div class="reopen-row" style="margin-top:0.35rem;">
+          <label>Date:</label>
+          <input type="date" class="form-control" id="reopen-date-input" value="${esc(reopenDate)}"
+            style="max-width:150px;" oninput="onReopenDateChange(this.value)" />
+          <label style="margin-left:0.5rem;">Time:</label>
+          <input type="time" class="form-control" id="reopen-time-input" value="${esc(reopenTime)}"
+            style="max-width:120px;" />
+        </div>` : '';
+
+      return `<div class="closure-card${isActive ? ' active' : ''}">
+        <div class="closure-card-title">🔒 Day Closure Override</div>
+        <div class="form-row" style="margin-bottom:0;">
+          <select class="form-control" id="closure-type-select" onchange="onClosureTypeChange(this.value)">
+            <option value="none"${typeVal === 'none' ? ' selected' : ''}>Open — no closure override</option>
+            <option value="maintenance"${typeVal === 'maintenance' ? ' selected' : ''}>Closed for Maintenance</option>
+            <option value="private_meeting"${typeVal === 'private_meeting' ? ' selected' : ''}>Closed for Private Meeting</option>
+          </select>
+        </div>
+        ${reopenSection}
+        ${isActive ? `<div class="closure-actions">
+          <button class="btn btn-gold btn-sm" onclick="saveClosure()">💾 Save Closure</button>
+          <button class="btn btn-danger btn-sm" onclick="removeClosure()">✕ Remove Closure</button>
+        </div>` : ''}
+      </div>`;
     }
 
     function buildAddForm() {
@@ -985,6 +1132,115 @@
       loadWeekData();
     }
 
+    /* ── Closure helpers ── */
+    function todayStr() {
+      const d = new Date();
+      return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+    }
+    function tomorrowStr() {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+    }
+
+    function onClosureTypeChange(val) {
+      if (selectedDay === null) return;
+      const date = weekData[selectedDay].date;
+      if (val === 'none') {
+        delete weekClosures[date];
+      } else {
+        weekClosures[date] = weekClosures[date] || {};
+        weekClosures[date].type = val;
+        if (!weekClosures[date].expectedReopen) weekClosures[date].expectedReopen = null;
+      }
+      renderEditor();
+      renderGrid();
+    }
+
+    function setReopenDate(dateStr) {
+      if (selectedDay === null) return;
+      const date = weekData[selectedDay].date;
+      if (weekClosures[date]) {
+        const existing = weekClosures[date].expectedReopen || '';
+        const timePart = existing.includes('T') ? existing.split('T')[1] : '';
+        weekClosures[date].expectedReopen = dateStr + (timePart ? 'T' + timePart : '');
+      }
+      // Update the date input and re-render to update button highlights
+      const dateInput = document.getElementById('reopen-date-input');
+      if (dateInput) dateInput.value = dateStr;
+      // Refresh button highlights without full re-render
+      document.querySelectorAll('.btn-day-preset').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.trim() === 'Today'
+          ? dateStr === todayStr()
+          : dateStr === tomorrowStr());
+      });
+    }
+
+    function onReopenDateChange(val) {
+      if (selectedDay === null) return;
+      const date = weekData[selectedDay].date;
+      if (weekClosures[date]) {
+        const existing = weekClosures[date].expectedReopen || '';
+        const timePart = existing.includes('T') ? existing.split('T')[1] : '';
+        weekClosures[date].expectedReopen = val + (timePart ? 'T' + timePart : '');
+      }
+      // Refresh button highlights
+      const today = todayStr(), tomorrow = tomorrowStr();
+      document.querySelectorAll('.btn-day-preset').forEach(btn => {
+        const label = btn.textContent.trim();
+        btn.classList.toggle('active', (label === 'Today' && val === today) || (label === 'Tomorrow' && val === tomorrow));
+      });
+    }
+
+    function saveClosure() {
+      if (selectedDay === null) return;
+      const date = weekData[selectedDay].date;
+      const typeEl = document.getElementById('closure-type-select');
+      const type = typeEl ? typeEl.value : '';
+      if (!type || type === 'none') { showToast('Select a closure type', 'error'); return; }
+
+      const dateInput = document.getElementById('reopen-date-input');
+      const timeInput = document.getElementById('reopen-time-input');
+      const reopenDate = dateInput ? dateInput.value : '';
+      const reopenTime = timeInput ? timeInput.value : '';
+      const expectedReopen = reopenDate
+        ? (reopenDate + (reopenTime ? 'T' + reopenTime : ''))
+        : null;
+
+      apiFetch('/admin/closures/' + date, {
+        method: 'PUT',
+        body: JSON.stringify({ type, expectedReopen })
+      })
+      .then(res => {
+        if (res.ok) {
+          weekClosures[date] = { type, expectedReopen };
+          renderEditor();
+          renderGrid();
+          showToast('Closure saved!', 'success');
+        } else {
+          showToast('Failed to save closure', 'error');
+        }
+      })
+      .catch(err => { if (err.message !== 'Unauthorized') showToast('Error: ' + err.message, 'error'); });
+    }
+
+    function removeClosure() {
+      if (selectedDay === null) return;
+      const date = weekData[selectedDay].date;
+      apiFetch('/admin/closures/' + date, { method: 'DELETE' })
+      .then(res => {
+        if (res.ok) {
+          delete weekClosures[date];
+          renderEditor();
+          renderGrid();
+          showToast('Closure removed', 'success');
+        } else {
+          showToast('Failed to remove closure', 'error');
+        }
+      })
+      .catch(err => { if (err.message !== 'Unauthorized') showToast('Error: ' + err.message, 'error'); });
+    }
+
     /* ── Top-level actions ── */
     document.getElementById('btn-prev').addEventListener('click', () => navWeek(-1));
     document.getElementById('btn-next').addEventListener('click', () => navWeek(1));
@@ -1024,6 +1280,11 @@
     window.saveDay         = saveDay;
     window.clearDay        = clearDay;
     window.copyFromLastWeek = copyFromLastWeek;
+    window.onClosureTypeChange = onClosureTypeChange;
+    window.setReopenDate   = setReopenDate;
+    window.onReopenDateChange = onReopenDateChange;
+    window.saveClosure     = saveClosure;
+    window.removeClosure   = removeClosure;
 
     /* ── Boot ── */
     document.addEventListener('DOMContentLoaded', initWeek);

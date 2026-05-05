@@ -80,6 +80,40 @@
     return null;
   }
 
+  function formatReopenTime(expectedReopen) {
+    if (!expectedReopen) return null;
+    var datePart = expectedReopen.split('T')[0];
+    var timePart = expectedReopen.indexOf('T') >= 0 ? expectedReopen.split('T')[1] : '';
+
+    var now = new Date();
+    var todayStr    = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+    var tom = new Date(now); tom.setDate(tom.getDate() + 1);
+    var tomorrowStr = tom.getFullYear() + '-' + String(tom.getMonth()+1).padStart(2,'0') + '-' + String(tom.getDate()).padStart(2,'0');
+
+    var dateLabel;
+    if (datePart === todayStr) {
+      dateLabel = 'Today';
+    } else if (datePart === tomorrowStr) {
+      dateLabel = 'Tomorrow';
+    } else if (datePart) {
+      var d = new Date(datePart + 'T12:00:00Z');
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      dateLabel = months[d.getUTCMonth()] + ' ' + d.getUTCDate();
+    } else {
+      return null;
+    }
+
+    if (timePart) {
+      var hm = timePart.slice(0, 5).split(':');
+      var h = parseInt(hm[0], 10);
+      var m = parseInt(hm[1], 10);
+      var ampm = h >= 12 ? 'PM' : 'AM';
+      var h12 = h % 12 || 12;
+      return dateLabel + ' ' + h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+    }
+    return dateLabel;
+  }
+
   function render(days) {
     var container = document.getElementById('tv-container');
     var loading   = document.getElementById('tv-loading');
@@ -102,7 +136,18 @@
       html += '<div class="tv-divider"></div>';
       html += '<div class="tv-show-list">';
 
-      if (shows.length === 0) {
+      if (dayObj.closure) {
+        var closureLabel = dayObj.closure.type === 'maintenance'
+          ? 'CLOSED FOR MAINTENANCE'
+          : 'CLOSED FOR PRIVATE MEETING';
+        var reopenLabel = formatReopenTime(dayObj.closure.expectedReopen);
+        html += '<div class="tv-closure">';
+        html += '<span class="tv-closure-type">🔒 ' + escapeHtml(closureLabel) + '</span>';
+        if (reopenLabel) {
+          html += '<span class="tv-closure-reopen">Reopening: ' + escapeHtml(reopenLabel) + '</span>';
+        }
+        html += '</div>';
+      } else if (shows.length === 0) {
         html += '<span class="tv-empty">No shows scheduled</span>';
       } else {
         shows.forEach(function (show) {
