@@ -106,12 +106,17 @@
     .tv-show-time {
       font-weight: 600;
       color: #E37433;
-      display: block;
-      margin-bottom: 0;
+      display: inline;
+    }
+
+    .tv-show-time::after {
+      content: ' \00B7 ';
+      font-weight: 400;
+      color: #B8A898;
     }
 
     .tv-show-title {
-      display: block;
+      display: inline;
       color: #4A7A36;
       font-weight: 700;
     }
