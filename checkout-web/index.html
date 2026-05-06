@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://checkout-backend.onrender.com">
+  <title>Express Check Out</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #FFF8F0;
+      --card:     #FFFFFF;
+      --border:   #E8D5C0;
+      --text:     #2d3436;
+      --muted:    #6b7280;
+      --orange:   #E37433;
+      --orange-d: #C25A1E;
+      --orange-l: rgba(227,116,51,0.12);
+      --green:    #4A7A36;
+      --green-l:  rgba(74,122,54,0.12);
+      --radius:   14px;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    .app-header {
+      background: var(--orange);
+      color: #fff;
+      text-align: center;
+      padding: 28px 20px 24px;
+    }
+    .app-header h1 {
+      font-size: clamp(22px, 5vw, 30px);
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .app-header p {
+      font-size: 14px;
+      margin-top: 6px;
+      opacity: 0.9;
+    }
+
+    /* ── Main container ── */
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    /* ── Form card ── */
+    .form-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Field groups ── */
+    .field {
+      margin-bottom: 20px;
+    }
+    .field:last-child { margin-bottom: 0; }
+
+    label.field-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 16px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: var(--orange); }
+
+    /* ── Building selector (pill buttons) ── */
+    .seg-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .seg-btn {
+      flex: 1;
+      min-width: 64px;
+      padding: 11px 8px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .seg-btn.active {
+      border-color: var(--orange);
+      background: var(--orange-l);
+      color: var(--orange);
+    }
+
+    /* ── Room dropdown ── */
+    select {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 16px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    select:focus { border-color: var(--orange); }
+
+    /* ── Unit selector (A / B / A+B) ── */
+    #unit-row { display: none; }
+    .unit-btn {
+      flex: 1;
+      padding: 11px 8px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .unit-btn.active {
+      border-color: var(--orange);
+      background: var(--orange-l);
+      color: var(--orange);
+    }
+
+    /* ── Continue button ── */
+    .btn-primary {
+      width: 100%;
+      padding: 15px;
+      background: var(--orange);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 8px;
+    }
+    .btn-primary:hover { background: var(--orange-d); }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Error text ── */
+    .error-msg {
+      display: none;
+      color: #c0392b;
+      font-size: 13px;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+    .error-msg.show { display: block; }
+
+    /* ─────────────────────────────────────────────────────────────────────── */
+    /* ── Confirmation modal (overlay) ── */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 100;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0 12px 0;
+    }
+    #modal-overlay.open { display: flex; }
+
+    #modal-box {
+      background: #fff;
+      border-radius: 18px 18px 0 0;
+      padding: 28px 22px 36px;
+      width: 100%;
+      max-width: 480px;
+      animation: slideUp 0.28s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to   { transform: translateY(0);   opacity: 1; }
+    }
+    #modal-box.dismissing {
+      animation: slideDown 0.28s ease-in forwards;
+    }
+    @keyframes slideDown {
+      from { transform: translateY(0);   opacity: 1; }
+      to   { transform: translateY(100%); opacity: 0; }
+    }
+
+    .modal-headline {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--orange-d);
+      line-height: 1.45;
+      margin-bottom: 22px;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 18px;
+      cursor: pointer;
+    }
+    .check-item:last-of-type { margin-bottom: 0; }
+
+    .check-box {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .check-item.checked .check-box {
+      border-color: var(--green);
+      background: var(--green-l);
+    }
+    .check-box svg { display: none; }
+    .check-item.checked .check-box svg { display: block; }
+
+    .check-text {
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    /* ─────────────────────────────────────────────────────────────────────── */
+    /* ── Post-modal submit section ── */
+    #submit-section { display: none; }
+
+    .warning-banner {
+      background: var(--orange-l);
+      border: 1.5px solid var(--orange);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--orange-d);
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+    .warning-banner::before {
+      content: '⚠ ';
+    }
+
+    .dup-warning {
+      background: #fff3cd;
+      border: 1.5px solid #ffc107;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
+      color: #856404;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .dup-warning.show { display: block; }
+
+    /* ─────────────────────────────────────────────────────────────────────── */
+    /* ── Success screen ── */
+    #success-screen { display: none; }
+
+    .success-card {
+      background: var(--card);
+      border: 1.5px solid #c3e6cb;
+      border-radius: var(--radius);
+      padding: 36px 24px;
+      text-align: center;
+    }
+    .success-icon {
+      font-size: 52px;
+      margin-bottom: 16px;
+    }
+    .success-card h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--green);
+      margin-bottom: 10px;
+    }
+    .success-card p {
+      font-size: 16px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── Summary line ── */
+    .summary {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      line-height: 1.6;
+    }
+    .summary strong { color: var(--text); }
+
+    /* Hide helper */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>Express Check Out</h1>
+  <p>Skip the front desk — check out right from your phone.</p>
+</header>
+
+<div class="container">
+
+  <!-- ── Form ── -->
+  <div id="form-section">
+    <div class="form-card">
+
+      <!-- Last Name -->
+      <div class="field">
+        <label class="field-label" for="last-name">Last Name on Reservation</label>
+        <input type="text" id="last-name" placeholder="e.g. Smith" autocomplete="family-name">
+        <div class="error-msg" id="err-name">Please enter the last name on the reservation.</div>
+      </div>
+
+      <!-- Building -->
+      <div class="field">
+        <label class="field-label">Building</label>
+        <div class="seg-row" id="building-row">
+          <button class="seg-btn" data-bld="1">Building 1</button>
+          <button class="seg-btn" data-bld="2">Building 2</button>
+          <button class="seg-btn" data-bld="3">Building 3</button>
+        </div>
+        <div class="error-msg" id="err-building">Please select a building.</div>
+      </div>
+
+      <!-- Room number -->
+      <div class="field hidden" id="room-field">
+        <label class="field-label" for="room-select">Room Number</label>
+        <select id="room-select">
+          <option value="">— Select room —</option>
+        </select>
+        <div class="error-msg" id="err-room">Please select a room number.</div>
+      </div>
+
+      <!-- A / B / A+B unit (Building 1 only, when applicable) -->
+      <div class="field hidden" id="unit-field">
+        <label class="field-label">Unit</label>
+        <div class="seg-row" id="unit-row">
+          <button class="unit-btn" data-unit="A">A</button>
+          <button class="unit-btn" data-unit="B">B</button>
+          <button class="unit-btn" data-unit="A+B">A+B</button>
+        </div>
+        <div class="error-msg" id="err-unit">Please select a unit (A, B, or A+B).</div>
+      </div>
+
+    </div>
+
+    <button class="btn-primary" id="continue-btn">Continue</button>
+  </div>
+
+  <!-- ── Submit section (shown after modal is dismissed) ── -->
+  <div id="submit-section">
+    <div class="form-card">
+      <div class="summary" id="summary-line"></div>
+      <div class="warning-banner">
+        Please do not complete this form until you are ready to leave, as it notifies
+        the housekeeping team that you have vacated the villa.
+      </div>
+      <div class="dup-warning" id="dup-warning">
+        This villa may have already been checked out recently. If you are sure, tap
+        <strong>Submit</strong> to proceed anyway.
+      </div>
+      <button class="btn-primary" id="submit-btn">Submit</button>
+    </div>
+  </div>
+
+  <!-- ── Success ── -->
+  <div id="success-screen">
+    <div class="success-card">
+      <div class="success-icon">✓</div>
+      <h2>Checkout Complete</h2>
+      <p>Safe travels! The housekeeping team has been notified.</p>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- ── Confirmation modal ── -->
+<div id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-headline">
+  <div id="modal-box">
+    <p class="modal-headline" id="modal-headline">
+      Please do not complete this form until you are ready to leave, as it notifies
+      the housekeeping team that you have vacated the villa.
+    </p>
+
+    <div class="check-item" id="chk1-item" role="checkbox" aria-checked="false" tabindex="0">
+      <div class="check-box" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <polyline points="2,7 6,11 12,3" stroke="#4A7A36" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="check-text">
+        I understand that outstanding room charges will be billed to my credit card on file.
+      </span>
+    </div>
+
+    <div class="check-item" id="chk2-item" role="checkbox" aria-checked="false" tabindex="0">
+      <div class="check-box" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <polyline points="2,7 6,11 12,3" stroke="#4A7A36" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="check-text">
+        I have ended my occupancy of the villa.
+      </span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── Villa data ─────────────────────────────────────────────────────────── */
+  const B1_WHOLE = [
+    1104, 1108, 1109, 1112,
+    1203, 1204, 1208, 1209, 1212, 1213, 1299,
+    1303, 1304, 1308, 1309, 1312, 1313,
+    1403, 1404, 1408, 1409, 1412, 1413, 1417, 1418, 1421, 1422, 1426, 1427,
+    1503, 1504, 1508, 1509, 1512, 1513, 1517, 1518, 1521, 1522, 1526, 1527,
+  ];
+  const B1_AB = [
+    1105, 1106, 1107, 1110, 1111,
+    1201, 1202, 1205, 1206, 1207, 1210, 1211, 1214,
+    1301, 1302, 1305, 1306, 1307, 1310, 1311, 1314,
+    1401, 1402, 1405, 1406, 1407, 1410, 1411, 1414, 1415, 1416,
+    1419, 1420, 1423, 1424, 1425, 1428, 1429,
+    1501, 1502, 1505, 1506, 1507, 1510, 1511, 1514, 1515, 1516,
+    1519, 1520, 1523, 1524, 1525, 1528, 1529,
+  ];
+  const B1_AB_SET = new Set(B1_AB);
+
+  const B2_NUMS = [];
+  for (let r = 1; r <=  8; r++) B2_NUMS.push(2100 + r);
+  for (let r = 1; r <= 12; r++) B2_NUMS.push(2200 + r);
+  for (let r = 1; r <= 12; r++) B2_NUMS.push(2300 + r);
+  for (let r = 1; r <= 12; r++) B2_NUMS.push(2400 + r);
+  for (let r = 1; r <= 12; r++) B2_NUMS.push(2500 + r);
+
+  const B3_NUMS = [
+    3101,3102,3103,3104,3105,3106,3107,3108,3109,3110,
+    3202,3204,3205,3206,3207,3208,3209,3210,
+    3302,3304,3305,3306,3307,3308,3309,3310,
+    3402,3404,3405,3406,3407,3408,3409,3410,
+    3502,3504,3505,3506,3507,3508,3509,3510,
+  ];
+
+  /* ── API base ────────────────────────────────────────────────────────────── */
+  const API = document.querySelector('meta[name="api-url"]').content.replace(/\/$/, '');
+
+  /* ── State ───────────────────────────────────────────────────────────────── */
+  let selectedBuilding = null;
+  let selectedRoom     = null; // numeric
+  let selectedUnit     = null; // 'A' | 'B' | 'A+B' | null
+  let forceDup         = false;
+
+  /* ── DOM refs ────────────────────────────────────────────────────────────── */
+  const formSection   = document.getElementById('form-section');
+  const submitSection = document.getElementById('submit-section');
+  const successScreen = document.getElementById('success-screen');
+
+  const lastNameInput = document.getElementById('last-name');
+  const buildingRow   = document.getElementById('building-row');
+  const roomField     = document.getElementById('room-field');
+  const roomSelect    = document.getElementById('room-select');
+  const unitField     = document.getElementById('unit-field');
+  const unitRow       = document.getElementById('unit-row');
+  const continueBtn   = document.getElementById('continue-btn');
+
+  const summaryLine   = document.getElementById('summary-line');
+  const dupWarning    = document.getElementById('dup-warning');
+  const submitBtn     = document.getElementById('submit-btn');
+
+  const modalOverlay  = document.getElementById('modal-overlay');
+  const modalBox      = document.getElementById('modal-box');
+  const chk1          = document.getElementById('chk1-item');
+  const chk2          = document.getElementById('chk2-item');
+
+  /* ── Building selection ──────────────────────────────────────────────────── */
+  buildingRow.addEventListener('click', e => {
+    const btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+    buildingRow.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedBuilding = parseInt(btn.dataset.bld, 10);
+    selectedRoom = null;
+    selectedUnit = null;
+    document.getElementById('err-building').classList.remove('show');
+    populateRooms(selectedBuilding);
+  });
+
+  /* ── Room population ─────────────────────────────────────────────────────── */
+  function populateRooms(bld) {
+    roomSelect.innerHTML = '<option value="">— Select room —</option>';
+    let nums;
+    if (bld === 1)      nums = [...B1_WHOLE, ...B1_AB].sort((a, b) => a - b);
+    else if (bld === 2) nums = B2_NUMS;
+    else                nums = B3_NUMS;
+    nums.forEach(n => {
+      const opt = document.createElement('option');
+      opt.value       = n;
+      opt.textContent = n;
+      roomSelect.appendChild(opt);
+    });
+    roomField.classList.remove('hidden');
+    unitField.classList.add('hidden');
+    unitRow.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
+  }
+
+  /* ── Room selection ──────────────────────────────────────────────────────── */
+  roomSelect.addEventListener('change', () => {
+    const val = roomSelect.value;
+    selectedRoom = val ? parseInt(val, 10) : null;
+    selectedUnit = null;
+    document.getElementById('err-room').classList.remove('show');
+
+    if (selectedBuilding === 1 && selectedRoom && B1_AB_SET.has(selectedRoom)) {
+      unitField.classList.remove('hidden');
+      unitRow.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
+    } else {
+      unitField.classList.add('hidden');
+    }
+  });
+
+  /* ── Unit selection ──────────────────────────────────────────────────────── */
+  unitRow.addEventListener('click', e => {
+    const btn = e.target.closest('.unit-btn');
+    if (!btn) return;
+    unitRow.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedUnit = btn.dataset.unit;
+    document.getElementById('err-unit').classList.remove('show');
+  });
+
+  /* ── Villa string builder ────────────────────────────────────────────────── */
+  function getVillaString() {
+    if (!selectedRoom) return null;
+    if (selectedBuilding === 1 && B1_AB_SET.has(selectedRoom)) {
+      if (!selectedUnit) return null;
+      return `${selectedRoom} ${selectedUnit}`;
+    }
+    return String(selectedRoom);
+  }
+
+  /* ── Validation ──────────────────────────────────────────────────────────── */
+  function validate() {
+    let ok = true;
+    if (!lastNameInput.value.trim()) {
+      document.getElementById('err-name').classList.add('show');
+      ok = false;
+    }
+    if (!selectedBuilding) {
+      document.getElementById('err-building').classList.add('show');
+      ok = false;
+    }
+    if (selectedBuilding && !selectedRoom) {
+      document.getElementById('err-room').classList.add('show');
+      ok = false;
+    }
+    if (selectedBuilding === 1 && selectedRoom && B1_AB_SET.has(selectedRoom) && !selectedUnit) {
+      document.getElementById('err-unit').classList.add('show');
+      ok = false;
+    }
+    return ok;
+  }
+
+  /* ── Continue → open modal ───────────────────────────────────────────────── */
+  continueBtn.addEventListener('click', () => {
+    // Clear prior errors
+    document.querySelectorAll('.error-msg').forEach(e => e.classList.remove('show'));
+    if (!validate()) return;
+    openModal();
+  });
+
+  /* ── Modal logic ─────────────────────────────────────────────────────────── */
+  function openModal() {
+    chk1.classList.remove('checked');
+    chk2.classList.remove('checked');
+    chk1.setAttribute('aria-checked', 'false');
+    chk2.setAttribute('aria-checked', 'false');
+    modalOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function dismissModal() {
+    modalBox.classList.add('dismissing');
+    modalBox.addEventListener('animationend', () => {
+      modalOverlay.classList.remove('open');
+      modalBox.classList.remove('dismissing');
+      document.body.style.overflow = '';
+      showSubmitSection();
+    }, { once: true });
+  }
+
+  function toggleCheck(item) {
+    const nowChecked = !item.classList.contains('checked');
+    item.classList.toggle('checked', nowChecked);
+    item.setAttribute('aria-checked', String(nowChecked));
+    if (chk1.classList.contains('checked') && chk2.classList.contains('checked')) {
+      // Brief visual pause before dismissing
+      setTimeout(dismissModal, 400);
+    }
+  }
+
+  chk1.addEventListener('click', () => toggleCheck(chk1));
+  chk2.addEventListener('click', () => toggleCheck(chk2));
+  chk1.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') toggleCheck(chk1); });
+  chk2.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') toggleCheck(chk2); });
+
+  /* ── Submit section ──────────────────────────────────────────────────────── */
+  function showSubmitSection() {
+    forceDup = false;
+    dupWarning.classList.remove('show');
+    const villa = getVillaString();
+    summaryLine.innerHTML =
+      `Villa <strong>${villa}</strong> &nbsp;·&nbsp; Last name: <strong>${escHtml(lastNameInput.value.trim())}</strong>`;
+    formSection.style.display   = 'none';
+    submitSection.style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  /* ── Submit ──────────────────────────────────────────────────────────────── */
+  submitBtn.addEventListener('click', async () => {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting…';
+    dupWarning.classList.remove('show');
+
+    const villa    = getVillaString();
+    const lastName = lastNameInput.value.trim();
+
+    try {
+      const res  = await fetch(`${API}/api/checkout`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ lastName, villa, force: forceDup }),
+      });
+      const data = await res.json();
+
+      if (res.status === 409 && data.duplicate) {
+        // Soft duplicate — warn and allow the guest to proceed
+        forceDup = true;
+        dupWarning.classList.add('show');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit';
+        return;
+      }
+
+      if (!res.ok) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit';
+        alert('There was a problem submitting your checkout. Please try again or visit the front desk.');
+        return;
+      }
+
+      // Success
+      submitSection.style.display = 'none';
+      successScreen.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    } catch (_) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit';
+      alert('Unable to reach the server. Please check your connection and try again.');
+    }
+  });
+
+  /* ── Input error clear ───────────────────────────────────────────────────── */
+  lastNameInput.addEventListener('input', () =>
+    document.getElementById('err-name').classList.remove('show'));
+
+})();
+</script>
+</body>
+</html>

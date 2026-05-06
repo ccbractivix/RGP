@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://checkout-backend.onrender.com">
+  <title>Housekeeping — Check-Out Log</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #111827;
+      --header:   #0f172a;
+      --card:     #1e293b;
+      --border:   #334155;
+      --text:     #f1f5f9;
+      --muted:    #94a3b8;
+      --orange:   #E37433;
+      --green:    #22c55e;
+      --green-dim:rgba(34,197,94,0.12);
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ── */
+    .hk-header {
+      background: var(--header);
+      border-bottom: 2px solid var(--orange);
+      padding: 18px 24px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .hk-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .hk-title h1 {
+      font-size: clamp(18px, 3vw, 28px);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--orange);
+    }
+
+    .hk-date {
+      font-size: clamp(13px, 1.8vw, 18px);
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .count-badge {
+      background: var(--orange);
+      color: #fff;
+      font-size: clamp(13px, 1.6vw, 16px);
+      font-weight: 700;
+      padding: 5px 14px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    /* ── Main content ── */
+    .content {
+      padding: 20px 24px 48px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* ── Table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead th {
+      text-align: left;
+      font-size: clamp(11px, 1.4vw, 14px);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    tbody tr:first-child td { padding-top: 18px; }
+
+    tbody td {
+      padding: 14px 16px;
+      vertical-align: middle;
+    }
+
+    .td-num {
+      font-size: clamp(14px, 1.8vw, 22px);
+      font-weight: 400;
+      color: var(--muted);
+      width: 48px;
+    }
+
+    .td-villa {
+      font-size: clamp(22px, 3.5vw, 44px);
+      font-weight: 800;
+      color: var(--orange);
+      letter-spacing: 1px;
+    }
+
+    .td-time {
+      font-size: clamp(16px, 2.2vw, 28px);
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 80px 24px;
+    }
+    .empty-icon { font-size: 56px; margin-bottom: 16px; }
+    .empty h2   { font-size: clamp(18px, 3vw, 28px); color: var(--muted); font-weight: 600; }
+
+    /* ── Footer ── */
+    .hk-footer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--header);
+      border-top: 1px solid var(--border);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .footer-ts {
+      font-size: clamp(12px, 1.6vw, 16px);
+      color: var(--muted);
+    }
+    .footer-ts span { color: var(--text); font-weight: 600; }
+    .live-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--green);
+      display: inline-block;
+      margin-right: 6px;
+      animation: pulse 2s infinite;
+    }
+    .live-dot.off { background: var(--muted); animation: none; }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.4; }
+    }
+    .footer-status {
+      font-size: clamp(12px, 1.6vw, 14px);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+<header class="hk-header">
+  <div class="hk-title">
+    <h1>Villa Check-Out Log</h1>
+    <span class="hk-date" id="today-date"></span>
+  </div>
+  <span class="count-badge" id="count-badge">0 Check-Outs</span>
+</header>
+
+<div class="content">
+  <table id="hk-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Villa</th>
+        <th style="text-align:right">Time</th>
+      </tr>
+    </thead>
+    <tbody id="hk-tbody"></tbody>
+  </table>
+  <div class="empty hidden" id="empty-state">
+    <div class="empty-icon">🏡</div>
+    <h2>No check-outs recorded yet today.</h2>
+  </div>
+</div>
+
+<footer class="hk-footer">
+  <div class="footer-ts">
+    Updated: <span id="updated-ts">—</span>
+  </div>
+  <div class="footer-status">
+    <span class="live-dot" id="live-dot"></span>
+    <span id="live-label">Standby</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  const API = document.querySelector('meta[name="api-url"]').content.replace(/\/$/, '');
+
+  let refreshTimer = null;
+
+  /* ── ET helpers ─────────────────────────────────────────────────────────── */
+  function getETTime() {
+    const now   = new Date();
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    }).formatToParts(now);
+    const get = type => parts.find(p => p.type === type)?.value ?? '';
+    return {
+      h: parseInt(get('hour') === '24' ? '0' : get('hour'), 10),
+      m: parseInt(get('minute'), 10),
+      dateLabel: `${get('month')} ${get('day')}, ${get('year')}`,
+    };
+  }
+
+  function isInRefreshWindow() {
+    const { h, m } = getETTime();
+    if (h < 6)  return false;
+    if (h > 10) return false;
+    if (h === 10 && m > 30) return false;
+    return true;
+  }
+
+  function formatTime(isoString) {
+    return new Date(isoString).toLocaleTimeString('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric', minute: '2-digit', hour12: true,
+    });
+  }
+
+  /* ── Init date label ─────────────────────────────────────────────────────── */
+  document.getElementById('today-date').textContent = getETTime().dateLabel;
+
+  /* ── Load ────────────────────────────────────────────────────────────────── */
+  async function loadData() {
+    try {
+      const res  = await fetch(`${API}/api/checkouts/housekeeping`);
+      const data = await res.json();
+      renderList(data.checkouts || []);
+      document.getElementById('updated-ts').textContent =
+        new Date().toLocaleTimeString('en-US', {
+          timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true,
+        });
+    } catch (_) {
+      document.getElementById('updated-ts').textContent = 'Error';
+    }
+  }
+
+  function renderList(rows) {
+    const tbody   = document.getElementById('hk-tbody');
+    const emptyEl = document.getElementById('empty-state');
+    const badge   = document.getElementById('count-badge');
+
+    badge.textContent = `${rows.length} Check-Out${rows.length !== 1 ? 's' : ''}`;
+
+    if (rows.length === 0) {
+      tbody.innerHTML = '';
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+    emptyEl.classList.add('hidden');
+    tbody.innerHTML = rows.map((r, i) => `
+      <tr>
+        <td class="td-num">${i + 1}</td>
+        <td class="td-villa">${esc(r.villa)}</td>
+        <td class="td-time">${formatTime(r.submitted_at)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  /* ── Auto-refresh ────────────────────────────────────────────────────────── */
+  function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    const dot   = document.getElementById('live-dot');
+    const label = document.getElementById('live-label');
+
+    if (isInRefreshWindow()) {
+      dot.classList.remove('off');
+      label.textContent = 'Live — updating every minute';
+      refreshTimer = setTimeout(() => { loadData(); scheduleRefresh(); }, 60_000);
+    } else {
+      dot.classList.add('off');
+      label.textContent = 'Standby (live 6 am – 10:30 am)';
+      refreshTimer = setTimeout(scheduleRefresh, 60_000);
+    }
+  }
+
+  /* ── Start ───────────────────────────────────────────────────────────────── */
+  loadData();
+  scheduleRefresh();
+
+})();
+</script>
+</body>
+</html>
