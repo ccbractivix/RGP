@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://theater-backend-qf1b.onrender.com/api/schedule/tv">
+  <title>Today's Movies</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #FFF8F0;
+      color: #3D3128;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+
+    #today-page {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ===== HEADLINE ===== */
+    #today-headline {
+      text-align: center;
+      padding: 16px 0 4px;
+      font-size: clamp(26px, 3.2vw, 46px);
+      font-weight: 700;
+      font-family: 'Fredoka', sans-serif;
+      letter-spacing: 6px;
+      color: #4A7A36;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    #today-date {
+      text-align: center;
+      font-size: clamp(14px, 1.5vw, 22px);
+      font-weight: 600;
+      color: #E37433;
+      letter-spacing: 2px;
+      padding-bottom: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ===== MOVIE CARDS ===== */
+    #today-movies {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      padding: 4px 14px 4px;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    .today-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #3D3128;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    .today-poster {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .today-poster-placeholder {
+      flex: 1;
+      min-height: 0;
+      background: #5c4a3a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #B8A898;
+      font-size: clamp(12px, 1.5vw, 20px);
+      font-style: italic;
+      text-align: center;
+      padding: 12px;
+    }
+
+    .today-card-info {
+      padding: 8px 10px;
+      background: #FFF8F0;
+      flex-shrink: 0;
+    }
+
+    .today-show-time {
+      font-size: clamp(12px, 1.2vw, 18px);
+      font-weight: 700;
+      color: #E37433;
+    }
+
+    .today-show-title {
+      font-size: clamp(11px, 1.1vw, 16px);
+      font-weight: 700;
+      color: #4A7A36;
+      line-height: 1.3;
+    }
+
+    .today-show-meta {
+      font-size: clamp(9px, 0.85vw, 12px);
+      color: #7A6B5A;
+      margin-top: 2px;
+    }
+
+    /* ===== EMPTY / LOADING ===== */
+    #today-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      font-size: 36px;
+      color: #7A6B5A;
+    }
+
+    #today-empty {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      font-size: clamp(22px, 2vw, 32px);
+      color: #B8A898;
+      font-style: italic;
+    }
+
+    /* ===== BOTTOM BAR ===== */
+    #today-bottom {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      padding: 6px 16px 8px;
+      border-top: 1px solid #E8D5C0;
+      gap: 16px;
+    }
+
+    #today-qr img {
+      width: clamp(90px, 10vw, 150px);
+      height: clamp(90px, 10vw, 150px);
+      border-radius: 6px;
+      background: #fff;
+      padding: 4px;
+      display: block;
+    }
+
+    #today-info {
+      flex: 1;
+      color: #3D3128;
+      font-size: clamp(12px, 1.15vw, 17px);
+      line-height: 1.55;
+    }
+
+    #today-comedy-note {
+      display: none;
+      font-size: clamp(13px, 1.3vw, 20px);
+      font-weight: 700;
+      color: #E37433;
+      margin-top: 6px;
+    }
+
+    /* ===== STATUS ===== */
+    #today-status {
+      position: fixed;
+      bottom: 4px;
+      right: 14px;
+      font-size: 20px;
+      color: #B8A898;
+    }
+  </style>
+</head>
+<body>
+  <div id="today-page">
+    <div id="today-headline">Today's Showtimes</div>
+    <div id="today-date"></div>
+    <div id="today-loading">Loading schedule…</div>
+    <div id="today-movies" style="display:none;"></div>
+    <div id="today-empty">No shows scheduled today.</div>
+    <div id="today-bottom">
+      <div id="today-qr">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=https%3A%2F%2Fccbractivix.github.io%2FRGP%2Ftheater-web%2Findex.html" alt="QR Code to schedule">
+      </div>
+      <div id="today-info">
+        <div>See our web schedule for the complete theater schedule with ratings, runtimes, and links to IMDB and parents' resources.</div>
+        <div id="today-comedy-note">Scan QR code below for ticket info</div>
+      </div>
+    </div>
+  </div>
+  <div id="today-status"></div>
+  <script src="today.js"></script>
+</body>
+</html>
