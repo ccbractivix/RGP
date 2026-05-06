@@ -119,6 +119,8 @@
     var loading   = document.getElementById('tv-loading');
     var status    = document.getElementById('tv-status');
 
+    if (days) days = days.slice(0, 4);
+
     if (!days || days.length === 0) {
       loading.textContent = 'No schedule available.';
       loading.style.display = 'flex';
