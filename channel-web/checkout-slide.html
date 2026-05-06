@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Express Check Out</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Background matches go4launch TV orange */
+    #slide {
+      width: 100%; height: 100%;
+      background: #E37433;
+      color: #FFFFFF;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(32px, 5vw, 72px);
+      padding: clamp(32px, 5vw, 72px);
+    }
+
+    /* ── Left: text block ── */
+    .text-block {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      max-width: 540px;
+    }
+
+    .eyebrow {
+      font-size: clamp(13px, 1.6vw, 20px);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: rgba(255,255,255,0.75);
+      margin-bottom: clamp(10px, 1.5vw, 18px);
+    }
+
+    .headline {
+      font-size: clamp(32px, 5.5vw, 76px);
+      font-weight: 800;
+      line-height: 1.1;
+      color: #FFFFFF;
+      margin-bottom: clamp(14px, 2vw, 28px);
+    }
+
+    .tagline {
+      font-size: clamp(16px, 2.2vw, 30px);
+      font-weight: 400;
+      line-height: 1.5;
+      color: rgba(255,255,255,0.9);
+    }
+
+    /* ── Right: QR block ── */
+    .qr-block {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: clamp(10px, 1.5vw, 18px);
+    }
+
+    .qr-frame {
+      background: #FFFFFF;
+      border-radius: clamp(10px, 1.5vw, 20px);
+      padding: clamp(12px, 1.8vw, 24px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+    }
+
+    .qr-frame img {
+      display: block;
+      width:  clamp(160px, 22vw, 320px);
+      height: clamp(160px, 22vw, 320px);
+    }
+
+    .qr-caption {
+      font-size: clamp(12px, 1.4vw, 18px);
+      font-weight: 600;
+      color: rgba(255,255,255,0.8);
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+<div id="slide">
+
+  <div class="text-block">
+    <div class="eyebrow">Rocket Beach Resort</div>
+    <h1 class="headline">Ready to<br>check out?</h1>
+    <p class="tagline">Scan the code to skip the line<br>with Express Check Out!</p>
+  </div>
+
+  <div class="qr-block">
+    <div class="qr-frame">
+      <!--
+        QR code points to the guest Express Check Out form.
+        Update CHECKOUT_URL below to the deployed URL of checkout-web/index.html.
+      -->
+      <img id="qr-img" alt="QR code for Express Check Out" src="">
+    </div>
+    <div class="qr-caption">Use your phone camera to scan</div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Checkout form URL ──────────────────────────────────────────────────────
+  // Update this to the live URL after deploying checkout-web.
+  // For GitHub Pages this is typically:
+  //   https://ccbractivix.github.io/RGP/checkout-web/
+  // A query-string override is also supported: ?url=https://...
+  const params = new URLSearchParams(window.location.search);
+  const CHECKOUT_URL = params.get('url') ||
+    'https://ccbractivix.github.io/RGP/checkout-web/';
+
+  // Generate QR code via the qrserver.com free API
+  const qrSize = Math.min(Math.round(Math.min(window.innerWidth, window.innerHeight) * 0.25), 320);
+  const qrSrc  = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&margin=0&data=${encodeURIComponent(CHECKOUT_URL)}`;
+  document.getElementById('qr-img').src = qrSrc;
+})();
+</script>
+</body>
+</html>

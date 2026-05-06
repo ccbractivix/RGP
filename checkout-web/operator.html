@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://checkout-backend.onrender.com">
+  <title>Express Check Out — Operator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f172a;
+      --card:        #1e293b;
+      --card-border: #334155;
+      --text:        #e2e8f0;
+      --muted:       #94a3b8;
+      --orange:      #E37433;
+      --orange-dim:  rgba(227,116,51,0.15);
+      --green:       #22c55e;
+      --green-dim:   rgba(34,197,94,0.12);
+      --red:         #ef4444;
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Login ── */
+    #login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    #login-screen h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    #login-screen p  { color: var(--muted); margin-bottom: 24px; font-size: 14px; }
+
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 320px;
+    }
+    .login-card label { display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted);
+      margin-bottom: 8px; }
+    .login-card input {
+      width: 100%;
+      background: var(--bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 20px;
+      letter-spacing: 4px;
+      padding: 12px 14px;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .login-card input:focus { border-color: var(--orange); }
+    .login-err { color: var(--red); font-size: 13px; margin-top: 8px; display: none; }
+    .login-err.show { display: block; }
+
+    .btn-login {
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px;
+      background: var(--orange);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-login:hover { opacity: 0.9; }
+
+    /* ── Dashboard ── */
+    #dashboard { display: none; }
+
+    .top-bar {
+      background: var(--card);
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .top-bar h1 { font-size: 16px; font-weight: 700; }
+    .top-bar .meta { color: var(--muted); font-size: 12px; }
+
+    .top-actions { display: flex; gap: 8px; align-items: center; }
+
+    .btn-sm {
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      border: 1px solid var(--card-border);
+      background: var(--card);
+      color: var(--text);
+      transition: background 0.15s;
+    }
+    .btn-sm:hover { background: #273449; }
+    .btn-sm.primary { background: var(--orange); border-color: var(--orange); color: #fff; }
+    .btn-sm.primary:hover { opacity: 0.9; }
+
+    .refresh-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: var(--green-dim);
+      color: var(--green);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .refresh-badge.off { background: var(--orange-dim); color: var(--orange); }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: flex;
+      gap: 12px;
+      padding: 16px 20px;
+      flex-wrap: wrap;
+    }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      min-width: 120px;
+      flex: 1;
+    }
+    .stat-value { font-size: 26px; font-weight: 800; color: var(--orange); }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Table ── */
+    .table-wrap { padding: 0 20px 40px; overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--card-border);
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--card-border);
+      transition: background 0.1s;
+    }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    tbody td {
+      padding: 12px 12px;
+      font-size: 14px;
+      color: var(--text);
+    }
+    .td-villa { font-weight: 700; color: var(--orange); font-size: 15px; }
+    .td-name  { font-weight: 500; }
+    .td-time  { color: var(--muted); font-size: 13px; white-space: nowrap; }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 36px; margin-bottom: 12px; }
+    .empty p    { font-size: 15px; }
+  </style>
+</head>
+<body>
+
+<!-- ── Login ── -->
+<div id="login-screen">
+  <h1>Operator Dashboard</h1>
+  <p>Express Check Out · Staff Access</p>
+  <div class="login-card">
+    <label for="code-input">Access Code</label>
+    <input type="password" id="code-input" maxlength="10" inputmode="numeric"
+           placeholder="••••" autocomplete="off">
+    <div class="login-err" id="login-err">Invalid access code.</div>
+    <button class="btn-login" id="login-btn">Sign In</button>
+  </div>
+</div>
+
+<!-- ── Dashboard ── -->
+<div id="dashboard">
+  <div class="top-bar">
+    <div>
+      <h1>Express Check Out — Operator View</h1>
+      <div class="meta" id="last-updated">Loading…</div>
+    </div>
+    <div class="top-actions">
+      <span class="refresh-badge" id="refresh-badge">● Live</span>
+      <button class="btn-sm primary" id="export-btn">⬇ Export CSV</button>
+      <button class="btn-sm" id="refresh-btn">↺ Refresh</button>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-value" id="stat-total">—</div>
+      <div class="stat-label">Total check-outs today</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="checkouts-table">
+      <thead>
+        <tr>
+          <th>Villa</th>
+          <th>Last Name</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody id="checkouts-tbody"></tbody>
+    </table>
+    <div class="empty hidden" id="empty-state">
+      <div class="empty-icon">🏡</div>
+      <p>No check-outs recorded yet today.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const API = document.querySelector('meta[name="api-url"]').content.replace(/\/$/, '');
+
+  let authCode       = null;
+  let refreshTimer   = null;
+  let liveActive     = false;
+
+  /* ── ET time helpers ───────────────────────────────────────────────────── */
+  function getETHour() {
+    const now   = new Date();
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    }).formatToParts(now);
+    const get = type => parts.find(p => p.type === type).value;
+    return { h: parseInt(get('hour') === '24' ? '0' : get('hour'), 10),
+             m: parseInt(get('minute'), 10) };
+  }
+
+  function isInRefreshWindow() {
+    const { h, m } = getETHour();
+    if (h < 6)  return false;
+    if (h > 10) return false;
+    if (h === 10 && m > 30) return false;
+    return true;
+  }
+
+  function formatLocalTime(isoString) {
+    const d = new Date(isoString);
+    return d.toLocaleString('en-US', {
+      timeZone: 'America/New_York',
+      month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true,
+    });
+  }
+
+  /* ── Login ──────────────────────────────────────────────────────────────── */
+  const loginScreen = document.getElementById('login-screen');
+  const dashboard   = document.getElementById('dashboard');
+  const codeInput   = document.getElementById('code-input');
+  const loginErr    = document.getElementById('login-err');
+  const loginBtn    = document.getElementById('login-btn');
+
+  async function doLogin() {
+    const code = codeInput.value.trim();
+    if (!code) return;
+    loginBtn.disabled = true;
+    loginErr.classList.remove('show');
+    try {
+      const res  = await fetch(`${API}/admin/verify`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        authCode = code;
+        loginScreen.style.display = 'none';
+        dashboard.style.display   = 'block';
+        loadData();
+        scheduleRefresh();
+      } else {
+        loginErr.classList.add('show');
+      }
+    } catch (_) {
+      loginErr.textContent = 'Could not reach server. Try again.';
+      loginErr.classList.add('show');
+    }
+    loginBtn.disabled = false;
+  }
+
+  loginBtn.addEventListener('click', doLogin);
+  codeInput.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  /* ── Load data ──────────────────────────────────────────────────────────── */
+  async function loadData() {
+    try {
+      const res  = await fetch(`${API}/admin/checkouts`, {
+        headers: { 'X-Auth-Code': authCode },
+      });
+      if (res.status === 401) { showLoginAgain(); return; }
+      const data = await res.json();
+      renderTable(data.checkouts || []);
+      const ts = data.serverTime || new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+      document.getElementById('last-updated').textContent = `Last updated: ${ts}`;
+    } catch (_) {
+      document.getElementById('last-updated').textContent = 'Error loading data';
+    }
+  }
+
+  function renderTable(rows) {
+    const tbody     = document.getElementById('checkouts-tbody');
+    const emptyEl   = document.getElementById('empty-state');
+    const statTotal = document.getElementById('stat-total');
+
+    statTotal.textContent = rows.length;
+
+    if (rows.length === 0) {
+      tbody.innerHTML = '';
+      emptyEl.classList.remove('hidden');
+      return;
+    }
+    emptyEl.classList.add('hidden');
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td class="td-villa">${esc(r.villa)}</td>
+        <td class="td-name">${esc(r.last_name)}</td>
+        <td class="td-time">${formatLocalTime(r.submitted_at)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showLoginAgain() {
+    authCode = null;
+    clearTimeout(refreshTimer);
+    dashboard.style.display   = 'none';
+    loginScreen.style.display = 'flex';
+    loginErr.textContent = 'Session expired. Please sign in again.';
+    loginErr.classList.add('show');
+  }
+
+  /* ── Auto-refresh ────────────────────────────────────────────────────────── */
+  function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    if (!authCode) return;
+
+    const active = isInRefreshWindow();
+    const badge  = document.getElementById('refresh-badge');
+
+    if (active) {
+      badge.textContent = '● Live';
+      badge.classList.remove('off');
+      refreshTimer = setTimeout(() => { loadData(); scheduleRefresh(); }, 60_000);
+    } else {
+      badge.textContent = '○ Standby';
+      badge.classList.add('off');
+      // Check again in 60 s in case we cross the window boundary
+      refreshTimer = setTimeout(scheduleRefresh, 60_000);
+    }
+  }
+
+  /* ── Manual refresh ─────────────────────────────────────────────────────── */
+  document.getElementById('refresh-btn').addEventListener('click', () => {
+    loadData();
+    scheduleRefresh();
+  });
+
+  /* ── CSV export ──────────────────────────────────────────────────────────── */
+  document.getElementById('export-btn').addEventListener('click', () => {
+    if (!authCode) return;
+    const a = document.createElement('a');
+    a.href = `${API}/admin/export`;
+    a.setAttribute('download', '');
+    // Include auth in URL via fetch + Blob so header is passed
+    fetch(`${API}/admin/export`, { headers: { 'X-Auth-Code': authCode } })
+      .then(r => r.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const dl  = document.createElement('a');
+        dl.href     = url;
+        dl.download = `checkouts-${new Date().toISOString().slice(0,10)}.csv`;
+        dl.click();
+        URL.revokeObjectURL(url);
+      });
+  });
+
+})();
+</script>
+</body>
+</html>
