@@ -199,24 +199,37 @@
     #tv-gutter-right {
       flex: 1;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       align-items: center;
-      justify-content: center;
-      gap: 4px;
+      gap: 10px;
     }
 
     #tv-gutter-right img {
-      width: clamp(70px, 8vw, 120px);
-      height: auto;
+      flex-shrink: 0;
+      width: clamp(80px, 9vw, 130px);
+      height: clamp(80px, 9vw, 130px);
+      object-fit: contain;
       border-radius: 6px;
+    }
+
+    .gutter-arcade-text {
+      flex: 1;
+      text-align: left;
+    }
+
+    .gutter-arcade-tagline {
+      font-size: clamp(13px, 1.3vw, 20px);
+      font-weight: 700;
+      color: #E37433;
+      line-height: 1.3;
     }
 
     .gutter-arcade-hours {
       font-size: clamp(10px, 0.9vw, 14px);
       font-weight: 700;
       color: #7A6B5A;
-      text-align: center;
       line-height: 1.3;
+      margin-top: 3px;
     }
 
     /* ===== STATUS ===== */
@@ -267,7 +280,10 @@
       <!-- Right: Arcade -->
       <div id="tv-gutter-right">
         <img src="../static/images/Atlas Arcade Logo c.png" alt="Atlas Arcade">
-        <div class="gutter-arcade-hours">Open Daily 11 am to 8 pm</div>
+        <div class="gutter-arcade-text">
+          <div class="gutter-arcade-tagline">Games and Fun for Everyone!</div>
+          <div class="gutter-arcade-hours">Open Daily 8 am to 11 pm</div>
+        </div>
       </div>
     </div>
   </div>
