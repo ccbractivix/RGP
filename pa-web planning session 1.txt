@@ -1,0 +1,253 @@
+PA WEB — PLANNING SESSION 1
+Date: 2026-05-08
+Context: Discussion of a new audio-announcement / PA system that fits alongside the existing
+channel-web (visual slide channels), amenities-backend (lightning closure), and go4launch
+(launch tracking) services in the RGP monorepo.
+
+════════════════════════════════════════════════════════════════════════════════
+SYSTEM OVERVIEW (as envisioned)
+════════════════════════════════════════════════════════════════════════════════
+
+Goal: A tool that plays pre-recorded audio voice announcements over the resort PA system
+on a schedule, with:
+  • A UI for scheduling playlists of audio clips
+  • A "lightning closure" routine that auto-interrupts any current playlist when a
+    lightning closure is active in amenities-backend, plays a dedicated lightning
+    playlist, and then resumes normal operation once the closure is cleared
+  • (Future) Voice announcements triggered by the current launch card in go4launch
+
+Rough component shape (mirroring channel-web / channel-backend pattern):
+  pa-backend/   — Express/Node service (new or extended from channel-backend)
+  pa-web/       — Static HTML/JS pages: admin.html (schedule UI), player.html (PA device tab)
+
+════════════════════════════════════════════════════════════════════════════════
+OPEN QUESTIONS / THINGS TO NAIL DOWN BEFORE CODING
+════════════════════════════════════════════════════════════════════════════════
+
+1. PHYSICAL AUDIO OUTPUT
+   ─────────────────────
+   The player.html page must run permanently in a browser on a computer physically
+   connected to the PA amplifier or mixer.  No browser = no audio.
+   Questions:
+   - Is PA resort-wide, or per-zone (Building 1, Building 2/3, pool area, etc.)?
+   - We already have five channel zones (front-lobby, building-2, building-3,
+     restaurant, no-limits).  Does audio follow the same zone map?
+   - What computer/device will run the PA player?  It must never sleep or lock.
+
+2. BROWSER AUTOPLAY POLICY
+   ────────────────────────
+   Browsers block audio playback until the user has interacted with the page.
+   The PA player page needs a "click to activate" splash on first load that calls
+   AudioContext.resume() (or plays a silent clip).  After that first gesture,
+   all subsequent scheduled/triggered plays work without interaction.
+   This must be designed into player.html from day one — not an afterthought.
+
+3. AUDIO FILE HOSTING
+   ───────────────────
+   Where do recorded MP3/WAV files live?
+   Options:
+     a) Static folder on the same server as pa-backend (simplest, no extra cost)
+     b) GitHub Pages under /RGP/pa-web/audio/ (fine for small sets; 1 GB repo limit)
+     c) A CDN or object store (S3, Cloudflare R2) — most scalable for many files
+   Recommended format: MP3, 128 kbps, mono.  Universal browser support, small files.
+   All files should be loudness-normalised before upload (target: –14 LUFS / –3 dBFS peak)
+   so volume is consistent across all clips without touching the PA amplifier gain.
+
+4. LIGHTNING — EDGE DETECTION VS. STEADY STATE
+   ─────────────────────────────────────────────
+   channel-backend/services/lightning.js already polls amenities-backend /api/status
+   every 30 s and exposes isLightningActive() (boolean).
+   The audio system needs TRANSITION detection:
+     • false → true  : trigger "lightning closure" playlist immediately
+     • stays true    : do NOT retrigger (playlist is already running / looping)
+     • true → false  : optionally play "all clear" clip, then return to schedule
+   The player must store the previous lightning state and compare on each poll tick.
+
+5. PREEMPTION BEHAVIOUR (NEEDS A DECISION)
+   ─────────────────────────────────────────
+   When lightning fires mid-clip:
+     Option A — cut off immediately and switch to lightning playlist
+     Option B — finish the current clip, then switch
+   Recommendation: finish the current clip (less jarring), but this is a judgement call.
+
+   When lightning clears:
+     Option A — play an "all clear" clip, then resume the schedule
+     Option B — silently resume the schedule
+   Recommendation: always play an all-clear clip.  Record one.
+
+   After lightning clears, resume normal scheduling:
+     Option A — pick up where the schedule left off (skip anything that fired during closure)
+     Option B — restart the current time-slot playlist from the beginning
+   Recommendation: restart from beginning (simpler, avoids stale position state).
+
+6. SCHEDULE DATA MODEL
+   ─────────────────────
+   A schedule entry needs at minimum:
+     • days_of_week  (bitmask or array: Mon–Sun)
+     • start_time    (HH:MM, America/New_York — matches rest of system)
+     • playlist_id   (foreign key to a named playlist)
+     • zone_id       (optional: which PA zone, if multi-zone)
+     • active        (boolean, so entries can be disabled without deleting)
+   Questions still open:
+     - One-off (date-specific) entries in addition to recurring?
+       (Analogous to hours_overrides in amenities-backend)
+     - Overlap handling: what wins if two entries fire at the same minute?
+       Priority field, or "first wins"?
+     - Public holidays / date blackouts?
+
+7. AUDIO FILE + PLAYLIST DATA MODEL
+   ───────────────────────────────────
+   Audio files (the "pool"):
+     id, filename, label, duration_sec, file_url, uploaded_at
+
+   Playlists:
+     id, name, description, created_at
+
+   Playlist items (ordered):
+     id, playlist_id, audio_file_id, play_order, gap_sec (silence between clips)
+
+   Special named playlists:
+     - "lightning-closure"  — plays on lightning trigger
+     - "lightning-all-clear" — plays when lightning clears (single clip is fine)
+     - (future) "launch-today", "launch-imminent", etc.
+
+8. GO4LAUNCH INTEGRATION — WHAT IS "CURRENT"?
+   ─────────────────────────────────────────────
+   go4launch-backend fetches upcoming launches from Launch Library 2 (LL2) with a
+   14-day window (location IDs 12 and 27 = KSC / Cape Canaveral area).
+   Practical approach: TIME-WINDOW TRIGGERS, not per-launch named clips.
+   Example triggers:
+     • Launch within 24 hours → play "space launch today" clip once in morning
+     • Launch within 2 hours  → play "launch imminent" clip
+   These are just special schedule entries evaluated against the LL2 cache.
+   Scrub/delay problem: if a launch slips after the announcement fired, there is
+   no graceful correction unless you record a "launch has been postponed" clip and
+   add logic to detect a NET change.  Keep it simple to start: generic clips only.
+
+9. MULTI-ZONE AUDIO
+   ──────────────────
+   If PA is resort-wide (one amp): one player instance, no zone concept needed.
+   If PA is per-zone: each zone needs its own browser tab / computer with player.html
+   open and a zone= URL parameter (like channel player uses ?channel=).
+   Zone awareness also affects the schedule: "pool closure" only goes to pool zones.
+   Defer multi-zone until the single-zone version is working.
+
+10. VOLUME NORMALISATION (REMINDER — RECORDING GUIDANCE)
+    ──────────────────────────────────────────────────────
+    Record in a quiet room.  Aim for –14 LUFS integrated / –3 dBFS true peak.
+    Use Audacity (free) or Adobe Audition to normalise before upload.
+    MP3 encode at 128 kbps mono.  Name files descriptively:
+      lightning-closure-v1.mp3
+      lightning-all-clear-v1.mp3
+      good-morning-welcome-v1.mp3
+      (etc.)
+
+11. WHERE DOES pa-backend LIVE?
+    ────────────────────────────
+    Option A — Extend channel-backend:
+      + Lightning state is already there (isLightningActive, pollLightning)
+      + Same DB, same auth pattern, same CORS config
+      – Makes channel-backend bigger; harder to deploy independently
+    Option B — Separate pa-backend service:
+      + Clean separation of concerns
+      + Deploy / scale independently (audio delivery may need different resources)
+      – Another Render service; must replicate lightning poll or call channel-backend
+    Recommendation: start by EXTENDING channel-backend (Option A) using new route
+    files /routes/pa-api.js and /routes/pa-admin.js plus new DB tables.  If it
+    outgrows that, split it out later.
+
+12. STAFF ADMIN UI
+    ───────────────
+    pa-web/admin.html — mirrors channel-web/admin.html style (dark theme, Inter font,
+    same card/modal/tab pattern, same passcode auth model).
+    Tabs:
+      • Files      — upload / manage audio file pool
+      • Playlists  — create / edit named playlists, drag-to-order clips
+      • Schedule   — create / edit recurring schedule entries per playlist
+      • Triggers   — configure lightning playlist, launch-window triggers
+      • Player     — live status: is PA player online? what's currently playing?
+
+13. PA PLAYER PAGE
+    ───────────────
+    pa-web/player.html — runs fullscreen on the PA computer.
+    Features:
+      • "Click to activate audio" splash on first load (autoplay unlock)
+      • Web Audio API or <audio> element for playback
+      • Polls backend every ~15 s for: current schedule state, lightning state,
+        any manually triggered one-off clip
+      • Visual status display (current playlist name, clip name, next up, lightning badge)
+      • Heartbeat back to backend every 60 s (so admin UI can show "PA online")
+
+14. MONITORING / HEARTBEAT
+    ────────────────────────
+    channel-backend already has a heartbeats table keyed by channel_id.
+    Same pattern for PA: a pa_heartbeats table (or reuse heartbeats with a
+    special channel_id like 'pa-player-zone-1') so admin.html shows a green/red
+    dot indicating whether the PA browser tab is alive.
+
+15. TEST / PREVIEW IN ADMIN
+    ────────────────────────
+    "Preview" button on each audio file in the Files tab plays the clip ONLY in
+    the admin browser (not on the PA device).  Achieved by simply creating a
+    local <audio> element in the admin page JavaScript.
+    "Send to PA" button triggers a one-off play on the actual PA player device
+    via a backend endpoint (e.g., POST /admin/pa/play-now { audioFileId }).
+
+════════════════════════════════════════════════════════════════════════════════
+KEY DECISIONS STILL NEEDED FROM YOU
+════════════════════════════════════════════════════════════════════════════════
+
+□ Is PA resort-wide (one zone) or per building/area?
+□ What computer/device will run the player page permanently?
+□ Do you need one-off (date-specific) schedule entries, or just recurring?
+□ When lightning fires mid-clip: cut off immediately, or finish the clip first?
+□ After lightning clears, do you want a "all clear" audio clip?
+□ Where do you want to host the audio files (backend server, GitHub Pages, CDN)?
+□ Extend channel-backend vs. new pa-backend service?
+□ Do you want go4launch launch-window triggers in v1, or defer to v2?
+
+════════════════════════════════════════════════════════════════════════════════
+EXISTING SYSTEM HOOKS (no changes needed, just use them)
+════════════════════════════════════════════════════════════════════════════════
+
+• amenities-backend  GET /api/status
+    Returns all amenities; .lightning === true on any item = closure active.
+    Used by channel-backend/services/lightning.js already.
+
+• channel-backend/services/lightning.js
+    isLightningActive() — current boolean state
+    getLightningStatus() — { active, lastCheck, lastError }
+    startPolling() — polls every 30 s
+
+• go4launch-backend  GET /api/launches
+    Returns { upcoming: [...], previous: [...] }.
+    upcoming[0].net = ISO timestamp of next launch NET.
+    upcoming[0].name, .rocket.configuration.name, .launch_service_provider.name available.
+
+════════════════════════════════════════════════════════════════════════════════
+SUGGESTED BUILD ORDER (if/when you decide to proceed)
+════════════════════════════════════════════════════════════════════════════════
+
+Phase 1 — Foundation
+  1. DB tables: audio_files, playlists, playlist_items, pa_schedule, pa_heartbeats
+  2. Admin API routes: CRUD for files, playlists, schedule entries
+  3. pa-web/admin.html: Files tab + Playlists tab (static-file style, no backend needed to view)
+  4. pa-web/player.html: autoplay unlock, basic scheduled playback, heartbeat
+
+Phase 2 — Lightning Integration
+  5. Lightning trigger endpoint in backend
+  6. Player polls for lightning state; preempts schedule; plays lightning playlist
+  7. All-clear detection and clip
+
+Phase 3 — Scheduling UI Polish
+  8. Schedule tab in admin (day/time grid)
+  9. Triggers tab (assign playlists to events)
+  10. Player status / monitoring panel in admin
+
+Phase 4 — go4launch Integration (optional)
+  11. Launch-window trigger logic in backend (calls /api/launches, evaluates NET)
+  12. Launch-trigger playlist assignment in admin UI
+
+════════════════════════════════════════════════════════════════════════════════
+END OF SESSION 1 NOTES
+════════════════════════════════════════════════════════════════════════════════
