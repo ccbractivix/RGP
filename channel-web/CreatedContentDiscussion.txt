@@ -1,0 +1,38 @@
+Canvas/image dimensions
+
+The slides are rendered full-screen in an iframe at whatever resolution your TV/monitor runs — most commonly 1920 × 1080 px (16:9). That's the target size for any image that needs to fill the whole slide.
+
+If your image is used inside the slide.html template (via the ?image= parameter), it renders constrained to max 60% width / 50% height of the screen with object-fit: contain, so the exact size matters less — but 1280 × 720 px is a safe, lightweight minimum for that use case.
+
+Use case	Recommended size
+Full-bleed background image	1920 × 1080 px
+?image= inset on slide.html	1280 × 720 px (or square 800 × 800 px)
+Logo / icon / small graphic	400–600 px on the longest edge
+DPI
+
+DPI is irrelevant for screen display — it only matters for print. Set it to 72 or 96 DPI (screen resolution) and focus on pixel dimensions.
+
+File format & size
+
+JPEG — best for photos, venue shots, food/drink imagery. Target 150–400 KB per image. Quality setting 80–85% in most editors is a great balance.
+PNG — use only when you need transparency (logos, overlay graphics). They'll be larger; aim for under 500 KB.
+Avoid anything over 1 MB — it will slow the pre-load step in player.html (which pre-fetches the next slide 12 seconds before transition).
+Where to host
+
+The player only accepts http:// or https:// URLs (enforced in slide.html). Good free/cheap options:
+
+Option	Notes
+GitHub (your own repo)	Free, fast CDN via raw.githubusercontent.com. Drop images into a channel-web/assets/ folder and commit. URL looks like https://raw.githubusercontent.com/ccbractivix/RGP/main/channel-web/assets/pool.jpg
+Cloudflare R2	Free tier (10 GB storage, 1M requests/month), excellent CDN, no egress fees. Best long-term pick for media.
+Google Drive (public link)	Works, but the URL is ugly and Google occasionally breaks direct-link access. Not recommended for production.
+Cloudinary	Free tier is generous (25 GB storage). Bonus: you can resize/compress on-the-fly via URL parameters (/w_1920,q_80/).
+Imgur	Simple but not reliable for production — they've removed hotlinking for anonymous uploads.
+My recommendation: For your scale, GitHub itself is the simplest path — commit your images into channel-web/assets/ and reference raw.githubusercontent.com URLs directly in the admin panel. Zero cost, version-controlled, no extra account. If you accumulate many images or need resize-on-the-fly, move to Cloudinary's free tier.
+
+Quick checklist when making an image:
+
+Size: 1920 × 1080 px (full slide) or 1280 × 720 px (inset)
+Format: JPEG at 80–85% quality
+Target: under 400 KB
+Host: commit to channel-web/assets/ in this repo and use the raw.githubusercontent.com URL
+Send message
