@@ -1,0 +1,265 @@
+IMPROVEMENT SUGGESTIONS — RGP Resort Platform
+Session Date: 2026-05-09
+Compiled from code review and recommendation discussion
+================================================================================
+
+
+OVERVIEW
+--------
+Seven improvement areas were identified across the RGP platform through a code
+review session. For each item, the original observation, the root cause found in
+the code, and the recommended action are recorded below.
+
+
+--------------------------------------------------------------------------------
+ITEM 1: /api/schedule and /api/schedule/tv are identical — one is redundant
+--------------------------------------------------------------------------------
+
+OBSERVATION
+  Both GET /api/schedule and GET /api/schedule/tv exist in theater-backend and
+  execute byte-for-byte the same logic: query the same date range (today + 4
+  days), call the same backfillPosters / backfillYears helpers, and return the
+  same buildDays() output.
+
+CODE LOCATION
+  theater-backend/routes/api.js  lines 161–189
+  Both route handlers are copy-pasted; even the error message differs only by
+  the word "TV".
+
+RECOMMENDED ACTION
+  1. Extract the shared logic into a named async function (e.g. scheduleHandler).
+  2. Register both routes pointing at that single function:
+       router.get('/schedule',    scheduleHandler);
+       router.get('/schedule/tv', scheduleHandler);
+  3. Audit consumers (theater-web/tv.js, channel-web/player.html, etc.) to
+     confirm which route each uses. If /api/schedule/tv has zero consumers,
+     remove it outright rather than aliasing.
+  Effort: ~15 minutes. No behavior change, no DB change.
+
+
+--------------------------------------------------------------------------------
+ITEM 2: Celebrations expire at noon UTC (8 AM ET) — late-checkout guests may
+        miss their slide
+--------------------------------------------------------------------------------
+
+OBSERVATION
+  When staff create a celebration, the record's checkout_at is set to noon UTC
+  on the checkout date. Guests with late checkout (11 AM ET) or who linger until
+  early afternoon will no longer see their slide after 8 AM ET.
+
+CODE LOCATION
+  celebrations-backend/services/celebrations.js  line 81
+    const checkoutAt = new Date(`${data.checkout_date}T12:00:00Z`);
+  Comment on the same line reads: "Slides stay up until noon (12:00) UTC on the
+  checkout date."
+
+RECOMMENDED ACTION (choose one)
+  Option A — Simple fix (recommended):
+    Change T12:00:00Z  →  T23:59:00Z  (midnight UTC / ~8 PM ET).
+    Keeps the slide visible all day through any conceivable late departure.
+    One-line change, no schema migration required.
+
+  Option B — Operator control:
+    Add an optional expires_at field to the DB schema and admin form so staff
+    can set a custom expiry. Default the insert to T23:59:00Z. Adds flexibility
+    but requires a schema migration and admin UI update.
+
+  Recommended: Option A now, Option B if operators request it later.
+
+
+--------------------------------------------------------------------------------
+ITEM 3: Weather slide has no live data connection
+--------------------------------------------------------------------------------
+
+OBSERVATION
+  This was a false alarm. The weather slide is fully live.
+
+CODE LOCATION
+  weather-web/tv.html  lines 296–600
+  - Hardcoded coordinates: LAT = 28.404919, LON = -80.597154 (Cape Canaveral).
+  - On load: fetches https://api.weather.gov/points/{LAT},{LON} to resolve the
+    NWS gridpoint, then fetches the forecast and gridData endpoints.
+  - Refreshes every 1 hour (REFRESH_MS = 3600000). Retries every 60 s on error.
+  - No API key required (NWS is a free public API).
+
+RECOMMENDED ACTION
+  No functional change needed. Housekeeping only:
+  1. Rename the raw numeric literals to named constants at the top of the script:
+       var RESORT_LAT = 28.404919;
+       var RESORT_LON = -80.597154;
+     This makes it obvious where to update if the property ever changes.
+  2. Add a comment explaining the NWS two-step (points → gridpoint → forecast)
+     for the next developer who reads the file.
+
+
+--------------------------------------------------------------------------------
+ITEM 4: 5 separate launch UIs — consolidation would reduce maintenance burden
+--------------------------------------------------------------------------------
+
+OBSERVATION
+  Five UIs display launch data with overlapping functionality:
+
+  UI                          Data Source                  Purpose
+  ──────────────────────────  ───────────────────────────  ────────────────────────
+  go4launch/index.html        go4launch-backend + LL2      Full guest site
+  go4launch/tv.html           same                         TV / kiosk display
+  rocket-talk/index.html      LL2 direct (hardcoded key!)  Older standalone viewer
+  splashpass/launches.html    unclear                      Splash pass screen
+  channel-web/ slides         channel-backend              Channel rotation
+
+SECURITY ISSUE — ACTION REQUIRED IMMEDIATELY
+  rocket-talk/js/app.js  line 8 contains a hardcoded LL2 (Launch Library 2) API
+  key in plain text:
+    API_KEY: '506485404eb785c1b7e1c3dac3ba394ba8fb6834'
+  This is committed to the repository and is publicly visible.
+  Steps:
+    a. Revoke / rotate this key in your Launch Library 2 account immediately.
+    b. Move launch fetches for rocket-talk through the go4launch-backend proxy
+       (/api/launches) so no client-side key is needed.
+    c. Delete or redirect rocket-talk/index.html to go4launch/.
+
+CONSOLIDATION ACTIONS (after the security fix)
+  1. Redirect rocket-talk/index.html and splashpass/launches.html to the
+     go4launch frontend. They pull from the same data source; no feature is lost.
+  2. Confirm go4launch/tv.html and the channel slide both consume
+     go4launch-backend /api/launches — they already should be.
+  3. After redirects are in place, mark rocket-talk/ and splashpass/launches.html
+     as deprecated and schedule removal.
+  Net result: 5 UIs → 2 active (go4launch/index.html + go4launch/tv.html).
+
+
+--------------------------------------------------------------------------------
+ITEM 5: Amenity status uses polling rather than SSE push
+--------------------------------------------------------------------------------
+
+OBSERVATION
+  amenities-web/tv.html, index.html, admin.html, and splashpass.html all use
+  setInterval / setTimeout to re-fetch /api/status every 30 s–60 s. There is no
+  push mechanism; each client independently wakes up and polls.
+
+CODE LOCATION
+  amenities-web/tv.html       line 413: setTimeout(fetchAndRender, REFRESH_MS)
+  amenities-web/index.html    line 304: setInterval(fetchAndRender, 30000)
+  amenities-web/admin.html    line 433: setInterval(loadStatus, REFRESH_MS)
+  amenities-web/splashpass.html line 188: setInterval(fetchAndRender, 30000)
+
+ANALYSIS
+  Polling is acceptable at this scale. The main cost is unnecessary Render.com
+  cold-start wake-ups when the free-tier service idles. True SSE would require
+  the server process to stay running continuously (a paid Render tier) or use a
+  stateless event fan-out (e.g. Supabase Realtime) — significant added complexity.
+
+RECOMMENDED ACTION (low effort, meaningful improvement)
+  Short term: Add a Page Visibility API listener in each polling client so the
+  timer pauses when the browser tab is hidden and resumes on focus:
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) clearInterval(timer);
+      else { fetchAndRender(); timer = setInterval(fetchAndRender, REFRESH_MS); }
+    });
+  This reduces unnecessary poll requests when a TV browser is backgrounded or
+  locked.
+
+  Longer term (if real-time push is desired):
+  Add GET /api/events (SSE) to amenities-backend. Push a status update event
+  whenever an admin changes a status. Clients open new EventSource('/api/events')
+  and call render() on each message. Include a 20-second heartbeat to survive
+  Render's 30-second idle disconnect. Only worth implementing if the service moves
+  to a paid / always-on host.
+
+
+--------------------------------------------------------------------------------
+ITEM 6: Auth is independently reinvented in each backend (~6 services)
+--------------------------------------------------------------------------------
+
+OBSERVATION
+  Every backend implements its own requireAuth middleware from scratch.
+  Two distinct patterns exist:
+
+  Pattern A — Session cookie + CSRF (theater-backend only):
+    Uses express-session with connect-pg-simple, CSRF token stored in session,
+    constant-time comparison via crypto.timingSafeEqual.
+    Files: theater-backend/server.js (lines 39–90), theater-backend/routes/admin.js
+
+  Pattern B — X-Auth-Code header checked against env var list (all others):
+    function requireAuth(req, res, next) {
+      const code = req.headers['x-auth-code'];
+      if (!validCodes.includes(code)) return res.status(401)...
+    }
+    Duplicated verbatim in:
+      amenities-backend/routes/admin.js
+      celebrations-backend/routes/admin.js
+      rentals-backend/routes/admin.js
+      channel-backend/routes/admin.js
+      go4launch-backend/routes/admin.js
+
+RECOMMENDED ACTION
+  1. Create shared/auth.js at the repo root (or a shared/ subdirectory) with a
+     factory function:
+       function makeRequireAuth(validCodes) { ... }
+       module.exports = { makeRequireAuth };
+  2. In each Pattern B backend, replace the inline requireAuth definition with:
+       const { makeRequireAuth } = require('../../shared/auth');
+       const requireAuth = makeRequireAuth(validCodes);
+  3. Do NOT introduce a centralized auth service or API gateway at this stage.
+     A network-hop auth dependency would couple independent services and create
+     a single point of failure. The shared JS module approach avoids that.
+  Effort: ~1 hour across all backends. Best done incrementally, one backend per
+  natural editing session.
+
+
+--------------------------------------------------------------------------------
+ITEM 7: No centralized health dashboard across all services
+--------------------------------------------------------------------------------
+
+OBSERVATION
+  There is no single place to see whether all 7 backends are up. Diagnosing
+  outages requires checking each Render.com service individually.
+
+SERVICES AND THEIR NATURAL HEALTH-CHECK ENDPOINTS
+  Service              Port   Health endpoint
+  ───────────────────  ─────  ────────────────────────────────────
+  amenities-backend    3001   GET /api/status
+  theater-backend      3000   GET /api/schedule
+  celebrations-backend 3004   GET /api/celebrations
+  rentals-backend      3002   GET /api/library
+  channel-backend      3003   GET /api/slides
+  go4launch-backend    3002*  GET /api/launches
+  checkout-backend     3005   (no /health route currently)
+
+  * go4launch-backend and rentals-backend both default to port 3002 locally;
+    on Render they are separate services with separate URLs.
+
+RECOMMENDED ACTION
+  Phase 1 — Static dashboard (no new backend, ~1–2 hours):
+    Create health-web/index.html. JavaScript fetches each service's public API
+    endpoint with a 5-second timeout and displays a green/red status dot per
+    service. Auto-refreshes every 60 seconds. Pure HTML + vanilla JS, no build
+    step, deploy as a Render static site.
+
+  Phase 2 — Structured health routes (optional, adds latency/uptime display):
+    Add GET /health to each backend returning:
+      { ok: true, service: "amenities", uptime: process.uptime(), version: "..." }
+    The dashboard fetches /health instead of the business endpoints. Enables
+    latency charts and version display with no schema changes.
+
+  Phase 3 — Alerting (future):
+    Wire the health dashboard to a webhook (Slack, PagerDuty, etc.) so on-call
+    staff are notified when a service goes red.
+
+
+================================================================================
+SUMMARY TABLE — Priority / Effort
+================================================================================
+
+  #   Item                            Priority   Effort    Notes
+  ──  ──────────────────────────────  ─────────  ────────  ─────────────────────
+  4*  Exposed API key (rocket-talk)   URGENT     < 1 hr    Rotate key NOW
+  2   Celebration expiry time         High       15 min    1-line fix
+  1   Duplicate schedule routes       Medium     15 min    Extract shared handler
+  7   Health dashboard                Medium     1–2 hrs   New static HTML file
+  6   Auth deduplication              Medium     1 hr      Shared JS module
+  3   Weather slide (no action)       Low        0         Already live, add docs
+  5   Amenity polling → visibility    Low        30 min    Add visibilitychange
+
+================================================================================
+END OF NOTES
