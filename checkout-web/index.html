@@ -650,8 +650,11 @@
   sigCanvas.addEventListener('pointercancel', () => { sigDrawing = false; });
 
   sigClear.addEventListener('click', () => {
-    const dpr = window.devicePixelRatio || 1;
-    sigCtx.clearRect(0, 0, sigCanvas.width / dpr, sigCanvas.height / dpr);
+    // Reset transform before clearing to work unambiguously in physical pixels
+    sigCtx.save();
+    sigCtx.setTransform(1, 0, 0, 1, 0, 0);
+    sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+    sigCtx.restore();
     sigHasInk = false;
     sigWrap.classList.remove('has-ink');
   });

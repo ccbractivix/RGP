@@ -70,7 +70,9 @@ async function ensureSchema() {
     CREATE INDEX IF NOT EXISTS idx_checkouts_villa_time
       ON checkouts (villa, submitted_at)
   `);
-  // Non-destructive migration: add signature_data column if it doesn't exist yet
+  // Migration for existing deployments that pre-date the signature_data column.
+  // The CREATE TABLE above already includes it for fresh installs; this is a
+  // safe no-op in that case.
   await db.query(`
     ALTER TABLE checkouts
       ADD COLUMN IF NOT EXISTS signature_data TEXT
