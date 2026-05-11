@@ -342,6 +342,59 @@
     }
     .summary strong { color: var(--text); }
 
+    /* ── Signature pad ── */
+    .sig-label {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .sig-canvas-wrap {
+      position: relative;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      overflow: hidden;
+      touch-action: none;
+    }
+    .sig-canvas-wrap canvas {
+      display: block;
+      width: 100%;
+      height: 160px;
+      cursor: crosshair;
+    }
+    .sig-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      color: #d1c4b8;
+      font-size: 14px;
+      font-style: italic;
+      transition: opacity 0.2s;
+    }
+    .sig-canvas-wrap.has-ink .sig-placeholder { opacity: 0; }
+
+    .sig-clear-btn {
+      margin-top: 8px;
+      padding: 7px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .sig-clear-btn:hover { border-color: var(--orange); color: var(--orange); }
+
     /* Hide helper */
     .hidden { display: none !important; }
   </style>
@@ -414,6 +467,18 @@
         This villa may have already been checked out recently. If you are sure, tap
         <strong>Submit</strong> to proceed anyway.
       </div>
+
+      <!-- Signature pad -->
+      <div class="field" style="margin-bottom:20px;">
+        <div class="sig-label">Guest Signature</div>
+        <div class="sig-canvas-wrap" id="sig-wrap">
+          <canvas id="sig-canvas"></canvas>
+          <div class="sig-placeholder">Sign here with your finger</div>
+        </div>
+        <button type="button" class="sig-clear-btn" id="sig-clear">Clear</button>
+        <div class="error-msg" id="err-signature">Please provide your signature before submitting.</div>
+      </div>
+
       <button class="btn-primary" id="submit-btn">Submit</button>
     </div>
   </div>
@@ -531,6 +596,79 @@
   const modalBox      = document.getElementById('modal-box');
   const chk1          = document.getElementById('chk1-item');
   const chk2          = document.getElementById('chk2-item');
+
+  /* ── Signature pad ───────────────────────────────────────────────────────── */
+  const sigWrap   = document.getElementById('sig-wrap');
+  const sigCanvas = document.getElementById('sig-canvas');
+  const sigClear  = document.getElementById('sig-clear');
+  const errSig    = document.getElementById('err-signature');
+  const sigCtx    = sigCanvas.getContext('2d');
+  let sigDrawing  = false;
+  let sigHasInk   = false;
+
+  function resizeSigCanvas() {
+    // Match canvas backing store to CSS size, accounting for device pixel ratio
+    const dpr  = window.devicePixelRatio || 1;
+    const rect = sigCanvas.getBoundingClientRect();
+    sigCanvas.width  = Math.round(rect.width  * dpr);
+    sigCanvas.height = Math.round(rect.height * dpr);
+    sigCtx.scale(dpr, dpr);
+    sigCtx.strokeStyle = '#1a1a1a';
+    sigCtx.lineWidth   = 2;
+    sigCtx.lineCap     = 'round';
+    sigCtx.lineJoin    = 'round';
+  }
+
+  function getSigPoint(e) {
+    const rect = sigCanvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  sigCanvas.addEventListener('pointerdown', e => {
+    sigCanvas.setPointerCapture(e.pointerId);
+    sigDrawing = true;
+    const { x, y } = getSigPoint(e);
+    sigCtx.beginPath();
+    sigCtx.moveTo(x, y);
+    e.preventDefault();
+  });
+
+  sigCanvas.addEventListener('pointermove', e => {
+    if (!sigDrawing) return;
+    const { x, y } = getSigPoint(e);
+    sigCtx.lineTo(x, y);
+    sigCtx.stroke();
+    if (!sigHasInk) {
+      sigHasInk = true;
+      sigWrap.classList.add('has-ink');
+      errSig.classList.remove('show');
+    }
+    e.preventDefault();
+  });
+
+  sigCanvas.addEventListener('pointerup',     () => { sigDrawing = false; });
+  sigCanvas.addEventListener('pointercancel', () => { sigDrawing = false; });
+
+  sigClear.addEventListener('click', () => {
+    // Reset transform before clearing to work unambiguously in physical pixels
+    sigCtx.save();
+    sigCtx.setTransform(1, 0, 0, 1, 0, 0);
+    sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+    sigCtx.restore();
+    sigHasInk = false;
+    sigWrap.classList.remove('has-ink');
+  });
+
+  function isSignatureEmpty() { return !sigHasInk; }
+
+  // Re-size once the submit section is made visible (canvas reports no
+  // dimensions while its parent is display:none).
+  let sigInitialised = false;
+  function initSigCanvas() {
+    if (sigInitialised) return;
+    sigInitialised = true;
+    resizeSigCanvas();
+  }
 
   /* ── Building selection ──────────────────────────────────────────────────── */
   buildingRow.addEventListener('click', e => {
@@ -672,6 +810,7 @@
       `Villa <strong>${villa}</strong> &nbsp;·&nbsp; Last name: <strong>${escHtml(lastNameInput.value.trim())}</strong>`;
     formSection.style.display   = 'none';
     submitSection.style.display = 'block';
+    initSigCanvas();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -681,18 +820,27 @@
 
   /* ── Submit ──────────────────────────────────────────────────────────────── */
   submitBtn.addEventListener('click', async () => {
+    // Validate signature
+    if (isSignatureEmpty()) {
+      errSig.classList.add('show');
+      sigCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    errSig.classList.remove('show');
+
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitting…';
     dupWarning.classList.remove('show');
 
-    const villa    = getVillaString();
-    const lastName = lastNameInput.value.trim();
+    const villa     = getVillaString();
+    const lastName  = lastNameInput.value.trim();
+    const signature = sigCanvas.toDataURL('image/png');
 
     try {
       const res  = await fetch(`${API}/api/checkout`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ lastName, villa, force: forceDup }),
+        body:    JSON.stringify({ lastName, villa, force: forceDup, signature }),
       });
       const data = await res.json();
 
