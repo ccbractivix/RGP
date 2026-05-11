@@ -59,24 +59,39 @@ const VILLA_DATA = { B1_WHOLE, B1_AB, B2, B3 };
 async function ensureSchema() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS checkouts (
-      id             SERIAL PRIMARY KEY,
-      last_name      TEXT        NOT NULL,
-      villa          TEXT        NOT NULL,
-      submitted_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      signature_data TEXT
+      id                  SERIAL PRIMARY KEY,
+      last_name           TEXT        NOT NULL,
+      villa               TEXT        NOT NULL,
+      submitted_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      signature_data      TEXT,
+      confirmation_number TEXT
     )
   `);
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_checkouts_villa_time
       ON checkouts (villa, submitted_at)
   `);
-  // Migration for existing deployments that pre-date the signature_data column.
-  // The CREATE TABLE above already includes it for fresh installs; this is a
-  // safe no-op in that case.
+  // Migrations for existing deployments — safe no-ops on fresh installs.
   await db.query(`
     ALTER TABLE checkouts
       ADD COLUMN IF NOT EXISTS signature_data TEXT
   `);
+  await db.query(`
+    ALTER TABLE checkouts
+      ADD COLUMN IF NOT EXISTS confirmation_number TEXT
+  `);
+}
+
+// ── Confirmation number generator ─────────────────────────────────────────────
+
+const CONF_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // unambiguous chars
+
+function generateConfirmationNumber() {
+  let code = 'ECO-';
+  for (let i = 0; i < 6; i++) {
+    code += CONF_CHARS[Math.floor(Math.random() * CONF_CHARS.length)];
+  }
+  return code;
 }
 
 // ── Current ET date / time helpers ───────────────────────────────────────────
@@ -114,11 +129,12 @@ async function submitCheckout(lastName, villa, force = false, signature = null) 
     `, [villa]);
     if (dup.rows.length > 0) return { duplicate: true };
   }
+  const confirmationNumber = generateConfirmationNumber();
   await db.query(
-    `INSERT INTO checkouts (last_name, villa, signature_data) VALUES ($1, $2, $3)`,
-    [lastName.trim(), villa, signature || null],
+    `INSERT INTO checkouts (last_name, villa, signature_data, confirmation_number) VALUES ($1, $2, $3, $4)`,
+    [lastName.trim(), villa, signature || null, confirmationNumber],
   );
-  return { ok: true };
+  return { ok: true, confirmationNumber };
 }
 
 // ── Read checkouts ────────────────────────────────────────────────────────────
@@ -126,7 +142,7 @@ async function submitCheckout(lastName, villa, force = false, signature = null) 
 /** All current checkouts in reverse-chronological order (operator view). */
 async function getAllCheckouts() {
   const r = await db.query(`
-    SELECT id, last_name, villa, submitted_at
+    SELECT id, last_name, villa, submitted_at, signature_data, confirmation_number
     FROM checkouts
     ORDER BY submitted_at DESC
   `);
@@ -146,14 +162,16 @@ async function getHousekeepingCheckouts() {
 // ── CSV export ────────────────────────────────────────────────────────────────
 
 function toCsv(rows) {
-  const header = 'villa,last_name,submitted_at';
+  const header = 'villa,last_name,submitted_at,confirmation_number,signature_data';
   const lines  = rows.map(r => {
     const ts = r.submitted_at instanceof Date
       ? r.submitted_at.toISOString()
       : String(r.submitted_at);
-    const lastName = String(r.last_name).replace(/"/g, '""');
-    const villa    = String(r.villa).replace(/"/g, '""');
-    return `"${villa}","${lastName}","${ts}"`;
+    const lastName   = String(r.last_name   || '').replace(/"/g, '""');
+    const villa      = String(r.villa       || '').replace(/"/g, '""');
+    const confNum    = String(r.confirmation_number || '').replace(/"/g, '""');
+    const sigData    = String(r.signature_data      || '').replace(/"/g, '""');
+    return `"${villa}","${lastName}","${ts}","${confNum}","${sigData}"`;
   });
   return [header, ...lines].join('\n');
 }

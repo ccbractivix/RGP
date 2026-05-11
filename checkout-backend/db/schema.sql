@@ -1,10 +1,11 @@
 -- Express Check-Out submissions
 CREATE TABLE IF NOT EXISTS checkouts (
-  id             SERIAL PRIMARY KEY,
-  last_name      TEXT        NOT NULL,
-  villa          TEXT        NOT NULL,
-  submitted_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  signature_data TEXT
+  id                  SERIAL PRIMARY KEY,
+  last_name           TEXT        NOT NULL,
+  villa               TEXT        NOT NULL,
+  submitted_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  signature_data      TEXT,
+  confirmation_number TEXT
 );
 
 -- Index for fast per-villa duplicate checks

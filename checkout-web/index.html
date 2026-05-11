@@ -329,6 +329,28 @@
       line-height: 1.6;
     }
 
+    .conf-box {
+      margin: 20px 0 4px;
+      background: var(--orange-l);
+      border: 1.5px solid var(--orange);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .conf-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--orange-d);
+      margin-bottom: 6px;
+    }
+    .conf-number {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: var(--orange-d);
+    }
+
     /* ── Summary line ── */
     .summary {
       font-size: 14px;
@@ -489,6 +511,11 @@
       <div class="success-icon">✓</div>
       <h2>Checkout Complete</h2>
       <p>Safe travels! The housekeeping team has been notified.</p>
+      <div class="conf-box" id="conf-box" style="display:none;">
+        <div class="conf-label">Express Checkout Confirmation</div>
+        <div class="conf-number" id="conf-number"></div>
+      </div>
+      <p style="margin-top:12px;font-size:13px;">Please save your confirmation number for your records.</p>
     </div>
   </div>
 
@@ -863,6 +890,10 @@
       // Success
       submitSection.style.display = 'none';
       successScreen.style.display = 'block';
+      if (data.confirmationNumber) {
+        document.getElementById('conf-number').textContent = data.confirmationNumber;
+        document.getElementById('conf-box').style.display = 'block';
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
     } catch (_) {
