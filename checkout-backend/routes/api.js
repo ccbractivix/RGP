@@ -25,7 +25,7 @@ router.post('/checkout', async (req, res) => {
     const result = await submitCheckout(lastName, villa, force, signature);
     if (result.duplicate)    return res.status(409).json({ duplicate: true });
     if (result.error)        return res.status(400).json({ error: result.error });
-    return res.json({ ok: true });
+    return res.json({ ok: true, confirmationNumber: result.confirmationNumber });
   } catch (e) {
     console.error('[api] /checkout error:', e);
     return res.status(500).json({ error: 'server_error' });

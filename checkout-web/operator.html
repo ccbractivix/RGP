@@ -184,6 +184,18 @@
     .td-villa { font-weight: 700; color: var(--orange); font-size: 15px; }
     .td-name  { font-weight: 500; }
     .td-time  { color: var(--muted); font-size: 13px; white-space: nowrap; }
+    .td-conf  { font-size: 13px; font-weight: 600; color: var(--green); font-family: monospace; white-space: nowrap; }
+    .td-sig img {
+      display: block;
+      max-width: 160px;
+      height: 56px;
+      object-fit: contain;
+      background: #fff;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 2px 4px;
+    }
+    .td-sig .no-sig { color: var(--muted); font-size: 12px; font-style: italic; }
 
     /* ── Empty state ── */
     .empty {
@@ -238,6 +250,8 @@
           <th>Villa</th>
           <th>Last Name</th>
           <th>Time</th>
+          <th>Confirmation #</th>
+          <th>Signature</th>
         </tr>
       </thead>
       <tbody id="checkouts-tbody"></tbody>
@@ -360,6 +374,10 @@
         <td class="td-villa">${esc(r.villa)}</td>
         <td class="td-name">${esc(r.last_name)}</td>
         <td class="td-time">${formatLocalTime(r.submitted_at)}</td>
+        <td class="td-conf">${r.confirmation_number ? esc(r.confirmation_number) : '<span style="color:var(--muted);font-style:italic;font-weight:400;">—</span>'}</td>
+        <td class="td-sig">${r.signature_data
+          ? `<img src="${esc(r.signature_data)}" alt="Guest signature">`
+          : '<span class="no-sig">No signature</span>'}</td>
       </tr>
     `).join('');
   }
