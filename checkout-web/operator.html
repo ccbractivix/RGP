@@ -376,7 +376,7 @@
         <td class="td-time">${formatLocalTime(r.submitted_at)}</td>
         <td class="td-conf">${r.confirmation_number ? esc(r.confirmation_number) : '<span style="color:var(--muted);font-style:italic;font-weight:400;">—</span>'}</td>
         <td class="td-sig">${r.signature_data
-          ? `<img src="${esc(r.signature_data)}" alt="Signature for ${esc(r.last_name)}">`
+          ? `<img src="${esc(r.signature_data)}" alt="Guest signature">`
           : '<span class="no-sig">No signature</span>'}</td>
       </tr>
     `).join('');

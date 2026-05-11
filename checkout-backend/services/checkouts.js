@@ -86,12 +86,24 @@ async function ensureSchema() {
 
 const CONF_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // unambiguous chars
 
-function generateConfirmationNumber() {
+async function generateUniqueConfirmationNumber() {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    let code = 'ECO-';
+    for (let i = 0; i < 6; i++) {
+      code += CONF_CHARS[Math.floor(Math.random() * CONF_CHARS.length)];
+    }
+    const existing = await db.query(
+      `SELECT id FROM checkouts WHERE confirmation_number = $1 LIMIT 1`,
+      [code],
+    );
+    if (existing.rows.length === 0) return code;
+  }
+  // Extremely unlikely fallback: append timestamp suffix
   let code = 'ECO-';
   for (let i = 0; i < 6; i++) {
     code += CONF_CHARS[Math.floor(Math.random() * CONF_CHARS.length)];
   }
-  return code;
+  return code + Date.now().toString(36).toUpperCase().slice(-3);
 }
 
 // ── Current ET date / time helpers ───────────────────────────────────────────
@@ -129,7 +141,7 @@ async function submitCheckout(lastName, villa, force = false, signature = null) 
     `, [villa]);
     if (dup.rows.length > 0) return { duplicate: true };
   }
-  const confirmationNumber = generateConfirmationNumber();
+  const confirmationNumber = await generateUniqueConfirmationNumber();
   await db.query(
     `INSERT INTO checkouts (last_name, villa, signature_data, confirmation_number) VALUES ($1, $2, $3, $4)`,
     [lastName.trim(), villa, signature || null, confirmationNumber],
