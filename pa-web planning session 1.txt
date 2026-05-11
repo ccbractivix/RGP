@@ -249,5 +249,68 @@ Phase 4 — go4launch Integration (optional)
   12. Launch-trigger playlist assignment in admin UI
 
 ════════════════════════════════════════════════════════════════════════════════
+PRE-START CHECKLIST — BEFORE CODING BEGINS
+════════════════════════════════════════════════════════════════════════════════
+
+These things must be done BEFORE any development starts:
+
+□ RECORD ALL AUDIO FILES (owner task — see Section 10 above for recording guidance)
+    Minimum required clips:
+      • lightning-closure-v1.mp3      — plays when lightning closure is triggered
+      • lightning-all-clear-v1.mp3    — plays when lightning clears
+      • good-morning-welcome-v1.mp3   — example scheduled announcement
+    Recording tips:
+      - Quiet room, no echo
+      - Target: –14 LUFS integrated / –3 dBFS true peak
+      - Encode as MP3, 128 kbps, mono (use Audacity — free)
+      - Name files descriptively (see above examples)
+    You do NOT need all clips before coding starts, but the lightning pair
+    (closure + all-clear) are needed to test Phase 2.
+
+□ ANSWER THE OPEN DECISIONS listed in the "KEY DECISIONS STILL NEEDED" section above
+
+□ CONFIRM what computer will run player.html (must stay on, never sleep)
+
+════════════════════════════════════════════════════════════════════════════════
+SSH — REMOTE ACCESS TO THE PA COMPUTER
+════════════════════════════════════════════════════════════════════════════════
+
+Once the PA player computer is set up, SSH is the primary way to manage it
+without being physically at the machine.
+
+WHAT SSH IS:
+  SSH (Secure Shell) lets you log into and control the Linux computer remotely
+  from another device — your laptop, phone, or any machine on the same Wi-Fi.
+  Think of it as sitting at that computer's keyboard from anywhere on the network.
+  All traffic is fully encrypted.
+
+WHAT YOU'D USE IT FOR (in practice):
+  • Make changes without plugging in a monitor/keyboard to the PA computer
+  • Restart services after a code update is pushed (e.g., pm2 restart pa-backend)
+  • Edit config files (port numbers, file paths, API URLs)
+  • Troubleshoot crashes — check logs to see what went wrong
+  • Set up or modify cron jobs (e.g., auto-shutdown at midnight)
+  • Pull the latest code from GitHub after a developer pushes a change
+
+HOW IT WORKS:
+  From a Mac or Linux machine, open Terminal and type:
+    ssh username@192.168.1.50
+  (replace with the PA computer's local IP address)
+  Enter the password once — you're in.  From there it's a text command line.
+
+  On Windows: use PuTTY (free app) or Windows Terminal (SSH is built into
+  Windows 10/11).
+
+IS IT SAFE?
+  On the resort's internal Wi-Fi network (not exposed to the internet), yes —
+  it is very safe.  SSH is encrypted by design.  The only risk would be if
+  someone exposed it to the open internet without proper hardening, which is
+  not needed here.
+
+WHEN YOU'D USE IT:
+  Likely a few times a month for maintenance, or the developer uses it remotely
+  so you never have to touch the command line yourself at all.
+
+════════════════════════════════════════════════════════════════════════════════
 END OF SESSION 1 NOTES
 ════════════════════════════════════════════════════════════════════════════════
