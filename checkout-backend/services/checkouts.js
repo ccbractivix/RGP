@@ -59,15 +59,21 @@ const VILLA_DATA = { B1_WHOLE, B1_AB, B2, B3 };
 async function ensureSchema() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS checkouts (
-      id           SERIAL PRIMARY KEY,
-      last_name    TEXT        NOT NULL,
-      villa        TEXT        NOT NULL,
-      submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      id             SERIAL PRIMARY KEY,
+      last_name      TEXT        NOT NULL,
+      villa          TEXT        NOT NULL,
+      submitted_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      signature_data TEXT
     )
   `);
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_checkouts_villa_time
       ON checkouts (villa, submitted_at)
+  `);
+  // Non-destructive migration: add signature_data column if it doesn't exist yet
+  await db.query(`
+    ALTER TABLE checkouts
+      ADD COLUMN IF NOT EXISTS signature_data TEXT
   `);
 }
 
@@ -93,7 +99,7 @@ function getETDateAndTime() {
  * Returns { ok: true } on success, { duplicate: true } when the same villa
  * was submitted within the last 10 minutes and force is false.
  */
-async function submitCheckout(lastName, villa, force = false) {
+async function submitCheckout(lastName, villa, force = false, signature = null) {
   if (!VALID_VILLAS.has(villa)) {
     return { error: 'invalid_villa' };
   }
@@ -107,8 +113,8 @@ async function submitCheckout(lastName, villa, force = false) {
     if (dup.rows.length > 0) return { duplicate: true };
   }
   await db.query(
-    `INSERT INTO checkouts (last_name, villa) VALUES ($1, $2)`,
-    [lastName.trim(), villa],
+    `INSERT INTO checkouts (last_name, villa, signature_data) VALUES ($1, $2, $3)`,
+    [lastName.trim(), villa, signature || null],
   );
   return { ok: true };
 }
