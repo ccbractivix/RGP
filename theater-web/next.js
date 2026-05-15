@@ -162,8 +162,7 @@
   // --- DOM references (cached after DOMContentLoaded) ---
   var elLoading, elMain, elEmpty, elPoster, elNoPoster,
       elTitle, elMeta, elImdb, elShowtime,
-      elCountdownLabel, elCountdown, elStatus,
-      elScheduleList;
+      elCountdownLabel, elCountdown, elStatus;
 
   function cacheElements() {
     elLoading        = document.getElementById('next-loading');
@@ -178,7 +177,6 @@
     elCountdownLabel = document.getElementById('next-countdown-label');
     elCountdown      = document.getElementById('next-countdown');
     elStatus         = document.getElementById('next-status');
-    elScheduleList   = document.getElementById('schedule-list');
   }
 
   // --- Rendering ---
@@ -195,59 +193,6 @@
     elEmpty.style.display   = 'flex';
     if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
     displayedKey = null;
-  }
-
-  /**
-   * Populate the schedule sidebar with all movies for the given day.
-   * The currently-displayed show (activeKey = "dayLabel|time") is highlighted.
-   */
-  function renderScheduleSidebar(days, currentDayLabel, activeKey) {
-    if (!elScheduleList) return;
-
-    var dayObj = null;
-    for (var i = 0; i < days.length; i++) {
-      if (days[i].label === currentDayLabel) { dayObj = days[i]; break; }
-    }
-
-    if (!dayObj || !dayObj.shows || dayObj.shows.length === 0) {
-      elScheduleList.innerHTML = '';
-      return;
-    }
-
-    var html = '';
-    for (var j = 0; j < dayObj.shows.length; j++) {
-      var show = dayObj.shows[j];
-      if (show.contentType === 'live event') continue;
-
-      var posterSrc = show.poster || '';
-      if (posterSrc && posterSrc.charAt(0) === '/') {
-        posterSrc = API_BASE + posterSrc;
-      }
-
-      var thumbInner = posterSrc
-        ? '<img class="schedule-thumb" src="' + escapeHtml(posterSrc) + '" alt="">'
-        : '<div class="schedule-thumb-empty">\uD83C\uDFAC</div>';
-
-      var itemKey = currentDayLabel + '|' + show.time;
-      var activeClass = (itemKey === activeKey) ? ' schedule-item-active' : '';
-
-      html +=
-        '<div class="schedule-item' + activeClass + '">' +
-          '<div class="schedule-thumb-wrap">' + thumbInner + '</div>' +
-          '<div class="schedule-item-info">' +
-            '<div class="schedule-item-time">' + escapeHtml(show.time) + '</div>' +
-            '<div class="schedule-item-movie-title">' + escapeHtml(show.title) + '</div>' +
-          '</div>' +
-        '</div>';
-    }
-
-    elScheduleList.innerHTML = html;
-
-    // Scroll the active item into view
-    var activeEl = elScheduleList.querySelector('.schedule-item-active');
-    if (activeEl) {
-      activeEl.scrollIntoView({ block: 'nearest' });
-    }
   }
 
   /**
@@ -305,11 +250,6 @@
     elMain.style.display    = 'flex';
 
     displayedKey = entry.dayLabel + '|' + entry.show.time;
-
-    // ---- Schedule sidebar ----
-    if (scheduleData) {
-      renderScheduleSidebar(scheduleData, entry.dayLabel, displayedKey);
-    }
   }
 
   /**
