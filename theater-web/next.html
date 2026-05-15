@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://theater-backend-qf1b.onrender.com/api/schedule/tv">
+  <title>Coming Up Next — Movie Theater</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #07091A;
+      color: #FFFFFF;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+
+    /* subtle depth gradient behind everything */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, #10183A 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #next-page {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ===== HEADER ===== */
+    #next-header {
+      flex-shrink: 0;
+      text-align: center;
+      padding: 18px 0 6px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(32px, 4.2vw, 68px);
+      letter-spacing: 14px;
+      color: #F5C518;
+      text-shadow: 0 0 40px rgba(245, 197, 24, 0.45);
+    }
+
+    /* ===== FILMSTRIP ACCENT LINE ===== */
+    .filmstrip-line {
+      flex-shrink: 0;
+      height: 4px;
+      background: repeating-linear-gradient(
+        90deg,
+        #F5C518 0,
+        #F5C518 22px,
+        transparent 22px,
+        transparent 32px
+      );
+      opacity: 0.25;
+      margin: 0 0;
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    #next-main {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      padding: 12px 50px 8px 50px;
+      gap: 52px;
+      min-height: 0;
+    }
+
+    /* ===== POSTER ===== */
+    #next-poster-area {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #next-poster {
+      height: 100%;
+      max-height: calc(100vh - 220px);
+      width: auto;
+      max-width: clamp(160px, 24vw, 360px);
+      border-radius: 10px;
+      object-fit: cover;
+      box-shadow:
+        0 0 0 1px rgba(245,197,24,0.15),
+        0 12px 50px rgba(0,0,0,0.8),
+        0 0 80px rgba(245,197,24,0.10);
+    }
+
+    #next-no-poster {
+      width: clamp(140px, 20vw, 280px);
+      height: clamp(200px, 30vw, 420px);
+      border: 2px solid #1E2340;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(48px, 6vw, 90px);
+      color: #1E2340;
+    }
+
+    /* ===== INFO COLUMN ===== */
+    #next-info-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: clamp(10px, 1.5vh, 22px);
+      min-width: 0;
+    }
+
+    /* ===== COUNTDOWN ===== */
+    #next-countdown-section {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    #next-countdown-label {
+      font-size: clamp(11px, 1.2vw, 18px);
+      font-weight: 700;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: #6A70A0;
+    }
+
+    #next-countdown {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(56px, 8.5vw, 130px);
+      letter-spacing: 6px;
+      color: #F5C518;
+      line-height: 0.95;
+      text-shadow: 0 0 50px rgba(245,197,24,0.45);
+      transition: color 0.4s, text-shadow 0.4s;
+    }
+
+    #next-countdown.starting-now {
+      color: #50E87A;
+      text-shadow: 0 0 40px rgba(80,232,122,0.45);
+      animation: pulse-green 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-green {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    /* ===== ACCENT DIVIDER ===== */
+    .info-divider {
+      height: 2px;
+      width: clamp(80px, 12vw, 200px);
+      background: linear-gradient(90deg, #F5C518 0%, transparent 100%);
+      opacity: 0.5;
+      border-radius: 1px;
+    }
+
+    /* ===== TITLE ===== */
+    #next-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(30px, 4vw, 64px);
+      letter-spacing: 3px;
+      color: #FFFFFF;
+      line-height: 1.1;
+      word-break: break-word;
+    }
+
+    /* ===== META LINE ===== */
+    #next-meta {
+      font-size: clamp(14px, 1.5vw, 22px);
+      color: #9098C8;
+      font-weight: 500;
+      letter-spacing: 2px;
+    }
+
+    /* ===== IMDB ===== */
+    #next-imdb {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .imdb-badge {
+      background: #F5C518;
+      color: #000000;
+      font-weight: 700;
+      font-size: clamp(11px, 1vw, 15px);
+      padding: 4px 8px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+      line-height: 1;
+    }
+
+    .imdb-stars-value {
+      font-size: clamp(22px, 2.8vw, 42px);
+      font-weight: 700;
+      color: #F5C518;
+    }
+
+    .imdb-denom {
+      font-size: clamp(14px, 1.6vw, 24px);
+      color: #6A70A0;
+      font-weight: 500;
+    }
+
+    /* ===== SHOWTIME ===== */
+    #next-showtime {
+      font-size: clamp(14px, 1.6vw, 24px);
+      color: #C8CCE8;
+      font-weight: 600;
+      letter-spacing: 2px;
+    }
+
+    /* ===== LOADING / EMPTY ===== */
+    #next-loading,
+    #next-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(22px, 2.8vw, 44px);
+      color: #1E2340;
+      font-style: italic;
+    }
+
+    /* ===== GUTTER (matches tv.html structure) ===== */
+    #tv-bottom {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      padding: 7px 14px 9px;
+      border-top: 1px solid #141830;
+      background: rgba(8, 10, 28, 0.95);
+    }
+
+    #tv-qr {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #tv-qr img {
+      width: clamp(64px, 7.5vw, 115px);
+      height: clamp(64px, 7.5vw, 115px);
+      border-radius: 5px;
+      background: #fff;
+      padding: 5px;
+    }
+
+    #tv-info {
+      flex: 1;
+      padding-left: 18px;
+      color: #5A608A;
+      font-size: clamp(11px, 1.05vw, 15px);
+      line-height: 1.55;
+    }
+
+    #tv-info strong {
+      color: #F5C518;
+    }
+
+    #tv-info .info-rules {
+      font-style: italic;
+      margin-top: 4px;
+      font-size: clamp(9px, 0.85vw, 13px);
+      color: #3A3F60;
+    }
+
+    /* ===== STATUS STAMP ===== */
+    #next-status {
+      position: fixed;
+      bottom: 4px;
+      right: 14px;
+      font-size: 10px;
+      color: #1E2340;
+    }
+  </style>
+</head>
+<body>
+  <div id="next-page">
+
+    <div id="next-header">&#9733;&nbsp;&nbsp;Coming Up Next&nbsp;&nbsp;&#9733;</div>
+    <div class="filmstrip-line"></div>
+
+    <div id="next-loading">Loading schedule&hellip;</div>
+
+    <div id="next-main" style="display:none;">
+      <div id="next-poster-area">
+        <img id="next-poster" src="" alt="">
+        <div id="next-no-poster" style="display:none;">&#127916;</div>
+      </div>
+      <div id="next-info-area">
+        <div id="next-countdown-section">
+          <div id="next-countdown-label">Starting In</div>
+          <div id="next-countdown">--:--:--</div>
+        </div>
+        <div class="info-divider"></div>
+        <div id="next-title"></div>
+        <div id="next-meta"></div>
+        <div id="next-imdb"></div>
+        <div id="next-showtime"></div>
+      </div>
+    </div>
+
+    <div id="next-empty" style="display:none;">No upcoming shows scheduled.</div>
+
+    <!-- Gutter: same structure as tv.html -->
+    <div class="filmstrip-line"></div>
+    <div id="tv-bottom">
+      <div id="tv-qr">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=https%3A%2F%2Fccbractivix.github.io%2FRGP%2Ftheater-web%2Findex.html" alt="QR Code to schedule">
+      </div>
+      <div id="tv-info">
+        <div>See our web schedule for the complete theater schedule with ratings, runtimes, and links to IMDb and parents&rsquo; resources.</div>
+        <div>Scan Here, or use the shortcut <strong>rocketbeachresort.com</strong></div>
+        <div class="info-rules">Kids under 12 require responsible adult supervision. Please take your trash with you if you bring snacks and drinks into the theater. Please be respectful of others, take phone calls outside the theater.</div>
+      </div>
+    </div>
+
+  </div>
+  <div id="next-status"></div>
+  <script src="next.js"></script>
+</body>
+</html>
