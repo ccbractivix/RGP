@@ -108,23 +108,34 @@
       color: #1E2340;
     }
 
-    /* ===== INFO COLUMN ===== */
-    #next-info-area {
+    /* ===== RIGHT PANEL (info + schedule stacked) ===== */
+    #next-right-panel {
       flex: 1;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      min-height: 0;
+      gap: 18px;
+    }
+
+    /* ===== INFO COLUMN ===== */
+    #next-info-area {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
       gap: clamp(10px, 1.5vh, 22px);
       min-width: 0;
     }
 
-    /* ===== SCHEDULE SIDEBAR ===== */
+    /* ===== SCHEDULE (fills remaining right-panel space) ===== */
     #schedule-sidebar {
-      flex: 0 0 clamp(200px, 22vw, 340px);
+      flex: 1;
       display: flex;
       flex-direction: column;
       min-height: 0;
       overflow: hidden;
+      border-top: 1px solid rgba(245,197,24,0.15);
+      padding-top: 14px;
     }
 
     #schedule-sidebar-title {
@@ -135,8 +146,6 @@
       color: #F5C518;
       text-transform: uppercase;
       margin-bottom: 10px;
-      border-bottom: 1px solid rgba(245,197,24,0.2);
-      padding-bottom: 6px;
     }
 
     #schedule-list {
@@ -409,20 +418,22 @@
         <img id="next-poster" src="" alt="">
         <div id="next-no-poster" style="display:none;">&#127916;</div>
       </div>
-      <div id="next-info-area">
-        <div id="next-countdown-section">
-          <div id="next-countdown-label">Starting In</div>
-          <div id="next-countdown">--:--:--</div>
+      <div id="next-right-panel">
+        <div id="next-info-area">
+          <div id="next-countdown-section">
+            <div id="next-countdown-label">Starting In</div>
+            <div id="next-countdown">--:--:--</div>
+          </div>
+          <div class="info-divider"></div>
+          <div id="next-title"></div>
+          <div id="next-meta"></div>
+          <div id="next-imdb"></div>
+          <div id="next-showtime"></div>
         </div>
-        <div class="info-divider"></div>
-        <div id="next-title"></div>
-        <div id="next-meta"></div>
-        <div id="next-imdb"></div>
-        <div id="next-showtime"></div>
-      </div>
-      <div id="schedule-sidebar">
-        <div id="schedule-sidebar-title">Today&rsquo;s Schedule</div>
-        <div id="schedule-list"></div>
+        <div id="schedule-sidebar">
+          <div id="schedule-sidebar-title">Today&rsquo;s Schedule</div>
+          <div id="schedule-list"></div>
+        </div>
       </div>
     </div>
 

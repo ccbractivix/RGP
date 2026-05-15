@@ -226,7 +226,7 @@
 
       var thumbInner = posterSrc
         ? '<img class="schedule-thumb" src="' + escapeHtml(posterSrc) + '" alt="">'
-        : '<div class="schedule-thumb-empty">\u{1F3AC}</div>';
+        : '<div class="schedule-thumb-empty">\uD83C\uDFAC</div>';
 
       var itemKey = currentDayLabel + '|' + show.time;
       var activeClass = (itemKey === activeKey) ? ' schedule-item-active' : '';
