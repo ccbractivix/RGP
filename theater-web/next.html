@@ -108,17 +108,6 @@
       color: #1E2340;
     }
 
-    /* ===== LEFT CELL (poster + up-next info side by side) ===== */
-    #next-left-cell {
-      flex: 3;
-      display: flex;
-      flex-direction: row;
-      align-items: stretch;
-      gap: 40px;
-      min-width: 0;
-      min-height: 0;
-    }
-
     /* ===== INFO COLUMN ===== */
     #next-info-area {
       flex: 1;
@@ -127,93 +116,6 @@
       justify-content: flex-start;
       gap: clamp(10px, 1.5vh, 22px);
       min-width: 0;
-    }
-
-    /* ===== RIGHT CELL (today's schedule) ===== */
-    #next-right-cell {
-      flex: 2;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      border-left: 1px solid rgba(245,197,24,0.15);
-      padding-left: 28px;
-    }
-
-    #schedule-sidebar-title {
-      flex-shrink: 0;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: clamp(16px, 1.6vw, 26px);
-      letter-spacing: 5px;
-      color: #F5C518;
-      text-transform: uppercase;
-      margin-bottom: 14px;
-    }
-
-    #schedule-list {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      scrollbar-width: none;
-    }
-
-    #schedule-list::-webkit-scrollbar { display: none; }
-
-    /* ===== SCHEDULE ROW (time · title · year) ===== */
-    .day-sched-row {
-      display: flex;
-      flex-direction: row;
-      align-items: baseline;
-      gap: 12px;
-      padding: 7px 10px;
-      border-radius: 7px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.05);
-      transition: background 0.2s;
-    }
-
-    .day-sched-row.day-sched-row-active {
-      background: rgba(245,197,24,0.08);
-      border-color: rgba(245,197,24,0.25);
-    }
-
-    .day-sched-time {
-      flex-shrink: 0;
-      font-size: clamp(11px, 1.05vw, 16px);
-      font-weight: 700;
-      letter-spacing: 2px;
-      color: #F5C518;
-      white-space: nowrap;
-    }
-
-    .day-sched-row-active .day-sched-time {
-      color: #50E87A;
-    }
-
-    .day-sched-title {
-      flex: 1;
-      min-width: 0;
-      font-size: clamp(12px, 1.1vw, 17px);
-      font-weight: 600;
-      color: #C8CCE8;
-      line-height: 1.3;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-
-    .day-sched-row-active .day-sched-title {
-      color: #FFFFFF;
-    }
-
-    .day-sched-year {
-      font-weight: 400;
-      color: #6A70A0;
-    }
-
-    .day-sched-row-active .day-sched-year {
-      color: #9098C8;
     }
 
     /* ===== COUNTDOWN ===== */
@@ -393,28 +295,20 @@
     <div id="next-loading">Loading schedule&hellip;</div>
 
     <div id="next-main" style="display:none;">
-      <!-- Left cell: "Up Next" (poster + info) -->
-      <div id="next-left-cell">
-        <div id="next-poster-area">
-          <img id="next-poster" src="" alt="">
-          <div id="next-no-poster" style="display:none;">&#127916;</div>
-        </div>
-        <div id="next-info-area">
-          <div id="next-countdown-section">
-            <div id="next-countdown-label">Starting In</div>
-            <div id="next-countdown">--:--:--</div>
-          </div>
-          <div class="info-divider"></div>
-          <div id="next-title"></div>
-          <div id="next-meta"></div>
-          <div id="next-imdb"></div>
-          <div id="next-showtime"></div>
-        </div>
+      <div id="next-poster-area">
+        <img id="next-poster" src="" alt="">
+        <div id="next-no-poster" style="display:none;">&#127916;</div>
       </div>
-      <!-- Right cell: Today's Schedule -->
-      <div id="next-right-cell">
-        <div id="schedule-sidebar-title">Today&rsquo;s Schedule</div>
-        <div id="schedule-list"></div>
+      <div id="next-info-area">
+        <div id="next-countdown-section">
+          <div id="next-countdown-label">Starting In</div>
+          <div id="next-countdown">--:--:--</div>
+        </div>
+        <div class="info-divider"></div>
+        <div id="next-title"></div>
+        <div id="next-meta"></div>
+        <div id="next-imdb"></div>
+        <div id="next-showtime"></div>
       </div>
     </div>
 
