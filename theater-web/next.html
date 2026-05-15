@@ -108,18 +108,20 @@
       color: #1E2340;
     }
 
-    /* ===== RIGHT PANEL (info + schedule stacked) ===== */
-    #next-right-panel {
-      flex: 1;
+    /* ===== LEFT CELL (poster + up-next info side by side) ===== */
+    #next-left-cell {
+      flex: 3;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      align-items: stretch;
+      gap: 40px;
+      min-width: 0;
       min-height: 0;
-      gap: 18px;
     }
 
     /* ===== INFO COLUMN ===== */
     #next-info-area {
-      flex-shrink: 0;
+      flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
@@ -127,15 +129,14 @@
       min-width: 0;
     }
 
-    /* ===== SCHEDULE (fills remaining right-panel space) ===== */
-    #schedule-sidebar {
-      flex: 1;
+    /* ===== RIGHT CELL (today's schedule) ===== */
+    #next-right-cell {
+      flex: 2;
       display: flex;
       flex-direction: column;
       min-height: 0;
-      overflow: hidden;
-      border-top: 1px solid rgba(245,197,24,0.15);
-      padding-top: 14px;
+      border-left: 1px solid rgba(245,197,24,0.15);
+      padding-left: 28px;
     }
 
     #schedule-sidebar-title {
@@ -145,7 +146,7 @@
       letter-spacing: 5px;
       color: #F5C518;
       text-transform: uppercase;
-      margin-bottom: 10px;
+      margin-bottom: 14px;
     }
 
     #schedule-list {
@@ -153,88 +154,66 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       scrollbar-width: none;
     }
 
     #schedule-list::-webkit-scrollbar { display: none; }
 
-    .schedule-item {
+    /* ===== SCHEDULE ROW (time · title · year) ===== */
+    .day-sched-row {
       display: flex;
       flex-direction: row;
-      align-items: center;
-      gap: 10px;
-      padding: 6px 8px;
+      align-items: baseline;
+      gap: 12px;
+      padding: 7px 10px;
       border-radius: 7px;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.05);
       transition: background 0.2s;
     }
 
-    .schedule-item.schedule-item-active {
+    .day-sched-row.day-sched-row-active {
       background: rgba(245,197,24,0.08);
       border-color: rgba(245,197,24,0.25);
     }
 
-    .schedule-thumb-wrap {
+    .day-sched-time {
       flex-shrink: 0;
-      width: clamp(36px, 4vw, 58px);
-      height: clamp(54px, 6vw, 87px);
-      border-radius: 4px;
-      overflow: hidden;
-      background: #0D1030;
-    }
-
-    .schedule-thumb {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    .schedule-thumb-empty {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: clamp(16px, 2vw, 28px);
-      color: #1E2340;
-    }
-
-    .schedule-item-info {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-
-    .schedule-item-time {
-      font-size: clamp(10px, 1vw, 15px);
+      font-size: clamp(11px, 1.05vw, 16px);
       font-weight: 700;
       letter-spacing: 2px;
       color: #F5C518;
       white-space: nowrap;
     }
 
-    .schedule-item-active .schedule-item-time {
+    .day-sched-row-active .day-sched-time {
       color: #50E87A;
     }
 
-    .schedule-item-movie-title {
-      font-size: clamp(11px, 1.05vw, 15px);
+    .day-sched-title {
+      flex: 1;
+      min-width: 0;
+      font-size: clamp(12px, 1.1vw, 17px);
       font-weight: 600;
       color: #C8CCE8;
-      line-height: 1.25;
+      line-height: 1.3;
       overflow: hidden;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
 
-    .schedule-item-active .schedule-item-movie-title {
+    .day-sched-row-active .day-sched-title {
       color: #FFFFFF;
+    }
+
+    .day-sched-year {
+      font-weight: 400;
+      color: #6A70A0;
+    }
+
+    .day-sched-row-active .day-sched-year {
+      color: #9098C8;
     }
 
     /* ===== COUNTDOWN ===== */
@@ -414,11 +393,12 @@
     <div id="next-loading">Loading schedule&hellip;</div>
 
     <div id="next-main" style="display:none;">
-      <div id="next-poster-area">
-        <img id="next-poster" src="" alt="">
-        <div id="next-no-poster" style="display:none;">&#127916;</div>
-      </div>
-      <div id="next-right-panel">
+      <!-- Left cell: "Up Next" (poster + info) -->
+      <div id="next-left-cell">
+        <div id="next-poster-area">
+          <img id="next-poster" src="" alt="">
+          <div id="next-no-poster" style="display:none;">&#127916;</div>
+        </div>
         <div id="next-info-area">
           <div id="next-countdown-section">
             <div id="next-countdown-label">Starting In</div>
@@ -430,10 +410,11 @@
           <div id="next-imdb"></div>
           <div id="next-showtime"></div>
         </div>
-        <div id="schedule-sidebar">
-          <div id="schedule-sidebar-title">Today&rsquo;s Schedule</div>
-          <div id="schedule-list"></div>
-        </div>
+      </div>
+      <!-- Right cell: Today's Schedule -->
+      <div id="next-right-cell">
+        <div id="schedule-sidebar-title">Today&rsquo;s Schedule</div>
+        <div id="schedule-list"></div>
       </div>
     </div>
 

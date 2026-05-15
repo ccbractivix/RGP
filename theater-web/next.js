@@ -198,7 +198,8 @@
   }
 
   /**
-   * Populate the schedule sidebar with all movies for the given day.
+   * Populate the schedule list with all movies for the given day.
+   * Each row shows: start time · title (year).
    * The currently-displayed show (activeKey = "dayLabel|time") is highlighted.
    */
   function renderScheduleSidebar(days, currentDayLabel, activeKey) {
@@ -219,32 +220,24 @@
       var show = dayObj.shows[j];
       if (show.contentType === 'live event') continue;
 
-      var posterSrc = show.poster || '';
-      if (posterSrc && posterSrc.charAt(0) === '/') {
-        posterSrc = API_BASE + posterSrc;
-      }
-
-      var thumbInner = posterSrc
-        ? '<img class="schedule-thumb" src="' + escapeHtml(posterSrc) + '" alt="">'
-        : '<div class="schedule-thumb-empty">\uD83C\uDFAC</div>';
-
       var itemKey = currentDayLabel + '|' + show.time;
-      var activeClass = (itemKey === activeKey) ? ' schedule-item-active' : '';
+      var activeClass = (itemKey === activeKey) ? ' day-sched-row-active' : '';
+
+      var yearHtml = show.year
+        ? ' <span class="day-sched-year">(' + escapeHtml(String(show.year)) + ')</span>'
+        : '';
 
       html +=
-        '<div class="schedule-item' + activeClass + '">' +
-          '<div class="schedule-thumb-wrap">' + thumbInner + '</div>' +
-          '<div class="schedule-item-info">' +
-            '<div class="schedule-item-time">' + escapeHtml(show.time) + '</div>' +
-            '<div class="schedule-item-movie-title">' + escapeHtml(show.title) + '</div>' +
-          '</div>' +
+        '<div class="day-sched-row' + activeClass + '">' +
+          '<div class="day-sched-time">' + escapeHtml(show.time) + '</div>' +
+          '<div class="day-sched-title">' + escapeHtml(show.title) + yearHtml + '</div>' +
         '</div>';
     }
 
     elScheduleList.innerHTML = html;
 
     // Scroll the active item into view
-    var activeEl = elScheduleList.querySelector('.schedule-item-active');
+    var activeEl = elScheduleList.querySelector('.day-sched-row-active');
     if (activeEl) {
       activeEl.scrollIntoView({ block: 'nearest' });
     }
