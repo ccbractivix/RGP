@@ -19,14 +19,6 @@ function requireAuth(req, res, next) {
   return res.status(401).json({ error: 'Unauthorized' });
 }
 
-function requireOperatorAuth(req, res, next) {
-  if (req.session && req.session.authed) return next();
-  const code  = (req.headers['x-auth-code'] || '').trim();
-  const codes = getOperatorCodes();
-  if (code && codes.length && codes.includes(code)) return next();
-  return res.status(401).json({ error: 'Unauthorized' });
-}
-
 // ── POST /admin/verify — check operator code (no session required) ────────────
 router.post('/verify', (req, res) => {
   const code  = (req.body.code || '').trim();

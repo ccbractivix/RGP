@@ -30,7 +30,12 @@ app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Session with PostgreSQL store
+// Session with PostgreSQL store.
+// Note: the /admin/login, /admin/logout, and /admin/verify routes intentionally
+// bypass CSRF validation because:
+//   - login/logout operate on unauthenticated or expiring sessions (no forgeable state)
+//   - verify only reads operator code validity and changes no session state
+// All other mutating admin routes enforce CSRF (session-based) or X-Auth-Code (operator UI).
 const PgSession = require('connect-pg-simple')(session);
 const sessionPool = new Pool({
   connectionString: process.env.DATABASE_URL,
