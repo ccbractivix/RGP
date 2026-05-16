@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://activities-backend.onrender.com">
+  <title>Activities Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f172a; --card: #1e293b; --card-border: #334155;
+      --text: #e2e8f0; --text-muted: #94a3b8;
+      --green: #22c55e; --green-dim: rgba(34,197,94,0.15);
+      --red: #ef4444; --red-dim: rgba(239,68,68,0.15);
+      --orange: #f59e0b; --orange-dim: rgba(245,158,11,0.15);
+      --blue: #3b82f6; --blue-dim: rgba(59,130,246,0.15);
+    }
+
+    html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; }
+
+    /* ── Login ── */
+    #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    #login-screen h1 { font-family: 'Fredoka', sans-serif; font-size: 26px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+    #login-screen p { color: var(--text-muted); margin-bottom: 24px; font-size: 13px; }
+    .code-input { width: 200px; padding: 14px; font-size: 24px; font-family: 'Inter', sans-serif; text-align: center; letter-spacing: 8px; background: var(--card); color: var(--text); border: 2px solid var(--card-border); border-radius: 10px; outline: none; }
+    .code-input:focus { border-color: var(--blue); }
+    .login-btn { margin-top: 16px; padding: 12px 40px; font-size: 15px; font-weight: 600; background: var(--blue); color: #fff; border: none; border-radius: 8px; cursor: pointer; }
+    .login-btn:active { opacity: 0.8; }
+    .login-error { color: var(--red); margin-top: 12px; font-size: 13px; min-height: 20px; }
+
+    /* ── Dashboard ── */
+    #dashboard { display: none; }
+
+    .dash-header {
+      background: var(--card); border-bottom: 1px solid var(--card-border);
+      padding: 14px 16px 12px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .dash-header h1 { font-family: 'Fredoka', sans-serif; font-size: 22px; font-weight: 700; }
+    .dash-header-time { font-size: 12px; color: var(--text-muted); text-align: right; }
+    .logout-btn { font-size: 12px; color: var(--text-muted); background: none; border: 1px solid var(--card-border); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+    .logout-btn:active { background: var(--card-border); }
+
+    .dash-date-label { padding: 10px 16px 4px; font-size: 18px; font-weight: 700; color: var(--text); }
+
+    .activities-list { padding: 8px 12px 24px; display: flex; flex-direction: column; gap: 8px; }
+
+    .act-row {
+      background: var(--card); border: 1px solid var(--card-border); border-radius: 10px;
+      padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s; -webkit-tap-highlight-color: transparent;
+    }
+    .act-row:active { background: #253045; }
+    .act-row.canceled { background: var(--red-dim); border-color: var(--red); opacity: 0.85; }
+    .act-row.relocated { background: var(--orange-dim); border-color: var(--orange); }
+
+    .act-row-time { font-size: 22px; font-weight: 700; color: var(--orange); white-space: nowrap; min-width: 72px; }
+    .act-row-info { flex: 1; min-width: 0; }
+    .act-row-name { font-size: 17px; font-weight: 600; line-height: 1.3; }
+    .act-row-name.canceled { color: var(--red); text-decoration: line-through; }
+    .act-row-venue { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .act-row-status { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+    .act-row-status.canceled { color: var(--red); }
+    .act-row-status.relocated { color: var(--orange); }
+    .act-row-arrow { color: var(--text-muted); font-size: 18px; }
+
+    .empty-today { text-align: center; color: var(--text-muted); font-size: 14px; padding: 40px 20px; }
+    .loading-msg { text-align: center; color: var(--text-muted); font-size: 14px; padding: 40px 20px; }
+
+    /* ── Popup overlay ── */
+    .popup-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(3px);
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 100; padding-bottom: 0; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .popup-overlay.open { opacity: 1; pointer-events: all; }
+
+    .popup-sheet {
+      background: var(--card); border-top: 1px solid var(--card-border);
+      border-radius: 20px 20px 0 0; width: 100%; max-width: 520px;
+      padding: 20px 20px 36px;
+      transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+    }
+    .popup-overlay.open .popup-sheet { transform: translateY(0); }
+
+    .popup-handle { width: 40px; height: 4px; background: var(--card-border); border-radius: 2px; margin: 0 auto 16px; }
+
+    .popup-activity-name { font-family: 'Fredoka', sans-serif; font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .popup-activity-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+
+    .popup-actions { display: flex; flex-direction: column; gap: 10px; }
+
+    .popup-btn {
+      width: 100%; padding: 16px; border: none; border-radius: 12px;
+      font-family: 'Inter', sans-serif; font-size: 17px; font-weight: 700;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .popup-btn:active { opacity: 0.75; }
+    .popup-btn-cancel-act { background: var(--red); color: #fff; }
+    .popup-btn-relocate   { background: var(--orange); color: #fff; }
+    .popup-btn-restore    { background: var(--green); color: #fff; }
+    .popup-btn-dismiss    { background: var(--card); color: var(--text-muted); border: 1px solid var(--card-border); }
+
+    /* ── Relocate step ── */
+    #relocate-step { display: none; }
+    .venue-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .venue-btn {
+      width: 100%; padding: 14px 16px; border-radius: 10px;
+      background: #253045; border: 2px solid transparent;
+      color: var(--text); font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600;
+      cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s;
+    }
+    .venue-btn:active, .venue-btn.selected { border-color: var(--blue); background: var(--blue-dim); }
+    #other-venue-input {
+      display: none; width: 100%; padding: 12px 14px; font-size: 15px;
+      background: #253045; border: 2px solid var(--card-border); border-radius: 10px;
+      color: var(--text); font-family: 'Inter', sans-serif; outline: none; margin-bottom: 10px;
+    }
+    #other-venue-input:focus { border-color: var(--blue); }
+    .confirm-relocate-btn {
+      width: 100%; padding: 15px; border: none; border-radius: 12px;
+      background: var(--orange); color: #fff; font-family: 'Inter', sans-serif;
+      font-size: 17px; font-weight: 700; cursor: pointer;
+    }
+    .confirm-relocate-btn:active { opacity: 0.75; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(16px);
+      background: #1e293b; border: 1px solid #475569; border-radius: 8px;
+      padding: 12px 20px; font-size: 14px; font-weight: 600; color: var(--text);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5); opacity: 0;
+      transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 9999;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: var(--green); color: var(--green); }
+    .toast.error   { border-color: var(--red);   color: var(--red); }
+  </style>
+</head>
+<body>
+
+  <!-- Login -->
+  <div id="login-screen">
+    <h1>🏄 Activities Control</h1>
+    <p>Enter your access code to continue</p>
+    <input class="code-input" type="password" id="code-input" maxlength="8"
+           placeholder="••••" autocomplete="off" inputmode="numeric" />
+    <button class="login-btn" id="login-btn">Enter</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard">
+    <div class="dash-header">
+      <h1>🏄 Activities Control</h1>
+      <button class="logout-btn" id="logout-btn">Log Out</button>
+    </div>
+    <div class="dash-date-label" id="dash-date-label"></div>
+    <div class="activities-list" id="activities-list">
+      <div class="loading-msg">Loading today's activities…</div>
+    </div>
+  </div>
+
+  <!-- Action popup -->
+  <div class="popup-overlay" id="popup-overlay">
+    <div class="popup-sheet">
+      <div class="popup-handle"></div>
+      <div class="popup-activity-name" id="popup-name"></div>
+      <div class="popup-activity-meta" id="popup-meta"></div>
+
+      <!-- Action step -->
+      <div id="action-step">
+        <div class="popup-actions">
+          <button class="popup-btn popup-btn-cancel-act" id="btn-do-cancel">⛔ Cancel Activity</button>
+          <button class="popup-btn popup-btn-relocate" id="btn-do-relocate">📍 Relocate Activity</button>
+          <button class="popup-btn popup-btn-restore" id="btn-do-restore" style="display:none">↩ Restore Activity</button>
+          <button class="popup-btn popup-btn-dismiss" onclick="closePopup()">Dismiss</button>
+        </div>
+      </div>
+
+      <!-- Relocate step -->
+      <div id="relocate-step">
+        <p style="font-size:14px;color:var(--text-muted);margin-bottom:12px;">Where should this activity be moved?</p>
+        <div class="venue-list" id="venue-list"></div>
+        <input type="text" id="other-venue-input" placeholder="Enter new location…" />
+        <button class="confirm-relocate-btn" id="btn-confirm-relocate">Confirm Relocation</button>
+        <button class="popup-btn popup-btn-dismiss" style="margin-top:8px" onclick="showActionStep()">← Back</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var metaTag = document.querySelector('meta[name="api-url"]');
+    var API_BASE = (metaTag && metaTag.getAttribute('content')) || '';
+    if (API_BASE.endsWith('/')) API_BASE = API_BASE.slice(0, -1);
+
+    var VENUES = ['Caribe Room','Water Slide','Main Pool Deck','Sports Courts','Tiki Bar','Arcade','Other…'];
+    var authCode = '';
+    var todayData = [];
+    var activeEntry = null;
+    var selectedVenue = null;
+
+    function escapeHtml(s) {
+      if (!s) return '';
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    /* ── Login ── */
+    function attemptLogin() {
+      var code = document.getElementById('code-input').value.trim();
+      if (!code) return;
+      fetch(API_BASE + '/admin/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(d) {
+        if (d.valid) {
+          authCode = code;
+          document.getElementById('login-screen').style.display = 'none';
+          document.getElementById('dashboard').style.display = 'block';
+          loadToday();
+        } else {
+          document.getElementById('login-error').textContent = 'Invalid code. Try again.';
+        }
+      })
+      .catch(function() {
+        document.getElementById('login-error').textContent = 'Connection error. Please try again.';
+      });
+    }
+
+    document.getElementById('login-btn').addEventListener('click', attemptLogin);
+    document.getElementById('code-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') attemptLogin();
+      document.getElementById('login-error').textContent = '';
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', function() {
+      authCode = '';
+      document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('code-input').value = '';
+    });
+
+    /* ── Toast ── */
+    function showToast(msg, type) {
+      var t = document.getElementById('toast');
+      t.textContent = msg; t.className = 'toast' + (type ? ' ' + type : '');
+      t.classList.add('show'); clearTimeout(t._timer);
+      t._timer = setTimeout(function(){ t.classList.remove('show'); }, 3000);
+    }
+
+    /* ── Load today ── */
+    function loadToday() {
+      fetch(API_BASE + '/api/schedule/today')
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+          todayData = data.activities || [];
+          var d = new Date();
+          document.getElementById('dash-date-label').textContent =
+            d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+          renderList();
+        })
+        .catch(function() {
+          document.getElementById('activities-list').innerHTML = '<div class="loading-msg">Failed to load activities.</div>';
+        });
+    }
+
+    function renderList() {
+      var list = document.getElementById('activities-list');
+      if (!todayData.length) {
+        list.innerHTML = '<div class="empty-today">No activities scheduled for today.</div>';
+        return;
+      }
+      var html = '';
+      todayData.forEach(function(a) {
+        var statusClass = a.status !== 'scheduled' ? ' ' + a.status : '';
+        html += '<div class="act-row'+statusClass+'" onclick="openPopup(\''+escapeHtml(a.id)+'\')">';
+        html += '<div class="act-row-time">'+escapeHtml(a.time)+'</div>';
+        html += '<div class="act-row-info">';
+        html += '<div class="act-row-name'+(a.status==='canceled'?' canceled':'')+'">' + escapeHtml(a.name) + '</div>';
+        if (a.status==='canceled') {
+          html += '<div class="act-row-status canceled">Activity Canceled</div>';
+        } else if (a.status==='relocated') {
+          html += '<div class="act-row-venue">'+escapeHtml(a.relocatedVenue||a.venue)+'</div>';
+          html += '<div class="act-row-status relocated">Relocated</div>';
+        } else {
+          html += '<div class="act-row-venue">'+escapeHtml(a.venue)+'</div>';
+        }
+        html += '</div>';
+        html += '<div class="act-row-arrow">›</div>';
+        html += '</div>';
+      });
+      list.innerHTML = html;
+    }
+
+    /* ── Popup ── */
+    window.openPopup = function(id) {
+      var entry = todayData.find(function(a){ return a.id === id; });
+      if (!entry) return;
+      activeEntry = entry;
+      document.getElementById('popup-name').textContent = entry.name;
+      document.getElementById('popup-meta').textContent = entry.time + ' · ' + entry.venue;
+
+      var btnRestore = document.getElementById('btn-do-restore');
+      var btnCancel  = document.getElementById('btn-do-cancel');
+      var btnRelocate= document.getElementById('btn-do-relocate');
+      if (entry.status !== 'scheduled') {
+        btnRestore.style.display = '';
+        btnCancel.style.display  = 'none';
+        btnRelocate.style.display= 'none';
+      } else {
+        btnRestore.style.display = 'none';
+        btnCancel.style.display  = '';
+        btnRelocate.style.display= '';
+      }
+
+      showActionStep();
+      document.getElementById('popup-overlay').classList.add('open');
+    };
+
+    function closePopup() {
+      document.getElementById('popup-overlay').classList.remove('open');
+      activeEntry = null;
+    }
+    window.closePopup = closePopup;
+
+    // Close popup when tapping outside the sheet
+    document.getElementById('popup-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closePopup();
+    });
+
+    function showActionStep() {
+      document.getElementById('action-step').style.display = '';
+      document.getElementById('relocate-step').style.display = 'none';
+    }
+    window.showActionStep = showActionStep;
+
+    /* ── Cancel ── */
+    document.getElementById('btn-do-cancel').addEventListener('click', function() {
+      if (!activeEntry) return;
+      if (!confirm('Mark "' + activeEntry.name + '" as canceled?')) return;
+      apiPatch('/admin/schedule/entry/' + encodeURIComponent(activeEntry.id) + '/cancel', {})
+        .then(function(r) {
+          if (!r.ok) throw new Error();
+          closePopup();
+          showToast('Activity canceled.', 'success');
+          loadToday();
+        })
+        .catch(function(){ showToast('Failed to cancel.','error'); });
+    });
+
+    /* ── Restore ── */
+    document.getElementById('btn-do-restore').addEventListener('click', function() {
+      if (!activeEntry) return;
+      apiPatch('/admin/schedule/entry/' + encodeURIComponent(activeEntry.id) + '/restore', {})
+        .then(function(r) {
+          if (!r.ok) throw new Error();
+          closePopup();
+          showToast('Activity restored.', 'success');
+          loadToday();
+        })
+        .catch(function(){ showToast('Failed to restore.','error'); });
+    });
+
+    /* ── Relocate ── */
+    document.getElementById('btn-do-relocate').addEventListener('click', function() {
+      selectedVenue = null;
+      document.getElementById('other-venue-input').style.display = 'none';
+      document.getElementById('other-venue-input').value = '';
+
+      var vl = document.getElementById('venue-list');
+      vl.innerHTML = VENUES.map(function(v) {
+        var isDefault = (v === 'Caribe Room');
+        return '<button class="venue-btn'+(isDefault?' selected':'')+'" onclick="selectVenue(this,\''+escapeHtml(v)+'\')">'+escapeHtml(v)+'</button>';
+      }).join('');
+      if (!selectedVenue) selectedVenue = 'Caribe Room';
+
+      document.getElementById('action-step').style.display = 'none';
+      document.getElementById('relocate-step').style.display = '';
+    });
+
+    window.selectVenue = function(btn, venue) {
+      document.querySelectorAll('.venue-btn').forEach(function(b){ b.classList.remove('selected'); });
+      btn.classList.add('selected');
+      selectedVenue = venue;
+      var otherInput = document.getElementById('other-venue-input');
+      if (venue === 'Other…') {
+        otherInput.style.display = 'block';
+        otherInput.focus();
+      } else {
+        otherInput.style.display = 'none';
+      }
+    };
+
+    document.getElementById('btn-confirm-relocate').addEventListener('click', function() {
+      var venue = selectedVenue === 'Other…'
+        ? document.getElementById('other-venue-input').value.trim()
+        : selectedVenue;
+      if (!venue) { showToast('Please select or enter a venue.','error'); return; }
+      if (!activeEntry) return;
+      apiPatch('/admin/schedule/entry/' + encodeURIComponent(activeEntry.id) + '/relocate', { venue })
+        .then(function(r) {
+          if (!r.ok) throw new Error();
+          closePopup();
+          showToast('Activity relocated to ' + venue + '.', 'success');
+          loadToday();
+        })
+        .catch(function(){ showToast('Failed to relocate.','error'); });
+    });
+
+    /* ── API helper ── */
+    function apiPatch(path, body) {
+      return fetch(API_BASE + path, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Auth-Code': authCode,
+        },
+        body: JSON.stringify(body),
+      });
+    }
+  })();
+  </script>
+</body>
+</html>

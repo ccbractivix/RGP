@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://activities-backend.onrender.com/api/schedule/today">
+  <title>Today's Activities</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #FFF8F0;
+      color: #3D3128;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+
+    #tv-page { display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+    /* ===== HEADLINE ===== */
+    #tv-headline-wrap {
+      display: flex;
+      align-items: stretch;
+      flex-shrink: 0;
+      border-bottom: 2px solid #E8D5C0;
+    }
+
+    #tv-headline {
+      flex: 1;
+      padding: 16px 24px 12px;
+      font-family: 'Fredoka', sans-serif;
+      font-size: clamp(28px, 4vw, 54px);
+      font-weight: 700;
+      letter-spacing: 5px;
+      color: #4A7A36;
+      text-transform: uppercase;
+    }
+
+    #tv-day-label {
+      align-self: flex-end;
+      padding: 0 24px 14px;
+      font-size: clamp(14px, 1.5vw, 22px);
+      font-weight: 600;
+      color: #7A6B5A;
+    }
+
+    /* ===== CONTENT ===== */
+    #tv-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 16px 32px;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .today-row {
+      display: flex;
+      align-items: baseline;
+      gap: 18px;
+      padding: 12px 0;
+      border-bottom: 1px solid #E8D5C0;
+    }
+    .today-row:last-child { border-bottom: none; }
+
+    .today-time {
+      font-size: clamp(22px, 2.8vw, 42px);
+      font-weight: 700;
+      color: #E37433;
+      min-width: 130px;
+      white-space: nowrap;
+    }
+
+    .today-info { flex: 1; min-width: 0; }
+
+    .today-name {
+      font-family: 'Fredoka', sans-serif;
+      font-size: clamp(20px, 2.4vw, 36px);
+      font-weight: 700;
+      color: #4A7A36;
+      line-height: 1.2;
+    }
+
+    .today-name.canceled {
+      color: #C0392B;
+      text-decoration: line-through;
+    }
+
+    .today-canceled-note {
+      font-size: clamp(12px, 1.2vw, 18px);
+      font-weight: 700;
+      color: #C0392B;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .today-relocated-venue {
+      font-size: clamp(12px, 1.2vw, 18px);
+      font-weight: 700;
+      color: #C0392B;
+    }
+
+    .today-relocated-note {
+      font-size: clamp(11px, 1vw, 15px);
+      color: #C0392B;
+      font-style: italic;
+    }
+
+    .today-venue {
+      font-size: clamp(12px, 1.2vw, 18px);
+      color: #7A6B5A;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .tv-empty {
+      font-size: clamp(20px, 2.2vw, 32px);
+      color: #B8A898;
+      font-style: italic;
+      align-self: center;
+      margin-top: 40px;
+    }
+
+    /* ===== BOTTOM BAR ===== */
+    #tv-bottom {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      padding: 8px 14px;
+      border-top: 2px solid #E8D5C0;
+      gap: 14px;
+    }
+
+    #tv-qr {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+    }
+
+    #tv-qr img {
+      width: clamp(70px, 8vw, 110px);
+      height: clamp(70px, 8vw, 110px);
+      border-radius: 6px;
+      background: #fff;
+      padding: 4px;
+    }
+
+    #tv-qr-text {
+      font-size: clamp(10px, 0.95vw, 14px);
+      color: #3D3128;
+      line-height: 1.5;
+      max-width: 280px;
+    }
+
+    #tv-sports {
+      margin-left: auto;
+      text-align: right;
+      font-size: clamp(11px, 1.05vw, 16px);
+      color: #3D3128;
+      line-height: 1.5;
+    }
+
+    #tv-sports .sports-headline {
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 700;
+      font-size: clamp(14px, 1.3vw, 20px);
+      color: #4A7A36;
+      letter-spacing: 1px;
+    }
+
+    #tv-status {
+      position: fixed;
+      bottom: 3px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: clamp(9px, 0.75vw, 12px);
+      color: #B8A898;
+    }
+
+    #tv-loading {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      color: #7A6B5A;
+    }
+  </style>
+</head>
+<body>
+  <div id="tv-page">
+
+    <div id="tv-headline-wrap">
+      <div id="tv-headline">🏄 Today's Activities</div>
+      <div id="tv-day-label"></div>
+    </div>
+
+    <div id="tv-content">
+      <div id="tv-loading">Loading…</div>
+    </div>
+
+    <div id="tv-bottom">
+      <div id="tv-qr">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fccbractivix.github.io%2FRGP%2Factivities-web%2Findex.html"
+             alt="QR Code for activities schedule">
+        <div id="tv-qr-text">
+          See the full week's activities schedule at our website — scan the QR code or visit
+          <strong>rocketbeachresort.com</strong>.
+        </div>
+      </div>
+      <div id="tv-sports">
+        <div class="sports-headline">Dawn to Dusk</div>
+        <div>Basketball, Volleyball, Pickleball and More!</div>
+        <div>All supplies available for rental at the Front Desk.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="tv-status"></div>
+  <script src="today.js"></script>
+</body>
+</html>

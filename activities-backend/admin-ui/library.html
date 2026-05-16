@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="api-base" content="https://activities-backend.onrender.com" />
+  <title>Library Builder – Activities Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fredoka:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #1a1a1a; --panel: #242424; --card: #2c2c2c;
+      --border: #333; --border-light: #3a3a3a;
+      --gold: #c8a45a; --gold-hover: #d9b96e; --gold-dim: rgba(200,164,90,0.15);
+      --green: #5cb85c; --green-dim: rgba(92,184,92,0.18);
+      --red: #e05555; --red-dim: rgba(224,85,85,0.15);
+      --text: #e8e8e8; --text-muted: #888; --text-dim: #555;
+      --header-bg: #0d0d0d; --success: #5cb85c;
+    }
+    html, body { height: 100%; overflow-x: hidden; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif;
+      font-size: 13px; display: flex; flex-direction: column; }
+
+    .header {
+      background: var(--header-bg); border-bottom: 1px solid var(--border);
+      padding: 0 1.5rem; height: 52px; display: flex; align-items: center;
+      justify-content: space-between; flex-shrink: 0; gap: 1rem;
+    }
+    .header-title { font-family: 'Fredoka', sans-serif; font-size: 1.15rem; font-weight: 700; color: var(--gold); }
+    .header-actions { display: flex; align-items: center; gap: 0.5rem; }
+
+    .btn {
+      background: var(--card); color: var(--text); border: 1px solid var(--border-light);
+      border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600;
+      padding: 0.42rem 0.9rem; cursor: pointer; transition: background 0.15s, border-color 0.15s;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap;
+    }
+    .btn:hover { background: #353535; border-color: #4a4a4a; }
+    .btn-gold { background: var(--gold); color: #1a1a1a; border-color: var(--gold); }
+    .btn-gold:hover { background: var(--gold-hover); border-color: var(--gold-hover); }
+    .btn-danger { color: var(--red); border-color: rgba(224,85,85,0.35); }
+    .btn-danger:hover { background: var(--red-dim); border-color: var(--red); }
+    .btn-sm { font-size: 0.73rem; padding: 0.25rem 0.6rem; }
+    .btn-xs { font-size: 0.68rem; padding: 0.18rem 0.45rem; }
+
+    .action-bar {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0.75rem 1.5rem; background: var(--panel);
+      border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
+    }
+
+    .table-wrap { flex: 1; overflow: auto; padding: 0 1.5rem 1.5rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    thead th {
+      background: var(--panel); border: 1px solid var(--border);
+      padding: 0.55rem 0.75rem; text-align: left; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted);
+      white-space: nowrap; position: sticky; top: 0; z-index: 2;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    tbody td { padding: 0.55rem 0.75rem; vertical-align: middle; font-size: 0.82rem; }
+    .state-row td { text-align: center; padding: 3rem 0; color: var(--text-dim); font-size: 0.9rem; }
+    .spinner-inline {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(200,164,90,0.3); border-top-color: var(--gold);
+      border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 0.4rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .badge {
+      display: inline-block; border-radius: 4px; font-size: 0.68rem; font-weight: 700;
+      letter-spacing: 0.05em; text-transform: uppercase; padding: 0.18rem 0.5rem;
+    }
+    .badge-featured { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(200,164,90,0.4); }
+    .actions-cell { white-space: nowrap; display: flex; gap: 0.35rem; align-items: center; }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(2px);
+      display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-card {
+      background: var(--panel); border: 1px solid var(--border-light); border-radius: 12px;
+      width: 100%; max-width: 500px; box-shadow: 0 16px 48px rgba(0,0,0,0.7);
+      transform: translateY(8px); transition: transform 0.2s; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-overlay.open .modal-card { transform: translateY(0); }
+    .modal-header {
+      padding: 1.1rem 1.25rem 0.85rem; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; background: var(--panel); z-index: 1;
+    }
+    .modal-title { font-size: 1rem; font-weight: 700; color: var(--gold); }
+    .modal-close {
+      background: none; border: none; color: var(--text-muted); font-size: 1.1rem;
+      cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: color 0.15s;
+    }
+    .modal-close:hover { color: var(--text); background: var(--card); }
+    .modal-body { padding: 1.1rem 1.25rem; }
+    .modal-footer {
+      padding: 0.85rem 1.25rem; border-top: 1px solid var(--border);
+      display: flex; gap: 0.5rem; justify-content: flex-end;
+      position: sticky; bottom: 0; background: var(--panel);
+    }
+    .form-row { margin-bottom: 0.9rem; }
+    .form-row label {
+      display: block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.07em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.35rem;
+    }
+    .form-control {
+      width: 100%; background: #1e1e1e; border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.85rem;
+      padding: 0.5rem 0.7rem; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-control:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(200,164,90,0.12); }
+    .form-control::placeholder { color: #555; }
+    .form-control option { background: #2c2c2c; }
+    .form-hint { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.3rem; }
+    .modal-error {
+      color: var(--red); font-size: 0.78rem; margin-top: 0.4rem; display: none;
+    }
+    .modal-error.visible { display: block; }
+    .checkbox-row {
+      display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.9rem;
+    }
+    .checkbox-row input[type="checkbox"] {
+      width: 16px; height: 16px; accent-color: var(--gold); cursor: pointer; flex-shrink: 0;
+    }
+    .checkbox-row label {
+      font-size: 0.82rem; font-weight: 600; color: var(--text); text-transform: none;
+      letter-spacing: 0; margin: 0; cursor: pointer;
+    }
+    .form-row-half { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--panel);
+      border: 1px solid var(--border-light); border-radius: 8px; padding: 0.65rem 1rem;
+      font-size: 0.82rem; font-weight: 500; color: var(--text); box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      opacity: 0; transform: translateY(8px); transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none; z-index: 9999; max-width: 320px;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error   { border-color: var(--red); color: var(--red); }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-title">🏄 Library Builder</div>
+    <div class="header-actions">
+      <a class="btn" href="/admin-ui/dashboard.html">📅 Schedule</a>
+      <button class="btn btn-danger" id="btn-logout">⏻ Logout</button>
+    </div>
+  </header>
+
+  <div class="action-bar">
+    <button class="btn btn-gold" onclick="openAddModal()">＋ Add Activity</button>
+  </div>
+
+  <div class="table-wrap">
+    <table id="lib-table">
+      <thead>
+        <tr>
+          <th>Image</th>
+          <th>Name</th>
+          <th>ID</th>
+          <th>Venue</th>
+          <th>Price</th>
+          <th>Duration</th>
+          <th>Featured</th>
+          <th>Info Lines</th>
+          <th style="width:120px">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="lib-tbody">
+        <tr class="state-row"><td colspan="9"><span class="spinner-inline"></span> Loading library…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Add / Edit Modal -->
+  <div class="modal-overlay" id="modal-activity">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title" id="modal-activity-title">Add Activity</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row" id="row-id">
+          <label>Activity ID</label>
+          <input type="text" class="form-control" id="act-id" placeholder="ACT-POOLSWIM" spellcheck="false" />
+          <div class="form-hint">Must match ACT-[A-Z0-9]+ format (e.g. ACT-WATERSLIDE)</div>
+        </div>
+        <div class="form-row">
+          <label>Activity Name</label>
+          <input type="text" class="form-control" id="act-name" placeholder="Activity name (required)" />
+        </div>
+        <div class="form-row-half">
+          <div class="form-row" style="margin-bottom:0">
+            <label>Venue</label>
+            <select class="form-control" id="act-venue">
+              <option value="">Select venue…</option>
+              <option>Water Slide</option>
+              <option>Main Pool Deck</option>
+              <option>Caribe Room</option>
+              <option>Sports Courts</option>
+              <option>Tiki Bar</option>
+              <option>Arcade</option>
+            </select>
+          </div>
+          <div class="form-row" style="margin-bottom:0">
+            <label>Duration (minutes)</label>
+            <input type="number" class="form-control" id="act-duration" placeholder="60" min="1" />
+          </div>
+        </div>
+        <div class="form-row" style="margin-top:0.9rem">
+          <label>Price <span style="color:var(--text-dim);font-weight:400">(optional — leave blank if free)</span></label>
+          <input type="number" class="form-control" id="act-price" placeholder="e.g. 5.00" min="0" step="0.01" />
+          <div class="form-hint">If no price is entered, no price will be shown in the schedule.</div>
+        </div>
+        <div class="form-row">
+          <label>Additional Info Line 1 <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="act-info1" placeholder="e.g. Ages 7 and up" />
+        </div>
+        <div class="form-row">
+          <label>Additional Info Line 2 <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="act-info2" placeholder="e.g. Wristbands required" />
+        </div>
+        <div class="form-row">
+          <label>Image Filename <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="act-image" placeholder="e.g. pool-party.jpg" spellcheck="false" />
+          <div class="form-hint">Filename of an image in the repo's <code>/static</code> folder.</div>
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="act-featured" />
+          <label for="act-featured">⭐ Featured Activity — shown in the header of the web &amp; TV schedules</label>
+        </div>
+        <div class="modal-error" id="act-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-gold" id="btn-save-activity" onclick="saveActivity()">Add Activity</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  (function () {
+    var metaBase = document.querySelector('meta[name="api-base"]');
+    var apiBase  = (metaBase && metaBase.getAttribute('content')) || '';
+    if (apiBase.endsWith('/')) apiBase = apiBase.slice(0, -1);
+    if (apiBase && window.location.origin !== apiBase) {
+      window.location.replace(apiBase + '/admin-ui/library.html');
+      return;
+    }
+
+    var editingId  = null;
+    var items      = [];
+
+    /* ── CSRF ── */
+    var _csrf = null;
+    async function csrf(force) {
+      if (_csrf && !force) return _csrf;
+      var r = await fetch('/admin/csrf-token', { credentials: 'include' });
+      if (r.status === 401) { window.location.href = '/admin-ui/login.html'; return ''; }
+      _csrf = (await r.json()).csrfToken || '';
+      return _csrf;
+    }
+
+    async function apiFetch(url, opts) {
+      opts = opts || {};
+      var token = await csrf();
+      if (!token) return new Response(null, { status: 401 });
+      var doFetch = function(t) {
+        return fetch(url, Object.assign({ credentials: 'include' }, opts, {
+          headers: Object.assign({ 'Content-Type': 'application/json', 'X-CSRF-Token': t }, opts.headers || {})
+        }));
+      };
+      var res = await doFetch(token);
+      if (res.status === 403) { var t2 = await csrf(true); res = await doFetch(t2); }
+      if (res.status === 401) { window.location.href = '/admin-ui/login.html'; return new Response(null, {status:401}); }
+      return res;
+    }
+
+    function showToast(msg, type) {
+      var t = document.getElementById('toast');
+      t.textContent = msg; t.className = 'toast' + (type ? ' ' + type : '');
+      t.classList.add('show'); clearTimeout(t._timer);
+      t._timer = setTimeout(function() { t.classList.remove('show'); }, 3000);
+    }
+
+    function esc(s) {
+      return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function fmtDuration(m) {
+      m = parseInt(m, 10);
+      if (!m) return '—';
+      var h = Math.floor(m/60), min = m%60;
+      if (h && min) return h+'h '+min+'m';
+      if (h) return h+'h';
+      return min+'m';
+    }
+
+    /* ── Load ── */
+    async function loadLibrary() {
+      var r = await apiFetch('/admin/library');
+      if (!r.ok) { document.getElementById('lib-tbody').innerHTML = '<tr class="state-row"><td colspan="9">Failed to load library.</td></tr>'; return; }
+      items = await r.json();
+      renderTable();
+    }
+
+    function renderTable() {
+      var tbody = document.getElementById('lib-tbody');
+      if (!items.length) {
+        tbody.innerHTML = '<tr class="state-row"><td colspan="9">No activities in library yet.</td></tr>';
+        return;
+      }
+      var html = '';
+      items.forEach(function(item) {
+        var imgCell = item.image
+          ? '<img src="/static/' + esc(item.image) + '" style="width:40px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--border)">'
+          : '<span style="color:var(--text-dim);font-size:1.1rem">🏃</span>';
+        var infoLines = [item.info_line1, item.info_line2].filter(Boolean).join(' · ') || '<span style="color:var(--text-dim)">—</span>';
+        html += '<tr>'
+          + '<td>' + imgCell + '</td>'
+          + '<td style="font-weight:600">' + esc(item.name) + '</td>'
+          + '<td style="font-family:monospace;font-size:0.75rem;color:var(--text-muted)">' + esc(item.id) + '</td>'
+          + '<td>' + esc(item.venue) + '</td>'
+          + '<td>' + (item.price != null ? '$' + Number(item.price).toFixed(2) : '<span style="color:var(--text-dim)">Free</span>') + '</td>'
+          + '<td>' + fmtDuration(item.duration_min) + '</td>'
+          + '<td>' + (item.is_featured ? '<span class="badge badge-featured">⭐ Featured</span>' : '<span style="color:var(--text-dim)">—</span>') + '</td>'
+          + '<td style="font-size:0.75rem;color:var(--text-muted)">' + infoLines + '</td>'
+          + '<td><div class="actions-cell">'
+          + '<button class="btn btn-sm" onclick="openEditModal(' + JSON.stringify(esc(item.id)) + ')">Edit</button>'
+          + '<button class="btn btn-sm btn-danger" onclick="deleteActivity(' + JSON.stringify(esc(item.id)) + ')">Delete</button>'
+          + '</div></td>'
+          + '</tr>';
+      });
+      tbody.innerHTML = html;
+    }
+
+    /* ── Modal ── */
+    function openAddModal() {
+      editingId = null;
+      document.getElementById('modal-activity-title').textContent = 'Add Activity';
+      document.getElementById('btn-save-activity').textContent = 'Add Activity';
+      document.getElementById('row-id').style.display = '';
+      document.getElementById('act-id').value = '';
+      document.getElementById('act-name').value = '';
+      document.getElementById('act-venue').value = '';
+      document.getElementById('act-duration').value = '';
+      document.getElementById('act-price').value = '';
+      document.getElementById('act-info1').value = '';
+      document.getElementById('act-info2').value = '';
+      document.getElementById('act-image').value = '';
+      document.getElementById('act-featured').checked = false;
+      document.getElementById('act-error').className = 'modal-error';
+      document.getElementById('modal-activity').classList.add('open');
+    }
+    window.openAddModal = openAddModal;
+
+    function openEditModal(id) {
+      var item = items.find(function(i) { return i.id === id; });
+      if (!item) return;
+      editingId = item.id;
+      document.getElementById('modal-activity-title').textContent = 'Edit Activity';
+      document.getElementById('btn-save-activity').textContent = 'Save Changes';
+      document.getElementById('row-id').style.display = 'none';
+      document.getElementById('act-name').value = item.name || '';
+      document.getElementById('act-venue').value = item.venue || '';
+      document.getElementById('act-duration').value = item.duration_min || '';
+      document.getElementById('act-price').value = item.price != null ? item.price : '';
+      document.getElementById('act-info1').value = item.info_line1 || '';
+      document.getElementById('act-info2').value = item.info_line2 || '';
+      document.getElementById('act-image').value = item.image || '';
+      document.getElementById('act-featured').checked = !!item.is_featured;
+      document.getElementById('act-error').className = 'modal-error';
+      document.getElementById('modal-activity').classList.add('open');
+    }
+    window.openEditModal = openEditModal;
+
+    function closeModal() {
+      document.getElementById('modal-activity').classList.remove('open');
+    }
+    window.closeModal = closeModal;
+
+    /* ── Save ── */
+    async function saveActivity() {
+      var id       = editingId || document.getElementById('act-id').value.trim().toUpperCase();
+      var name     = document.getElementById('act-name').value.trim();
+      var venue    = document.getElementById('act-venue').value;
+      var duration = document.getElementById('act-duration').value;
+      var price    = document.getElementById('act-price').value;
+      var info1    = document.getElementById('act-info1').value.trim();
+      var info2    = document.getElementById('act-info2').value.trim();
+      var image    = document.getElementById('act-image').value.trim();
+      var featured = document.getElementById('act-featured').checked;
+      var errEl    = document.getElementById('act-error');
+
+      errEl.className = 'modal-error';
+      if (!id || !name || !venue) {
+        errEl.textContent = 'ID, name, and venue are required.';
+        errEl.className = 'modal-error visible'; return;
+      }
+      if (!editingId && !/^ACT-[A-Z0-9]+$/.test(id)) {
+        errEl.textContent = 'ID must match ACT-[A-Z0-9]+ (e.g. ACT-WATERSLIDE)';
+        errEl.className = 'modal-error visible'; return;
+      }
+
+      var body = {
+        id, name, venue,
+        duration_min: duration ? parseInt(duration, 10) : 60,
+        price: price !== '' ? parseFloat(price) : null,
+        info_line1: info1 || null,
+        info_line2: info2 || null,
+        image: image || null,
+        is_featured: featured,
+      };
+
+      var url    = editingId ? ('/admin/library/' + encodeURIComponent(editingId)) : '/admin/library';
+      var method = editingId ? 'PUT' : 'POST';
+
+      var r = await apiFetch(url, { method, body: JSON.stringify(body) });
+      var d = await r.json();
+      if (!r.ok) {
+        errEl.textContent = d.error || 'Save failed.';
+        errEl.className = 'modal-error visible'; return;
+      }
+      closeModal();
+      showToast(editingId ? 'Activity updated.' : 'Activity added.', 'success');
+      await loadLibrary();
+    }
+    window.saveActivity = saveActivity;
+
+    /* ── Delete ── */
+    async function deleteActivity(id) {
+      if (!confirm('Delete this activity? This cannot be undone.')) return;
+      var r = await apiFetch('/admin/library/' + encodeURIComponent(id), { method: 'DELETE' });
+      var d = await r.json();
+      if (!r.ok) { showToast(d.error || 'Delete failed.', 'error'); return; }
+      showToast('Activity deleted.', 'success');
+      await loadLibrary();
+    }
+    window.deleteActivity = deleteActivity;
+
+    /* ── Logout ── */
+    document.getElementById('btn-logout').addEventListener('click', async function() {
+      await apiFetch('/admin/logout', { method: 'POST' });
+      window.location.href = '/admin-ui/login.html';
+    });
+
+    loadLibrary();
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://activities-backend.onrender.com/api/schedule">
+  <title>Activities Schedule</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1>Activities Schedule</h1>
+      <div class="header-sub">Today + the next 6 days &mdash; always a full week</div>
+    </div>
+    <div class="page-header-right" id="featured-panel">
+      <div class="featured-label">⭐ Featured Activities</div>
+      <div class="featured-list" id="featured-list">
+        <div class="featured-item" style="color:rgba(255,255,255,0.4);font-weight:400">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav-bar">
+    <a href="amenities-web/index.html" class="amenities-link">🏖 Amenities Status</a>
+  </nav>
+
+  <div class="content">
+    <div id="loading">
+      <div class="bounce-dots">
+        <div class="bounce-dot"></div>
+        <div class="bounce-dot"></div>
+        <div class="bounce-dot"></div>
+      </div>
+      <p style="margin-top:16px;color:#888;font-size:13px;">Loading activities…</p>
+    </div>
+    <div id="schedule-container" style="display:none;"></div>
+  </div>
+
+  <div class="page-footer">
+    <p>Activity times and locations are subject to change.</p>
+    <p style="margin-top:6px;">For amenity hours and status, visit the <a href="amenities-web/index.html" style="color:var(--orange);font-weight:600;">Amenities page</a>.</p>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
