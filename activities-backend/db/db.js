@@ -1,0 +1,50 @@
+'use strict';
+const { Pool, types } = require('pg');
+
+// Return DATE columns as plain 'YYYY-MM-DD' strings instead of JS Date objects
+types.setTypeParser(types.builtins.DATE, (val) => val);
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
+// Auto-migrate: create tables and add any missing columns
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS activities_library (
+        id            TEXT PRIMARY KEY,
+        name          TEXT NOT NULL,
+        price         NUMERIC(8,2),
+        duration_min  INT NOT NULL DEFAULT 60,
+        venue         TEXT NOT NULL,
+        info_line1    TEXT,
+        info_line2    TEXT,
+        image         TEXT,
+        is_featured   BOOLEAN NOT NULL DEFAULT false,
+        last_updated  TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await pool.query(`ALTER TABLE activities_library ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT false`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS activities_schedule (
+        id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        date             DATE NOT NULL,
+        start_time       TIME NOT NULL,
+        library_id       TEXT NOT NULL REFERENCES activities_library(id) ON DELETE CASCADE,
+        status           TEXT NOT NULL DEFAULT 'scheduled'
+                           CHECK (status IN ('scheduled', 'canceled', 'relocated')),
+        relocated_venue  TEXT,
+        UNIQUE(date, start_time)
+      )
+    `);
+  } catch (e) {
+    console.error('[db] Migration error:', e.message);
+  }
+})();
+
+module.exports = {
+  query:   (text, params) => pool.query(text, params),
+  connect: ()             => pool.connect(),
+};

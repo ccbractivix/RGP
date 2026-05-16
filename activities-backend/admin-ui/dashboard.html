@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="api-base" content="https://activities-backend.onrender.com" />
+  <title>Schedule Builder – Activities Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fredoka:wght@700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #1a1a1a; --panel: #242424; --card: #2c2c2c;
+      --border: #333; --border-light: #3a3a3a;
+      --gold: #c8a45a; --gold-hover: #d9b96e; --gold-dim: rgba(200,164,90,0.18);
+      --blue: #4a90d9; --blue-dim: rgba(74,144,217,0.2);
+      --red: #e05555; --red-dim: rgba(224,85,85,0.15);
+      --green: #5cb85c; --green-dim: rgba(92,184,92,0.18);
+      --orange: #e37433; --orange-dim: rgba(227,116,51,0.18);
+      --text: #e8e8e8; --text-muted: #888; --text-dim: #555;
+      --header-bg: #0d0d0d; --success: #5cb85c;
+    }
+    html, body { height: 100%; overflow: hidden; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; display: flex; flex-direction: column; }
+
+    .header {
+      background: var(--header-bg); border-bottom: 1px solid var(--border);
+      padding: 0 1.25rem; height: 52px; display: flex; align-items: center;
+      justify-content: space-between; flex-shrink: 0; gap: 1rem;
+    }
+    .header-title { font-family: 'Fredoka', sans-serif; font-size: 1.15rem; font-weight: 700; color: var(--gold); }
+    .header-actions { display: flex; align-items: center; gap: 0.5rem; }
+
+    .btn {
+      background: var(--card); color: var(--text); border: 1px solid var(--border-light);
+      border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 0.78rem; font-weight: 600;
+      padding: 0.38rem 0.85rem; cursor: pointer; transition: background 0.15s, border-color 0.15s;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap;
+    }
+    .btn:hover { background: #353535; border-color: #4a4a4a; }
+    .btn-gold { background: var(--gold); color: #1a1a1a; border-color: var(--gold); }
+    .btn-gold:hover { background: var(--gold-hover); border-color: var(--gold-hover); }
+    .btn-danger { color: var(--red); border-color: rgba(224,85,85,0.35); }
+    .btn-danger:hover { background: var(--red-dim); border-color: var(--red); }
+    .btn-sm { font-size: 0.72rem; padding: 0.25rem 0.55rem; }
+    .btn-icon {
+      background: none; border: none; cursor: pointer; color: var(--text-muted);
+      font-size: 0.9rem; padding: 2px 4px; border-radius: 4px; transition: color 0.15s, background 0.15s;
+    }
+    .btn-icon:hover { color: var(--red); background: var(--red-dim); }
+
+    .week-nav {
+      background: var(--panel); border-bottom: 1px solid var(--border);
+      height: 44px; display: flex; align-items: center; justify-content: center;
+      gap: 1rem; flex-shrink: 0;
+    }
+    .week-nav .btn { padding: 0.3rem 0.7rem; font-size: 1rem; }
+    #week-label { font-size: 0.875rem; font-weight: 600; color: var(--gold); min-width: 230px; text-align: center; }
+
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    .week-grid-wrap {
+      flex: 0 0 65%; min-width: 0; display: flex; flex-direction: column;
+      border-right: 1px solid var(--border); overflow: hidden;
+    }
+    .week-grid {
+      display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 0; flex: 1; overflow-y: auto; overflow-x: hidden;
+    }
+    .week-grid::-webkit-scrollbar { width: 5px; }
+    .week-grid::-webkit-scrollbar-track { background: var(--bg); }
+    .week-grid::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+    .day-col { border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 100%; overflow: hidden; }
+    .day-col:last-child { border-right: none; }
+    .day-col-header {
+      background: var(--panel); border-bottom: 1px solid var(--border);
+      padding: 0.55rem 0.5rem 0.45rem; text-align: center; cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+    }
+    .day-col-header:hover { background: #2e2e2e; }
+    .day-col-header.selected { background: var(--gold-dim); border-bottom-color: var(--gold); }
+    .day-name { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; color: var(--gold); text-transform: uppercase; }
+    .day-date-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
+
+    .day-shows { flex: 1; padding: 0.4rem 0.3rem; display: flex; flex-direction: column; gap: 0.3rem; }
+    .show-card {
+      background: var(--card); border: 1px solid var(--border-light); border-radius: 5px;
+      padding: 0.3rem 0.35rem; display: flex; align-items: flex-start; gap: 0.25rem;
+    }
+    .show-card.status-canceled { border-color: rgba(224,85,85,0.5); background: rgba(224,85,85,0.06); }
+    .show-card.status-relocated { border-color: rgba(227,116,51,0.5); background: rgba(227,116,51,0.06); }
+    .show-card-info { flex: 1; min-width: 0; }
+    .show-card-time { font-size: 0.65rem; color: var(--gold); font-weight: 600; white-space: nowrap; }
+    .show-card-title { font-size: 0.7rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .show-card-status { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+    .show-card-status.canceled { color: var(--red); }
+    .show-card-status.relocated { color: var(--orange); }
+    .show-card .btn-icon { font-size: 0.7rem; margin-top: 1px; }
+    .add-btn-row { padding: 0.3rem 0.3rem 0.5rem; flex-shrink: 0; }
+    .add-btn-row .btn { width: 100%; justify-content: center; font-size: 0.7rem; padding: 0.3rem 0.4rem; color: var(--text-muted); }
+    .add-btn-row .btn:hover { color: var(--gold); border-color: var(--gold); }
+
+    .editor-panel { flex: 0 0 35%; display: flex; flex-direction: column; overflow: hidden; background: var(--panel); }
+    .editor-header { padding: 0.85rem 1rem 0.65rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .editor-title { font-family: 'Fredoka', sans-serif; font-size: 1rem; font-weight: 700; color: var(--gold); }
+    .editor-subtitle { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+    .editor-body { flex: 1; overflow-y: auto; padding: 0.75rem 1rem; }
+    .editor-body::-webkit-scrollbar { width: 5px; }
+    .editor-body::-webkit-scrollbar-track { background: var(--panel); }
+    .editor-body::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+
+    .timeline-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.75rem; }
+    .timeline-item {
+      display: flex; align-items: center; gap: 0.5rem;
+      background: var(--card); border: 1px solid var(--border-light); border-radius: 6px; padding: 0.5rem 0.6rem;
+    }
+    .timeline-item.status-canceled { border-color: rgba(224,85,85,0.5); background: rgba(224,85,85,0.06); }
+    .timeline-item.status-relocated { border-color: rgba(227,116,51,0.5); background: rgba(227,116,51,0.06); }
+    .timeline-time { font-size: 0.78rem; font-weight: 700; color: var(--gold); white-space: nowrap; min-width: 52px; }
+    .timeline-info { flex: 1; min-width: 0; }
+    .timeline-title { font-size: 0.82rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .timeline-meta { font-size: 0.7rem; color: var(--text-muted); }
+    .timeline-status { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+    .timeline-status.canceled { color: var(--red); }
+    .timeline-status.relocated { color: var(--orange); }
+    .timeline-actions { display: flex; gap: 0.2rem; flex-shrink: 0; }
+
+    .empty-state { text-align: center; color: var(--text-dim); font-size: 0.8rem; padding: 1.5rem 0; }
+    .add-show-form { background: var(--card); border: 1px solid var(--border-light); border-radius: 8px; padding: 0.85rem; margin-bottom: 0.75rem; display: none; }
+    .add-show-form.open { display: block; }
+    .form-row { margin-bottom: 0.6rem; }
+    .form-row label { display: block; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.3rem; }
+    .form-control { width: 100%; background: #1e1e1e; border: 1px solid var(--border); border-radius: 5px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.82rem; padding: 0.45rem 0.6rem; outline: none; transition: border-color 0.15s; }
+    .form-control:focus { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(200,164,90,0.12); }
+    .form-control option { background: #2c2c2c; }
+    select.form-control { cursor: pointer; }
+
+    .editor-footer { padding: 0.65rem 1rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; flex-shrink: 0; flex-wrap: wrap; }
+
+    .no-day { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-dim); text-align: center; padding: 2rem; gap: 0.5rem; }
+    .no-day-icon { font-size: 2rem; }
+    .no-day-text { font-size: 0.85rem; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(2px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-card { background: var(--panel); border: 1px solid var(--border-light); border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 16px 48px rgba(0,0,0,0.7); transform: translateY(8px); transition: transform 0.2s; }
+    .modal-overlay.open .modal-card { transform: translateY(0); }
+    .modal-header { padding: 1rem 1.25rem 0.8rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .modal-title { font-size: 0.95rem; font-weight: 700; color: var(--gold); }
+    .modal-close { background: none; border: none; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+    .modal-close:hover { color: var(--text); background: var(--card); }
+    .modal-body { padding: 1rem 1.25rem; }
+    .modal-footer { padding: 0.8rem 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 0.5rem; justify-content: flex-end; }
+    .modal-name { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 0.9rem; }
+    .radio-group { display: flex; flex-direction: column; gap: 0.5rem; }
+    .radio-option { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem 0.6rem; border-radius: 6px; border: 1px solid var(--border-light); background: var(--card); transition: border-color 0.15s; }
+    .radio-option:hover { border-color: var(--gold); }
+    .radio-option input[type="radio"] { accent-color: var(--gold); }
+    .radio-option label { cursor: pointer; font-size: 0.85rem; color: var(--text); }
+    #relocate-other-input { display: none; margin-top: 0.6rem; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--panel); border: 1px solid var(--border-light); border-radius: 8px; padding: 0.65rem 1rem; font-size: 0.82rem; font-weight: 500; color: var(--text); box-shadow: 0 4px 20px rgba(0,0,0,0.5); opacity: 0; transform: translateY(8px); transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 9999; max-width: 300px; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error   { border-color: var(--red); color: var(--red); }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-title">🏄 Schedule Builder</div>
+    <div class="header-actions">
+      <a class="btn" href="/admin-ui/library.html">📚 Library</a>
+      <button class="btn btn-danger" id="btn-logout">⏻ Logout</button>
+    </div>
+  </header>
+
+  <div class="week-nav">
+    <button class="btn" id="btn-prev">←</button>
+    <span id="week-label">Loading…</span>
+    <button class="btn" id="btn-next">→</button>
+  </div>
+
+  <div class="main">
+    <div class="week-grid-wrap">
+      <div class="week-grid" id="week-grid"></div>
+    </div>
+    <div class="editor-panel">
+      <div id="editor-inner">
+        <div class="no-day">
+          <div class="no-day-icon">📅</div>
+          <div class="no-day-text">Select a day to edit its schedule</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Relocate Modal -->
+  <div class="modal-overlay" id="modal-relocate">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Relocate Activity</div>
+        <button class="modal-close" onclick="closeRelocateModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-name" id="relocate-act-name"></div>
+        <div class="radio-group" id="relocate-venues">
+          <label class="radio-option"><input type="radio" name="rel-venue" value="Caribe Room" checked /><label>Caribe Room</label></label>
+          <label class="radio-option"><input type="radio" name="rel-venue" value="Water Slide" /><label>Water Slide</label></label>
+          <label class="radio-option"><input type="radio" name="rel-venue" value="Main Pool Deck" /><label>Main Pool Deck</label></label>
+          <label class="radio-option"><input type="radio" name="rel-venue" value="Sports Courts" /><label>Sports Courts</label></label>
+          <label class="radio-option"><input type="radio" name="rel-venue" value="Tiki Bar" /><label>Tiki Bar</label></label>
+          <label class="radio-option"><input type="radio" name="rel-venue" value="Arcade" /><label>Arcade</label></label>
+          <label class="radio-option"><input type="radio" name="rel-venue" value="__other__" /><label>Other…</label></label>
+        </div>
+        <div id="relocate-other-input">
+          <input type="text" class="form-control" id="relocate-other-text" placeholder="Enter new location…" style="margin-top:0.4rem" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeRelocateModal()">Cancel</button>
+        <button class="btn btn-gold" onclick="confirmRelocate()">Confirm Relocation</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+  (function () {
+    var metaBase = document.querySelector('meta[name="api-base"]');
+    var apiBase  = (metaBase && metaBase.getAttribute('content')) || '';
+    if (apiBase.endsWith('/')) apiBase = apiBase.slice(0, -1);
+    if (apiBase && window.location.origin !== apiBase) {
+      window.location.replace(apiBase + '/admin-ui/dashboard.html');
+      return;
+    }
+
+    var currentWeekStart = '';
+    var libraryData      = [];
+    var weekData         = [];
+    var selectedDay      = null;
+    var addFormOpen      = false;
+    var relocatingEntryId = null;
+
+    var DAY_NAMES  = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+    var DAY_LABELS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+    /* ── CSRF ── */
+    var _csrf = null;
+    async function csrf(force) {
+      if (_csrf && !force) return _csrf;
+      var r = await fetch('/admin/csrf-token', { credentials: 'include' });
+      if (r.status === 401) { window.location.href = '/admin-ui/login.html'; return ''; }
+      _csrf = (await r.json()).csrfToken || '';
+      return _csrf;
+    }
+    async function apiFetch(url, opts) {
+      opts = opts || {};
+      var token = await csrf();
+      if (!token) return new Response(null, { status: 401 });
+      var doFetch = function(t) {
+        return fetch(url, Object.assign({ credentials: 'include' }, opts, {
+          headers: Object.assign({ 'Content-Type': 'application/json', 'X-CSRF-Token': t }, opts.headers || {})
+        }));
+      };
+      var res = await doFetch(token);
+      if (res.status === 403) { var t2 = await csrf(true); res = await doFetch(t2); }
+      if (res.status === 401) { window.location.href = '/admin-ui/login.html'; return new Response(null,{status:401}); }
+      return res;
+    }
+
+    function showToast(msg, type) {
+      var t = document.getElementById('toast');
+      t.textContent = msg; t.className = 'toast' + (type ? ' ' + type : '');
+      t.classList.add('show'); clearTimeout(t._timer);
+      t._timer = setTimeout(function() { t.classList.remove('show'); }, 3000);
+    }
+    function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function pad2(n) { return String(n).padStart(2,'0'); }
+    function dateToStr(d) { return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+    function strToDate(s) { var p=s.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
+    function addDays(s,n) { var d=strToDate(s); d.setDate(d.getDate()+n); return dateToStr(d); }
+    function getMonday(date) { var d=new Date(date),day=d.getDay(),diff=(day===0)?-6:1-day; d.setDate(d.getDate()+diff); return dateToStr(d); }
+    function formatShortDate(s) { var d=strToDate(s),months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return months[d.getMonth()]+' '+d.getDate(); }
+    function formatWeekLabel() {
+      var m=strToDate(currentWeekStart),s=new Date(m); s.setDate(m.getDate()+6);
+      var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var wdays=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      return wdays[m.getDay()]+' '+months[m.getMonth()]+' '+m.getDate()+' – '+wdays[s.getDay()]+' '+months[s.getMonth()]+' '+s.getDate();
+    }
+    function fmtTime(t) {
+      if (!t) return '';
+      var parts=t.split(':'),h=parseInt(parts[0],10),ampm=h>=12?'PM':'AM',h12=h%12||12;
+      return h12+':'+parts[1]+' '+ampm;
+    }
+
+    /* ── Init ── */
+    function initWeek() {
+      currentWeekStart = getMonday(new Date());
+      Promise.all([
+        apiFetch('/admin/library').then(function(r){return r.json();}).then(function(d){ libraryData = Array.isArray(d)?d:[]; }),
+        loadWeekData()
+      ]).catch(function(){});
+    }
+
+    function loadWeekData() {
+      document.getElementById('week-label').textContent = 'Loading…';
+      return apiFetch('/admin/schedule/'+currentWeekStart)
+        .then(function(r){ return r.ok ? r.json() : Promise.reject(new Error('error')); })
+        .then(function(data) {
+          var days = Array.isArray(data) ? data : [];
+          weekData = [];
+          for (var i=0;i<7;i++) {
+            var ds = addDays(currentWeekStart,i);
+            var found = days.find(function(d){return d.date===ds;}) || {};
+            weekData.push({ date: ds, activities: Array.isArray(found.activities)?found.activities:[] });
+          }
+          document.getElementById('week-label').textContent = formatWeekLabel();
+          renderGrid();
+        })
+        .catch(function() {
+          if (!weekData.length) { for(var i=0;i<7;i++) weekData.push({date:addDays(currentWeekStart,i),activities:[]}); }
+          document.getElementById('week-label').textContent = formatWeekLabel();
+          renderGrid();
+        });
+    }
+
+    /* ── Grid ── */
+    function renderGrid() {
+      var grid = document.getElementById('week-grid');
+      var html = '';
+      for (var i=0;i<7;i++) {
+        var day = weekData[i];
+        var isSelected = selectedDay === i;
+        var shortDate = formatShortDate(day.date);
+        html += '<div class="day-col"><div class="day-col-header'+(isSelected?' selected':'')+'" onclick="openEditor('+i+')">';
+        html += '<div class="day-name">'+DAY_NAMES[i]+'</div>';
+        html += '<div class="day-date-label">'+shortDate+'</div></div>';
+        html += '<div class="day-shows">';
+        if (!day.activities.length) {
+          html += '<div style="color:var(--text-dim);font-size:0.68rem;text-align:center;padding:0.5rem 0;">Empty</div>';
+        } else {
+          day.activities.forEach(function(a, ai) {
+            var statusClass = a.status !== 'scheduled' ? ' status-'+a.status : '';
+            html += '<div class="show-card'+statusClass+'">';
+            html += '<div class="show-card-info">';
+            html += '<div class="show-card-time">'+fmtTime(a.start_time)+'</div>';
+            html += '<div class="show-card-title" title="'+esc(a.name)+'">'+esc(a.name)+'</div>';
+            if (a.status==='canceled') html += '<div class="show-card-status canceled">Canceled</div>';
+            if (a.status==='relocated') html += '<div class="show-card-status relocated">→ '+esc(a.relocated_venue||'')+'</div>';
+            html += '</div>';
+            html += '<button class="btn-icon" title="Remove" onclick="event.stopPropagation();removeActivity('+i+','+ai+')">✕</button>';
+            html += '</div>';
+          });
+        }
+        html += '</div><div class="add-btn-row"><button class="btn" onclick="openEditor('+i+')">＋ Add</button></div></div>';
+      }
+      grid.innerHTML = html;
+    }
+
+    /* ── Editor ── */
+    window.openEditor = function(dayIndex) {
+      selectedDay = dayIndex; addFormOpen = false;
+      renderGrid(); renderEditor();
+    };
+
+    function renderEditor() {
+      if (selectedDay === null) return;
+      var day   = weekData[selectedDay];
+      var label = DAY_LABELS[selectedDay] + ', ' + formatShortDate(day.date);
+      var sorted = day.activities.slice().sort(function(a,b){return (a.start_time||'').localeCompare(b.start_time||'');});
+
+      var timelineHtml = '';
+      if (!sorted.length) {
+        timelineHtml = '<div class="empty-state">No activities scheduled for this day.</div>';
+      } else {
+        sorted.forEach(function(a) {
+          var realIdx = day.activities.indexOf(a);
+          var lib = libraryData.find(function(l){return l.id===a.library_id;}) || {};
+          var statusClass = a.status!=='scheduled' ? ' status-'+a.status : '';
+          timelineHtml += '<div class="timeline-item'+statusClass+'">';
+          timelineHtml += '<div class="timeline-time">'+fmtTime(a.start_time)+'</div>';
+          timelineHtml += '<div class="timeline-info">';
+          timelineHtml += '<div class="timeline-title">'+esc(a.name||lib.name||'—')+'</div>';
+          timelineHtml += '<div class="timeline-meta">'+esc(a.venue||lib.venue||'')+'</div>';
+          if (a.status==='canceled') timelineHtml += '<div class="timeline-status canceled">⛔ Canceled</div>';
+          if (a.status==='relocated') timelineHtml += '<div class="timeline-status relocated">📍 Moved → '+esc(a.relocated_venue||'')+'</div>';
+          timelineHtml += '</div>';
+          timelineHtml += '<div class="timeline-actions">';
+          if (a.id) {
+            if (a.status==='scheduled') {
+              timelineHtml += '<button class="btn btn-sm" style="color:var(--red);border-color:rgba(224,85,85,0.4)" title="Cancel activity" onclick="cancelActivity(\''+a.id+'\')">⛔</button>';
+              timelineHtml += '<button class="btn btn-sm" style="color:var(--orange);border-color:rgba(227,116,51,0.4)" title="Relocate activity" onclick="openRelocateModal(\''+a.id+'\',\''+esc(a.name||lib.name||'')+'\')">📍</button>';
+            } else {
+              timelineHtml += '<button class="btn btn-sm" style="color:var(--green);border-color:rgba(92,184,92,0.4)" title="Restore activity" onclick="restoreActivity(\''+a.id+'\')">↩</button>';
+            }
+          }
+          timelineHtml += '<button class="btn-icon" title="Remove" onclick="removeActivity('+selectedDay+','+realIdx+')">🗑</button>';
+          timelineHtml += '</div></div>';
+        });
+      }
+
+      var libOptions = libraryData.map(function(l){
+        return '<option value="'+esc(l.id)+'">'+esc(l.name)+' ('+esc(l.venue)+')</option>';
+      }).join('');
+
+      var formHtml = '<div class="add-show-form'+(addFormOpen?' open':'')+'" id="add-form">'
+        + '<div class="form-row"><label>Activity</label><select class="form-control" id="sel-activity"><option value="">Select…</option>'+libOptions+'</select></div>'
+        + '<div class="form-row"><label>Start Time</label><input type="time" class="form-control" id="inp-time" /></div>'
+        + '<div style="display:flex;gap:0.5rem;margin-top:0.4rem">'
+        + '<button class="btn btn-gold btn-sm" onclick="addActivityToDay()">Add</button>'
+        + '<button class="btn btn-sm" onclick="toggleAddForm()">Cancel</button>'
+        + '</div></div>';
+
+      var html = '<div class="editor-header">'
+        + '<div class="editor-title">'+label+'</div>'
+        + '<div class="editor-subtitle">'+sorted.length+' activit'+(sorted.length!==1?'ies':'y')+' scheduled</div></div>'
+        + '<div class="editor-body">'
+        + '<div class="timeline-list" id="timeline-list">'+timelineHtml+'</div>'
+        + '<button class="btn btn-sm" id="btn-toggle-form" onclick="toggleAddForm()" style="margin-bottom:0.6rem">'+(addFormOpen?'✕ Cancel':'＋ Add Activity')+'</button>'
+        + formHtml
+        + '</div>'
+        + '<div class="editor-footer">'
+        + '<button class="btn btn-gold btn-sm" onclick="saveDay()">💾 Save Day</button>'
+        + '<button class="btn btn-sm" onclick="copyLastWeek()">📋 Copy Last Week</button>'
+        + '<button class="btn btn-danger btn-sm" onclick="clearDay()">🗑 Clear Day</button>'
+        + '</div>';
+
+      document.getElementById('editor-inner').innerHTML = html;
+    }
+
+    window.toggleAddForm = function() { addFormOpen = !addFormOpen; renderEditor(); };
+
+    window.addActivityToDay = function() {
+      var actId = document.getElementById('sel-activity').value;
+      var time  = document.getElementById('inp-time').value;
+      if (!actId || !time) { showToast('Select an activity and time.', 'error'); return; }
+      var lib = libraryData.find(function(l){return l.id===actId;});
+      if (!lib) return;
+      var day = weekData[selectedDay];
+      if (day.activities.find(function(a){return a.start_time===time;})) {
+        showToast('A time slot already exists at that time.', 'error'); return;
+      }
+      day.activities.push({ library_id: actId, name: lib.name, venue: lib.venue, start_time: time, status: 'scheduled', relocated_venue: null });
+      addFormOpen = false;
+      renderGrid(); renderEditor();
+    };
+
+    window.removeActivity = function(dayIdx, actIdx) {
+      weekData[dayIdx].activities.splice(actIdx, 1);
+      renderGrid();
+      if (selectedDay === dayIdx) renderEditor();
+    };
+
+    /* ── Save / Copy / Clear ── */
+    window.saveDay = async function() {
+      var day = weekData[selectedDay];
+      var r = await apiFetch('/admin/schedule/day', {
+        method: 'POST',
+        body: JSON.stringify({ date: day.date, activities: day.activities.map(function(a){return {library_id:a.library_id,start_time:a.start_time};}) })
+      });
+      var d = await r.json();
+      if (!r.ok) { showToast(d.error||'Save failed.','error'); return; }
+      showToast('Day saved.','success');
+      loadWeekData();
+    };
+
+    window.copyLastWeek = async function() {
+      var fromWeekStart = addDays(currentWeekStart, -7);
+      if (!confirm('Copy last week\'s schedule to '+formatWeekLabel()+'?\nExisting entries will not be overwritten.')) return;
+      var r = await apiFetch('/admin/schedule/copy-week', { method:'POST', body:JSON.stringify({fromWeekStart,toWeekStart:currentWeekStart}) });
+      var d = await r.json();
+      if (!r.ok) { showToast(d.error||'Copy failed.','error'); return; }
+      showToast('Copied '+d.copied+' entries from last week.','success');
+      loadWeekData();
+    };
+
+    window.clearDay = function() {
+      if (!confirm('Clear all activities for this day?')) return;
+      weekData[selectedDay].activities = [];
+      renderGrid(); renderEditor();
+    };
+
+    /* ── Cancel / Relocate / Restore ── */
+    window.cancelActivity = async function(entryId) {
+      if (!confirm('Mark this activity as canceled?')) return;
+      var r = await apiFetch('/admin/schedule/entry/'+encodeURIComponent(entryId)+'/cancel', { method:'PATCH' });
+      if (!r.ok) { showToast('Failed to cancel.','error'); return; }
+      showToast('Activity canceled.','success');
+      loadWeekData().then(function(){ if(selectedDay!==null) renderEditor(); });
+    };
+
+    window.openRelocateModal = function(entryId, name) {
+      relocatingEntryId = entryId;
+      document.getElementById('relocate-act-name').textContent = name;
+      var radios = document.querySelectorAll('input[name="rel-venue"]');
+      radios.forEach(function(r){ if(r.value==='Caribe Room') r.checked=true; else r.checked=false; });
+      document.getElementById('relocate-other-input').style.display = 'none';
+      document.getElementById('relocate-other-text').value = '';
+      document.getElementById('modal-relocate').classList.add('open');
+      document.querySelectorAll('input[name="rel-venue"]').forEach(function(radio){
+        radio.addEventListener('change', function(){
+          document.getElementById('relocate-other-input').style.display = radio.value==='__other__' ? 'block' : 'none';
+        });
+      });
+    };
+    window.closeRelocateModal = function() {
+      document.getElementById('modal-relocate').classList.remove('open');
+      relocatingEntryId = null;
+    };
+    window.confirmRelocate = async function() {
+      var selected = document.querySelector('input[name="rel-venue"]:checked');
+      if (!selected) { showToast('Select a venue.','error'); return; }
+      var venue = selected.value === '__other__' ? document.getElementById('relocate-other-text').value.trim() : selected.value;
+      if (!venue) { showToast('Enter a venue name.','error'); return; }
+      var r = await apiFetch('/admin/schedule/entry/'+encodeURIComponent(relocatingEntryId)+'/relocate', { method:'PATCH', body:JSON.stringify({venue}) });
+      if (!r.ok) { showToast('Failed to relocate.','error'); return; }
+      closeRelocateModal();
+      showToast('Activity relocated.','success');
+      loadWeekData().then(function(){ if(selectedDay!==null) renderEditor(); });
+    };
+
+    window.restoreActivity = async function(entryId) {
+      var r = await apiFetch('/admin/schedule/entry/'+encodeURIComponent(entryId)+'/restore', { method:'PATCH' });
+      if (!r.ok) { showToast('Failed to restore.','error'); return; }
+      showToast('Activity restored.','success');
+      loadWeekData().then(function(){ if(selectedDay!==null) renderEditor(); });
+    };
+
+    /* ── Week nav ── */
+    document.getElementById('btn-prev').addEventListener('click', function(){
+      currentWeekStart = addDays(currentWeekStart,-7);
+      selectedDay = null; addFormOpen = false;
+      document.getElementById('editor-inner').innerHTML = '<div class="no-day"><div class="no-day-icon">📅</div><div class="no-day-text">Select a day to edit its schedule</div></div>';
+      loadWeekData();
+    });
+    document.getElementById('btn-next').addEventListener('click', function(){
+      currentWeekStart = addDays(currentWeekStart,7);
+      selectedDay = null; addFormOpen = false;
+      document.getElementById('editor-inner').innerHTML = '<div class="no-day"><div class="no-day-icon">📅</div><div class="no-day-text">Select a day to edit its schedule</div></div>';
+      loadWeekData();
+    });
+
+    document.getElementById('btn-logout').addEventListener('click', async function(){
+      await apiFetch('/admin/logout', { method:'POST' });
+      window.location.href = '/admin-ui/login.html';
+    });
+
+    initWeek();
+  })();
+  </script>
+</body>
+</html>
