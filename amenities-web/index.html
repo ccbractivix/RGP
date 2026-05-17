@@ -164,6 +164,23 @@
       font-weight: 600;
       color: #8b4533;
     }
+
+    .card-link {
+      display: flex;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .card-link .card {
+      width: 100%;
+      margin-bottom: 0;
+    }
+
+    .card-link .card .arrow {
+      flex-shrink: 0;
+      font-size: 18px;
+      color: var(--slate);
+    }
   </style>
 </head>
 <body>
@@ -174,6 +191,14 @@
   <div class="container">
     <div id="content"><div class="loading">Loading amenity status…</div></div>
     <div class="refresh-note" id="refresh-note"></div>
+    <a class="card-link" href="https://ccbractivix.github.io/RGP/amenities-web/pools.html">
+      <div class="card">
+        <div class="info">
+          <div class="name">Pools Information</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+    </a>
   </div>
   <script>
   (function () {
