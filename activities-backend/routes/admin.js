@@ -1,7 +1,11 @@
 'use strict';
 const express = require('express');
+const fs      = require('fs');
+const path    = require('path');
 const db      = require('../db/db');
 const router  = express.Router();
+
+const IMAGES_DIR = path.join(__dirname, '..', '..', 'static', 'images');
 
 const VENUES = ['Water Slide','Main Pool Deck','Caribe Room','Sports Courts','Tiki Bar','Arcade'];
 
@@ -46,6 +50,21 @@ router.post('/logout', (req, res) => {
 
 // All routes below require auth
 router.use(requireAuth);
+
+// ── Images: list available images ───────────────────────────────────────────
+// GET /admin/images
+router.get('/images', (req, res) => {
+  try {
+    const IMAGE_EXTS = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
+    let files = [];
+    try {
+      files = fs.readdirSync(IMAGES_DIR)
+        .filter(f => IMAGE_EXTS.test(f))
+        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+    } catch (_) { /* directory missing – return empty list */ }
+    return res.json(files);
+  } catch (e) { return res.status(500).json({ error: 'Failed to list images' }); }
+});
 
 // ── Schedule: week view ──────────────────────────────────────────────────────
 // GET /admin/schedule/:weekStart
