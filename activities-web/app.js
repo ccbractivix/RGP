@@ -63,8 +63,10 @@
       var meta = '';
       if (item.dayLabel) {
         meta = escapeHtml(item.dayLabel);
-        var timeDisplay = item.isAllDay ? 'All Day' : (item.time || '');
-        if (timeDisplay) meta += ' · ' + escapeHtml(timeDisplay);
+        if (!item._everyDay) {
+          var timeDisplay = item.isAllDay ? 'All Day' : (item.time || '');
+          if (timeDisplay) meta += ' · ' + escapeHtml(timeDisplay);
+        }
       } else if (item.venue) {
         meta = escapeHtml(item.venue);
       }
@@ -97,7 +99,10 @@
     }
 
     // Collect featured activities from the schedule (with day/time info)
-    var featuredFromDays = [];
+    // Deduplicate by name: each activity appears once with aggregated day labels.
+    var totalDays = days.length;
+    var featuredMap = {};
+    var featuredOrder = [];
     days.forEach(function (dayObj) {
       var label = dayObj.label || dayObj.date || '';
       var dayName = label;
@@ -105,13 +110,28 @@
       if (dayMatch) dayName = dayMatch[1];
       (dayObj.activities || []).forEach(function (a) {
         if (a.isFeatured) {
-          featuredFromDays.push({
-            name: a.name, venue: a.venue, time: a.time,
-            isAllDay: a.isAllDay, dayLabel: dayName,
-            infoLine1: a.infoLine1, infoLine2: a.infoLine2,
-          });
+          if (!featuredMap[a.name]) {
+            featuredMap[a.name] = {
+              name: a.name, venue: a.venue, time: a.time,
+              isAllDay: a.isAllDay, infoLine1: a.infoLine1,
+              infoLine2: a.infoLine2, days: [],
+            };
+            featuredOrder.push(a.name);
+          }
+          featuredMap[a.name].days.push(dayName);
         }
       });
+    });
+    var featuredFromDays = featuredOrder.map(function (name) {
+      var item = featuredMap[name];
+      var timeDisplay = item.isAllDay ? 'All Day' : (item.time || '');
+      if (item.days.length === totalDays) {
+        item.dayLabel = 'Every Day' + (timeDisplay ? ' at ' + timeDisplay : '');
+        item._everyDay = true;
+      } else {
+        item.dayLabel = item.days.join(', ');
+      }
+      return item;
     });
     var html = buildFeaturedCard(featuredFromDays.length ? featuredFromDays : (featuredItems || []));
     days.forEach(function (dayObj) {
