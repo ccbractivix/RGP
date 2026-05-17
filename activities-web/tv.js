@@ -63,7 +63,7 @@
       } else {
         acts.forEach(function(a) {
           html += '<div class="tv-show-item">';
-          html += '<span class="tv-show-time">' + escapeHtml(a.time) + '</span>';
+          html += '<span class="tv-show-time">' + escapeHtml(a.isAllDay ? 'All Day' : a.time) + '</span>';
 
           if (a.status === 'canceled') {
             html += '<span class="tv-show-title canceled">' + escapeHtml(a.name) + '</span>';

@@ -1,7 +1,7 @@
 /**
  * app.js — Activities Schedule Frontend
  * Fetches today + 6 days from the activities backend and renders the schedule.
- * Featured activities are shown in the page header right panel.
+ * Featured activities from the library are always shown in the page header card.
  * Midnight rollover: after the local date changes the page auto-refreshes.
  */
 (function () {
@@ -9,6 +9,7 @@
 
   var metaTag = document.querySelector('meta[name="api-url"]');
   var API_URL = (metaTag && metaTag.getAttribute('content')) || '/api/schedule';
+  var API_FEATURED_URL = API_URL.replace(/\/api\/schedule.*$/, '') + '/api/library/featured';
 
   var currentDateStr = todayStr();
 
@@ -55,23 +56,13 @@
     }, msTill);
   }
 
-  // ── Build featured card for top of schedule ──────────────────────────────
-  function buildFeaturedCard(days) {
-    var seen = {};
-    var items = [];
-    (days || []).forEach(function (day) {
-      (day.activities || []).forEach(function (a) {
-        if (a.isFeatured && !seen[a.libraryId]) {
-          seen[a.libraryId] = true;
-          items.push(a);
-        }
-      });
-    });
-    if (!items.length) return '';
-    var listHtml = items.map(function (a) {
+  // ── Build featured card from library items ─────────────────────────────────
+  function buildFeaturedCard(items) {
+    if (!items || !items.length) return '';
+    var listHtml = items.map(function (item) {
       return '<div class="featured-top-item">'
-        + escapeHtml(a.name)
-        + '<span class="feat-venue">' + escapeHtml(a.venue) + '</span>'
+        + escapeHtml(item.name)
+        + '<span class="feat-venue">' + escapeHtml(item.venue) + '</span>'
         + '</div>';
     }).join('');
     return '<div class="featured-top-card">'
@@ -83,7 +74,7 @@
   }
 
   // ── Render schedule ────────────────────────────────────────────────────────
-  function renderSchedule(days) {
+  function renderSchedule(days, featuredItems) {
     var container = document.getElementById('schedule-container');
     var loading   = document.getElementById('loading');
 
@@ -94,7 +85,7 @@
       return;
     }
 
-    var html = buildFeaturedCard(days);
+    var html = buildFeaturedCard(featuredItems || []);
     days.forEach(function (dayObj) {
       var label = dayObj.label || dayObj.date || '';
       // Parse label: "Monday, May 19" → dayName + dateStr
@@ -138,8 +129,9 @@
 
           // Time + venue (only show original venue if not relocated)
           var venueDisplay = (a.status === 'relocated') ? (a.relocatedVenue || a.relocated_venue || a.venue) : a.venue;
-          html += '<div class="act-time"><span class="time-val">' + escapeHtml(a.time) + '</span>';
-          if (a.durationMin) html += ' &middot; ' + fmtDuration(a.durationMin);
+          var timeDisplay = a.isAllDay ? 'All Day' : (a.time || '');
+          html += '<div class="act-time"><span class="time-val">' + escapeHtml(timeDisplay) + '</span>';
+          if (!a.isAllDay && a.durationMin) html += ' &middot; ' + fmtDuration(a.durationMin);
           html += ' &middot; <span class="venue-val">' + escapeHtml(venueDisplay) + '</span></div>';
 
           // Price (only if set)
@@ -165,13 +157,17 @@
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   function fetchSchedule() {
-    fetch(API_URL)
-      .then(function (r) {
+    Promise.all([
+      fetch(API_URL).then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
-      })
-      .then(function (data) {
-        renderSchedule(data);
+      }),
+      fetch(API_FEATURED_URL).then(function (r) {
+        return r.ok ? r.json() : [];
+      }).catch(function () { return []; })
+    ])
+      .then(function (results) {
+        renderSchedule(results[0], results[1]);
       })
       .catch(function (err) {
         console.error('Failed to load activities:', err);

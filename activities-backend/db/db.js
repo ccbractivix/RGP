@@ -31,14 +31,18 @@ const pool = new Pool({
       CREATE TABLE IF NOT EXISTS activities_schedule (
         id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         date             DATE NOT NULL,
-        start_time       TIME NOT NULL,
+        start_time       TIME,
         library_id       TEXT NOT NULL REFERENCES activities_library(id) ON DELETE CASCADE,
         status           TEXT NOT NULL DEFAULT 'scheduled'
                            CHECK (status IN ('scheduled', 'canceled', 'relocated')),
         relocated_venue  TEXT,
-        UNIQUE(date, start_time)
+        is_all_day       BOOLEAN NOT NULL DEFAULT false
       )
     `);
+    // Migrations for existing deployments
+    await pool.query(`ALTER TABLE activities_schedule ALTER COLUMN start_time DROP NOT NULL`).catch(() => {});
+    await pool.query(`ALTER TABLE activities_schedule ADD COLUMN IF NOT EXISTS is_all_day BOOLEAN NOT NULL DEFAULT false`);
+    await pool.query(`ALTER TABLE activities_schedule DROP CONSTRAINT IF EXISTS activities_schedule_date_start_time_key`).catch(() => {});
   } catch (e) {
     console.error('[db] Migration error:', e.message);
   }

@@ -31,7 +31,7 @@
       var html = '';
       acts.forEach(function(a) {
         html += '<div class="today-row">';
-        html += '<div class="today-time">' + escapeHtml(a.time) + '</div>';
+        html += '<div class="today-time">' + escapeHtml(a.isAllDay ? 'All Day' : a.time) + '</div>';
         html += '<div class="today-info">';
 
         if (a.status === 'canceled') {

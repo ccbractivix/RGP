@@ -14,7 +14,6 @@ function formatTime(t) {
   if (h === 0) h = 12; else if (h > 12) h -= 12;
   return `${h}:${String(m).padStart(2, '0')} ${s}`;
 }
-
 function formatDateLabel(dateStr) {
   const d = new Date(dateStr + 'T12:00:00Z');
   return d.toLocaleDateString('en-US', {
@@ -39,8 +38,9 @@ function buildDays(rows, startDate, endDate) {
       id:            row.id,
       libraryId:     row.library_id,
       name:          row.name,
-      time:          formatTime(row.start_time),
-      rawTime:       String(row.start_time).slice(0, 5),
+      time:          row.is_all_day ? '' : formatTime(row.start_time),
+      rawTime:       row.is_all_day ? '' : String(row.start_time || '').slice(0, 5),
+      isAllDay:      !!row.is_all_day,
       durationMin:   row.duration_min,
       venue:         row.venue,
       price:         row.price != null ? Number(row.price) : null,
@@ -59,13 +59,13 @@ function buildDays(rows, startDate, endDate) {
 
 async function getRange(startDate, endDate) {
   const r = await db.query(
-    `SELECT s.id, s.date, s.start_time, s.status, s.relocated_venue,
+    `SELECT s.id, s.date, s.start_time, s.is_all_day, s.status, s.relocated_venue,
             l.id AS library_id, l.name, l.price, l.duration_min, l.venue,
             l.info_line1, l.info_line2, l.image, l.is_featured
      FROM activities_schedule s
      JOIN activities_library l ON l.id = s.library_id
      WHERE s.date >= $1 AND s.date <= $2
-     ORDER BY s.date, s.start_time`,
+     ORDER BY s.date, s.is_all_day DESC, s.start_time NULLS FIRST, l.name`,
     [startDate, endDate]
   );
   return r.rows;

@@ -16,10 +16,10 @@ CREATE TABLE IF NOT EXISTS activities_library (
 CREATE TABLE IF NOT EXISTS activities_schedule (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   date             DATE NOT NULL,
-  start_time       TIME NOT NULL,
+  start_time       TIME,
   library_id       TEXT NOT NULL REFERENCES activities_library(id) ON DELETE CASCADE,
   status           TEXT NOT NULL DEFAULT 'scheduled'
                      CHECK (status IN ('scheduled', 'canceled', 'relocated')),
   relocated_venue  TEXT,
-  UNIQUE(date, start_time)
+  is_all_day       BOOLEAN NOT NULL DEFAULT false
 );
