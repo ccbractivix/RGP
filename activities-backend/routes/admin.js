@@ -59,7 +59,13 @@ router.get('/images', (req, res) => {
     let files = [];
     try {
       files = fs.readdirSync(IMAGES_DIR)
-        .filter(f => IMAGE_EXTS.test(f))
+        .filter(f => {
+          if (!IMAGE_EXTS.test(f)) return false;
+          try {
+            const stat = fs.lstatSync(path.join(IMAGES_DIR, f));
+            return stat.isFile();
+          } catch (_) { return false; }
+        })
         .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
     } catch (_) { /* directory missing – return empty list */ }
     return res.json(files);

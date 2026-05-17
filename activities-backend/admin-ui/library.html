@@ -500,7 +500,7 @@
           var item = document.createElement('div');
           item.className = 'img-grid-item' + (f === current ? ' selected' : '');
           item.dataset.filename = f;
-          item.innerHTML = '<img src="/static/' + esc(f) + '" alt="" loading="lazy" /><span>' + esc(f) + '</span>';
+          item.innerHTML = '<img src="/static/' + esc(f) + '" alt="' + esc(f) + '" loading="lazy" /><span>' + esc(f) + '</span>';
           item.addEventListener('click', function() {
             document.querySelectorAll('.img-grid-item').forEach(function(el) { el.classList.remove('selected'); });
             item.classList.add('selected');
