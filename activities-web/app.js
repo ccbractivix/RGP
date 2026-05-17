@@ -60,10 +60,21 @@
   function buildFeaturedCard(items) {
     if (!items || !items.length) return '';
     var listHtml = items.map(function (item) {
-      return '<div class="featured-top-item">'
-        + escapeHtml(item.name)
-        + '<span class="feat-venue">' + escapeHtml(item.venue) + '</span>'
-        + '</div>';
+      var meta = '';
+      if (item.dayLabel) {
+        meta = escapeHtml(item.dayLabel);
+        var timeDisplay = item.isAllDay ? 'All Day' : (item.time || '');
+        if (timeDisplay) meta += ' · ' + escapeHtml(timeDisplay);
+      } else if (item.venue) {
+        meta = escapeHtml(item.venue);
+      }
+      var html = '<div class="featured-top-item">'
+        + escapeHtml(item.name);
+      if (meta) html += '<span class="feat-venue">' + meta + '</span>';
+      if (item.infoLine1) html += '<span class="feat-info">' + escapeHtml(item.infoLine1) + '</span>';
+      if (item.infoLine2) html += '<span class="feat-info">' + escapeHtml(item.infoLine2) + '</span>';
+      html += '</div>';
+      return html;
     }).join('');
     return '<div class="featured-top-card">'
       + '<div class="featured-top-overlay">'
@@ -85,7 +96,24 @@
       return;
     }
 
-    var html = buildFeaturedCard(featuredItems || []);
+    // Collect featured activities from the schedule (with day/time info)
+    var featuredFromDays = [];
+    days.forEach(function (dayObj) {
+      var label = dayObj.label || dayObj.date || '';
+      var dayName = label;
+      var dayMatch = label.match(/^(\w+)/);
+      if (dayMatch) dayName = dayMatch[1];
+      (dayObj.activities || []).forEach(function (a) {
+        if (a.isFeatured) {
+          featuredFromDays.push({
+            name: a.name, venue: a.venue, time: a.time,
+            isAllDay: a.isAllDay, dayLabel: dayName,
+            infoLine1: a.infoLine1, infoLine2: a.infoLine2,
+          });
+        }
+      });
+    });
+    var html = buildFeaturedCard(featuredFromDays.length ? featuredFromDays : (featuredItems || []));
     days.forEach(function (dayObj) {
       var label = dayObj.label || dayObj.date || '';
       // Parse label: "Monday, May 19" → dayName + dateStr
