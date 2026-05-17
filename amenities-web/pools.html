@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pools Information</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ede8df;
+      --card: #ffffff;
+      --border: #d4cdc2;
+      --text: #2d3436;
+      --text-muted: #6b7f7f;
+      --blue: #3a7fc1;
+      --shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    html, body {
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      background: #ede8df;
+      text-align: center;
+      padding: 22px 16px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    /* ===== CONTAINER ===== */
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 16px 12px 32px;
+    }
+
+    /* ===== POOL SECTION (image card) ===== */
+    .pool-section {
+      margin-bottom: 18px;
+    }
+
+    .pool-section h2 {
+      font-size: 15px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      padding-left: 2px;
+    }
+
+    .pool-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: box-shadow 0.15s, transform 0.15s;
+    }
+
+    .pool-card:hover {
+      box-shadow: 0 4px 14px rgba(0,0,0,0.13);
+      transform: translateY(-1px);
+    }
+
+    .pool-card img {
+      width: 100%;
+      display: block;
+      max-height: 220px;
+      object-fit: cover;
+    }
+
+    .pool-card .tap-hint {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 9px 12px;
+      background: #f7f4ef;
+      border-top: 1px solid var(--border);
+    }
+
+    .pool-card .tap-hint span {
+      color: var(--blue);
+      font-weight: 600;
+    }
+
+    /* ===== INFO SECTION (text card) ===== */
+    .info-section {
+      margin-bottom: 18px;
+    }
+
+    .info-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: box-shadow 0.15s, transform 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .info-card:hover {
+      box-shadow: 0 4px 14px rgba(0,0,0,0.13);
+      transform: translateY(-1px);
+    }
+
+    .info-card .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .info-card .card-arrow {
+      font-size: 18px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    /* ===== STATIC TEXT SECTION ===== */
+    .static-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 1000;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 24px 12px 24px;
+      overflow-y: auto;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #fff;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 500px;
+      padding: 22px 20px 20px;
+      position: relative;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+      margin: auto;
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 14px;
+      padding-right: 28px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .modal-body {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.75;
+    }
+
+    .modal-body p {
+      margin-bottom: 10px;
+    }
+
+    .modal-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .modal-body h3 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin: 14px 0 6px;
+    }
+
+    .modal-body ul {
+      padding-left: 18px;
+      margin-bottom: 10px;
+    }
+
+    .modal-body ul li {
+      margin-bottom: 4px;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 0;
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+    }
+
+    /* ===== DISCLAIMER ===== */
+    .disclaimer-box {
+      background: #888;
+      padding: 20px 24px;
+      position: relative;
+      overflow: hidden;
+      min-height: 100px;
+    }
+
+    .disclaimer-text {
+      font-size: 10px;
+      color: #d0d0d0;
+      line-height: 1.6;
+      margin-bottom: 4px;
+      padding-right: 110px;
+    }
+
+    .disclaimer-logo {
+      position: absolute;
+      bottom: 14px;
+      right: 18px;
+      max-height: 70px;
+      width: auto;
+    }
+
+    @media (max-width: 540px) {
+      .disclaimer-text { padding-right: 0; }
+      .disclaimer-logo { position: static; display: block; margin-top: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Pools Information</h1>
+  </div>
+
+  <div class="container">
+
+    <!-- The Main Pool -->
+    <div class="pool-section">
+      <h2>The Main Pool</h2>
+      <div class="pool-card" onclick="openModal('modal-main-pool')" role="button" tabindex="0" aria-label="Learn more about The Main Pool">
+        <img src="../static/images/26IHG_CCR_0048SD.jpg" alt="The Main Pool">
+        <div class="tap-hint"><span>Tap for details</span></div>
+      </div>
+    </div>
+
+    <!-- The Lazy River & Waterslide -->
+    <div class="pool-section">
+      <h2>The Lazy River &amp; Waterslide</h2>
+      <div class="pool-card" onclick="openModal('modal-lazy-river')" role="button" tabindex="0" aria-label="Learn more about The Lazy River and Waterslide">
+        <img src="../static/images/26IHG_CCR_PROP_Aerial_Lazyriver_102.jpg" alt="The Lazy River and Waterslide">
+        <div class="tap-hint"><span>Tap for details</span></div>
+      </div>
+    </div>
+
+    <!-- The Signature Pool -->
+    <div class="pool-section">
+      <h2>The Signature Pool: The Quiet Pool</h2>
+      <div class="pool-card" onclick="openModal('modal-signature-pool')" role="button" tabindex="0" aria-label="Learn more about The Signature Pool">
+        <img src="../static/images/26IHG_CCR_PROP_AMN_Signature_Pool_96.jpg" alt="The Signature Pool: The Quiet Pool">
+        <div class="tap-hint"><span>Tap for details</span></div>
+      </div>
+    </div>
+
+    <!-- Weather Closure Protocols -->
+    <div class="info-section">
+      <div class="info-card" onclick="openModal('modal-weather')" role="button" tabindex="0" aria-label="Learn more about Weather Closure Protocols">
+        <div class="card-title">⛈ Weather Closure Protocols</div>
+        <div class="card-arrow">›</div>
+      </div>
+    </div>
+
+    <!-- Pool FAQs -->
+    <div class="info-section">
+      <div class="info-card" onclick="openModal('modal-faq')" role="button" tabindex="0" aria-label="Pool FAQs">
+        <div class="card-title">❓ Pool FAQ's</div>
+        <div class="card-arrow">›</div>
+      </div>
+    </div>
+
+    <!-- Pool Rules Boards -->
+    <div class="info-section">
+      <div class="info-card" onclick="openModal('modal-rules')" role="button" tabindex="0" aria-label="Pool Rules Boards">
+        <div class="card-title">📋 Pool Rules Boards</div>
+        <div class="card-arrow">›</div>
+      </div>
+    </div>
+
+    <!-- Static safety text -->
+    <div class="static-section">
+      Pool Safety is among our top priorities, and everyone's responsibility. Please familiarize yourself with our 'Pool Rules' signs when you enter our pool decks and before you enter the water. Locker rooms with showers are available at the Main Pool and pool showers are available around the decks.
+    </div>
+
+  </div><!-- /container -->
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- Main Pool Modal -->
+  <div id="modal-main-pool" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-main-pool')">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('modal-main-pool')">&times;</button>
+      <div class="modal-title">The Main Pool</div>
+      <div class="modal-body">
+        <p>Both the Main and Signature Pools are open daily, see hours posted on the Current Pool Operation Status Tracker.</p>
+        <p>Pool Towels are found in your villa, in the master bedroom closet.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lazy River & Waterslide Modal -->
+  <div id="modal-lazy-river" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-lazy-river')">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('modal-lazy-river')">&times;</button>
+      <div class="modal-title">The Lazy River &amp; Waterslide</div>
+      <div class="modal-body">
+        <p>Our 4-story Waterslide is open every day, see hours posted on the Current Pool Operation Status Tracker. Riders must be 48 inches (122cm) or taller, see rules signs boards around the slide stairs. Please be sure to follow attendants' directions.</p>
+        <p>As with all of our resort amenities, wristbands are required to be worn at all times when using our pools. Pools and water facilities are subject to closure in certain weather conditions, particularly lightning and high winds. If the staff inform you that the pool is closing for lightning, please gather your belongings and exit the pool deck. Items left behind may be damaged by rain or lightning and may be turned in to lost and found.</p>
+        <p>The Lazy River is open daily, see hours posted on the Current Pool Operation Status Tracker. Personal tubes are not permitted for use in the lazy river. Please use only one tube per person when visiting the lazy river to assure that there are enough tubes available for all guests who wish to use the amenity. Please see the Pool Rules below for complete information about floats in the pools.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Signature Pool Modal -->
+  <div id="modal-signature-pool" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-signature-pool')">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('modal-signature-pool')">&times;</button>
+      <div class="modal-title">The Signature Pool: The Quiet Pool</div>
+      <div class="modal-body">
+        <p>Located at Building Three is our Signature Pool. See hours posted on the Current Pool Operation Status Tracker.</p>
+        <p>This pool is intended as a quiet "oasis" pool. All guests and all ages are welcome at The Quiet Pool, we ask only that everyone observe a few basic guidelines to assure the most pleasant experience. As with all of our facilities, anyone under the age of 12 years must be accompanied by an adult, such as a family member, guardian or babysitter. Personal conduct must be such that the safety of self and others is preserved.</p>
+        <p>As this is the quiet pool, there is no throwing balls or other items. Rough play and intentional splashing is not permitted. Electronic audio devices are permitted to be played through ear buds/earphones &amp; kept at a low volume.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weather Closure Protocols Modal -->
+  <div id="modal-weather" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-weather')">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('modal-weather')">&times;</button>
+      <div class="modal-title">Weather Closure Protocols</div>
+      <div class="modal-body">
+        <h3>⚡ Lightning</h3>
+        <p>The current safety standards in place for our outdoor pools, water slide, and guest tram operations is:</p>
+        <ul>
+          <li><strong>Within 20 miles:</strong> The water slide will be closed and immediately vacated.</li>
+          <li><strong>Within 15 miles:</strong> We suggest that guests begin to exit the pool decks and our resort team will start closing procedures.</li>
+          <li><strong>Within 10 miles:</strong> Pool decks will be closed and all guests will be required to exit immediately. The guest tram will be suspended after 20–30 minutes of operation and conducting rounds to return guests to their buildings.</li>
+        </ul>
+        <p>We will reopen the pool deck and resume tram operations after lightning has cleared a 10-mile radius and 30 minutes has passed since last lightning strike. The 30-minute count cannot begin until the pool deck has been cleared, so your cooperation in clearing the deck in the event of lightning is essential. Please refer to the scoreboard at the top of this page for status updates.</p>
+        <h3>💨 Wind</h3>
+        <p>The Water Slide must be closed if wind speeds are a constant 18 mph or gusting at 23 mph or higher. If wind speeds are 26 mph or higher, the pool deck must be closed &amp; guest tram service must be suspended due to potential safety hazard of flying debris.</p>
+        <h3>🌡 Temperature</h3>
+        <p>When temperatures dip below 50°F, the slide will not be in operation. Pool technicians will make a determination on the operation of pools based on ambient water temperatures.</p>
+        <p>The Current Pool Operation Status Tracker is updated continuously by the pool staff.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pool FAQs Modal -->
+  <div id="modal-faq" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-faq')">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('modal-faq')">&times;</button>
+      <div class="modal-title">Pool FAQ's</div>
+      <div class="modal-body">
+        <h3>When is the pool open?</h3>
+        <p>See hours posted on the Current Pool Operation Status Tracker. Pools and water facilities are subject to closure in certain weather conditions, particularly lightning. If the staff inform you that the pool is closing for lightning, please gather your belongings and exit the pool deck. Items left behind may be damaged by rain or lightning and may be turned in to lost and found.</p>
+        <p>All bodies of water are subject to other closures for maintenance at any time. Please see hours posted on Current Pool Operation Status at the top of this page.</p>
+
+        <h3>When is the waterslide open?</h3>
+        <p>See hours posted on the Current Pool Operation Status Tracker. The flag at the top of the tower indicates the slide's status. If the <strong>RED</strong> flag is posted, the slide is closed. When the <strong>GREEN</strong> flag is posted, the slide is open!</p>
+
+        <h3>What are the waterslide rules?</h3>
+        <ul>
+          <li>All riders must be wearing resort bands. If you're not wearing a resort band, you will be sent back to get your band.</li>
+          <li>Single riders only, no tandem rides. This includes small children or children with parents.</li>
+          <li>Riders must be no less than 42" tall.</li>
+          <li>Persons who are not confident swimmers should not ride.</li>
+          <li>Ride feet-forward, face-forward. Do not attempt to turn yourself in the slide.</li>
+          <li>Follow all instructions from the ride attendant.</li>
+          <li>The slide may close at any time for weather or any safety cause as determined by the staff.</li>
+        </ul>
+
+        <h3>I was given wristbands, do I really need them?</h3>
+        <p>Yes! Wristbands/resort bands must be worn at all times while on resort property. Everyone in your party must be wearing a wristband/resort band while on property, to include the pool area.</p>
+        <p>Dressing up and leaving property? We're happy to replace the band when you return your cut band to the front desk! If you have lost or broken a resort band, you may go to the front desk to obtain a replacement.</p>
+
+        <h3>I want to carry in my own food and beverages, is that okay?</h3>
+        <p>Personal size coolers only may be brought into the pool deck but please anticipate Team Members asking to check the cooler, to ensure there are no glass bottles or containers inside, as they pose safety hazards on the pool deck. Food and beverages are available for purchase at the Tiki Bar at the Main Pool. Restaurant personnel also serve on the pool deck during high-volume occupancy hours. Larger coolers should be stored in your villa or vehicle, please do not leave them outside the pool gates where other people can help themselves.</p>
+        <p>Glass containers of any variety are not permitted on or around the pool decks, as broken glass poses a major safety hazard within the pool area.</p>
+        <p>Coolers found outside the gates may have a courtesy notice inserted explaining the need to return the cooler to a villa or vehicle. Coolers unmoved after 1 hour will be taken to the front desk for storage.</p>
+
+        <h3>I like to enjoy a beverage while I'm in the pool, is that okay?</h3>
+        <p>Local health code for commercial pools prohibits food or drink in the pool or on the wet deck. No items may be left near the edge of the water, or in any walkway where it might become a tripping hazard. Please keep all food and beverage items at your seat or table.</p>
+        <p>Note: it is hazardous to consume alcohol before or while using a hot tub.</p>
+
+        <h3>Where is the smoking area?</h3>
+        <p>Both of our pools are smoke-free. Smokers will need to exit the pool deck to smoke or use vaping devices.</p>
+
+        <h3>What is the saved seat policy?</h3>
+        <p>Guests may not 'save' or 'reserve' seats at the pools by leaving towels on chairs when they do not intend to be present at the pool. Any items left unsupervised for an hour or more will be condensed onto one lounger or, if all seating is occupied, personal belongings left alone will be stored in a safe location for guests to pick up at their convenience. Please see a pool team member for assistance.</p>
+
+        <h3>What is The Signature / Quiet Pool?</h3>
+        <p>The Signature Pool is 'The Quiet Pool,' and is available to all guests. Located at Building Three is our Signature Pool. This pool is intended as a quiet "oasis" pool. All guests and all ages are welcome at The Quiet Pool, we ask only that everyone observe a few basic guidelines to assure the most pleasant experience. As with all of our facilities, anyone under the age of 12 years must be accompanied by an adult, such as a family member, guardian or babysitter. Personal conduct must be such that the safety of self and others is preserved. As this is the quiet pool, there is no throwing balls or other items. Rough play and intentional splashing is not permitted. Electronic audio devices are permitted to be played through ear buds/earphones &amp; kept at a low volume.</p>
+
+        <h3>Can I bring a speaker to the pool?</h3>
+        <p>Please don't bring any speakers to either of the pools. We have a PA system that plays music at the pool decks all day. If you bring a speaker to the pool, you will be asked to remove it.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pool Rules Boards Modal -->
+  <div id="modal-rules" class="modal-overlay" onclick="if(event.target===this)closeModal('modal-rules')">
+    <div class="modal-box">
+      <button class="modal-close" onclick="closeModal('modal-rules')">&times;</button>
+      <div class="modal-title">Pool Rules Boards</div>
+      <div class="modal-body">
+        <p>The following are transcriptions of our pool rules signs as posted at our pools. Please familiarize yourself with the pool rules before using any of the water features. Please be aware that some pools and features have hours that differ from those posted on rules signs, the current hours are those posted on our Current Pool Operation Status Tracker.</p>
+        <p>Please note that some features may have seasonal hours that differ from those posted on signs. The Current Pool Operation Status Tracker is the definitive schedule for pools and features. We apologize for any inconvenience.</p>
+        <p><strong>Please watch your children.</strong> For pool safety there is no substitute for supervision.</p>
+        <p><strong>NO DIVING</strong> — Diving is not permitted into any of our water features.</p>
+
+        <h3>Main Pool Rules</h3>
+        <ul>
+          <li>Warning — No Lifeguard On Duty — Use At Own Risk</li>
+          <li>Hours: see hours posted on Current Pool Operation Status Tracker</li>
+          <li>Maximum occupancy 146 persons</li>
+          <li>Failure to follow rules may result in expulsion from the water park or may cause serious injury</li>
+          <li>Property bands required at all times in pool area</li>
+          <li>Please shower before entering pool</li>
+          <li>Proper swimwear attire required</li>
+          <li>Do not swallow the pool water</li>
+          <li>No smoking or vaping in pool or on pool decks</li>
+          <li>No glass containers in pool area</li>
+          <li>No food or drink allowed within 4' of water</li>
+          <li>Keep entry and exit area clear — no sitting on steps</li>
+          <li>All children under 12 must be responsibly supervised by an adult</li>
+          <li>Non-swimmers must stay in shallow water (observe depth markers)</li>
+          <li>No running, pushing, dunking, rough play or throwing objects</li>
+          <li>No floats, tubes or floating devices in pool</li>
+          <li>No animals allowed on or around pool deck or resort property [Service animals are permitted on pool decks but not in the water; Service animals on pool decks may not be left unattended]</li>
+          <li>Breath holding and prolonged underwater swimming is prohibited (unconsciousness may occur unexpectedly)</li>
+          <li>No person should consume alcohol or any drug and then enter the water</li>
+          <li>Infants must wear rubber pants or swimming diapers</li>
+          <li>Pool may be closed for adverse weather conditions, routine maintenance, or safety reasons</li>
+          <li>Emergency phone located by pool bathrooms and building entrance — Dial 9-911</li>
+        </ul>
+
+        <h3>Lazy River Rules</h3>
+        <ul>
+          <li>Warning — No Lifeguard On Duty — Use At Own Risk</li>
+          <li>Hours: see hours posted on Current Pool Operation Status Tracker</li>
+          <li>Maximum occupancy 518 persons</li>
+          <li>Failure to follow rules may result in expulsion from the water park or may cause serious injury</li>
+          <li>Property bands required at all times in river area</li>
+          <li>Please shower before entering river; use of oils or body lotions is prohibited</li>
+          <li>Proper swimwear attire required</li>
+          <li>Do not swallow the pool water, it is recirculated</li>
+          <li>No smoking or vaping in lazy river or on pool decks</li>
+          <li>No diving — Entry available in designated areas only</li>
+          <li>No glass containers in river area</li>
+          <li>No food or drink allowed within 4' of water</li>
+          <li>Keep entry and exit area clear — no sitting on steps</li>
+          <li>All children under 12 must be responsibly supervised by an adult</li>
+          <li>Children under 42" are not permitted on the lazy river ride unless accompanied by an adult</li>
+          <li>Warning — Children riding in laps can be dangerous and is not recommended</li>
+          <li>No personal tubes — resort tubes are required to use the lazy river. Tubes may not be used in any other pool and must remain in designated areas</li>
+          <li>No animals allowed on or around pool deck or resort property [Service animals are permitted on pool decks but not in the water; Service animals on pool decks may not be left unattended]</li>
+          <li>Infants must wear rubber pants or swimming diapers</li>
+          <li>Do not use pool if you are ill with diarrhea</li>
+          <li>Lazy river may be closed for adverse weather conditions, routine maintenance, or safety reasons</li>
+          <li>Emergency phone located by pool bathrooms and building entrance — Dial 9-911</li>
+        </ul>
+
+        <h3>Water Slide Rules</h3>
+        <ul>
+          <li>Warning — No Lifeguard On Duty — Use At Own Risk</li>
+          <li>Hours: see hours posted on the Current Pool Operation Status Tracker</li>
+          <li>Failure to follow rules may result in expulsion from the water park or may cause serious injury</li>
+          <li>Property bands required at all times in slide area</li>
+          <li>Do not swallow the pool water, it is recirculated</li>
+          <li>Children under 48" tall are not permitted on the slide</li>
+          <li>Eyeglasses and goggles may not be worn on the slide</li>
+          <li>Climb steps slowly, no horseplay, running or pushing — warning — steps slippery when wet</li>
+          <li>No head first sliding</li>
+          <li>Slide must be ridden feet first lying down on your back</li>
+          <li>Keep arms and hands inside slide at all times</li>
+          <li>Do not run, dive, kneel, rotate or stop in the slide</li>
+          <li>Only one rider to enter slide at a time: Riders must clear splash area before next rider can go</li>
+          <li>Pregnant women and persons with heart conditions or back trouble should not ride the slide</li>
+          <li>Riders must wait for attendant's start signal before beginning ride</li>
+          <li>No tubes or floats of any kind on slide</li>
+          <li>Do not block slide entrance to splash down area</li>
+          <li>Swimwear with zippers, buckles, rivets or metal ornamentation are not permitted</li>
+          <li>Do not ride while under the influence of alcohol or drugs</li>
+          <li>Excessive use of slide may cause wear and tear of fabrics or skin irritation</li>
+          <li>Water slide may be closed for adverse weather conditions, routine maintenance, or safety reasons</li>
+          <li>Emergency phone located by pool bathrooms and building entrance — Dial 9-911</li>
+          <li>Pool depth 3'6" / 1.07m</li>
+        </ul>
+
+        <h3>Main Spa Rules</h3>
+        <ul>
+          <li>Warning — No Lifeguard On Duty — Use At Own Risk</li>
+          <li>Hours: see hours posted on the Current Pool Operation Status Tracker</li>
+          <li>Maximum occupancy 38 persons</li>
+          <li>Failure to follow rules may result in expulsion from the water park or may cause serious injury</li>
+          <li>Property bands required at all times in spa area</li>
+          <li>Maximum water temperature is 104°F, Maximum use limited to 15 minutes</li>
+          <li>Enter slowly and cautiously</li>
+          <li>Keep entry and exit area clear — no sitting on steps</li>
+          <li>Do not swallow the pool water</li>
+          <li>Children under 12 must have adult supervision</li>
+          <li>Pregnant women, small children, people with health problems and people using alcohol, narcotics, or other drugs that cause drowsiness should not use the spa without first consulting a doctor</li>
+          <li>No glass containers in spa area</li>
+          <li>No food or drink allowed within 4' of water</li>
+          <li>No floats, tubes or floating devices in spa</li>
+          <li>Please shower before entering; use of oils or body lotions is prohibited</li>
+          <li>No animals allowed on or around pool deck or resort property [Service animals are permitted on pool decks but not in the water; Service animals on pool decks may not be left unattended]</li>
+          <li>No smoking or vaping in spa or on pool decks</li>
+          <li>Persons with long hair should not submerge — entanglement may occur</li>
+          <li>Spa may be closed for adverse weather conditions, routine maintenance, or safety reasons</li>
+          <li>Emergency phone located by pool bathrooms and building entrance — Dial 9-911</li>
+        </ul>
+
+        <h3>Children's Zero Depth Entry Pool Rules</h3>
+        <ul>
+          <li>Warning — No Lifeguard On Duty — Use At Own Risk</li>
+          <li>Hours: see hours posted on the Current Pool Operation Status Tracker</li>
+          <li>Failure to follow rules may result in expulsion from the water park or may cause serious injury</li>
+          <li>Property bands required at all times in zero entry area</li>
+          <li>Responsible adult supervision required at all times</li>
+          <li>Please shower before entering zero depth entry pool; use of oils or body lotions is prohibited</li>
+          <li>Proper swimwear attire required</li>
+          <li>Do not swallow the pool water, it is recirculated</li>
+          <li>No reaching, interplay or grabbing with lazy river riders</li>
+          <li>No diving or jumping into lazy river</li>
+          <li>No climbing, standing, balancing or jumping on any water spraying device</li>
+          <li>No floats, tubes or floating devices in zero entry pool</li>
+          <li>No glass containers in pool area</li>
+          <li>No food or drink allowed within 4' of water</li>
+          <li>Infants must wear rubber pants or swimming diapers</li>
+          <li>Do not use pool if you are ill with diarrhea</li>
+          <li>No smoking or vaping in pool or on pool decks</li>
+          <li>Zero depth features may be closed for adverse weather conditions, routine maintenance, or safety reasons</li>
+          <li>Emergency phone located by pool bathrooms and building entrance — Dial 9-911</li>
+        </ul>
+
+        <h3>Signature Pool &amp; Spa Rules</h3>
+        <ul>
+          <li>Hours: see hours posted on the Current Pool Operation Status Tracker</li>
+          <li>No food or beverages in pool or spa or on pool or spa wet deck</li>
+          <li>No glass or animals allowed in the fenced pool area (or 50 feet from unfenced pool). [Service animals are permitted on pool decks but not in the water; Service animals on pool decks may not be left unattended.]</li>
+          <li>Please shower before entering pool or spa</li>
+          <li>Do not swallow the pool or spa water</li>
+          <li>Children under 12 must be accompanied by an adult. Infants and small children must wear appropriate plastic pants.</li>
+          <li>Pregnant women, small children, people with health problems and people using alcohol, narcotics or other drugs that cause drowsiness should not use pool or spa without consulting a doctor first</li>
+          <li>Do not enter pool during severe weather, heavy rain or when thunder and lightning can be heard or seen</li>
+          <li>In case of emergency, call 911</li>
+          <li>No reserving of pool furniture</li>
+          <li>Do not place furniture in pool or spa</li>
+          <li>Pool bathing load: 39 persons</li>
+          <li>Spa bathing load: 9 persons</li>
+          <li>Maximum water temperature: 104°F</li>
+          <li>Maximum spa use: 15 minutes</li>
+          <li>Warning: No Lifeguard On Duty</li>
+          <li>NO DIVING</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer-box">
+    <img src="../static/images/hicvfooter.png" alt="Holiday Inn Club Vacations" class="disclaimer-logo">
+    <p class="disclaimer-text">The Holiday Inn Club® program and the Holiday Inn Club Vacations® resorts are independently owned and operated and are not owned and operated by the owner of Holiday Inn brand. Copyright &copy; 2020 Holiday Inn Club Vacations Incorporated. All rights reserved.</p>
+    <p class="disclaimer-text">THIS MATERIAL IS BEING USED FOR THE PURPOSE OF SOLICITING SALES OF TIMESHARE INTERESTS</p>
+    <p class="disclaimer-text">Holiday Inn Club Vacations Incorporated, 9271 S John Young Parkway, Orlando, FL 32819</p>
+  </div>
+
+  <script>
+    function openModal(id) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    function closeModal(id) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    }
+
+    // Keyboard: Enter/Space on focusable cards
+    document.querySelectorAll('[role="button"]').forEach(function(el) {
+      el.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          el.click();
+        }
+      });
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.active').forEach(function(m) {
+          m.classList.remove('active');
+        });
+        document.body.style.overflow = '';
+      }
+    });
+  </script>
+</body>
+</html>
