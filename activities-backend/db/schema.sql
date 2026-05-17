@@ -23,3 +23,7 @@ CREATE TABLE IF NOT EXISTS activities_schedule (
   relocated_venue  TEXT,
   is_all_day       BOOLEAN NOT NULL DEFAULT false
 );
+
+-- Prevent scheduling the same activity twice at the same time
+CREATE UNIQUE INDEX IF NOT EXISTS uq_schedule_timed   ON activities_schedule (date, library_id, start_time) WHERE is_all_day = false;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_schedule_allday  ON activities_schedule (date, library_id) WHERE is_all_day = true;

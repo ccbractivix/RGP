@@ -137,29 +137,55 @@ router.post('/schedule/copy-week', async (req, res) => {
       `SELECT date, start_time, library_id, is_all_day FROM activities_schedule WHERE date >= $1 AND date <= $2`,
       [fromWeekStart, fromEndStr]
     );
-    let copied = 0;
-    for (const row of src.rows) {
-      const srcDate  = String(row.date).split('T')[0];
+
+    // Compute destination rows first, then batch-check for existing entries
+    const destRows = src.rows.map(row => {
+      const srcDate   = String(row.date).split('T')[0];
       const dayOffset = Math.round((new Date(srcDate + 'T12:00:00Z') - fromStart) / 86400000);
       const destDate  = new Date(toWeekStart + 'T12:00:00Z');
       destDate.setUTCDate(destDate.getUTCDate() + dayOffset);
-      const destDateStr = destDate.toISOString().split('T')[0];
-      const isAllDay = !!row.is_all_day;
-      // Skip if an identical entry already exists on the destination day
-      const existing = await client.query(
-        `SELECT 1 FROM activities_schedule
-         WHERE date = $1 AND library_id = $2 AND is_all_day = $3
-           AND (($4::TIME IS NULL AND start_time IS NULL) OR start_time = $4::TIME)`,
-        [destDateStr, row.library_id, isAllDay, isAllDay ? null : row.start_time]
-      );
-      if (existing.rowCount > 0) continue;
+      return {
+        date:       destDate.toISOString().split('T')[0],
+        start_time: row.start_time,
+        library_id: row.library_id,
+        is_all_day: !!row.is_all_day,
+      };
+    });
+
+    if (!destRows.length) {
+      await client.query('COMMIT');
+      return res.json({ ok: true, copied: 0 });
+    }
+
+    // Fetch all already-existing entries in the destination week in one query
+    const destDates = [...new Set(destRows.map(r => r.date))];
+    const existing = await client.query(
+      `SELECT date::text, library_id, start_time::text, is_all_day
+       FROM activities_schedule
+       WHERE date = ANY($1::date[])`,
+      [destDates]
+    );
+    const existSet = new Set(existing.rows.map(r => {
+      const key = r.is_all_day
+        ? `${r.date}|${r.library_id}|allday`
+        : `${r.date}|${r.library_id}|${(r.start_time||'').slice(0,5)}`;
+      return key;
+    }));
+
+    let copied = 0;
+    for (const row of destRows) {
+      const key = row.is_all_day
+        ? `${row.date}|${row.library_id}|allday`
+        : `${row.date}|${row.library_id}|${(row.start_time||'').slice(0,5)}`;
+      if (existSet.has(key)) continue;
       try {
         await client.query(
           `INSERT INTO activities_schedule (date, start_time, library_id, is_all_day)
            VALUES ($1, $2, $3, $4)`,
-          [destDateStr, isAllDay ? null : row.start_time, row.library_id, isAllDay]
+          [row.date, row.is_all_day ? null : row.start_time, row.library_id, row.is_all_day]
         );
         copied++;
+        existSet.add(key); // prevent re-insert if same row appears twice in source
       } catch (_) { /* skip on unexpected error */ }
     }
     await client.query('COMMIT');
