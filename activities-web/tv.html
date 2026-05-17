@@ -40,43 +40,42 @@
       text-transform: uppercase;
     }
 
-    /* Featured panel in header right */
-    #tv-featured {
-      flex: 0 0 280px;
-      background: #4A7A36;
-      color: #fff;
-      padding: 10px 16px;
-      border-left: 2px solid rgba(255,255,255,0.15);
+    /* Featured panel in header right — removed */
+
+    /* ===== SCHEDULE BODY ===== */
+    #tv-body {
+      display: flex;
+      flex-direction: row;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    #tv-schedule {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      min-height: 0;
     }
 
-    .tv-feat-label {
-      font-size: clamp(9px, 0.8vw, 12px);
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      opacity: 0.65;
-      margin-bottom: 5px;
-    }
-
-    .tv-feat-item {
-      font-size: clamp(11px, 1.05vw, 15px);
-      font-weight: 600;
-      color: #FFE8A0;
-      white-space: nowrap;
+    /* ===== SLIDESHOW ===== */
+    #tv-slideshow {
+      flex: 0 0 22%;
+      background: #000;
       overflow: hidden;
-      text-overflow: ellipsis;
-      line-height: 1.4;
+      border-left: 2px solid #E8D5C0;
+      position: relative;
     }
 
-    .tv-feat-item .feat-venue {
-      font-size: 0.85em;
-      font-weight: 400;
-      color: rgba(255,255,255,0.6);
-      margin-left: 4px;
+    .slideshow-slide {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      opacity: 0;
+      transition: opacity 1.5s ease-in-out;
     }
+    .slideshow-slide.active { opacity: 1; }
 
     /* ===== SCHEDULE AREA ===== */
     #tv-container {
@@ -147,13 +146,13 @@
     .tv-show-time::after { content: ' \00B7 '; font-weight: 400; color: #B8A898; }
 
     .tv-show-title { display: block; color: #4A7A36; font-weight: 700; }
-    .tv-show-title.canceled { color: #C0392B; text-decoration: line-through; }
+    .tv-show-title.canceled { color: #9ca3af; font-weight: 400; font-family: 'Inter', sans-serif; }
 
     .tv-canceled-note {
       display: block;
       font-size: clamp(10px, 0.9vw, 13px);
-      font-weight: 700;
-      color: #C0392B;
+      font-weight: 500;
+      color: #9ca3af;
       text-transform: uppercase;
       letter-spacing: 0.04em;
     }
@@ -255,14 +254,15 @@
 
     <div id="tv-headline-wrap">
       <div id="tv-headline">🏄 Activities Schedule</div>
-      <div id="tv-featured">
-        <div class="tv-feat-label">⭐ Featured Activities</div>
-        <div id="tv-feat-list"></div>
-      </div>
     </div>
 
-    <div id="tv-loading">Loading schedule…</div>
-    <div id="tv-container" style="display:none;"></div>
+    <div id="tv-body">
+      <div id="tv-schedule">
+        <div id="tv-loading">Loading schedule…</div>
+        <div id="tv-container" style="display:none;"></div>
+      </div>
+      <div id="tv-slideshow"></div>
+    </div>
 
     <div id="tv-bottom">
       <!-- Left gutter: QR code + text -->

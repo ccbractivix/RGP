@@ -31,29 +31,6 @@
     return { dayName: dayName, dateStr: dateStr };
   }
 
-  function renderFeatured(days) {
-    var el = document.getElementById('tv-feat-list');
-    if (!el) return;
-    var seen = {}, items = [];
-    (days || []).forEach(function(day) {
-      (day.activities || []).forEach(function(a) {
-        if (a.isFeatured && !seen[a.libraryId]) {
-          seen[a.libraryId] = true; items.push(a);
-        }
-      });
-    });
-    if (!items.length) {
-      el.innerHTML = '<div class="tv-feat-item" style="color:rgba(255,255,255,0.35);font-weight:400">None designated</div>';
-      return;
-    }
-    el.innerHTML = items.map(function(a) {
-      return '<div class="tv-feat-item">'
-        + escapeHtml(a.name)
-        + '<span class="feat-venue">' + escapeHtml(a.venue) + '</span>'
-        + '</div>';
-    }).join('');
-  }
-
   function render(days) {
     var container = document.getElementById('tv-container');
     var loading   = document.getElementById('tv-loading');
@@ -65,11 +42,8 @@
       loading.textContent = 'No schedule available.';
       loading.style.display = 'flex';
       container.style.display = 'none';
-      renderFeatured([]);
       return;
     }
-
-    renderFeatured(days);
 
     var html = '';
     days.forEach(function(dayObj) {
@@ -138,5 +112,53 @@
       });
   }
 
-  document.addEventListener('DOMContentLoaded', fetchAndRender);
+  /* ── Slideshow ── */
+  var slideshowImages = [];
+  var slideshowIdx    = 0;
+
+  function initSlideshow() {
+    fetch('https://api.github.com/repos/ccbractivix/RGP/contents/static/images')
+      .then(function(r) { return r.json(); })
+      .then(function(files) {
+        if (!Array.isArray(files)) return;
+        slideshowImages = files
+          .filter(function(f) { return f.type === 'file' && f.name.startsWith('26IHG'); })
+          .map(function(f) { return f.download_url; });
+        if (slideshowImages.length > 0) {
+          renderSlideshow();
+          if (slideshowImages.length > 1) {
+            setInterval(advanceSlideshow, 6000);
+          }
+        }
+      })
+      .catch(function() {});
+  }
+
+  function renderSlideshow() {
+    var container = document.getElementById('tv-slideshow');
+    if (!container) return;
+    container.innerHTML = slideshowImages.map(function(src, i) {
+      // Encode characters that could break out of CSS url('...') inside an HTML attribute
+      var safeSrc = src.replace(/['"()]/g, function(c) {
+        return '%' + c.charCodeAt(0).toString(16).toUpperCase();
+      });
+      return '<div class="slideshow-slide' + (i === 0 ? ' active' : '') + '" style="background-image:url(\'' + safeSrc + '\')"></div>';
+    }).join('');
+    slideshowIdx = 0;
+  }
+
+  function advanceSlideshow() {
+    var container = document.getElementById('tv-slideshow');
+    if (!container) return;
+    var slides = container.querySelectorAll('.slideshow-slide');
+    if (!slides.length) return;
+    slides[slideshowIdx].classList.remove('active');
+    slideshowIdx = (slideshowIdx + 1) % slides.length;
+    slides[slideshowIdx].classList.add('active');
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    fetchAndRender();
+    initSlideshow();
+  });
 })();
