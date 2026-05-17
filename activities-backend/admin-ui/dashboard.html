@@ -348,7 +348,7 @@
             var statusClass = a.status !== 'scheduled' ? ' status-'+a.status : '';
             html += '<div class="show-card'+statusClass+'">';
             html += '<div class="show-card-info">';
-            html += '<div class="show-card-time">'+fmtTime(a.start_time)+'</div>';
+            html += '<div class="show-card-time">'+(a.is_all_day ? 'All Day' : fmtTime(a.start_time))+'</div>';
             html += '<div class="show-card-title" title="'+esc(a.name)+'">'+esc(a.name)+'</div>';
             if (a.status==='canceled') html += '<div class="show-card-status canceled">Canceled</div>';
             if (a.status==='relocated') html += '<div class="show-card-status relocated">→ '+esc(a.relocated_venue||'')+'</div>';
@@ -372,7 +372,16 @@
       if (selectedDay === null) return;
       var day   = weekData[selectedDay];
       var label = DAY_LABELS[selectedDay] + ', ' + formatShortDate(day.date);
-      var sorted = day.activities.slice().sort(function(a,b){return (a.start_time||'').localeCompare(b.start_time||'');});
+      var sorted = day.activities.slice().sort(function(a,b){
+        // All-day events first
+        if (a.is_all_day && !b.is_all_day) return -1;
+        if (!a.is_all_day && b.is_all_day) return 1;
+        // Then by start time
+        var ta = a.start_time || '', tb = b.start_time || '';
+        if (ta !== tb) return ta.localeCompare(tb);
+        // Alphabetically for same start time
+        return (a.name||'').localeCompare(b.name||'');
+      });
 
       var timelineHtml = '';
       if (!sorted.length) {
@@ -383,7 +392,7 @@
           var lib = libraryData.find(function(l){return l.id===a.library_id;}) || {};
           var statusClass = a.status!=='scheduled' ? ' status-'+a.status : '';
           timelineHtml += '<div class="timeline-item'+statusClass+'">';
-          timelineHtml += '<div class="timeline-time">'+fmtTime(a.start_time)+'</div>';
+          timelineHtml += '<div class="timeline-time">'+(a.is_all_day ? 'All Day' : fmtTime(a.start_time))+'</div>';
           timelineHtml += '<div class="timeline-info">';
           timelineHtml += '<div class="timeline-title">'+esc(a.name||lib.name||'—')+'</div>';
           timelineHtml += '<div class="timeline-meta">'+esc(a.venue||lib.venue||'')+'</div>';
@@ -410,7 +419,8 @@
 
       var formHtml = '<div class="add-show-form'+(addFormOpen?' open':'')+'" id="add-form">'
         + '<div class="form-row"><label>Activity</label><select class="form-control" id="sel-activity"><option value="">Select…</option>'+libOptions+'</select></div>'
-        + '<div class="form-row"><label>Start Time</label><input type="time" class="form-control" id="inp-time" /></div>'
+        + '<div class="form-row"><label style="display:flex;align-items:center;gap:0.5rem;text-transform:none;letter-spacing:normal;font-size:0.82rem;font-weight:500;cursor:pointer"><input type="checkbox" id="chk-allday" style="accent-color:var(--gold);width:14px;height:14px" onchange="toggleAllDayField()"> All Day</label></div>'
+        + '<div class="form-row" id="time-row"><label>Start Time</label><input type="time" class="form-control" id="inp-time" /></div>'
         + '<div style="display:flex;gap:0.5rem;margin-top:0.4rem">'
         + '<button class="btn btn-gold btn-sm" onclick="addActivityToDay()">Add</button>'
         + '<button class="btn btn-sm" onclick="toggleAddForm()">Cancel</button>'
@@ -435,17 +445,22 @@
 
     window.toggleAddForm = function() { addFormOpen = !addFormOpen; renderEditor(); };
 
+    window.toggleAllDayField = function() {
+      var chk = document.getElementById('chk-allday');
+      var row = document.getElementById('time-row');
+      if (chk && row) row.style.display = chk.checked ? 'none' : '';
+    };
+
     window.addActivityToDay = function() {
-      var actId = document.getElementById('sel-activity').value;
-      var time  = document.getElementById('inp-time').value;
-      if (!actId || !time) { showToast('Select an activity and time.', 'error'); return; }
+      var actId   = document.getElementById('sel-activity').value;
+      var allDay  = document.getElementById('chk-allday') && document.getElementById('chk-allday').checked;
+      var time    = !allDay && document.getElementById('inp-time') ? document.getElementById('inp-time').value : '';
+      if (!actId) { showToast('Select an activity.', 'error'); return; }
+      if (!allDay && !time) { showToast('Enter a start time or check All Day.', 'error'); return; }
       var lib = libraryData.find(function(l){return l.id===actId;});
       if (!lib) return;
       var day = weekData[selectedDay];
-      if (day.activities.find(function(a){return a.start_time===time;})) {
-        showToast('A time slot already exists at that time.', 'error'); return;
-      }
-      day.activities.push({ library_id: actId, name: lib.name, venue: lib.venue, start_time: time, status: 'scheduled', relocated_venue: null });
+      day.activities.push({ library_id: actId, name: lib.name, venue: lib.venue, start_time: allDay ? null : time, is_all_day: !!allDay, status: 'scheduled', relocated_venue: null });
       addFormOpen = false;
       renderGrid(); renderEditor();
     };
@@ -461,7 +476,7 @@
       var day = weekData[selectedDay];
       var r = await apiFetch('/admin/schedule/day', {
         method: 'POST',
-        body: JSON.stringify({ date: day.date, activities: day.activities.map(function(a){return {library_id:a.library_id,start_time:a.start_time};}) })
+        body: JSON.stringify({ date: day.date, activities: day.activities.map(function(a){return {library_id:a.library_id,start_time:a.is_all_day?null:a.start_time,is_all_day:!!a.is_all_day};}) })
       });
       var d = await r.json();
       if (!r.ok) { showToast(d.error||'Save failed.','error'); return; }

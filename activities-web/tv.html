@@ -60,10 +60,12 @@
 
     /* ===== SLIDESHOW ===== */
     #tv-slideshow {
-      flex: 0 0 22%;
+      flex: 0 0 auto;
+      width: clamp(120px, 15vw, 200px);
+      height: clamp(80px, 9vw, 130px);
       background: #000;
       overflow: hidden;
-      border-left: 2px solid #E8D5C0;
+      border-radius: 8px;
       position: relative;
     }
 
@@ -183,6 +185,7 @@
       display: flex;
       flex-direction: row;
       align-items: center;
+      justify-content: space-between;
       padding: 6px 14px 8px;
       border-top: 2px solid #E8D5C0;
       gap: 12px;
@@ -212,9 +215,8 @@
       max-width: 280px;
     }
 
-    /* Right gutter: sports info */
+    /* Right: sports info */
     #tv-sports {
-      margin-left: auto;
       text-align: right;
       font-size: clamp(11px, 1.1vw, 16px);
       color: #3D3128;
@@ -261,7 +263,6 @@
         <div id="tv-loading">Loading schedule…</div>
         <div id="tv-container" style="display:none;"></div>
       </div>
-      <div id="tv-slideshow"></div>
     </div>
 
     <div id="tv-bottom">
@@ -274,7 +275,9 @@
           or by using the shortcut <strong>rocketbeachresort.com</strong>.
         </div>
       </div>
-      <!-- Right gutter: sports info -->
+      <!-- Center: slideshow -->
+      <div id="tv-slideshow"></div>
+      <!-- Right: sports info -->
       <div id="tv-sports">
         <div class="sports-headline">Dawn to Dusk</div>
         <div>Basketball, Volleyball, Pickleball and More!</div>

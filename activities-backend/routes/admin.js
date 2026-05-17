@@ -57,12 +57,12 @@ router.get('/schedule/:weekStart', async (req, res) => {
     const end   = new Date(start); end.setUTCDate(end.getUTCDate() + 6);
     const endStr = end.toISOString().split('T')[0];
     const r = await db.query(
-      `SELECT s.id, s.date, s.start_time, s.status, s.relocated_venue,
+      `SELECT s.id, s.date, s.start_time, s.is_all_day, s.status, s.relocated_venue,
               l.id AS library_id, l.name, l.duration_min, l.venue
        FROM activities_schedule s
        JOIN activities_library l ON l.id = s.library_id
        WHERE s.date >= $1 AND s.date <= $2
-       ORDER BY s.date, s.start_time`,
+       ORDER BY s.date, s.is_all_day DESC, s.start_time NULLS FIRST, l.name`,
       [weekStart, endStr]
     );
     const days = {};
@@ -78,7 +78,8 @@ router.get('/schedule/:weekStart', async (req, res) => {
           id:             row.id,
           library_id:     row.library_id,
           name:           row.name,
-          start_time:     String(row.start_time).slice(0, 5),
+          start_time:     row.is_all_day ? null : (row.start_time ? String(row.start_time).slice(0, 5) : null),
+          is_all_day:     !!row.is_all_day,
           duration_min:   row.duration_min,
           venue:          row.venue,
           status:         row.status,
@@ -101,11 +102,13 @@ router.post('/schedule/day', async (req, res) => {
     await client.query('DELETE FROM activities_schedule WHERE date = $1', [date]);
     if (Array.isArray(activities)) {
       for (const a of activities) {
-        if (!a.library_id || !a.start_time) continue;
+        if (!a.library_id) continue;
+        const isAllDay = !!a.is_all_day;
+        if (!isAllDay && !a.start_time) continue;
         await client.query(
-          `INSERT INTO activities_schedule (date, start_time, library_id)
-           VALUES ($1, $2, $3)`,
-          [date, a.start_time, a.library_id]
+          `INSERT INTO activities_schedule (date, start_time, library_id, is_all_day)
+           VALUES ($1, $2, $3, $4)`,
+          [date, isAllDay ? null : a.start_time, a.library_id, isAllDay]
         );
       }
     }
@@ -131,24 +134,59 @@ router.post('/schedule/copy-week', async (req, res) => {
   try {
     await client.query('BEGIN');
     const src = await client.query(
-      `SELECT date, start_time, library_id FROM activities_schedule WHERE date >= $1 AND date <= $2`,
+      `SELECT date, start_time, library_id, is_all_day FROM activities_schedule WHERE date >= $1 AND date <= $2`,
       [fromWeekStart, fromEndStr]
     );
-    let copied = 0;
-    for (const row of src.rows) {
-      const srcDate  = String(row.date).split('T')[0];
+
+    // Compute destination rows first, then batch-check for existing entries
+    const destRows = src.rows.map(row => {
+      const srcDate   = String(row.date).split('T')[0];
       const dayOffset = Math.round((new Date(srcDate + 'T12:00:00Z') - fromStart) / 86400000);
       const destDate  = new Date(toWeekStart + 'T12:00:00Z');
       destDate.setUTCDate(destDate.getUTCDate() + dayOffset);
-      const destDateStr = destDate.toISOString().split('T')[0];
+      return {
+        date:       destDate.toISOString().split('T')[0],
+        start_time: row.start_time,
+        library_id: row.library_id,
+        is_all_day: !!row.is_all_day,
+      };
+    });
+
+    if (!destRows.length) {
+      await client.query('COMMIT');
+      return res.json({ ok: true, copied: 0 });
+    }
+
+    // Fetch all already-existing entries in the destination week in one query
+    const destDates = [...new Set(destRows.map(r => r.date))];
+    const existing = await client.query(
+      `SELECT date::text, library_id, start_time::text, is_all_day
+       FROM activities_schedule
+       WHERE date = ANY($1::date[])`,
+      [destDates]
+    );
+    const existSet = new Set(existing.rows.map(r => {
+      const key = r.is_all_day
+        ? `${r.date}|${r.library_id}|allday`
+        : `${r.date}|${r.library_id}|${(r.start_time||'').slice(0,5)}`;
+      return key;
+    }));
+
+    let copied = 0;
+    for (const row of destRows) {
+      const key = row.is_all_day
+        ? `${row.date}|${row.library_id}|allday`
+        : `${row.date}|${row.library_id}|${(row.start_time||'').slice(0,5)}`;
+      if (existSet.has(key)) continue;
       try {
         await client.query(
-          `INSERT INTO activities_schedule (date, start_time, library_id)
-           VALUES ($1, $2, $3) ON CONFLICT (date, start_time) DO NOTHING`,
-          [destDateStr, row.start_time, row.library_id]
+          `INSERT INTO activities_schedule (date, start_time, library_id, is_all_day)
+           VALUES ($1, $2, $3, $4)`,
+          [row.date, row.is_all_day ? null : row.start_time, row.library_id, row.is_all_day]
         );
         copied++;
-      } catch (_) { /* skip conflicts */ }
+        existSet.add(key); // prevent re-insert if same row appears twice in source
+      } catch (_) { /* skip on unexpected error */ }
     }
     await client.query('COMMIT');
     return res.json({ ok: true, copied });
