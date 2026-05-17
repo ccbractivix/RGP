@@ -3,7 +3,7 @@ const express = require('express');
 const db      = require('../db/db');
 const router  = express.Router();
 
-const VENUES = ['Water Slide','Main Pool Deck','Caribe Room','Sports Courts','Tiki Bar','Arcade'];
+const VENUES = ['Water Slide','Main Pool Deck','Main Lobby','Caribe Room','Sports Courts','Tiki Bar','Arcade'];
 
 function formatTime(t) {
   if (!t) return '';
