@@ -10,6 +10,7 @@
   var metaTag = document.querySelector('meta[name="api-url"]');
   var API_URL = (metaTag && metaTag.getAttribute('content')) || '/api/schedule';
   var API_FEATURED_URL = API_URL.replace(/\/api\/schedule.*$/, '') + '/api/library/featured';
+  var STATIC_BASE_URL  = API_URL.replace(/\/api\/.*$/, '') + '/static/';
 
   var currentDateStr = todayStr();
 
@@ -156,7 +157,7 @@
 
           // Image
           if (a.image) {
-            html += '<img class="act-image" src="https://activities-backend.onrender.com/static/' + escapeHtml(a.image) + '" alt="' + escapeHtml(a.name) + '" onerror="this.style.display=\'none\'">';
+            html += '<img class="act-image" src="' + STATIC_BASE_URL + escapeHtml(a.image) + '" alt="' + escapeHtml(a.name) + '" onerror="this.style.display=\'none\'">';
           } else {
             html += '<div class="act-image-placeholder">🏃</div>';
           }
