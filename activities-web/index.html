@@ -13,12 +13,12 @@
 <body>
 
   <div class="page-header">
-    <div class="page-header-left">
-      <h1>Activities Schedule</h1>
+    <div class="page-header-logo">
+      <img src="../static/images/activixheader.png" alt="Activities" class="header-logo-img">
     </div>
   </div>
 
-  <nav class="nav-bar">
+  <nav class="nav-bar nav-bar-centered">
     <a href="amenities-web/index.html" class="amenities-link">🕐 Click here for operating status of Pools and other amenities</a>
   </nav>
 
@@ -37,6 +37,45 @@
   <div class="page-footer">
     <p>Activities subject to delay, cancellation, or closing depending on weather conditions and other factors.</p>
     <p style="margin-top:6px;">For amenity hours and status, visit the <a href="amenities-web/index.html" style="color:var(--orange);font-weight:600;">Amenities page</a>.</p>
+    <p style="margin-top:14px;">
+      <a href="#" class="popup-link" onclick="document.getElementById('popup-locations').style.display='flex';return false;">Where Are The Activities Held?</a>
+    </p>
+    <p style="margin-top:8px;">
+      <a href="#" class="popup-link" onclick="document.getElementById('popup-delays').style.display='flex';return false;">Delays and Cancellations</a>
+    </p>
+  </div>
+
+  <!-- Locations Popup -->
+  <div id="popup-locations" class="popup-overlay" onclick="if(event.target===this)this.style.display='none'">
+    <div class="popup-box">
+      <button class="popup-close" onclick="document.getElementById('popup-locations').style.display='none'">&times;</button>
+      <h2 class="popup-title">Where Are The Activities Held?</h2>
+      <h3 class="popup-section-title">The Caribe Room</h3>
+      <p class="popup-text">The Caribe Room is where most of our Activities and Crafts will take place. It is located in the main building in the escalator lobby, on the right hand side as you exit towards the main pool.</p>
+      <h3 class="popup-section-title">The Mezzanine</h3>
+      <p class="popup-text">The Mezzanine is the level located just above the Main Lobby in Building One. The easiest way to access the Mezzanine level is to ride the elevator or escalator up to the "M" floor.</p>
+      <h3 class="popup-section-title">The Sports Courts</h3>
+      <p class="popup-text">The Basketball and Tennis / Pickleball Courts are on the 3rd Floor of the Southern Parking Garage at Building One by the Main Lobby. If you are looking to rent equipment, you may do so at the Front Desk, but if you are joining an activity led by our team, we'll have everything there ready to go!</p>
+      <p class="popup-text" style="margin-top:12px;">If you have any difficulty finding any of these locations please ask a Team Member for assistance.</p>
+    </div>
+  </div>
+
+  <!-- Delays Popup -->
+  <div id="popup-delays" class="popup-overlay" onclick="if(event.target===this)this.style.display='none'">
+    <div class="popup-box">
+      <button class="popup-close" onclick="document.getElementById('popup-delays').style.display='none'">&times;</button>
+      <h2 class="popup-title">Delays and Cancellations</h2>
+      <p class="popup-text">All rocket launches, outdoor performances, events, and activities are subject to wind and weather conditions, or availability of the host that may postpone or cancel the function. Some activities rely on the participant to be physically able to participate. In the event that Bingo cannot be held poolside, it will move into the Caribe Room. Water park and guest tram operation times are subject to change.</p>
+      <p class="popup-text" style="margin-top:12px;">See Pool Status for up-to-date information.</p>
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer-box">
+    <img src="../static/images/hicvfooter.png" alt="Holiday Inn Club Vacations" class="disclaimer-logo">
+    <p class="disclaimer-text">The Holiday Inn Club® program and the Holiday Inn Club Vacations® resorts are independently owned and operated and are not owned and operated by the owner of Holiday Inn brand. Copyright &copy; 2020 Holiday Inn Club Vacations Incorporated. All rights reserved.</p>
+    <p class="disclaimer-text">THIS MATERIAL IS BEING USED FOR THE PURPOSE OF SOLICITING SALES OF TIMESHARE INTERESTS</p>
+    <p class="disclaimer-text">Holiday Inn Club Vacations Incorporated, 9271 S John Young Parkway, Orlando, FL 32819</p>
   </div>
 
   <script src="app.js"></script>
