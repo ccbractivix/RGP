@@ -96,8 +96,8 @@ app.use('/admin', (req, res, next) => {
   return next();
 });
 
-// Serve /static from the shared static folder at the repo root
-app.use('/static', express.static(path.join(__dirname, '..', 'static')));
+// Serve /static from the shared static images folder at the repo root
+app.use('/static', express.static(path.join(__dirname, '..', 'static', 'images')));
 
 // Public API
 app.use('/api', publicLimiter, apiRouter);
