@@ -147,6 +147,29 @@
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast.success { border-color: var(--success); color: var(--success); }
     .toast.error   { border-color: var(--red); color: var(--red); }
+    /* Image picker */
+    .img-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.5rem;
+      max-height: 55vh; overflow-y: auto; padding: 0.25rem;
+    }
+    .img-grid-item {
+      display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+      background: var(--card); border: 2px solid transparent; border-radius: 8px;
+      padding: 0.4rem; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+    }
+    .img-grid-item:hover { background: #353535; border-color: var(--border-light); }
+    .img-grid-item.selected { border-color: var(--gold); background: var(--gold-dim); }
+    .img-grid-item img {
+      width: 72px; height: 72px; object-fit: cover; border-radius: 5px;
+      border: 1px solid var(--border); display: block;
+    }
+    .img-grid-item span {
+      font-size: 0.62rem; color: var(--text-muted); text-align: center;
+      word-break: break-all; line-height: 1.2; max-width: 100%;
+      overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    }
+    .img-picker-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-dim); font-size: 0.875rem; }
+
   </style>
 </head>
 <body>
@@ -233,9 +256,17 @@
           <input type="text" class="form-control" id="act-info2" placeholder="e.g. Wristbands required" />
         </div>
         <div class="form-row">
-          <label>Image Filename <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
-          <input type="text" class="form-control" id="act-image" placeholder="e.g. pool-party.jpg" spellcheck="false" />
-          <div class="form-hint">Filename of an image in the repo's <code>/static</code> folder.</div>
+          <label>Image <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <div id="img-picker-preview" style="display:none;margin-bottom:0.5rem;align-items:center;gap:0.6rem">
+            <img id="img-picker-thumb" src="" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex-shrink:0" />
+            <span id="img-picker-name" style="font-size:0.8rem;color:var(--text-muted);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+          </div>
+          <input type="hidden" id="act-image" />
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+            <button type="button" class="btn btn-sm" id="btn-img-browse" onclick="openImagePicker()">🖼 Browse Images</button>
+            <button type="button" class="btn btn-sm btn-danger" id="btn-img-clear" style="display:none" onclick="clearImage()">✕ Clear</button>
+          </div>
+          <div class="form-hint">Select an image from the <code>/static</code> folder. Push new images to the repo and redeploy to make them available.</div>
         </div>
         <div class="checkbox-row">
           <input type="checkbox" id="act-featured" />
@@ -246,6 +277,27 @@
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">Cancel</button>
         <button class="btn btn-gold" id="btn-save-activity" onclick="saveActivity()">Add Activity</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Picker Modal -->
+  <div class="modal-overlay" id="modal-image-picker">
+    <div class="modal-card" style="max-width:640px">
+      <div class="modal-header">
+        <div class="modal-title">🖼 Select Image</div>
+        <button class="modal-close" onclick="closeImagePicker()">✕</button>
+      </div>
+      <div class="modal-body" style="padding:0.75rem 1rem">
+        <div id="img-picker-grid-wrap">
+          <div class="img-picker-state" id="img-picker-loading"><span class="spinner-inline"></span> Loading images…</div>
+          <div class="img-grid" id="img-picker-grid" style="display:none"></div>
+          <div class="img-picker-state" id="img-picker-empty" style="display:none">No images found in <code>/static</code>.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeImagePicker()">Cancel</button>
+        <button class="btn btn-gold" id="btn-img-pick-confirm" onclick="confirmImagePick()" disabled>Select Image</button>
       </div>
     </div>
   </div>
@@ -349,6 +401,29 @@
     }
 
     /* ── Modal ── */
+    function setImagePreview(filename) {
+      var preview = document.getElementById('img-picker-preview');
+      var thumb   = document.getElementById('img-picker-thumb');
+      var name    = document.getElementById('img-picker-name');
+      var clearBtn = document.getElementById('btn-img-clear');
+      if (filename) {
+        thumb.src = '/static/' + filename;
+        name.textContent = filename;
+        preview.style.display = 'flex';
+        clearBtn.style.display = '';
+      } else {
+        thumb.src = '';
+        preview.style.display = 'none';
+        clearBtn.style.display = 'none';
+      }
+    }
+
+    function clearImage() {
+      document.getElementById('act-image').value = '';
+      setImagePreview('');
+    }
+    window.clearImage = clearImage;
+
     function openAddModal() {
       editingId = null;
       document.getElementById('modal-activity-title').textContent = 'Add Activity';
@@ -362,6 +437,7 @@
       document.getElementById('act-info1').value = '';
       document.getElementById('act-info2').value = '';
       document.getElementById('act-image').value = '';
+      setImagePreview('');
       document.getElementById('act-featured').checked = false;
       document.getElementById('act-error').className = 'modal-error';
       document.getElementById('modal-activity').classList.add('open');
@@ -382,6 +458,7 @@
       document.getElementById('act-info1').value = item.info_line1 || '';
       document.getElementById('act-info2').value = item.info_line2 || '';
       document.getElementById('act-image').value = item.image || '';
+      setImagePreview(item.image || '');
       document.getElementById('act-featured').checked = !!item.is_featured;
       document.getElementById('act-error').className = 'modal-error';
       document.getElementById('modal-activity').classList.add('open');
@@ -392,6 +469,66 @@
       document.getElementById('modal-activity').classList.remove('open');
     }
     window.closeModal = closeModal;
+
+    /* ── Image Picker ── */
+    var pickerSelectedFilename = null;
+
+    async function openImagePicker() {
+      pickerSelectedFilename = null;
+      document.getElementById('btn-img-pick-confirm').disabled = true;
+
+      var grid     = document.getElementById('img-picker-grid');
+      var loading  = document.getElementById('img-picker-loading');
+      var empty    = document.getElementById('img-picker-empty');
+
+      grid.style.display = 'none';
+      empty.style.display = 'none';
+      loading.style.display = '';
+      document.getElementById('modal-image-picker').classList.add('open');
+
+      try {
+        var r = await apiFetch('/admin/images');
+        var files = r.ok ? await r.json() : [];
+        loading.style.display = 'none';
+        if (!files.length) {
+          empty.style.display = '';
+          return;
+        }
+        grid.innerHTML = '';
+        var current = document.getElementById('act-image').value;
+        files.forEach(function(f) {
+          var item = document.createElement('div');
+          item.className = 'img-grid-item' + (f === current ? ' selected' : '');
+          item.dataset.filename = f;
+          item.innerHTML = '<img src="/static/' + esc(f) + '" alt="' + esc(f) + '" loading="lazy" /><span>' + esc(f) + '</span>';
+          item.addEventListener('click', function() {
+            document.querySelectorAll('.img-grid-item').forEach(function(el) { el.classList.remove('selected'); });
+            item.classList.add('selected');
+            pickerSelectedFilename = f;
+            document.getElementById('btn-img-pick-confirm').disabled = false;
+          });
+          grid.appendChild(item);
+        });
+        grid.style.display = '';
+      } catch (_) {
+        loading.style.display = 'none';
+        empty.style.display = '';
+      }
+    }
+    window.openImagePicker = openImagePicker;
+
+    function closeImagePicker() {
+      document.getElementById('modal-image-picker').classList.remove('open');
+    }
+    window.closeImagePicker = closeImagePicker;
+
+    function confirmImagePick() {
+      if (!pickerSelectedFilename) return;
+      document.getElementById('act-image').value = pickerSelectedFilename;
+      setImagePreview(pickerSelectedFilename);
+      closeImagePicker();
+    }
+    window.confirmImagePick = confirmImagePick;
 
     /* ── Save ── */
     async function saveActivity() {
