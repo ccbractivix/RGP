@@ -138,7 +138,11 @@
     var container = document.getElementById('tv-slideshow');
     if (!container) return;
     container.innerHTML = slideshowImages.map(function(src, i) {
-      return '<div class="slideshow-slide' + (i === 0 ? ' active' : '') + '" style="background-image:url(\'' + src.replace(/'/g, '%27') + '\')"></div>';
+      // Encode characters that could break out of CSS url('...') inside an HTML attribute
+      var safeSrc = src.replace(/['"()]/g, function(c) {
+        return '%' + c.charCodeAt(0).toString(16).toUpperCase();
+      });
+      return '<div class="slideshow-slide' + (i === 0 ? ' active' : '') + '" style="background-image:url(\'' + safeSrc + '\')"></div>';
     }).join('');
     slideshowIdx = 0;
   }
