@@ -340,8 +340,8 @@
           + '<td>' + (item.is_featured ? '<span class="badge badge-featured">⭐ Featured</span>' : '<span style="color:var(--text-dim)">—</span>') + '</td>'
           + '<td style="font-size:0.75rem;color:var(--text-muted)">' + infoLines + '</td>'
           + '<td><div class="actions-cell">'
-          + '<button class="btn btn-sm" onclick="openEditModal(' + JSON.stringify(esc(item.id)) + ')">Edit</button>'
-          + '<button class="btn btn-sm btn-danger" onclick="deleteActivity(' + JSON.stringify(esc(item.id)) + ')">Delete</button>'
+          + '<button class="btn btn-sm" onclick="openEditModal(\'' + esc(item.id) + '\')">Edit</button>'
+          + '<button class="btn btn-sm btn-danger" onclick="deleteActivity(\'' + esc(item.id) + '\')">Delete</button>'
           + '</div></td>'
           + '</tr>';
       });

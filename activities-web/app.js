@@ -55,12 +55,8 @@
     }, msTill);
   }
 
-  // ── Render featured activities in header ──────────────────────────────────
-  function renderFeatured(days) {
-    var featuredList = document.getElementById('featured-list');
-    if (!featuredList) return;
-
-    // Collect unique featured activities across all days
+  // ── Build featured card for top of schedule ──────────────────────────────
+  function buildFeaturedCard(days) {
     var seen = {};
     var items = [];
     (days || []).forEach(function (day) {
@@ -71,18 +67,19 @@
         }
       });
     });
-
-    if (!items.length) {
-      featuredList.innerHTML = '<div class="featured-item" style="color:rgba(255,255,255,0.4);font-weight:400">None designated</div>';
-      return;
-    }
-
-    featuredList.innerHTML = items.map(function (a) {
-      return '<div class="featured-item">'
+    if (!items.length) return '';
+    var listHtml = items.map(function (a) {
+      return '<div class="featured-top-item">'
         + escapeHtml(a.name)
         + '<span class="feat-venue">' + escapeHtml(a.venue) + '</span>'
         + '</div>';
     }).join('');
+    return '<div class="featured-top-card">'
+      + '<div class="featured-top-overlay">'
+      + '<div class="featured-top-label">⭐ Featured Activities</div>'
+      + '<div class="featured-top-list">' + listHtml + '</div>'
+      + '</div>'
+      + '</div>';
   }
 
   // ── Render schedule ────────────────────────────────────────────────────────
@@ -97,7 +94,7 @@
       return;
     }
 
-    var html = '';
+    var html = buildFeaturedCard(days);
     days.forEach(function (dayObj) {
       var label = dayObj.label || dayObj.date || '';
       // Parse label: "Monday, May 19" → dayName + dateStr
@@ -174,7 +171,6 @@
         return r.json();
       })
       .then(function (data) {
-        renderFeatured(data);
         renderSchedule(data);
       })
       .catch(function (err) {
