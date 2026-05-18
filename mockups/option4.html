@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Rocket Beach Resort — Option 4 Mockup</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --ocean:    #0a2e4a;
+    --teal:     #0d7377;
+    --teal-lt:  #14a9ad;
+    --coral:    #e8622a;
+    --sand:     #fdf6ec;
+    --sand-dk:  #f0e8d8;
+    --white:    #ffffff;
+    --text:     #1a2e3a;
+    --muted:    #5a7080;
+    --nav-h:    66px;
+    --header-h: 68px;
+    --radius:   14px;
+    --shadow:   0 2px 16px rgba(10,46,74,0.13);
+  }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--sand);
+    color: var(--text);
+    max-width: 430px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── DEMO BANNER ── */
+  .demo-banner {
+    background: var(--coral);
+    color: white;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 8px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  /* ── HEADER ── */
+  .site-header {
+    background: linear-gradient(165deg, var(--ocean) 0%, var(--teal) 100%);
+    padding: 14px 20px;
+    height: var(--header-h);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .resort-name { color: white; font-size: 18px; font-weight: 700; }
+  .resort-sub  { color: rgba(255,255,255,0.65); font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; margin-top: 2px; }
+
+  .header-icon {
+    width: 44px; height: 44px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+
+  /* ── SCROLL AREA ── */
+  .content-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .content-area::-webkit-scrollbar { display: none; }
+
+  /* ── PAGES ── */
+  .page { display: none; animation: fadeIn 0.2s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    height: var(--nav-h);
+    flex-shrink: 0;
+    background: white;
+    border-top: 1px solid #e0e8f0;
+    display: flex;
+    box-shadow: 0 -2px 12px rgba(10,46,74,0.1);
+  }
+
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: var(--muted);
+    padding: 8px 4px;
+    transition: color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+  }
+
+  .nav-item.active { color: var(--teal); }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 20%; right: 20%;
+    height: 3px;
+    background: var(--teal);
+    border-radius: 0 0 3px 3px;
+  }
+
+  .nav-emoji { font-size: 22px; line-height: 1; }
+  .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; }
+
+  /* ── HOME HERO ── */
+  .page-hero {
+    background: linear-gradient(170deg, var(--ocean) 0%, #1a5f7a 55%, var(--teal-lt) 100%);
+    padding: 22px 20px 20px;
+    color: white;
+  }
+  .hero-greeting { font-size: 13px; opacity: 0.75; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .hero-title { font-size: 24px; font-weight: 800; line-height: 1.1; }
+  .hero-sub   { font-size: 13px; opacity: 0.75; margin-top: 8px; line-height: 1.4; }
+
+  /* ── LIVE TILES ── */
+  .tiles-row { display: flex; gap: 10px; padding: 14px 16px 0; }
+
+  .tile {
+    flex: 1;
+    background: white;
+    border-radius: var(--radius);
+    padding: 12px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s;
+  }
+  .tile:active { transform: scale(0.97); }
+
+  .tile-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .tile-value { font-size: 22px; font-weight: 800; color: var(--ocean); line-height: 1; }
+  .tile-sub   { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 1.3; }
+  .tile-dot   { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; background: #2a9a50; }
+  .tile-dot.red { background: var(--coral); }
+
+  /* ── SECTION ── */
+  .section { padding: 18px 16px 4px; }
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: 1.8px; text-transform: uppercase; color: var(--teal); margin-bottom: 12px; padding-left: 2px; }
+
+  /* ── FEATURED GRID ── */
+  .featured-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .feat-card {
+    background: white;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s;
+    display: flex;
+    flex-direction: column;
+  }
+  .feat-card:active { transform: scale(0.97); }
+  .feat-card.span2 { grid-column: span 2; flex-direction: row; align-items: center; }
+
+  .feat-hero { height: 88px; display: flex; align-items: center; justify-content: center; font-size: 38px; flex-shrink: 0; }
+  .feat-card.span2 .feat-hero { width: 80px; height: 72px; font-size: 32px; }
+
+  .bg-launch    { background: linear-gradient(135deg, #0a1628, #1a3a5c); }
+  .bg-theater   { background: linear-gradient(135deg, #1a0a28, #3a1a5c); }
+  .bg-activities{ background: linear-gradient(135deg, #082810, #1a5c2a); }
+  .bg-grill     { background: linear-gradient(135deg, #280a0a, #5c1a1a); }
+  .bg-pools     { background: linear-gradient(135deg, #0a1e28, #0d5c7a); }
+  .bg-checkout  { background: linear-gradient(135deg, #1a280a, #3a5c1a); }
+
+  .feat-body  { padding: 10px 12px 12px; flex: 1; }
+  .feat-title { font-size: 13px; font-weight: 700; line-height: 1.3; }
+  .feat-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .feat-arrow { color: #ccc; font-size: 16px; padding-right: 12px; }
+
+  /* ── LINK LIST ── */
+  .link-list { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+
+  .link-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 16px;
+    text-decoration: none; color: var(--text);
+    border-bottom: 1px solid var(--sand-dk);
+    transition: background 0.15s; cursor: pointer;
+  }
+  .link-item:last-child { border-bottom: none; }
+  .link-item:active, .link-item:hover { background: var(--sand); }
+
+  .link-icon {
+    width: 36px; height: 36px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; flex-shrink: 0;
+  }
+
+  .icon-teal   { background: #e0f5f5; }
+  .icon-blue   { background: #e0eaf8; }
+  .icon-green  { background: #e0f5e8; }
+  .icon-orange { background: #fdf0e8; }
+  .icon-purple { background: #f0e8fd; }
+  .icon-red    { background: #fde8e8; }
+  .icon-yellow { background: #fdf5e0; }
+  .icon-gray   { background: #eeeeee; }
+
+  .link-text  { flex: 1; }
+  .link-title { font-size: 14px; font-weight: 600; line-height: 1.3; }
+  .link-desc  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .link-chev  { color: #ccc; font-size: 15px; }
+
+  .section-divider { height: 8px; background: var(--sand-dk); margin: 6px 0; }
+
+  /* ── QUICK CHIPS ── */
+  .info-card {
+    background: white; border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 18px 16px; margin-bottom: 10px;
+  }
+  .info-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--ocean); }
+  .info-card p  { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .quick-links  { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+  .quick-chip {
+    background: var(--sand); border: 1px solid var(--sand-dk);
+    color: var(--text); font-size: 12px; font-weight: 500;
+    padding: 5px 12px; border-radius: 50px;
+    text-decoration: none; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .quick-chip:active { background: var(--teal); color: white; }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">🎨 Option 4 — Bottom Nav App</div>
+
+<header class="site-header">
+  <div>
+    <div class="resort-name">Rocket Beach Resort</div>
+    <div class="resort-sub">Guest Information</div>
+  </div>
+  <div class="header-icon">🚀</div>
+</header>
+
+<main class="content-area">
+
+  <!-- HOME -->
+  <div class="page active" id="page-home">
+    <div class="page-hero">
+      <div class="hero-greeting">Welcome, Guest</div>
+      <div class="hero-title">What can we<br>help with today?</div>
+      <div class="hero-sub">Tap anything below — all resort info, right here.</div>
+    </div>
+
+    <div class="tiles-row">
+      <a href="#" class="tile">
+        <div class="tile-label">Next Launch</div>
+        <div class="tile-value">Tue</div>
+        <div class="tile-sub"><span class="tile-dot"></span>Falcon 9 · 6:42 AM</div>
+      </a>
+      <a href="#" class="tile">
+        <div class="tile-label">Weather</div>
+        <div class="tile-value">82°</div>
+        <div class="tile-sub">☀️ Partly cloudy</div>
+      </a>
+      <a href="#" class="tile">
+        <div class="tile-label">Pools</div>
+        <div class="tile-value">Open</div>
+        <div class="tile-sub"><span class="tile-dot"></span>All pools &amp; spas</div>
+      </a>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Most Popular</div>
+      <div class="featured-grid">
+        <a href="#" class="feat-card">
+          <div class="feat-hero bg-launch">🚀</div>
+          <div class="feat-body"><div class="feat-title">Rocket Launch Info</div><div class="feat-sub">Go4Launch</div></div>
+        </a>
+        <a href="#" class="feat-card">
+          <div class="feat-hero bg-theater">🎬</div>
+          <div class="feat-body"><div class="feat-title">Movie Theater</div><div class="feat-sub">Schedule &amp; times</div></div>
+        </a>
+        <a href="#" class="feat-card">
+          <div class="feat-hero bg-activities">🏄</div>
+          <div class="feat-body"><div class="feat-title">Activities</div><div class="feat-sub">7-day schedule</div></div>
+        </a>
+        <a href="#" class="feat-card">
+          <div class="feat-hero bg-pools">🏊</div>
+          <div class="feat-body"><div class="feat-title">Pool Hours</div><div class="feat-sub">&amp; Status</div></div>
+        </a>
+        <a href="#" class="feat-card span2">
+          <div class="feat-hero bg-checkout">✅</div>
+          <div class="feat-body"><div class="feat-title">Express Checkout</div><div class="feat-sub">Skip the front desk — check out from your villa</div></div>
+          <div class="feat-arrow">›</div>
+        </a>
+        <a href="#" class="feat-card span2">
+          <div class="feat-hero bg-grill">🍽️</div>
+          <div class="feat-body"><div class="feat-title">Cape Grill &amp; Bar</div><div class="feat-sub">Restaurant menu &amp; hours</div></div>
+          <div class="feat-arrow">›</div>
+        </a>
+      </div>
+    </div>
+    <div style="height:16px;"></div>
+  </div>
+
+  <!-- FUN -->
+  <div class="page" id="page-fun">
+    <div class="section">
+      <div class="section-label">Entertainment</div>
+      <div class="link-list">
+        <a href="#" class="link-item"><div class="link-icon icon-blue">🚀</div><div class="link-text"><div class="link-title">Rocket Launch Information</div><div class="link-desc">Go4Launch — times, viewing spots, tracker</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-purple">🎬</div><div class="link-text"><div class="link-title">Movie Theater</div><div class="link-desc">On-site theater schedule</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-yellow">📚</div><div class="link-text"><div class="link-title">FREE Movie Lending Library</div><div class="link-desc">Borrow DVDs &amp; Blu-rays</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-orange">🎭</div><div class="link-text"><div class="link-title">Comedy Magic Shows</div><div class="link-desc">Shows &amp; tickets</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-teal">📸</div><div class="link-text"><div class="link-title">Photography</div><div class="link-desc">Resort photo services</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-green">🏄</div><div class="link-text"><div class="link-title">Activities Schedule</div><div class="link-desc">7-day schedule</div></div><div class="link-chev">›</div></a>
+      </div>
+    </div>
+    <div class="section-divider"></div>
+    <div class="section">
+      <div class="section-label">Explore the Area</div>
+      <div class="link-list">
+        <a href="#" class="link-item"><div class="link-icon icon-teal">🚢</div><div class="link-text"><div class="link-title">Cruise Ship Information</div><div class="link-desc">Port Canaveral schedules</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-green">🗺️</div><div class="link-text"><div class="link-title">Things To Do</div><div class="link-desc">Attractions, tours &amp; scenic drives</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-orange">🐢</div><div class="link-text"><div class="link-title">Sea Turtle Information</div><div class="link-desc">Nesting season &amp; viewing tips</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-yellow">🚗</div><div class="link-text"><div class="link-title">Taxi / Rideshare</div><div class="link-desc">Transportation options</div></div><div class="link-chev">›</div></a>
+      </div>
+    </div>
+    <div style="height:16px;"></div>
+  </div>
+
+  <!-- RESORT -->
+  <div class="page" id="page-resort">
+    <div class="section">
+      <div class="section-label">Dining</div>
+      <div class="link-list">
+        <a href="#" class="link-item"><div class="link-icon icon-orange">🍽️</div><div class="link-text"><div class="link-title">Cape Grill &amp; Bar Menu</div><div class="link-desc">On-site restaurant</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-green">🗺️</div><div class="link-text"><div class="link-title">Local Restaurants</div><div class="link-desc">Nearby dining recommendations</div></div><div class="link-chev">›</div></a>
+      </div>
+    </div>
+    <div class="section-divider"></div>
+    <div class="section">
+      <div class="section-label">Facilities</div>
+      <div class="link-list">
+        <a href="#" class="link-item"><div class="link-icon icon-blue">🏊</div><div class="link-text"><div class="link-title">Pool Hours &amp; Status</div><div class="link-desc">All pools &amp; hot tubs</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-teal">🏖️</div><div class="link-text"><div class="link-title">Amenities</div><div class="link-desc">Full resort amenity guide</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-teal">🌊</div><div class="link-text"><div class="link-title">Beach Rentals</div><div class="link-desc">Chairs, umbrellas, gear</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-green">💪</div><div class="link-text"><div class="link-title">Fitness Center</div><div class="link-desc">Hours &amp; equipment</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-yellow">🚌</div><div class="link-text"><div class="link-title">Guest Tram</div><div class="link-desc">Schedule &amp; stops</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-blue">🗺️</div><div class="link-text"><div class="link-title">Resort Map</div><div class="link-desc">Interactive property map</div></div><div class="link-chev">›</div></a>
+      </div>
+    </div>
+    <div style="height:16px;"></div>
+  </div>
+
+  <!-- WEATHER -->
+  <div class="page" id="page-weather">
+    <div class="section">
+      <div class="section-label">Conditions</div>
+      <div class="info-card">
+        <h3>🌤️ Weather, Tides &amp; Surf</h3>
+        <p>Live local conditions for Cocoa Beach &amp; Port Canaveral area.</p>
+        <div class="quick-links">
+          <span class="quick-chip">Current Conditions</span>
+          <span class="quick-chip">Tide Charts</span>
+          <span class="quick-chip">Surf Report</span>
+          <span class="quick-chip">7-Day Forecast</span>
+        </div>
+      </div>
+    </div>
+    <div style="height:16px;"></div>
+  </div>
+
+  <!-- SERVICES -->
+  <div class="page" id="page-services">
+    <div class="section">
+      <div class="section-label">Guest Services</div>
+      <div class="link-list">
+        <a href="#" class="link-item"><div class="link-icon icon-green">✅</div><div class="link-text"><div class="link-title">Express Checkout</div><div class="link-desc">Check out from your villa</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-red">🚨</div><div class="link-text"><div class="link-title">Emergency Information</div><div class="link-desc">Contacts &amp; procedures</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-gray">🔍</div><div class="link-text"><div class="link-title">Lost &amp; Found</div><div class="link-desc">Report or claim items</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-gray">🧳</div><div class="link-text"><div class="link-title">Luggage Storage</div><div class="link-desc">Before/after check-in &amp; out</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-purple">♿</div><div class="link-text"><div class="link-title">Mobility &amp; Medical Rentals</div><div class="link-desc">Emergency &amp; Insta-Care info</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-teal">💆</div><div class="link-text"><div class="link-title">Massage</div><div class="link-desc">In-villa massage services</div></div><div class="link-chev">›</div></a>
+        <a href="#" class="link-item"><div class="link-icon icon-yellow">📶</div><div class="link-text"><div class="link-title">Wi-Fi</div><div class="link-desc">Network name &amp; password</div></div><div class="link-chev">›</div></a>
+      </div>
+    </div>
+    <div style="height:16px;"></div>
+  </div>
+
+</main>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="showPage('home', this)">
+    <span class="nav-emoji">🏠</span>
+    <span class="nav-label">Home</span>
+  </button>
+  <button class="nav-item" onclick="showPage('fun', this)">
+    <span class="nav-emoji">🎬</span>
+    <span class="nav-label">Fun</span>
+  </button>
+  <button class="nav-item" onclick="showPage('resort', this)">
+    <span class="nav-emoji">🏊</span>
+    <span class="nav-label">Resort</span>
+  </button>
+  <button class="nav-item" onclick="showPage('weather', this)">
+    <span class="nav-emoji">🌤️</span>
+    <span class="nav-label">Weather</span>
+  </button>
+  <button class="nav-item" onclick="showPage('services', this)">
+    <span class="nav-emoji">🛎️</span>
+    <span class="nav-label">Services</span>
+  </button>
+</nav>
+
+<script>
+  function showPage(id, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    btn.classList.add('active');
+    document.querySelector('.content-area').scrollTop = 0;
+  }
+</script>
+</body>
+</html>

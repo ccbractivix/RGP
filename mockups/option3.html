@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Rocket Beach Resort — Option 3 Mockup</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --ocean:    #0a2e4a;
+    --teal:     #0d7377;
+    --teal-lt:  #14a9ad;
+    --coral:    #e8622a;
+    --sand:     #fdf6ec;
+    --sand-dk:  #f0e8d8;
+    --white:    #ffffff;
+    --text:     #1a2e3a;
+    --muted:    #5a7080;
+    --pill-bg:  rgba(255,255,255,0.18);
+    --radius:   14px;
+    --shadow:   0 2px 16px rgba(10,46,74,0.13);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--sand);
+    color: var(--text);
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── DEMO BANNER ── */
+  .demo-banner {
+    background: var(--coral);
+    color: white;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 8px;
+    text-transform: uppercase;
+  }
+
+  /* ── HEADER ── */
+  .site-header {
+    background: linear-gradient(165deg, var(--ocean) 0%, var(--teal) 100%);
+    padding: 20px 20px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .resort-name {
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+  }
+
+  .resort-sub {
+    color: rgba(255,255,255,0.7);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .header-icon {
+    width: 44px;
+    height: 44px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  /* ── PILL NAV ── */
+  .pill-nav {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 14px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .pill-nav::-webkit-scrollbar { display: none; }
+
+  .pill {
+    flex-shrink: 0;
+    background: var(--pill-bg);
+    color: rgba(255,255,255,0.8);
+    border: 1.5px solid rgba(255,255,255,0.2);
+    border-radius: 50px;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    text-decoration: none;
+    letter-spacing: 0.2px;
+  }
+
+  .pill.active, .pill:hover {
+    background: white;
+    color: var(--ocean);
+    border-color: white;
+    font-weight: 600;
+  }
+
+  /* ── SECTION ── */
+  .section {
+    padding: 24px 16px 8px;
+    scroll-margin-top: 120px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 14px;
+    padding-left: 2px;
+  }
+
+  /* ── FEATURED CARDS ── */
+  .featured-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .featured-card {
+    background: white;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .featured-card:active { transform: scale(0.97); }
+
+  .featured-card.wide {
+    grid-column: span 2;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .card-hero {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 42px;
+    flex-shrink: 0;
+  }
+
+  .featured-card.wide .card-hero {
+    width: 90px;
+    height: 80px;
+    font-size: 36px;
+  }
+
+  .card-hero.launch    { background: linear-gradient(135deg, #0a1628, #1a3a5c); }
+  .card-hero.theater   { background: linear-gradient(135deg, #1a0a28, #3a1a5c); }
+  .card-hero.activities{ background: linear-gradient(135deg, #0a2810, #1a5c2a); }
+  .card-hero.grill     { background: linear-gradient(135deg, #280a0a, #5c1a1a); }
+  .card-hero.pools     { background: linear-gradient(135deg, #0a1e28, #0d5c7a); }
+  .card-hero.checkout  { background: linear-gradient(135deg, #1a280a, #3a5c1a); }
+
+  .card-body { padding: 10px 12px 12px; flex: 1; }
+  .card-title { font-size: 13px; font-weight: 700; line-height: 1.3; }
+  .card-sub   { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .card-arrow { color: var(--teal-lt); font-size: 14px; margin-left: auto; padding-right: 2px; }
+
+  /* ── LIST ITEMS ── */
+  .link-list {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .link-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: var(--text);
+    border-bottom: 1px solid var(--sand-dk);
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+
+  .link-item:last-child { border-bottom: none; }
+  .link-item:active, .link-item:hover { background: var(--sand); }
+
+  .link-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .icon-teal   { background: #e0f5f5; }
+  .icon-blue   { background: #e0eaf8; }
+  .icon-green  { background: #e0f5e8; }
+  .icon-orange { background: #fdf0e8; }
+  .icon-purple { background: #f0e8fd; }
+  .icon-red    { background: #fde8e8; }
+  .icon-yellow { background: #fdf5e0; }
+  .icon-gray   { background: #eeeeee; }
+
+  .link-text  { flex: 1; }
+  .link-title { font-size: 14px; font-weight: 600; line-height: 1.3; }
+  .link-desc  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .link-chev  { color: #ccc; font-size: 16px; }
+
+  .section-divider { height: 8px; background: var(--sand-dk); margin: 4px 0; }
+
+  /* ── FOOTER ── */
+  .site-footer {
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.8;
+    border-top: 1px solid var(--sand-dk);
+    margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">🎨 Option 3 — Tabbed / Sectioned Single Page</div>
+
+<header class="site-header">
+  <div class="header-top">
+    <div>
+      <div class="resort-name">Rocket Beach Resort</div>
+      <div class="resort-sub">Guest Information</div>
+    </div>
+    <div class="header-icon">🚀</div>
+  </div>
+
+  <nav class="pill-nav" id="pillNav">
+    <a class="pill active" href="#featured">Featured</a>
+    <a class="pill" href="#entertainment">Entertainment</a>
+    <a class="pill" href="#dining">Dining</a>
+    <a class="pill" href="#facilities">Facilities</a>
+    <a class="pill" href="#services">Services</a>
+    <a class="pill" href="#explore">Explore</a>
+  </nav>
+</header>
+
+<!-- FEATURED -->
+<section class="section" id="featured">
+  <div class="section-label">Featured</div>
+  <div class="featured-grid">
+    <a href="#" class="featured-card">
+      <div class="card-hero launch">🚀</div>
+      <div class="card-body">
+        <div class="card-title">Rocket Launch Info</div>
+        <div class="card-sub">Go4Launch</div>
+      </div>
+    </a>
+    <a href="#" class="featured-card">
+      <div class="card-hero theater">🎬</div>
+      <div class="card-body">
+        <div class="card-title">Movie Theater</div>
+        <div class="card-sub">Schedule &amp; times</div>
+      </div>
+    </a>
+    <a href="#" class="featured-card">
+      <div class="card-hero activities">🏄</div>
+      <div class="card-body">
+        <div class="card-title">Activities</div>
+        <div class="card-sub">7-day schedule</div>
+      </div>
+    </a>
+    <a href="#" class="featured-card">
+      <div class="card-hero pools">🏊</div>
+      <div class="card-body">
+        <div class="card-title">Pool Hours</div>
+        <div class="card-sub">&amp; Status</div>
+      </div>
+    </a>
+    <a href="#" class="featured-card wide">
+      <div class="card-hero checkout">✅</div>
+      <div class="card-body">
+        <div class="card-title">Express Checkout</div>
+        <div class="card-sub">Skip the front desk — check out from your villa</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </a>
+    <a href="#" class="featured-card wide">
+      <div class="card-hero grill">🍽️</div>
+      <div class="card-body">
+        <div class="card-title">Cape Grill &amp; Bar</div>
+        <div class="card-sub">Restaurant menu &amp; hours</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </a>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ENTERTAINMENT -->
+<section class="section" id="entertainment">
+  <div class="section-label">Entertainment</div>
+  <div class="link-list">
+    <a href="#" class="link-item">
+      <div class="link-icon icon-blue">🚀</div>
+      <div class="link-text">
+        <div class="link-title">Rocket Launch Information</div>
+        <div class="link-desc">Go4Launch — launch times, viewing spots</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-purple">🎬</div>
+      <div class="link-text">
+        <div class="link-title">Movie Theater</div>
+        <div class="link-desc">On-site theater schedule</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-yellow">📚</div>
+      <div class="link-text">
+        <div class="link-title">FREE Movie Lending Library</div>
+        <div class="link-desc">Borrow DVDs &amp; Blu-rays</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-orange">🎭</div>
+      <div class="link-text">
+        <div class="link-title">Comedy Magic Shows</div>
+        <div class="link-desc">Upcoming shows &amp; tickets</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-teal">📸</div>
+      <div class="link-text">
+        <div class="link-title">Photography</div>
+        <div class="link-desc">Resort photo services</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-green">🏄</div>
+      <div class="link-text">
+        <div class="link-title">Activities Schedule</div>
+        <div class="link-desc">7-day schedule</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- DINING -->
+<section class="section" id="dining">
+  <div class="section-label">Dining</div>
+  <div class="link-list">
+    <a href="#" class="link-item">
+      <div class="link-icon icon-orange">🍽️</div>
+      <div class="link-text">
+        <div class="link-title">Cape Grill &amp; Bar Menu</div>
+        <div class="link-desc">On-site restaurant</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-green">🗺️</div>
+      <div class="link-text">
+        <div class="link-title">Local Restaurants</div>
+        <div class="link-desc">Nearby dining recommendations</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- FACILITIES -->
+<section class="section" id="facilities">
+  <div class="section-label">Facilities</div>
+  <div class="link-list">
+    <a href="#" class="link-item">
+      <div class="link-icon icon-blue">🏊</div>
+      <div class="link-text">
+        <div class="link-title">Pool Hours &amp; Status</div>
+        <div class="link-desc">All pools &amp; hot tubs</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-teal">🏖️</div>
+      <div class="link-text">
+        <div class="link-title">Amenities</div>
+        <div class="link-desc">Full resort amenity guide</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-teal">🌊</div>
+      <div class="link-text">
+        <div class="link-title">Beach Rentals</div>
+        <div class="link-desc">Chairs, umbrellas, gear</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-green">💪</div>
+      <div class="link-text">
+        <div class="link-title">Fitness Center</div>
+        <div class="link-desc">Hours &amp; equipment</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-yellow">🚌</div>
+      <div class="link-text">
+        <div class="link-title">Guest Tram</div>
+        <div class="link-desc">Schedule &amp; stops</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-blue">🗺️</div>
+      <div class="link-text">
+        <div class="link-title">Resort Map</div>
+        <div class="link-desc">Interactive property map</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- SERVICES -->
+<section class="section" id="services">
+  <div class="section-label">Guest Services</div>
+  <div class="link-list">
+    <a href="#" class="link-item">
+      <div class="link-icon icon-green">✅</div>
+      <div class="link-text">
+        <div class="link-title">Express Checkout</div>
+        <div class="link-desc">Check out from your villa</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-red">🚨</div>
+      <div class="link-text">
+        <div class="link-title">Emergency Information</div>
+        <div class="link-desc">Contacts &amp; procedures</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-gray">🔍</div>
+      <div class="link-text">
+        <div class="link-title">Lost &amp; Found</div>
+        <div class="link-desc">Report or claim items</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-icon icon-gray">🧳</a>
+    <div class="link-text">
+      <a href="#" class="link-item">
+        <div class="link-icon icon-gray">🧳</div>
+        <div class="link-text">
+          <div class="link-title">Luggage Storage</div>
+          <div class="link-desc">Before/after check-in &amp; out</div>
+        </div>
+        <div class="link-chev">›</div>
+      </a>
+    </div>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-purple">♿</div>
+      <div class="link-text">
+        <div class="link-title">Mobility &amp; Medical Rentals</div>
+        <div class="link-desc">Emergency &amp; Insta-Care info</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-teal">💆</div>
+      <div class="link-text">
+        <div class="link-title">Massage</div>
+        <div class="link-desc">In-villa massage services</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-yellow">📶</div>
+      <div class="link-text">
+        <div class="link-title">Wi-Fi</div>
+        <div class="link-desc">Network name &amp; password</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- EXPLORE -->
+<section class="section" id="explore">
+  <div class="section-label">Explore the Area</div>
+  <div class="link-list">
+    <a href="#" class="link-item">
+      <div class="link-icon icon-blue">🌤️</div>
+      <div class="link-text">
+        <div class="link-title">Weather, Tides &amp; Surf</div>
+        <div class="link-desc">Live local conditions</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-teal">🚢</div>
+      <div class="link-text">
+        <div class="link-title">Cruise Ship Information</div>
+        <div class="link-desc">Port Canaveral schedules</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-green">🗺️</div>
+      <div class="link-text">
+        <div class="link-title">Things To Do</div>
+        <div class="link-desc">Attractions, restaurants, tours &amp; scenic drives</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-orange">🐢</div>
+      <div class="link-text">
+        <div class="link-title">Sea Turtle Information</div>
+        <div class="link-desc">Nesting season &amp; viewing tips</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+    <a href="#" class="link-item">
+      <div class="link-icon icon-yellow">🚗</div>
+      <div class="link-text">
+        <div class="link-title">Taxi / Rideshare</div>
+        <div class="link-desc">Transportation options</div>
+      </div>
+      <div class="link-chev">›</div>
+    </a>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div>Holiday Inn Club Vacations · Rocket Beach Resort</div>
+  <div style="margin-top:4px;font-size:10px;color:#aaa;">Mockup — Option 3: Tabbed Single Page</div>
+</footer>
+
+<script>
+  const sections = document.querySelectorAll('section[id]');
+  const pills = document.querySelectorAll('.pill');
+  const header = document.querySelector('.site-header');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        pills.forEach(p => p.classList.remove('active'));
+        const active = document.querySelector(`.pill[href="#${entry.target.id}"]`);
+        if (active) {
+          active.classList.add('active');
+          active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+      }
+    });
+  }, { rootMargin: `-${header.offsetHeight + 10}px 0px -60% 0px`, threshold: 0 });
+
+  sections.forEach(s => observer.observe(s));
+
+  pills.forEach(pill => {
+    pill.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(pill.getAttribute('href'));
+      if (target) {
+        window.scrollTo({ top: target.offsetTop - header.offsetHeight - 8, behavior: 'smooth' });
+      }
+    });
+  });
+</script>
+</body>
+</html>
