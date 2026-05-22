@@ -405,6 +405,83 @@
     .toast.show { opacity: 1; }
 
     .divider { margin: 12px 0; border: none; border-top: 1px solid var(--border); }
+
+    /* ── Print ─────────────────────────────────────────────────────── */
+    #print-view { display: none; }
+
+    @media print {
+      @page { size: landscape; margin: 0.45in 0.5in; }
+
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+      body, html { background: #fff; color: #000; font-size: 9pt; }
+
+      #login-screen,
+      #dashboard,
+      .toast,
+      .modal-overlay { display: none !important; }
+
+      #print-view { display: block !important; }
+
+      .print-header {
+        text-align: center;
+        margin-bottom: 10pt;
+        border-bottom: 1.5pt solid #000;
+        padding-bottom: 6pt;
+      }
+
+      .print-header h1 { font-size: 14pt; font-weight: 700; margin: 0 0 2pt; }
+      .print-header p  { font-size: 8pt; color: #555; margin: 0; }
+
+      .print-columns {
+        column-count: 3;
+        column-gap: 18pt;
+        column-rule: 0.5pt solid #ccc;
+      }
+
+      .print-entry {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        padding: 2.5pt 0;
+        border-bottom: 0.4pt solid #e0e0e0;
+        break-inside: avoid;
+        gap: 4pt;
+      }
+
+      .print-entry-title {
+        flex: 1;
+        font-size: 8pt;
+        font-weight: 600;
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+      }
+
+      .print-entry-meta {
+        font-size: 7.5pt;
+        color: #444;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .print-entry-out {
+        font-size: 6.5pt;
+        font-weight: 700;
+        color: #b00;
+        white-space: nowrap;
+        flex-shrink: 0;
+        letter-spacing: 0.02em;
+      }
+
+      .print-footer {
+        margin-top: 10pt;
+        border-top: 0.5pt solid #ccc;
+        padding-top: 4pt;
+        text-align: center;
+        font-size: 7pt;
+        color: #888;
+      }
+    }
   </style>
 </head>
 <body>
@@ -422,7 +499,10 @@
   <div id="dashboard">
     <div class="dash-header">
       <h1>🎬 Operator Panel</h1>
-      <button class="logout-btn" id="logout-btn">Sign Out</button>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="logout-btn" id="print-btn">🖨 Print List</button>
+        <button class="logout-btn" id="logout-btn">Sign Out</button>
+      </div>
     </div>
 
     <!-- Session bar (shown while building a checkout) -->
@@ -462,6 +542,16 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <!-- Print view (hidden on screen, shown only when printing) -->
+  <div id="print-view">
+    <div class="print-header">
+      <h1>🎬 Disc Rentals — Title List</h1>
+      <p id="print-subtitle"></p>
+    </div>
+    <div class="print-columns" id="print-columns"></div>
+    <div class="print-footer" id="print-footer"></div>
+  </div>
 
   <script>
   (function () {
@@ -931,6 +1021,51 @@
         });
       });
     }
+
+    // ── Print ─────────────────────────────────────────────────────────────────
+
+    function printTitleList() {
+      if (allTitles.length === 0) { showToast('No titles loaded — try again'); return; }
+
+      var now      = new Date();
+      var dateStr  = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      var total    = allTitles.length;
+      var outCount = allTitles.filter(function (t) { return t.status === 'out'; }).length;
+
+      document.getElementById('print-subtitle').textContent =
+        dateStr + ' · ' + total + ' title' + (total !== 1 ? 's' : '') +
+        (outCount > 0 ? ' · ' + outCount + ' checked out' : '');
+
+      var html = '';
+      allTitles.slice().sort(function (a, b) { return a.title.localeCompare(b.title); }).forEach(function (t) {
+        var rating = '';
+        if (t.format === 'movie' && t.mpaaRating) rating = t.mpaaRating;
+        else if (t.format === 'game' && t.esrbRating) rating = 'ESRB ' + t.esrbRating;
+
+        html += '<div class="print-entry">';
+        html += '<span class="print-entry-title">' + esc(t.title) + '</span>';
+        html += '<span class="print-entry-meta">' + esc(rating) + '</span>';
+        if (t.status === 'out') {
+          html += '<span class="print-entry-out">OUT</span>';
+        }
+        html += '</div>';
+      });
+
+      document.getElementById('print-columns').innerHTML = html;
+      document.getElementById('print-footer').textContent =
+        'Printed ' + dateStr + ' · Disc Rentals Operator Panel';
+
+      window.print();
+    }
+
+    document.getElementById('print-btn').addEventListener('click', function () {
+      if (allTitles.length === 0) {
+        loadTitles();
+        showToast('Loading titles…');
+        return;
+      }
+      printTitleList();
+    });
 
     // ── Init ──────────────────────────────────────────────────────────────────
     if (authCode) { showDashboard(); } else { showLogin(); }
