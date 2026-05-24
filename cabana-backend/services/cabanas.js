@@ -70,6 +70,12 @@ async function ensureSchema() {
     )
   `);
 
+  // Rename legacy column if it exists (np_payment_review → no_payment_review)
+  await db.query(`
+    ALTER TABLE cabana_bookings
+    RENAME COLUMN np_payment_review TO no_payment_review
+  `).catch(() => {});
+
   // Create unique index to prevent duplicate active bookings
   await db.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_cabana_booking_unique
