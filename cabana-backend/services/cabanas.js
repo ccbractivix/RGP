@@ -347,7 +347,7 @@ async function createBooking({
   }
 
   // Flag for no-payment review if under a manager_no_payment block
-  const noPaymentReview = block && block.block_type === 'manager_no_payment';
+  const noPaymentReview = Boolean(block && block.block_type === 'manager_no_payment');
 
   const { rows } = await db.query(
     `INSERT INTO cabana_bookings
