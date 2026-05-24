@@ -312,7 +312,7 @@ async function getLocks() {
 
 async function createBooking({
   cabanaId, bookingDate, slot, renterName, phone, roomNumber,
-  property, isPaid, specialInstructions, createdByCode, isAdmin,
+  property, specialInstructions, createdByCode, isAdmin,
 }) {
   slot = slot || 'full';
   property = property || 'CCBR';
@@ -327,7 +327,7 @@ async function createBooking({
     } else if (block.block_type === 'maintenance') {
       if (!isAdmin) throw new Error('This cabana is under maintenance');
     }
-    // manager_no_payment: allowed, but flagged
+    // manager_no_payment: allowed, but flagged for admin awareness
   }
 
   // Check slot availability
@@ -336,17 +336,10 @@ async function createBooking({
     throw new Error('This slot is already booked');
   }
 
-  // Determine status
-  let status = 'confirmed';
-  const now = new Date();
-  // Calculate days difference in Eastern time
-  const bookDate = new Date(bookingDate + 'T00:00:00-05:00');
-  const diffDays = Math.floor((bookDate - now) / (1000 * 60 * 60 * 24));
-  if (diffDays > 21 && !isAdmin) {
-    status = 'tentative';
-  }
+  // All bookings are confirmed and paid at the time of entry
+  const status = 'confirmed';
 
-  // Flag for no-payment review if under a manager_no_payment block
+  // Flag for admin awareness when booked under a manager_no_payment hold
   const noPaymentReview = Boolean(block && block.block_type === 'manager_no_payment');
 
   const { rows } = await db.query(
@@ -359,16 +352,16 @@ async function createBooking({
     [
       cabanaId, bookingDate, slot, status, renterName.trim(), phone.trim(),
       roomNumber.trim(), property,
-      isPaid || false,
-      isPaid ? new Date() : null,
+      true,
+      new Date(),
       specialInstructions || null,
       noPaymentReview,
       createdByCode,
-      status === 'confirmed' ? new Date() : null,
+      new Date(),
     ]
   );
 
-  // Release any locks for this slot
+  // Release any locks for this slot (clean up any stale locks)
   await db.query(
     `DELETE FROM cabana_locks
      WHERE cabana_id = $1 AND lock_date = $2 AND slot = $3`,
@@ -487,8 +480,9 @@ async function getReviewQueue() {
 async function approveBooking(id) {
   const { rows, rowCount } = await db.query(
     `UPDATE cabana_bookings
-     SET status = 'confirmed', confirmed_at = NOW(), updated_at = NOW(),
-         version = version + 1
+     SET status = 'confirmed', confirmed_at = NOW(),
+         is_paid = TRUE, paid_at = COALESCE(paid_at, NOW()),
+         updated_at = NOW(), version = version + 1
      WHERE id = $1 AND status IN ('tentative','needs_review')
      RETURNING *`,
     [id]

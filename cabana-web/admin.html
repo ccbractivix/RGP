@@ -191,9 +191,7 @@
     <div id="tab-calendar">
       <div class="legend">
         <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Available</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> Booked (unpaid)</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Booked &amp; Paid</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--blue);border:1px dashed var(--blue)"></div> Tentative</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> Needs Review</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> 🚧 Maintenance</div>
         <div class="legend-item"><div class="legend-dot" style="background:#374151;border:1px solid var(--red)"></div> ✋ Manager Hold</div>
@@ -470,6 +468,17 @@ async function renderCalendar() {
 }
 
 function getSlotBadge(cabana, ds) {
+  // Gather all active bookings for this cabana + date
+  const bookings = calendarData.bookings.filter(b =>
+    b.cabana_id === cabana.id && b.booking_date === ds && b.status !== 'cancelled'
+  );
+
+  // If there are bookings, always show them — bookings take visual priority
+  if (bookings.length > 0) {
+    return bookings.map(b => buildBookingBadge(cabana, b)).join('');
+  }
+
+  // No bookings — check for a block and show the appropriate badge
   const block = calendarData.blocks.find(b =>
     b.cabana_id === cabana.id && b.start_date <= ds && (b.end_date === null || b.end_date >= ds)
   );
@@ -485,20 +494,11 @@ function getSlotBadge(cabana, ds) {
       return `<div class="slot-badge hold"><span>✋</span><span>${cabana.name} (${esc(block.guest_name || 'guest')})</span></div>`;
     }
     if (block.block_type === 'manager_no_payment') {
-      const booking = calendarData.bookings.find(b => b.cabana_id === cabana.id && b.booking_date === ds && b.status !== 'cancelled');
-      if (booking) return buildBookingBadge(cabana, booking);
       return `<div class="slot-badge no-payment"><span>🟢</span><span>${cabana.name} 💲🚫</span></div>`;
     }
   }
 
-  const bookings = calendarData.bookings.filter(b =>
-    b.cabana_id === cabana.id && b.booking_date === ds && b.status !== 'cancelled'
-  );
-
-  if (bookings.length === 0) {
-    return `<div class="slot-badge available"><span>🟢</span><span>${cabana.name}</span></div>`;
-  }
-  return bookings.map(b => buildBookingBadge(cabana, b)).join('');
+  return `<div class="slot-badge available"><span>🟢</span><span>${cabana.name}</span></div>`;
 }
 
 function buildBookingBadge(cabana, b) {
@@ -534,6 +534,9 @@ function openDayModal(date) {
       <span class="status-pill ${b.status}">${b.status}</span></span></div>`;
     if (b.special_instructions) {
       html += `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${esc(b.special_instructions)}</span></div>`;
+    }
+    if (b.no_payment_review) {
+      html += `<div class="info-row"><span class="info-label">⚠️ Alert</span><span class="info-value" style="color:var(--orange);">Booked under No-Payment hold — verify payment status</span></div>`;
     }
     if (b.confirmed_at) {
       html += `<div class="info-row"><span class="info-label">Confirmed</span><span class="info-value">${new Date(b.confirmed_at).toLocaleString()}</span></div>`;
@@ -582,7 +585,6 @@ function openDayModal(date) {
         <div class="form-check"><input type="radio" name="bk-prop" value="CCBR" id="bk-ccbr" checked><label for="bk-ccbr">CCBR</label></div>
         <div class="form-check"><input type="radio" name="bk-prop" value="HIE" id="bk-hie"><label for="bk-hie">HIE</label></div>
       </div></div></div>`;
-  html += `<div class="form-check"><input type="checkbox" id="bk-paid"><label for="bk-paid">Paid</label></div>`;
   html += `<div class="form-group"><label class="form-label">Special Instructions</label>
     <textarea class="form-textarea" id="bk-instructions" placeholder="Optional notes..."></textarea></div>`;
   html += `<button class="btn btn-primary btn-block" id="bk-submit" data-date="${date}">Book Cabana</button>`;
@@ -605,7 +607,6 @@ async function submitBooking() {
     phone: $('#bk-phone').value.trim(),
     room_number: $('#bk-room').value.trim(),
     property: document.querySelector('input[name="bk-prop"]:checked')?.value || 'CCBR',
-    is_paid: $('#bk-paid').checked,
     special_instructions: $('#bk-instructions').value.trim() || null,
   };
 

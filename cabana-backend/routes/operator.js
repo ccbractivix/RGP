@@ -119,7 +119,7 @@ router.delete('/lock/:id', async (req, res) => {
 router.post('/booking', async (req, res) => {
   const {
     cabana_id, date, slot, renter_name, phone, room_number,
-    property, is_paid, special_instructions,
+    property, special_instructions,
   } = req.body || {};
 
   if (!cabana_id || !date || !renter_name || !phone || !room_number) {
@@ -137,7 +137,6 @@ router.post('/booking', async (req, res) => {
       phone,
       roomNumber: room_number,
       property: property || 'CCBR',
-      isPaid: is_paid || false,
       specialInstructions: special_instructions,
       createdByCode: req.operatorCode,
       isAdmin: false,
