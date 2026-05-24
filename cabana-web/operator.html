@@ -118,6 +118,7 @@
     .status-pill.unpaid { background: var(--yellow-dim); color: var(--yellow); }
     .status-pill.tentative { background: var(--blue-dim); color: var(--blue); }
     .status-pill.confirmed { background: var(--green-dim); color: var(--green); }
+    .status-pill.needs_review { background: var(--purple-dim); color: var(--purple); }
 
     /* ── Toast ── */
     .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(16px); background: var(--card); border: 1px solid #475569; border-radius: 8px; padding: 12px 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 9999; white-space: nowrap; }
@@ -182,9 +183,8 @@
     <div id="tab-calendar">
       <div class="legend">
         <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Available</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> Booked (unpaid)</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Booked &amp; Paid</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--blue);border:1px dashed var(--blue)"></div> Tentative</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> Needs Review</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> 🚧 Maintenance</div>
         <div class="legend-item"><div class="legend-dot" style="background:#374151;border:1px solid var(--red)"></div> ✋ Manager Hold</div>
       </div>
@@ -434,12 +434,22 @@ async function renderCalendar() {
   });
 }
 
-function getSlotBadge(cabana, dateStr) {
-  // Check for blocks
+function getSlotBadge(cabana, ds) {
+  // Gather all active bookings for this cabana + date
+  const bookings = calendarData.bookings.filter(b =>
+    b.cabana_id === cabana.id && b.booking_date === ds && b.status !== 'cancelled'
+  );
+
+  // If there are bookings, always show them — bookings take visual priority
+  if (bookings.length > 0) {
+    return bookings.map(b => buildBookingBadge(cabana, b)).join('');
+  }
+
+  // No bookings — check for a block and show the appropriate badge
   const block = calendarData.blocks.find(b =>
     b.cabana_id === cabana.id &&
-    b.start_date <= dateStr &&
-    (b.end_date === null || b.end_date >= dateStr)
+    b.start_date <= ds &&
+    (b.end_date === null || b.end_date >= ds)
   );
 
   if (block) {
@@ -453,23 +463,11 @@ function getSlotBadge(cabana, dateStr) {
       return `<div class="slot-badge hold"><span class="slot-icon">✋</span><span class="slot-label">${cabana.name} (held)</span></div>`;
     }
     if (block.block_type === 'manager_no_payment') {
-      // Show as available but with no-payment indicator — bookings still possible
-      const booking = calendarData.bookings.find(b => b.cabana_id === cabana.id && b.booking_date === dateStr && b.status !== 'cancelled');
-      if (booking) return buildBookingBadge(cabana, booking);
       return `<div class="slot-badge no-payment"><span class="slot-icon">🟢</span><span class="slot-label">${cabana.name} 💲🚫</span></div>`;
     }
   }
 
-  // Check for bookings on this date
-  const bookings = calendarData.bookings.filter(b =>
-    b.cabana_id === cabana.id && b.booking_date === dateStr && b.status !== 'cancelled'
-  );
-
-  if (bookings.length === 0) {
-    return `<div class="slot-badge available"><span class="slot-icon">🟢</span><span class="slot-label">${cabana.name}</span></div>`;
-  }
-
-  return bookings.map(b => buildBookingBadge(cabana, b)).join('');
+  return `<div class="slot-badge available"><span class="slot-icon">🟢</span><span class="slot-label">${cabana.name}</span></div>`;
 }
 
 function buildBookingBadge(cabana, b) {
@@ -510,6 +508,9 @@ function openDayModal(date) {
     html += `<div class="info-row"><span class="info-label">Status</span><span class="info-value"><span class="status-pill ${b.is_paid ? 'paid' : 'unpaid'}">${b.is_paid ? 'Paid' : 'Unpaid'}</span> <span class="status-pill ${b.status}">${b.status}</span></span></div>`;
     if (b.special_instructions) {
       html += `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${esc(b.special_instructions)}</span></div>`;
+    }
+    if (b.no_payment_review) {
+      html += `<div class="info-row"><span class="info-label">⚠️ Alert</span><span class="info-value" style="color:var(--orange);">Booked under No-Payment hold — payment review required</span></div>`;
     }
     html += `<div class="btn-group">`;
     html += `<button class="btn btn-danger btn-sm" onclick="openCancelModal(${b.id})">Cancel Booking</button>`;
@@ -553,7 +554,6 @@ function openDayModal(date) {
         <div class="form-check"><input type="radio" name="bk-property" value="CCBR" id="bk-ccbr" checked><label for="bk-ccbr">CCBR</label></div>
         <div class="form-check"><input type="radio" name="bk-property" value="HIE" id="bk-hie"><label for="bk-hie">HIE</label></div>
       </div></div></div>`;
-  html += `<div class="form-check"><input type="checkbox" id="bk-paid"><label for="bk-paid">Paid</label></div>`;
   html += `<div class="form-group"><label class="form-label">Special Instructions</label>
     <textarea class="form-textarea" id="bk-instructions" placeholder="Optional notes..."></textarea></div>`;
   html += `<button class="btn btn-primary btn-block" id="bk-submit" data-date="${date}">Book Cabana</button>`;
@@ -581,7 +581,6 @@ async function submitBooking() {
   const phone = $('#bk-phone').value.trim();
   const room = $('#bk-room').value.trim();
   const property = document.querySelector('input[name="bk-property"]:checked')?.value || 'CCBR';
-  const isPaid = $('#bk-paid').checked;
   const instructions = $('#bk-instructions').value.trim();
 
   if (!name || !phone || !room) {
@@ -590,16 +589,12 @@ async function submitBooking() {
   }
 
   try {
-    // First acquire a lock
-    await api('/operator/lock', { method: 'POST', body: { cabana_id: cabanaId, date, slot } });
-
-    // Then create the booking
     await api('/operator/booking', {
       method: 'POST',
       body: {
         cabana_id: cabanaId, date, slot,
         renter_name: name, phone, room_number: room,
-        property, is_paid: isPaid, special_instructions: instructions || null,
+        property, special_instructions: instructions || null,
       },
     });
 
