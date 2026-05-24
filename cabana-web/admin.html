@@ -535,6 +535,7 @@ function openDayModal(date) {
     if (b.special_instructions) {
       html += `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${esc(b.special_instructions)}</span></div>`;
     }
+    html += `<div class="info-row"><span class="info-label">Receipt #</span><span class="info-value">${b.infogenesis_receipt_number ? esc(b.infogenesis_receipt_number) : '<span style="color:var(--yellow);">Missing</span>'}</span></div>`;
     if (b.no_payment_review) {
       html += `<div class="info-row"><span class="info-label">⚠️ Alert</span><span class="info-value" style="color:var(--orange);">Booked under No-Payment hold — verify payment status</span></div>`;
     }
@@ -587,6 +588,8 @@ function openDayModal(date) {
       </div></div></div>`;
   html += `<div class="form-group"><label class="form-label">Special Instructions</label>
     <textarea class="form-textarea" id="bk-instructions" placeholder="Optional notes..."></textarea></div>`;
+  html += `<div class="form-group"><label class="form-label">Infogenesis Receipt #</label>
+    <input class="form-input" id="bk-receipt" placeholder="Receipt number" required></div>`;
   html += `<button class="btn btn-primary btn-block" id="bk-submit" data-date="${date}">Book Cabana</button>`;
 
   sheet.innerHTML = html;
@@ -599,6 +602,7 @@ $('#booking-popup').addEventListener('click', e => { if (e.target === $('#bookin
 
 async function submitBooking() {
   const date = $('#bk-submit').dataset.date;
+  const receiptNumber = $('#bk-receipt').value.trim();
   const body = {
     cabana_id: parseInt($('#bk-cabana').value, 10),
     date,
@@ -608,10 +612,11 @@ async function submitBooking() {
     room_number: $('#bk-room').value.trim(),
     property: document.querySelector('input[name="bk-prop"]:checked')?.value || 'CCBR',
     special_instructions: $('#bk-instructions').value.trim() || null,
+    infogenesis_receipt_number: receiptNumber,
   };
 
-  if (!body.renter_name || !body.phone || !body.room_number) {
-    showToast('Fill in guest name, phone, and room', 'error'); return;
+  if (!body.renter_name || !body.phone || !body.room_number || !receiptNumber) {
+    showToast('Fill in guest name, phone, room, and receipt number', 'error'); return;
   }
 
   try {
@@ -659,12 +664,19 @@ window.openEditModal = async function(bookingId) {
     <label for="ed-paid">Paid</label></div>`;
   html += `<div class="form-group"><label class="form-label">Special Instructions</label>
     <textarea class="form-textarea" id="ed-instructions">${esc(booking.special_instructions||'')}</textarea></div>`;
+  html += `<div class="form-group"><label class="form-label">Infogenesis Receipt #</label>
+    <input class="form-input" id="ed-receipt" value="${esc(booking.infogenesis_receipt_number||'')}" placeholder="Receipt number" required></div>`;
   html += `<input type="hidden" id="ed-version" value="${booking.version}">`;
   html += `<button class="btn btn-primary btn-block" id="ed-save" data-id="${booking.id}">Save Changes</button>`;
 
   sheet.innerHTML = html;
 
   $('#ed-save').addEventListener('click', async () => {
+    const receiptNumber = $('#ed-receipt').value.trim();
+    if (!receiptNumber) {
+      showToast('Receipt number is required', 'error');
+      return;
+    }
     try {
       await api(`/admin/booking/${booking.id}`, {
         method: 'PUT',
@@ -676,6 +688,7 @@ window.openEditModal = async function(bookingId) {
           slot: $('#ed-slot').value,
           is_paid: $('#ed-paid').checked,
           special_instructions: $('#ed-instructions').value.trim() || null,
+          infogenesis_receipt_number: receiptNumber,
           version: parseInt($('#ed-version').value, 10),
         },
       });
@@ -923,48 +936,161 @@ $('#rpt-load').addEventListener('click', async () => {
     const data = await api(`/admin/report?start=${start}&end=${end}`);
     const r = data.report;
     const content = $('#report-content');
-    content.innerHTML = `
-      <div class="report-grid">
-        <div class="report-card">
-          <div class="report-stat">${r.bookings.total}</div>
-          <div class="report-label">Total Active Bookings</div>
-        </div>
-        <div class="report-card">
-          <div class="report-stat" style="color:var(--green)">${r.bookings.confirmed}</div>
-          <div class="report-label">Confirmed</div>
-        </div>
-        <div class="report-card">
-          <div class="report-stat" style="color:var(--blue)">${r.bookings.tentative}</div>
-          <div class="report-label">Tentative</div>
-        </div>
-        <div class="report-card">
-          <div class="report-stat" style="color:var(--red)">${r.bookings.paid_count}</div>
-          <div class="report-label">Paid</div>
-        </div>
-        <div class="report-card">
-          <div class="report-stat">${r.cancellations.total}</div>
-          <div class="report-label">Cancellations</div>
-        </div>
-        <div class="report-card">
-          <div class="report-stat">${r.cancellations.refunded}</div>
-          <div class="report-label">Refunds Issued</div>
-        </div>
-        <div class="report-card">
-          <div class="report-stat">${r.cancellations.hold_released}</div>
-          <div class="report-label">Holds Released</div>
-        </div>
-        <div class="report-card">
-          <div class="report-stat">${r.occupancy.rate}%</div>
-          <div class="report-label">Occupancy Rate</div>
-        </div>
+
+    // ── Summary stats ──
+    let html = `<div class="report-grid">
+      <div class="report-card">
+        <div class="report-stat">${r.bookings.total}</div>
+        <div class="report-label">Total Active Bookings</div>
       </div>
-      <div class="report-card" style="margin-top:12px;">
-        <div style="font-size:13px;color:var(--text-muted);">
-          ${r.occupancy.booked_days} booked days out of ${r.occupancy.total_slots} available slots
-          (${fmtDate(start)} to ${fmtDate(end)})
-        </div>
+      <div class="report-card">
+        <div class="report-stat" style="color:var(--green)">${r.bookings.confirmed}</div>
+        <div class="report-label">Confirmed</div>
       </div>
-    `;
+      <div class="report-card">
+        <div class="report-stat" style="color:var(--blue)">${r.bookings.tentative}</div>
+        <div class="report-label">Tentative</div>
+      </div>
+      <div class="report-card">
+        <div class="report-stat" style="color:var(--red)">${r.bookings.paid_count}</div>
+        <div class="report-label">Paid</div>
+      </div>
+      <div class="report-card">
+        <div class="report-stat">${r.cancellations.total}</div>
+        <div class="report-label">Cancellations</div>
+      </div>
+      <div class="report-card">
+        <div class="report-stat">${r.cancellations.refunded}</div>
+        <div class="report-label">Refunds Issued</div>
+      </div>
+      <div class="report-card">
+        <div class="report-stat">${r.cancellations.hold_released}</div>
+        <div class="report-label">Holds Released</div>
+      </div>
+      <div class="report-card">
+        <div class="report-stat">${r.occupancy.rate}%</div>
+        <div class="report-label">Occupancy Rate</div>
+      </div>
+    </div>`;
+
+    // ── Occupancy footnote ──
+    html += `<div class="report-card" style="margin-top:12px;">
+      <div style="font-size:13px;color:var(--text-muted);">
+        ${r.occupancy.booked_days} booked days out of ${r.occupancy.total_slots} available slots
+        (${fmtDate(start)} to ${fmtDate(end)})
+      </div>
+    </div>`;
+
+    // ── Second row: breakdowns ──
+    html += `<div class="report-grid" style="margin-top:12px;">`;
+
+    // By slot
+    const totalBk = parseInt(r.bookings.total, 10) || 1;
+    html += `<div class="report-card">
+      <div class="report-label" style="margin-bottom:10px;">Slot Distribution</div>
+      <div style="font-size:13px;margin-bottom:4px;">Full Day: <strong>${r.by_slot.full}</strong> (${(r.by_slot.full/totalBk*100).toFixed(0)}%)</div>
+      <div style="font-size:13px;margin-bottom:4px;">AM only: <strong>${r.by_slot.am}</strong> (${(r.by_slot.am/totalBk*100).toFixed(0)}%)</div>
+      <div style="font-size:13px;">PM only: <strong>${r.by_slot.pm}</strong> (${(r.by_slot.pm/totalBk*100).toFixed(0)}%)</div>
+    </div>`;
+
+    // By property
+    const props = Object.entries(r.by_property);
+    html += `<div class="report-card">
+      <div class="report-label" style="margin-bottom:10px;">By Property</div>
+      ${props.map(([prop, cnt]) => `<div style="font-size:13px;margin-bottom:4px;">${esc(prop)}: <strong>${cnt}</strong></div>`).join('')}
+      ${props.length === 0 ? '<div style="font-size:12px;color:var(--text-muted);">No data</div>' : ''}
+    </div>`;
+
+    // Receipt coverage
+    const withReceipt = r.receipt_coverage.with_receipt;
+    const pctReceipt = r.receipt_coverage.total_bookings > 0
+      ? (withReceipt / r.receipt_coverage.total_bookings * 100).toFixed(0)
+      : '0';
+    html += `<div class="report-card">
+      <div class="report-label" style="margin-bottom:10px;">Infogenesis Receipt Compliance</div>
+      <div style="font-size:13px;margin-bottom:4px;">With receipt: <strong>${withReceipt}</strong></div>
+      <div style="font-size:13px;margin-bottom:4px;">Missing receipt: <strong style="color:var(--yellow)">${r.receipt_coverage.missing_receipt}</strong></div>
+      <div style="font-size:12px;color:var(--text-muted);">${pctReceipt}% recorded across ${r.receipt_coverage.total_bookings} booking${r.receipt_coverage.total_bookings === 1 ? '' : 's'}. New and updated bookings require a receipt #.</div>
+    </div>`;
+
+    // No-payment flags + peak day
+    html += `<div class="report-card">
+      <div class="report-label" style="margin-bottom:10px;">Flags &amp; Peak</div>
+      <div style="font-size:13px;margin-bottom:6px;">⚠️ No-Payment Reviews: <strong style="color:var(--orange)">${r.no_payment_review_count}</strong></div>
+      ${r.peak_day ? `<div style="font-size:13px;">📈 Peak Day: <strong>${fmtDate(r.peak_day.booking_date)}</strong> (${r.peak_day.cnt} booking${r.peak_day.cnt > 1 ? 's' : ''})</div>` : '<div style="font-size:13px;color:var(--text-muted);">No bookings in range</div>'}
+    </div>`;
+
+    html += `</div>`; // close report-grid
+
+    // ── Per-cabana breakdown ──
+    if (r.by_cabana && r.by_cabana.length > 0) {
+      html += `<div class="report-card" style="margin-top:12px;">
+        <div class="report-label" style="margin-bottom:10px;">Per-Cabana Breakdown</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Cabana</th>
+              <th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Total</th>
+              <th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Confirmed</th>
+              <th style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Paid</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${r.by_cabana.map(row => `
+              <tr>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(row.cabana_name)}</td>
+                <td style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--card-border);font-weight:700;">${row.cnt}</td>
+                <td style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--green);">${row.confirmed}</td>
+                <td style="text-align:right;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--red);">${row.paid_count}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>`;
+    }
+
+    // ── Booking detail list ──
+    if (r.booking_list && r.booking_list.length > 0) {
+      html += `<div class="report-card" style="margin-top:12px;">
+        <div class="report-label" style="margin-bottom:10px;">Booking Detail (${r.booking_list.length} records)</div>
+        <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:640px;">
+          <thead>
+            <tr style="background:var(--bg);">
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Date</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Cabana</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Slot</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Guest</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Room</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Prop</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Receipt #</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Paid</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${r.booking_list.map(b => `
+              <tr>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);white-space:nowrap;">${fmtDate(b.booking_date)}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.cabana_name)}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${b.slot === 'full' ? 'Full' : b.slot.toUpperCase()}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.renter_name)}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.room_number)}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.property)}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);${!b.infogenesis_receipt_number ? 'color:var(--yellow)' : ''}">${b.infogenesis_receipt_number ? esc(b.infogenesis_receipt_number) : '—'}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);color:${b.is_paid ? 'var(--green)' : 'var(--yellow)'};">${b.is_paid ? '✓' : '✗'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        </div>
+      </div>`;
+    } else {
+      html += `<div class="report-card" style="margin-top:12px;">
+        <div style="font-size:13px;color:var(--text-muted);">No bookings in this date range.</div>
+      </div>`;
+    }
+
+    content.innerHTML = html;
   } catch (e) { showToast(e.message, 'error'); }
 });
 

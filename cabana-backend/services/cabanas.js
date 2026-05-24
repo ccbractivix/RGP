@@ -76,6 +76,19 @@ async function ensureSchema() {
     RENAME COLUMN np_payment_review TO no_payment_review
   `).catch(() => {});
 
+  // Add infogenesis_receipt_number if it doesn't exist yet
+  await db.query(`
+    ALTER TABLE cabana_bookings
+    ADD COLUMN IF NOT EXISTS infogenesis_receipt_number TEXT
+  `).catch(() => {});
+
+  await db.query(`
+    ALTER TABLE cabana_bookings
+    ADD CONSTRAINT cabana_bookings_infogenesis_receipt_required
+    CHECK (infogenesis_receipt_number IS NOT NULL AND btrim(infogenesis_receipt_number) <> '')
+    NOT VALID
+  `).catch(() => {});
+
   // Create unique index to prevent duplicate active bookings
   await db.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_cabana_booking_unique
@@ -310,12 +323,19 @@ async function getLocks() {
 
 // ── Bookings ──────────────────────────────────────────────────────────────────
 
+function requireReceiptNumber(value) {
+  const receiptNumber = typeof value === 'string' ? value.trim() : '';
+  if (!receiptNumber) throw new Error('Infogenesis receipt number is required');
+  return receiptNumber;
+}
+
 async function createBooking({
   cabanaId, bookingDate, slot, renterName, phone, roomNumber,
-  property, specialInstructions, createdByCode, isAdmin,
+  property, specialInstructions, infogenesisReceiptNumber, createdByCode, isAdmin,
 }) {
   slot = slot || 'full';
   property = property || 'CCBR';
+  const receiptNumber = requireReceiptNumber(infogenesisReceiptNumber);
 
   // Check for blocks
   const block = await getBlockingBlock(cabanaId, bookingDate);
@@ -345,9 +365,9 @@ async function createBooking({
   const { rows } = await db.query(
     `INSERT INTO cabana_bookings
        (cabana_id, booking_date, slot, status, renter_name, phone, room_number,
-        property, is_paid, paid_at, special_instructions, no_payment_review,
-        created_by_code, confirmed_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+        property, is_paid, paid_at, special_instructions, infogenesis_receipt_number,
+        no_payment_review, created_by_code, confirmed_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
      RETURNING *`,
     [
       cabanaId, bookingDate, slot, status, renterName.trim(), phone.trim(),
@@ -355,6 +375,7 @@ async function createBooking({
       true,
       new Date(),
       specialInstructions || null,
+      receiptNumber,
       noPaymentReview,
       createdByCode,
       new Date(),
@@ -387,9 +408,16 @@ async function updateBooking(id, updates) {
   if (!booking) throw new Error('Booking not found');
   if (booking.status === 'cancelled') throw new Error('Cannot edit a cancelled booking');
 
+  const hasReceiptUpdate = Object.prototype.hasOwnProperty.call(updates, 'infogenesis_receipt_number');
+  if (hasReceiptUpdate || !booking.infogenesis_receipt_number || !booking.infogenesis_receipt_number.trim()) {
+    updates.infogenesis_receipt_number = requireReceiptNumber(
+      hasReceiptUpdate ? updates.infogenesis_receipt_number : booking.infogenesis_receipt_number
+    );
+  }
+
   const allowed = [
     'renter_name', 'phone', 'room_number', 'property',
-    'is_paid', 'special_instructions', 'slot',
+    'is_paid', 'special_instructions', 'slot', 'infogenesis_receipt_number',
   ];
 
   const fields = [];
@@ -579,7 +607,7 @@ async function deleteBlock(id) {
 // ── Reports ───────────────────────────────────────────────────────────────────
 
 async function getReport(startDate, endDate) {
-  const [bookingsRes, cancelledRes, paidRes] = await Promise.all([
+  const [bookingsRes, cancelledRes, paidRes, bySlotRes, byPropertyRes, byCabanaRes, noPaymentRes, receiptRes, peakDayRes, bookingListRes] = await Promise.all([
     db.query(
       `SELECT COUNT(*) AS total,
               COUNT(*) FILTER (WHERE status = 'confirmed') AS confirmed,
@@ -604,6 +632,76 @@ async function getReport(startDate, endDate) {
        WHERE booking_date BETWEEN $1 AND $2 AND status <> 'cancelled'`,
       [startDate, endDate]
     ),
+    // By slot
+    db.query(
+      `SELECT slot, COUNT(*) AS cnt
+       FROM cabana_bookings
+       WHERE booking_date BETWEEN $1 AND $2 AND status <> 'cancelled'
+       GROUP BY slot`,
+      [startDate, endDate]
+    ),
+    // By property
+    db.query(
+      `SELECT property, COUNT(*) AS cnt
+       FROM cabana_bookings
+       WHERE booking_date BETWEEN $1 AND $2 AND status <> 'cancelled'
+       GROUP BY property`,
+      [startDate, endDate]
+    ),
+    // By cabana
+    db.query(
+      `SELECT c.name AS cabana_name, COUNT(*) AS cnt,
+              COUNT(*) FILTER (WHERE b.status = 'confirmed') AS confirmed,
+              COUNT(*) FILTER (WHERE b.is_paid = TRUE) AS paid_count
+       FROM cabana_bookings b
+       JOIN cabanas c ON c.id = b.cabana_id
+       WHERE b.booking_date BETWEEN $1 AND $2 AND b.status <> 'cancelled'
+       GROUP BY c.id, c.name
+       ORDER BY c.id`,
+      [startDate, endDate]
+    ),
+    // No-payment review flags
+    db.query(
+      `SELECT COUNT(*) AS cnt
+       FROM cabana_bookings
+       WHERE booking_date BETWEEN $1 AND $2 AND no_payment_review = TRUE AND status <> 'cancelled'`,
+      [startDate, endDate]
+    ),
+    // Infogenesis receipt coverage
+    db.query(
+      `SELECT COUNT(*) FILTER (
+               WHERE infogenesis_receipt_number IS NOT NULL AND btrim(infogenesis_receipt_number) <> ''
+             ) AS with_receipt,
+             COUNT(*) FILTER (
+               WHERE infogenesis_receipt_number IS NULL OR btrim(infogenesis_receipt_number) = ''
+             ) AS missing_receipt,
+             COUNT(*) AS total_bookings
+       FROM cabana_bookings
+       WHERE booking_date BETWEEN $1 AND $2 AND status <> 'cancelled'`,
+      [startDate, endDate]
+    ),
+    // Peak booking day
+    db.query(
+      `SELECT booking_date, COUNT(*) AS cnt
+       FROM cabana_bookings
+       WHERE booking_date BETWEEN $1 AND $2 AND status <> 'cancelled'
+       GROUP BY booking_date
+       ORDER BY cnt DESC
+       LIMIT 1`,
+      [startDate, endDate]
+    ),
+    // Full booking detail list (for table view)
+    db.query(
+      `SELECT b.id, b.booking_date, b.slot, b.status, b.renter_name, b.phone,
+              b.room_number, b.property, b.is_paid, b.infogenesis_receipt_number,
+              b.special_instructions, b.no_payment_review,
+              b.created_at, c.name AS cabana_name
+       FROM cabana_bookings b
+       JOIN cabanas c ON c.id = b.cabana_id
+       WHERE b.booking_date BETWEEN $1 AND $2 AND b.status <> 'cancelled'
+       ORDER BY b.booking_date ASC, c.id, b.slot`,
+      [startDate, endDate]
+    ),
   ]);
 
   // Calculate available days
@@ -613,6 +711,14 @@ async function getReport(startDate, endDate) {
   const end = new Date(endDate);
   const totalDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
   const totalSlots = totalDays * cabanaCount;
+
+  // Slot distribution
+  const slotMap = { full: 0, am: 0, pm: 0 };
+  for (const row of bySlotRes.rows) slotMap[row.slot] = parseInt(row.cnt, 10);
+
+  // Property distribution
+  const propMap = {};
+  for (const row of byPropertyRes.rows) propMap[row.property] = parseInt(row.cnt, 10);
 
   return {
     bookings: bookingsRes.rows[0],
@@ -624,6 +730,17 @@ async function getReport(startDate, endDate) {
         ? (parseInt(paidRes.rows[0].booked_days, 10) / totalSlots * 100).toFixed(1)
         : '0.0',
     },
+    by_slot: slotMap,
+    by_property: propMap,
+    by_cabana: byCabanaRes.rows,
+    no_payment_review_count: parseInt(noPaymentRes.rows[0].cnt, 10),
+    receipt_coverage: {
+      with_receipt: parseInt(receiptRes.rows[0].with_receipt, 10),
+      missing_receipt: parseInt(receiptRes.rows[0].missing_receipt, 10),
+      total_bookings: parseInt(receiptRes.rows[0].total_bookings, 10),
+    },
+    peak_day: peakDayRes.rows[0] || null,
+    booking_list: bookingListRes.rows,
   };
 }
 
