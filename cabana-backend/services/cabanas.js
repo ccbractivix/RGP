@@ -82,6 +82,13 @@ async function ensureSchema() {
     ADD COLUMN IF NOT EXISTS infogenesis_receipt_number TEXT
   `).catch(() => {});
 
+  await db.query(`
+    ALTER TABLE cabana_bookings
+    ADD CONSTRAINT cabana_bookings_infogenesis_receipt_required
+    CHECK (infogenesis_receipt_number IS NOT NULL AND btrim(infogenesis_receipt_number) <> '')
+    NOT VALID
+  `).catch(() => {});
+
   // Create unique index to prevent duplicate active bookings
   await db.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_cabana_booking_unique
@@ -316,12 +323,19 @@ async function getLocks() {
 
 // ── Bookings ──────────────────────────────────────────────────────────────────
 
+function requireReceiptNumber(value) {
+  const receiptNumber = typeof value === 'string' ? value.trim() : '';
+  if (!receiptNumber) throw new Error('Infogenesis receipt number is required');
+  return receiptNumber;
+}
+
 async function createBooking({
   cabanaId, bookingDate, slot, renterName, phone, roomNumber,
   property, specialInstructions, infogenesisReceiptNumber, createdByCode, isAdmin,
 }) {
   slot = slot || 'full';
   property = property || 'CCBR';
+  const receiptNumber = requireReceiptNumber(infogenesisReceiptNumber);
 
   // Check for blocks
   const block = await getBlockingBlock(cabanaId, bookingDate);
@@ -361,7 +375,7 @@ async function createBooking({
       true,
       new Date(),
       specialInstructions || null,
-      infogenesisReceiptNumber ? infogenesisReceiptNumber.trim() : null,
+      receiptNumber,
       noPaymentReview,
       createdByCode,
       new Date(),
@@ -393,6 +407,13 @@ async function updateBooking(id, updates) {
   const booking = await getBooking(id);
   if (!booking) throw new Error('Booking not found');
   if (booking.status === 'cancelled') throw new Error('Cannot edit a cancelled booking');
+
+  const hasReceiptUpdate = Object.prototype.hasOwnProperty.call(updates, 'infogenesis_receipt_number');
+  if (hasReceiptUpdate || !booking.infogenesis_receipt_number || !booking.infogenesis_receipt_number.trim()) {
+    updates.infogenesis_receipt_number = requireReceiptNumber(
+      hasReceiptUpdate ? updates.infogenesis_receipt_number : booking.infogenesis_receipt_number
+    );
+  }
 
   const allowed = [
     'renter_name', 'phone', 'room_number', 'property',
@@ -648,8 +669,13 @@ async function getReport(startDate, endDate) {
     ),
     // Infogenesis receipt coverage
     db.query(
-      `SELECT COUNT(*) AS with_receipt,
-              COUNT(*) FILTER (WHERE infogenesis_receipt_number IS NULL OR infogenesis_receipt_number = '') AS missing_receipt
+      `SELECT COUNT(*) FILTER (
+               WHERE infogenesis_receipt_number IS NOT NULL AND btrim(infogenesis_receipt_number) <> ''
+             ) AS with_receipt,
+             COUNT(*) FILTER (
+               WHERE infogenesis_receipt_number IS NULL OR btrim(infogenesis_receipt_number) = ''
+             ) AS missing_receipt,
+             COUNT(*) AS total_bookings
        FROM cabana_bookings
        WHERE booking_date BETWEEN $1 AND $2 AND status <> 'cancelled'`,
       [startDate, endDate]
@@ -711,6 +737,7 @@ async function getReport(startDate, endDate) {
     receipt_coverage: {
       with_receipt: parseInt(receiptRes.rows[0].with_receipt, 10),
       missing_receipt: parseInt(receiptRes.rows[0].missing_receipt, 10),
+      total_bookings: parseInt(receiptRes.rows[0].total_bookings, 10),
     },
     peak_day: peakDayRes.rows[0] || null,
     booking_list: bookingListRes.rows,

@@ -509,9 +509,7 @@ function openDayModal(date) {
     if (b.special_instructions) {
       html += `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${esc(b.special_instructions)}</span></div>`;
     }
-    if (b.infogenesis_receipt_number) {
-      html += `<div class="info-row"><span class="info-label">Receipt #</span><span class="info-value">${esc(b.infogenesis_receipt_number)}</span></div>`;
-    }
+    html += `<div class="info-row"><span class="info-label">Receipt #</span><span class="info-value">${b.infogenesis_receipt_number ? esc(b.infogenesis_receipt_number) : '<span style="color:var(--yellow);">Missing</span>'}</span></div>`;
     if (b.no_payment_review) {
       html += `<div class="info-row"><span class="info-label">⚠️ Alert</span><span class="info-value" style="color:var(--orange);">Booked under No-Payment hold — payment review required</span></div>`;
     }
@@ -560,7 +558,7 @@ function openDayModal(date) {
   html += `<div class="form-group"><label class="form-label">Special Instructions</label>
     <textarea class="form-textarea" id="bk-instructions" placeholder="Optional notes..."></textarea></div>`;
   html += `<div class="form-group"><label class="form-label">Infogenesis Receipt #</label>
-    <input class="form-input" id="bk-receipt" placeholder="Receipt number (optional)"></div>`;
+    <input class="form-input" id="bk-receipt" placeholder="Receipt number" required></div>`;
   html += `<button class="btn btn-primary btn-block" id="bk-submit" data-date="${date}">Book Cabana</button>`;
 
   sheet.innerHTML = html;
@@ -587,9 +585,10 @@ async function submitBooking() {
   const room = $('#bk-room').value.trim();
   const property = document.querySelector('input[name="bk-property"]:checked')?.value || 'CCBR';
   const instructions = $('#bk-instructions').value.trim();
+  const receiptNumber = $('#bk-receipt').value.trim();
 
-  if (!name || !phone || !room) {
-    showToast('Please fill in guest name, phone, and room number', 'error');
+  if (!name || !phone || !room || !receiptNumber) {
+    showToast('Please fill in guest name, phone, room number, and receipt number', 'error');
     return;
   }
 
@@ -600,7 +599,7 @@ async function submitBooking() {
         cabana_id: cabanaId, date, slot,
         renter_name: name, phone, room_number: room,
         property, special_instructions: instructions || null,
-        infogenesis_receipt_number: $('#bk-receipt').value.trim() || null,
+        infogenesis_receipt_number: receiptNumber,
       },
     });
 

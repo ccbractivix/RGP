@@ -535,9 +535,7 @@ function openDayModal(date) {
     if (b.special_instructions) {
       html += `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${esc(b.special_instructions)}</span></div>`;
     }
-    if (b.infogenesis_receipt_number) {
-      html += `<div class="info-row"><span class="info-label">Receipt #</span><span class="info-value">${esc(b.infogenesis_receipt_number)}</span></div>`;
-    }
+    html += `<div class="info-row"><span class="info-label">Receipt #</span><span class="info-value">${b.infogenesis_receipt_number ? esc(b.infogenesis_receipt_number) : '<span style="color:var(--yellow);">Missing</span>'}</span></div>`;
     if (b.no_payment_review) {
       html += `<div class="info-row"><span class="info-label">⚠️ Alert</span><span class="info-value" style="color:var(--orange);">Booked under No-Payment hold — verify payment status</span></div>`;
     }
@@ -591,7 +589,7 @@ function openDayModal(date) {
   html += `<div class="form-group"><label class="form-label">Special Instructions</label>
     <textarea class="form-textarea" id="bk-instructions" placeholder="Optional notes..."></textarea></div>`;
   html += `<div class="form-group"><label class="form-label">Infogenesis Receipt #</label>
-    <input class="form-input" id="bk-receipt" placeholder="Receipt number (optional)"></div>`;
+    <input class="form-input" id="bk-receipt" placeholder="Receipt number" required></div>`;
   html += `<button class="btn btn-primary btn-block" id="bk-submit" data-date="${date}">Book Cabana</button>`;
 
   sheet.innerHTML = html;
@@ -604,6 +602,7 @@ $('#booking-popup').addEventListener('click', e => { if (e.target === $('#bookin
 
 async function submitBooking() {
   const date = $('#bk-submit').dataset.date;
+  const receiptNumber = $('#bk-receipt').value.trim();
   const body = {
     cabana_id: parseInt($('#bk-cabana').value, 10),
     date,
@@ -613,11 +612,11 @@ async function submitBooking() {
     room_number: $('#bk-room').value.trim(),
     property: document.querySelector('input[name="bk-prop"]:checked')?.value || 'CCBR',
     special_instructions: $('#bk-instructions').value.trim() || null,
-    infogenesis_receipt_number: $('#bk-receipt').value.trim() || null,
+    infogenesis_receipt_number: receiptNumber,
   };
 
-  if (!body.renter_name || !body.phone || !body.room_number) {
-    showToast('Fill in guest name, phone, and room', 'error'); return;
+  if (!body.renter_name || !body.phone || !body.room_number || !receiptNumber) {
+    showToast('Fill in guest name, phone, room, and receipt number', 'error'); return;
   }
 
   try {
@@ -666,13 +665,18 @@ window.openEditModal = async function(bookingId) {
   html += `<div class="form-group"><label class="form-label">Special Instructions</label>
     <textarea class="form-textarea" id="ed-instructions">${esc(booking.special_instructions||'')}</textarea></div>`;
   html += `<div class="form-group"><label class="form-label">Infogenesis Receipt #</label>
-    <input class="form-input" id="ed-receipt" value="${esc(booking.infogenesis_receipt_number||'')}" placeholder="Receipt number (optional)"></div>`;
+    <input class="form-input" id="ed-receipt" value="${esc(booking.infogenesis_receipt_number||'')}" placeholder="Receipt number" required></div>`;
   html += `<input type="hidden" id="ed-version" value="${booking.version}">`;
   html += `<button class="btn btn-primary btn-block" id="ed-save" data-id="${booking.id}">Save Changes</button>`;
 
   sheet.innerHTML = html;
 
   $('#ed-save').addEventListener('click', async () => {
+    const receiptNumber = $('#ed-receipt').value.trim();
+    if (!receiptNumber) {
+      showToast('Receipt number is required', 'error');
+      return;
+    }
     try {
       await api(`/admin/booking/${booking.id}`, {
         method: 'PUT',
@@ -684,7 +688,7 @@ window.openEditModal = async function(bookingId) {
           slot: $('#ed-slot').value,
           is_paid: $('#ed-paid').checked,
           special_instructions: $('#ed-instructions').value.trim() || null,
-          infogenesis_receipt_number: $('#ed-receipt').value.trim() || null,
+          infogenesis_receipt_number: receiptNumber,
           version: parseInt($('#ed-version').value, 10),
         },
       });
@@ -998,15 +1002,15 @@ $('#rpt-load').addEventListener('click', async () => {
     </div>`;
 
     // Receipt coverage
-    const withReceipt = r.receipt_coverage.with_receipt - r.receipt_coverage.missing_receipt;
-    const pctReceipt = r.receipt_coverage.with_receipt > 0
-      ? (withReceipt / r.receipt_coverage.with_receipt * 100).toFixed(0)
+    const withReceipt = r.receipt_coverage.with_receipt;
+    const pctReceipt = r.receipt_coverage.total_bookings > 0
+      ? (withReceipt / r.receipt_coverage.total_bookings * 100).toFixed(0)
       : '0';
     html += `<div class="report-card">
-      <div class="report-label" style="margin-bottom:10px;">Infogenesis Receipts</div>
+      <div class="report-label" style="margin-bottom:10px;">Infogenesis Receipt Compliance</div>
       <div style="font-size:13px;margin-bottom:4px;">With receipt: <strong>${withReceipt}</strong></div>
       <div style="font-size:13px;margin-bottom:4px;">Missing receipt: <strong style="color:var(--yellow)">${r.receipt_coverage.missing_receipt}</strong></div>
-      <div style="font-size:12px;color:var(--text-muted);">${pctReceipt}% recorded</div>
+      <div style="font-size:12px;color:var(--text-muted);">${pctReceipt}% recorded across ${r.receipt_coverage.total_bookings} booking${r.receipt_coverage.total_bookings === 1 ? '' : 's'}. New and updated bookings require a receipt #.</div>
     </div>`;
 
     // No-payment flags + peak day

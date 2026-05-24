@@ -121,10 +121,13 @@ router.post('/booking', async (req, res) => {
     cabana_id, date, slot, renter_name, phone, room_number,
     property, special_instructions, infogenesis_receipt_number,
   } = req.body || {};
+  const receiptNumber = typeof infogenesis_receipt_number === 'string'
+    ? infogenesis_receipt_number.trim()
+    : '';
 
-  if (!cabana_id || !date || !renter_name || !phone || !room_number) {
+  if (!cabana_id || !date || !renter_name || !phone || !room_number || !receiptNumber) {
     return res.status(400).json({
-      error: 'cabana_id, date, renter_name, phone, and room_number required',
+      error: 'cabana_id, date, renter_name, phone, room_number, and infogenesis_receipt_number required',
     });
   }
 
