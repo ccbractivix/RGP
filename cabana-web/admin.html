@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://cabana-backend.onrender.com">
+  <title>Cabana Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f172a; --card: #1e293b; --card-border: #334155;
+      --text: #e2e8f0; --text-muted: #94a3b8;
+      --green: #22c55e; --green-dim: rgba(34,197,94,0.15);
+      --red: #ef4444; --red-dim: rgba(239,68,68,0.15);
+      --yellow: #eab308; --yellow-dim: rgba(234,179,8,0.15);
+      --orange: #f59e0b; --orange-dim: rgba(245,158,11,0.15);
+      --blue: #3b82f6; --blue-dim: rgba(59,130,246,0.15);
+      --purple: #a855f7; --purple-dim: rgba(168,85,247,0.15);
+    }
+
+    html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; }
+
+    /* ── Login ── */
+    #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    #login-screen h1 { font-family: 'Fredoka', sans-serif; font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+    #login-screen p { color: var(--text-muted); margin-bottom: 24px; font-size: 13px; }
+    .code-input { width: 200px; padding: 14px; font-size: 24px; font-family: 'Inter', sans-serif; text-align: center; letter-spacing: 8px; background: var(--card); color: var(--text); border: 2px solid var(--card-border); border-radius: 10px; outline: none; }
+    .code-input:focus { border-color: var(--blue); }
+    .login-btn { margin-top: 16px; padding: 12px 40px; font-size: 15px; font-weight: 600; background: var(--blue); color: #fff; border: none; border-radius: 8px; cursor: pointer; }
+    .login-btn:active { opacity: 0.8; }
+    .login-error { color: var(--red); margin-top: 12px; font-size: 13px; min-height: 20px; }
+
+    /* ── Dashboard ── */
+    #dashboard { display: none; }
+    .dash-header { background: var(--card); border-bottom: 1px solid var(--card-border); padding: 14px 16px 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .dash-header h1 { font-family: 'Fredoka', sans-serif; font-size: 22px; font-weight: 700; }
+    .dash-header-right { display: flex; align-items: center; gap: 10px; }
+    .logout-btn { font-size: 12px; color: var(--text-muted); background: none; border: 1px solid var(--card-border); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--card-border); background: var(--card); padding: 0 16px; overflow-x: auto; }
+    .tab-btn { padding: 12px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; }
+    .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    /* ── Calendar Nav ── */
+    .cal-nav { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
+    .cal-nav-btn { background: var(--card); border: 1px solid var(--card-border); color: var(--text); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .cal-nav-label { font-weight: 700; font-size: 15px; }
+
+    /* ── Calendar Grid ── */
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; padding: 0 16px 16px; }
+    .cal-day-header { font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: center; padding: 6px 0; text-transform: uppercase; }
+    .cal-cell { background: var(--card); border: 1px solid var(--card-border); border-radius: 6px; min-height: 90px; padding: 6px; cursor: pointer; transition: border-color 0.15s; }
+    .cal-cell:hover { border-color: var(--blue); }
+    .cal-cell.today { border-color: var(--blue); background: var(--blue-dim); }
+    .cal-cell.past { opacity: 0.5; }
+    .cal-date { font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
+    .cal-date.today { color: var(--blue); }
+
+    /* ── Slot Badges ── */
+    .slot-badge { display: flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; padding: 3px 6px; border-radius: 4px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .slot-badge.available { background: var(--green-dim); color: var(--green); }
+    .slot-badge.booked-paid { background: var(--red-dim); color: var(--red); }
+    .slot-badge.booked-unpaid { background: var(--yellow-dim); color: var(--yellow); }
+    .slot-badge.tentative { background: var(--blue-dim); color: var(--blue); border: 1px dashed var(--blue); }
+    .slot-badge.needs-review { background: var(--purple-dim); color: var(--purple); }
+    .slot-badge.maintenance { background: var(--orange-dim); color: var(--orange); }
+    .slot-badge.hold { background: #374151; color: var(--red); }
+    .slot-badge.no-payment { background: var(--green-dim); color: var(--green); border: 1px dashed var(--orange); }
+
+    /* ── Legend ── */
+    .legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 16px; border-bottom: 1px solid var(--card-border); }
+    .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+    /* ── Popup overlay ── */
+    .popup-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .popup-overlay.open { opacity: 1; pointer-events: all; }
+    .popup-sheet { background: var(--card); border: 1px solid var(--card-border); border-radius: 16px; width: 95%; max-width: 520px; max-height: 90vh; overflow-y: auto; padding: 24px; position: relative; transform: scale(0.95); transition: transform 0.2s; }
+    .popup-overlay.open .popup-sheet { transform: scale(1); }
+    .popup-title { font-family: 'Fredoka', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 16px; }
+    .popup-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; }
+
+    /* ── Form ── */
+    .form-group { margin-bottom: 14px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .form-input, .form-select, .form-textarea { width: 100%; padding: 10px 12px; font-size: 14px; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); border: 1px solid var(--card-border); border-radius: 8px; outline: none; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--blue); }
+    .form-textarea { resize: vertical; min-height: 60px; }
+    .form-row { display: flex; gap: 12px; }
+    .form-row > .form-group { flex: 1; }
+    .form-check { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .form-check input[type="checkbox"], .form-check input[type="radio"] { width: 18px; height: 18px; accent-color: var(--blue); }
+    .form-check label { font-size: 13px; font-weight: 500; }
+
+    /* ── Buttons ── */
+    .btn { padding: 12px 20px; border: none; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+    .btn:active { opacity: 0.75; }
+    .btn-primary { background: var(--blue); color: #fff; }
+    .btn-danger { background: var(--red); color: #fff; }
+    .btn-warning { background: var(--orange); color: #fff; }
+    .btn-success { background: var(--green); color: #fff; }
+    .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--card-border); }
+    .btn-sm { padding: 8px 14px; font-size: 12px; }
+    .btn-block { width: 100%; }
+    .btn-group { display: flex; gap: 8px; margin-top: 16px; }
+
+    /* ── Info Display ── */
+    .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--card-border); font-size: 13px; }
+    .info-label { color: var(--text-muted); font-weight: 600; }
+    .info-value { font-weight: 500; }
+    .status-pill { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .status-pill.paid { background: var(--red-dim); color: var(--red); }
+    .status-pill.unpaid { background: var(--yellow-dim); color: var(--yellow); }
+    .status-pill.tentative { background: var(--blue-dim); color: var(--blue); }
+    .status-pill.confirmed { background: var(--green-dim); color: var(--green); }
+    .status-pill.needs_review { background: var(--purple-dim); color: var(--purple); }
+
+    /* ── Review Queue ── */
+    .queue-item { background: var(--card); border: 1px solid var(--card-border); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+    .queue-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .queue-item-title { font-weight: 700; font-size: 14px; }
+    .queue-item-detail { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .queue-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+    /* ── Cabana List ── */
+    .cabana-item { background: var(--card); border: 1px solid var(--card-border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .cabana-item.inactive { opacity: 0.5; }
+
+    /* ── Reports ── */
+    .report-card { background: var(--card); border: 1px solid var(--card-border); border-radius: 10px; padding: 20px; margin-bottom: 12px; }
+    .report-stat { font-size: 28px; font-weight: 700; font-family: 'Fredoka', sans-serif; }
+    .report-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; }
+    .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+
+    /* ── CXL List ── */
+    .cxl-item { background: var(--card); border: 1px solid var(--card-border); border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; }
+    .cxl-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .cxl-title { font-weight: 700; font-size: 14px; }
+    .cxl-date { font-size: 12px; color: var(--text-muted); }
+    .cxl-detail { font-size: 12px; color: var(--text-muted); }
+
+    /* ── Toast ── */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(16px); background: var(--card); border: 1px solid #475569; border-radius: 8px; padding: 12px 20px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 20px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.25s, transform 0.25s; pointer-events: none; z-index: 9999; white-space: nowrap; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.success { border-color: var(--green); color: var(--green); }
+    .toast.error { border-color: var(--red); color: var(--red); }
+
+    .section-pad { padding: 16px; }
+
+    @media (max-width: 600px) {
+      .cal-cell { min-height: 70px; padding: 4px; }
+      .slot-badge { font-size: 9px; padding: 2px 4px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login -->
+  <div id="login-screen">
+    <h1>🏖️ Cabana Admin</h1>
+    <p>Enter your admin code</p>
+    <input class="code-input" type="password" id="code-input" maxlength="8" inputmode="numeric" autocomplete="off">
+    <button class="login-btn" id="login-btn">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard">
+    <div class="dash-header">
+      <h1>🏖️ Cabana Admin</h1>
+      <div class="dash-header-right">
+        <button class="logout-btn" id="logout-btn">Sign Out</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="calendar">Calendar</button>
+      <button class="tab-btn" data-tab="review">Review Queue</button>
+      <button class="tab-btn" data-tab="holds">Holds &amp; Blocks</button>
+      <button class="tab-btn" data-tab="cabanas">Cabanas</button>
+      <button class="tab-btn" data-tab="cancellations">Cancellations</button>
+      <button class="tab-btn" data-tab="reports">Reports</button>
+    </div>
+
+    <!-- Calendar Tab -->
+    <div id="tab-calendar">
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Available</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> Booked (unpaid)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Booked &amp; Paid</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--blue);border:1px dashed var(--blue)"></div> Tentative</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> Needs Review</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> 🚧 Maintenance</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#374151;border:1px solid var(--red)"></div> ✋ Manager Hold</div>
+      </div>
+      <div class="cal-nav">
+        <button class="cal-nav-btn" id="cal-prev">← Prev</button>
+        <span class="cal-nav-label" id="cal-label"></span>
+        <button class="cal-nav-btn" id="cal-next">Next →</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+
+    <!-- Review Queue Tab -->
+    <div id="tab-review" style="display:none;" class="section-pad">
+      <h2 style="font-family:'Fredoka',sans-serif;font-size:18px;margin-bottom:16px;">📋 Review Queue</h2>
+      <div id="review-list"></div>
+    </div>
+
+    <!-- Holds & Blocks Tab -->
+    <div id="tab-holds" style="display:none;" class="section-pad">
+      <h2 style="font-family:'Fredoka',sans-serif;font-size:18px;margin-bottom:16px;">Manager Holds &amp; Blocks</h2>
+
+      <div style="background:var(--bg);border-radius:10px;padding:16px;margin-bottom:20px;">
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">Create New Hold/Block</h3>
+        <div class="form-group"><label class="form-label">Cabana</label>
+          <select class="form-select" id="hold-cabana"></select></div>
+        <div class="form-group"><label class="form-label">Type</label>
+          <select class="form-select" id="hold-type">
+            <option value="manager_total_block">✋ Total Block</option>
+            <option value="manager_blocked_for_guest">✋ Blocked for Guest</option>
+            <option value="manager_no_payment">💲🚫 Available, No Payment</option>
+            <option value="maintenance">🚧 Maintenance</option>
+          </select></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Start Date</label>
+            <input class="form-input" type="date" id="hold-start"></div>
+          <div class="form-group"><label class="form-label">End Date</label>
+            <input class="form-input" type="date" id="hold-end"></div>
+        </div>
+        <div class="form-check"><input type="checkbox" id="hold-indeterminate">
+          <label for="hold-indeterminate">Indeterminate (no end date)</label></div>
+        <div id="hold-guest-fields" style="display:none;">
+          <div class="form-group"><label class="form-label">Guest Name</label>
+            <input class="form-input" id="hold-guest-name" placeholder="Guest name"></div>
+          <div class="form-group"><label class="form-label">Guest Phone</label>
+            <input class="form-input" id="hold-guest-phone" placeholder="Phone" type="tel"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Notes</label>
+          <textarea class="form-textarea" id="hold-notes" placeholder="Optional notes..."></textarea></div>
+        <button class="btn btn-warning btn-block" id="hold-submit">Create Block</button>
+      </div>
+
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;">Active Blocks</h3>
+      <div id="holds-list"></div>
+    </div>
+
+    <!-- Cabanas Tab -->
+    <div id="tab-cabanas" style="display:none;" class="section-pad">
+      <h2 style="font-family:'Fredoka',sans-serif;font-size:18px;margin-bottom:16px;">Manage Cabanas</h2>
+      <div id="cabanas-list"></div>
+      <div style="margin-top:16px;display:flex;gap:8px;align-items:flex-end;">
+        <div class="form-group" style="flex:1;margin-bottom:0;">
+          <label class="form-label">New Cabana Name (optional)</label>
+          <input class="form-input" id="new-cabana-name" placeholder="Leave blank for auto-naming">
+        </div>
+        <button class="btn btn-success" id="add-cabana-btn">+ Add Cabana</button>
+      </div>
+    </div>
+
+    <!-- Cancellations Tab -->
+    <div id="tab-cancellations" style="display:none;" class="section-pad">
+      <h2 style="font-family:'Fredoka',sans-serif;font-size:18px;margin-bottom:12px;">Cancellation History</h2>
+      <div class="form-row" style="margin-bottom:12px;">
+        <div class="form-group"><label class="form-label">From</label>
+          <input class="form-input" type="date" id="cxl-start"></div>
+        <div class="form-group"><label class="form-label">To</label>
+          <input class="form-input" type="date" id="cxl-end"></div>
+        <div class="form-group" style="align-self:flex-end;">
+          <button class="btn btn-primary btn-sm" id="cxl-load">Load</button></div>
+      </div>
+      <div id="cxl-list"></div>
+    </div>
+
+    <!-- Reports Tab -->
+    <div id="tab-reports" style="display:none;" class="section-pad">
+      <h2 style="font-family:'Fredoka',sans-serif;font-size:18px;margin-bottom:12px;">📊 Reports</h2>
+      <div class="form-row" style="margin-bottom:16px;">
+        <div class="form-group"><label class="form-label">From</label>
+          <input class="form-input" type="date" id="rpt-start"></div>
+        <div class="form-group"><label class="form-label">To</label>
+          <input class="form-input" type="date" id="rpt-end"></div>
+        <div class="form-group" style="align-self:flex-end;">
+          <button class="btn btn-primary btn-sm" id="rpt-load">Generate</button></div>
+      </div>
+      <div id="report-content"></div>
+    </div>
+  </div>
+
+  <!-- Booking Modal -->
+  <div class="popup-overlay" id="booking-popup">
+    <div class="popup-sheet" id="booking-sheet"></div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+const API = (document.querySelector('meta[name="api-url"]')?.content || '').replace(/\/$/, '');
+let AUTH_CODE = '';
+let cabanas = [];
+let calendarData = { bookings: [], blocks: [] };
+let calWeekOffset = 0;
+
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', 'X-Auth-Code': AUTH_CODE };
+  return fetch(`${API}${path}`, { ...opts, headers: { ...headers, ...opts.headers }, body: opts.body ? JSON.stringify(opts.body) : undefined })
+    .then(async r => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      return data;
+    });
+}
+
+function showToast(msg, type = 'success') {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+function fmtDate(d) {
+  const dt = typeof d === 'string' ? new Date(d + 'T00:00:00') : d;
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function dateStr(d) {
+  const yr = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const dy = String(d.getDate()).padStart(2, '0');
+  return `${yr}-${mo}-${dy}`;
+}
+
+function todayStr() { return dateStr(new Date()); }
+
+function getSlotLabel(slot) {
+  if (slot === 'am') return 'AM (till 1pm)';
+  if (slot === 'pm') return 'PM (from 2pm)';
+  return 'Full Day';
+}
+
+function esc(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── Login ─────────────────────────────────────────────────────────────────────
+$('#login-btn').addEventListener('click', doLogin);
+$('#code-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function doLogin() {
+  const code = $('#code-input').value.trim();
+  if (!code) return;
+  try {
+    const data = await api('/admin/verify', { method: 'POST', body: { code } });
+    if (data.valid) {
+      AUTH_CODE = code;
+      $('#login-screen').style.display = 'none';
+      $('#dashboard').style.display = 'block';
+      await loadCabanas();
+      renderCalendar();
+      loadReviewQueue();
+    } else {
+      $('#login-error').textContent = 'Invalid admin code';
+    }
+  } catch (e) {
+    $('#login-error').textContent = e.message;
+  }
+}
+
+$('#logout-btn').addEventListener('click', () => {
+  AUTH_CODE = '';
+  $('#dashboard').style.display = 'none';
+  $('#login-screen').style.display = 'flex';
+  $('#code-input').value = '';
+});
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+$$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
+  $$('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const tab = btn.dataset.tab;
+  ['calendar', 'review', 'holds', 'cabanas', 'cancellations', 'reports'].forEach(t => {
+    const el = $(`#tab-${t}`);
+    if (el) el.style.display = t === tab ? '' : 'none';
+  });
+  if (tab === 'review') loadReviewQueue();
+  if (tab === 'holds') loadHolds();
+  if (tab === 'cabanas') loadCabanasList();
+}));
+
+// ── Cabana Loading ────────────────────────────────────────────────────────────
+async function loadCabanas() {
+  try {
+    const data = await api('/admin/cabanas');
+    cabanas = data.cabanas || [];
+    $('#hold-cabana').innerHTML = cabanas.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  } catch (e) {
+    showToast('Failed to load cabanas: ' + e.message, 'error');
+  }
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+$('#cal-prev').addEventListener('click', () => { calWeekOffset--; renderCalendar(); });
+$('#cal-next').addEventListener('click', () => { calWeekOffset++; renderCalendar(); });
+
+function getCalendarRange() {
+  const now = new Date();
+  const sun = new Date(now);
+  sun.setDate(sun.getDate() - sun.getDay() + (calWeekOffset * 7));
+  sun.setHours(0, 0, 0, 0);
+  const start = new Date(sun);
+  const end = new Date(sun);
+  end.setDate(end.getDate() + 27);
+  return { start, end };
+}
+
+async function renderCalendar() {
+  const { start, end } = getCalendarRange();
+  $('#cal-label').textContent = `${fmtDate(start)} — ${fmtDate(end)}`;
+  try {
+    calendarData = await api(`/admin/calendar?start=${dateStr(start)}&end=${dateStr(end)}`);
+  } catch (e) {
+    showToast('Failed to load calendar: ' + e.message, 'error');
+    return;
+  }
+
+  const grid = $('#cal-grid');
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  let html = days.map(d => `<div class="cal-day-header">${d}</div>`).join('');
+  const today = todayStr();
+
+  for (let i = 0; i < 28; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const ds = dateStr(d);
+    const isToday = ds === today;
+    const isPast = ds < today;
+    let cls = 'cal-cell';
+    if (isToday) cls += ' today';
+    if (isPast) cls += ' past';
+
+    let slotsHtml = '';
+    for (const cabana of cabanas.filter(c => c.is_active)) {
+      slotsHtml += getSlotBadge(cabana, ds);
+    }
+
+    html += `<div class="${cls}" data-date="${ds}">
+      <div class="cal-date${isToday ? ' today' : ''}">${d.getDate()}</div>
+      ${slotsHtml}
+    </div>`;
+  }
+
+  grid.innerHTML = html;
+  grid.querySelectorAll('.cal-cell').forEach(cell => {
+    cell.addEventListener('click', () => openDayModal(cell.dataset.date));
+  });
+}
+
+function getSlotBadge(cabana, ds) {
+  const block = calendarData.blocks.find(b =>
+    b.cabana_id === cabana.id && b.start_date <= ds && (b.end_date === null || b.end_date >= ds)
+  );
+
+  if (block) {
+    if (block.block_type === 'maintenance') {
+      return `<div class="slot-badge maintenance"><span>🚧</span><span>${cabana.name}</span></div>`;
+    }
+    if (block.block_type === 'manager_total_block') {
+      return `<div class="slot-badge hold"><span>✋</span><span>${cabana.name}</span></div>`;
+    }
+    if (block.block_type === 'manager_blocked_for_guest') {
+      return `<div class="slot-badge hold"><span>✋</span><span>${cabana.name} (${esc(block.guest_name || 'guest')})</span></div>`;
+    }
+    if (block.block_type === 'manager_no_payment') {
+      const booking = calendarData.bookings.find(b => b.cabana_id === cabana.id && b.booking_date === ds && b.status !== 'cancelled');
+      if (booking) return buildBookingBadge(cabana, booking);
+      return `<div class="slot-badge no-payment"><span>🟢</span><span>${cabana.name} 💲🚫</span></div>`;
+    }
+  }
+
+  const bookings = calendarData.bookings.filter(b =>
+    b.cabana_id === cabana.id && b.booking_date === ds && b.status !== 'cancelled'
+  );
+
+  if (bookings.length === 0) {
+    return `<div class="slot-badge available"><span>🟢</span><span>${cabana.name}</span></div>`;
+  }
+  return bookings.map(b => buildBookingBadge(cabana, b)).join('');
+}
+
+function buildBookingBadge(cabana, b) {
+  let cls, icon;
+  if (b.status === 'tentative') { cls = 'tentative'; icon = '🔵'; }
+  else if (b.status === 'needs_review') { cls = 'needs-review'; icon = '⚠️'; }
+  else if (b.is_paid) { cls = 'booked-paid'; icon = '🔴'; }
+  else { cls = 'booked-unpaid'; icon = '🟡'; }
+  const slotSuffix = b.slot === 'full' ? '' : b.slot === 'am' ? ' AM' : ' PM';
+  return `<div class="slot-badge ${cls}"><span>${icon}</span><span>${cabana.name}${slotSuffix}</span></div>`;
+}
+
+// ── Day Modal (Admin can book + edit + cancel) ────────────────────────────────
+function openDayModal(date) {
+  const sheet = $('#booking-sheet');
+  const bookings = calendarData.bookings.filter(b => b.booking_date === date && b.status !== 'cancelled');
+  const blocks = calendarData.blocks.filter(b =>
+    b.start_date <= date && (b.end_date === null || b.end_date >= date)
+  );
+
+  let html = `<button class="popup-close" onclick="closePopup()">✕</button>`;
+  html += `<div class="popup-title">${fmtDate(date)}</div>`;
+
+  for (const b of bookings) {
+    const cab = cabanas.find(c => c.id === b.cabana_id);
+    html += `<div style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:10px;">`;
+    html += `<div style="font-weight:700;margin-bottom:8px;">${cab?.name || 'Cabana'} — ${getSlotLabel(b.slot)}</div>`;
+    html += `<div class="info-row"><span class="info-label">Guest</span><span class="info-value">${esc(b.renter_name)}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Phone</span><span class="info-value">${esc(b.phone)}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Room</span><span class="info-value">${esc(b.room_number)} (${b.property})</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Status</span><span class="info-value">
+      <span class="status-pill ${b.is_paid ? 'paid' : 'unpaid'}">${b.is_paid ? 'Paid' : 'Unpaid'}</span>
+      <span class="status-pill ${b.status}">${b.status}</span></span></div>`;
+    if (b.special_instructions) {
+      html += `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${esc(b.special_instructions)}</span></div>`;
+    }
+    if (b.confirmed_at) {
+      html += `<div class="info-row"><span class="info-label">Confirmed</span><span class="info-value">${new Date(b.confirmed_at).toLocaleString()}</span></div>`;
+    }
+    if (b.paid_at) {
+      html += `<div class="info-row"><span class="info-label">Paid At</span><span class="info-value">${new Date(b.paid_at).toLocaleString()}</span></div>`;
+    }
+    html += `<div class="btn-group">
+      <button class="btn btn-primary btn-sm" onclick="openEditModal(${b.id})">✏️ Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="openCancelModal(${b.id})">Cancel</button>
+    </div></div>`;
+  }
+
+  for (const bl of blocks) {
+    const cab = cabanas.find(c => c.id === bl.cabana_id);
+    const typeLabel = bl.block_type === 'maintenance' ? '🚧 Maintenance'
+      : bl.block_type === 'manager_total_block' ? '✋ Total Block'
+      : bl.block_type === 'manager_blocked_for_guest' ? `✋ Held for ${esc(bl.guest_name || '?')}`
+      : '💲🚫 No Payment';
+    html += `<div style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:10px;">
+      <div style="font-weight:700;">${cab?.name || 'Cabana'} — ${typeLabel}</div>
+      ${bl.notes ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px;">${esc(bl.notes)}</div>` : ''}
+    </div>`;
+  }
+
+  // New booking form
+  html += `<hr style="border-color:var(--card-border);margin:16px 0;">`;
+  html += `<div class="popup-title" style="font-size:16px;">New Booking (Admin)</div>`;
+  html += `<div class="form-group"><label class="form-label">Cabana</label>
+    <select class="form-select" id="bk-cabana">${cabanas.filter(c=>c.is_active).map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>`;
+  html += `<div class="form-group"><label class="form-label">Slot</label>
+    <select class="form-select" id="bk-slot">
+      <option value="full">Full Day</option>
+      <option value="am">AM (until 1:00 PM)</option>
+      <option value="pm">PM (from 2:00 PM)</option>
+    </select></div>`;
+  html += `<div class="form-group"><label class="form-label">Guest Name</label>
+    <input class="form-input" id="bk-name" placeholder="Last name, First name"></div>`;
+  html += `<div class="form-group"><label class="form-label">Phone</label>
+    <input class="form-input" id="bk-phone" placeholder="Contact phone number" type="tel"></div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Room #</label>
+      <input class="form-input" id="bk-room" placeholder="Room number"></div>
+    <div class="form-group"><label class="form-label">Property</label>
+      <div style="display:flex;gap:16px;padding-top:6px;">
+        <div class="form-check"><input type="radio" name="bk-prop" value="CCBR" id="bk-ccbr" checked><label for="bk-ccbr">CCBR</label></div>
+        <div class="form-check"><input type="radio" name="bk-prop" value="HIE" id="bk-hie"><label for="bk-hie">HIE</label></div>
+      </div></div></div>`;
+  html += `<div class="form-check"><input type="checkbox" id="bk-paid"><label for="bk-paid">Paid</label></div>`;
+  html += `<div class="form-group"><label class="form-label">Special Instructions</label>
+    <textarea class="form-textarea" id="bk-instructions" placeholder="Optional notes..."></textarea></div>`;
+  html += `<button class="btn btn-primary btn-block" id="bk-submit" data-date="${date}">Book Cabana</button>`;
+
+  sheet.innerHTML = html;
+  $('#booking-popup').classList.add('open');
+  $('#bk-submit').addEventListener('click', submitBooking);
+}
+
+function closePopup() { $('#booking-popup').classList.remove('open'); }
+$('#booking-popup').addEventListener('click', e => { if (e.target === $('#booking-popup')) closePopup(); });
+
+async function submitBooking() {
+  const date = $('#bk-submit').dataset.date;
+  const body = {
+    cabana_id: parseInt($('#bk-cabana').value, 10),
+    date,
+    slot: $('#bk-slot').value,
+    renter_name: $('#bk-name').value.trim(),
+    phone: $('#bk-phone').value.trim(),
+    room_number: $('#bk-room').value.trim(),
+    property: document.querySelector('input[name="bk-prop"]:checked')?.value || 'CCBR',
+    is_paid: $('#bk-paid').checked,
+    special_instructions: $('#bk-instructions').value.trim() || null,
+  };
+
+  if (!body.renter_name || !body.phone || !body.room_number) {
+    showToast('Fill in guest name, phone, and room', 'error'); return;
+  }
+
+  try {
+    await api('/admin/booking', { method: 'POST', body });
+    showToast('Booking created!', 'success');
+    closePopup();
+    renderCalendar();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ── Edit Modal (Admin Only) ───────────────────────────────────────────────────
+window.openEditModal = async function(bookingId) {
+  let booking;
+  try {
+    const data = await api(`/admin/booking/${bookingId}`);
+    booking = data.booking;
+  } catch (e) {
+    showToast(e.message, 'error'); return;
+  }
+
+  const sheet = $('#booking-sheet');
+  let html = `<button class="popup-close" onclick="closePopup()">✕</button>`;
+  html += `<div class="popup-title">Edit Booking</div>`;
+  html += `<div class="form-group"><label class="form-label">Guest Name</label>
+    <input class="form-input" id="ed-name" value="${esc(booking.renter_name)}"></div>`;
+  html += `<div class="form-group"><label class="form-label">Phone</label>
+    <input class="form-input" id="ed-phone" value="${esc(booking.phone)}" type="tel"></div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Room #</label>
+      <input class="form-input" id="ed-room" value="${esc(booking.room_number)}"></div>
+    <div class="form-group"><label class="form-label">Property</label>
+      <select class="form-select" id="ed-property">
+        <option value="CCBR" ${booking.property==='CCBR'?'selected':''}>CCBR</option>
+        <option value="HIE" ${booking.property==='HIE'?'selected':''}>HIE</option>
+      </select></div></div>`;
+  html += `<div class="form-group"><label class="form-label">Slot</label>
+    <select class="form-select" id="ed-slot">
+      <option value="full" ${booking.slot==='full'?'selected':''}>Full Day</option>
+      <option value="am" ${booking.slot==='am'?'selected':''}>AM (until 1:00 PM)</option>
+      <option value="pm" ${booking.slot==='pm'?'selected':''}>PM (from 2:00 PM)</option>
+    </select></div>`;
+  html += `<div class="form-check"><input type="checkbox" id="ed-paid" ${booking.is_paid?'checked':''}>
+    <label for="ed-paid">Paid</label></div>`;
+  html += `<div class="form-group"><label class="form-label">Special Instructions</label>
+    <textarea class="form-textarea" id="ed-instructions">${esc(booking.special_instructions||'')}</textarea></div>`;
+  html += `<input type="hidden" id="ed-version" value="${booking.version}">`;
+  html += `<button class="btn btn-primary btn-block" id="ed-save" data-id="${booking.id}">Save Changes</button>`;
+
+  sheet.innerHTML = html;
+
+  $('#ed-save').addEventListener('click', async () => {
+    try {
+      await api(`/admin/booking/${booking.id}`, {
+        method: 'PUT',
+        body: {
+          renter_name: $('#ed-name').value.trim(),
+          phone: $('#ed-phone').value.trim(),
+          room_number: $('#ed-room').value.trim(),
+          property: $('#ed-property').value,
+          slot: $('#ed-slot').value,
+          is_paid: $('#ed-paid').checked,
+          special_instructions: $('#ed-instructions').value.trim() || null,
+          version: parseInt($('#ed-version').value, 10),
+        },
+      });
+      showToast('Booking updated!', 'success');
+      closePopup();
+      renderCalendar();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  });
+};
+
+// ── Cancel Modal ──────────────────────────────────────────────────────────────
+window.openCancelModal = function(bookingId) {
+  const sheet = $('#booking-sheet');
+  let html = `<button class="popup-close" onclick="closePopup()">✕</button>`;
+  html += `<div class="popup-title">Cancel Booking</div>`;
+  html += `<p style="color:var(--text-muted);margin-bottom:16px;font-size:13px;">Are you sure?</p>`;
+  html += `<div class="form-group"><label class="form-label">Refund Status</label>
+    <select class="form-select" id="cxl-refund">
+      <option value="">— Select —</option>
+      <option value="refund_issued">Refund Issued</option>
+      <option value="hold_released">CC/RC Hold Released</option>
+      <option value="no_refund">No Refund</option>
+    </select></div>`;
+  html += `<div class="form-group"><label class="form-label">Reason</label>
+    <textarea class="form-textarea" id="cxl-reason" placeholder="Optional..."></textarea></div>`;
+  html += `<div class="btn-group">
+    <button class="btn btn-danger btn-block" id="cxl-confirm" data-id="${bookingId}">Confirm Cancel</button>
+    <button class="btn btn-ghost btn-block" onclick="closePopup()">Go Back</button></div>`;
+  sheet.innerHTML = html;
+
+  $('#cxl-confirm').addEventListener('click', async () => {
+    try {
+      await api(`/admin/booking/${bookingId}/cancel`, {
+        method: 'POST',
+        body: { cancellation_reason: $('#cxl-reason').value.trim()||null, refund_type: $('#cxl-refund').value||null },
+      });
+      showToast('Booking cancelled', 'success');
+      closePopup(); renderCalendar();
+    } catch (e) { showToast(e.message, 'error'); }
+  });
+};
+
+// ── Review Queue ──────────────────────────────────────────────────────────────
+async function loadReviewQueue() {
+  try {
+    const data = await api('/admin/review-queue');
+    const list = $('#review-list');
+    if (!data.queue || data.queue.length === 0) {
+      list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">✅ No items pending review</p>';
+      return;
+    }
+    list.innerHTML = data.queue.map(b => {
+      let reason = '';
+      if (b.status === 'tentative') reason = '📌 Tentative (>21 days out)';
+      else if (b.status === 'needs_review') reason = '⚠️ Needs Review (maintenance conflict)';
+      if (b.no_payment_review) reason += (reason ? ' + ' : '') + '💲🚫 No-Payment Hold';
+
+      return `<div class="queue-item">
+        <div class="queue-item-header">
+          <span class="queue-item-title">${esc(b.cabana_name)} — ${fmtDate(b.booking_date)} (${getSlotLabel(b.slot)})</span>
+          <span class="status-pill ${b.status}">${b.status}</span>
+        </div>
+        <div class="queue-item-detail">${reason}</div>
+        <div class="queue-item-detail">Guest: ${esc(b.renter_name)} | Phone: ${esc(b.phone)} | Room: ${esc(b.room_number)} (${b.property})</div>
+        ${b.special_instructions ? `<div class="queue-item-detail">Notes: ${esc(b.special_instructions)}</div>` : ''}
+        <div class="queue-actions">
+          <button class="btn btn-success btn-sm" onclick="approveBooking(${b.id})">✅ Approve</button>
+          <button class="btn btn-danger btn-sm" onclick="rejectBooking(${b.id})">❌ Reject</button>
+          <button class="btn btn-primary btn-sm" onclick="openEditModal(${b.id})">✏️ Edit</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    showToast('Failed to load review queue: ' + e.message, 'error');
+  }
+}
+
+window.approveBooking = async function(id) {
+  try {
+    await api(`/admin/booking/${id}/approve`, { method: 'POST' });
+    showToast('Booking approved!', 'success');
+    loadReviewQueue(); renderCalendar();
+  } catch (e) { showToast(e.message, 'error'); }
+};
+
+window.rejectBooking = async function(id) {
+  const reason = prompt('Rejection reason (optional):');
+  try {
+    await api(`/admin/booking/${id}/reject`, { method: 'POST', body: { reason: reason || null } });
+    showToast('Booking rejected', 'success');
+    loadReviewQueue(); renderCalendar();
+  } catch (e) { showToast(e.message, 'error'); }
+};
+
+// ── Holds & Blocks ────────────────────────────────────────────────────────────
+$('#hold-type').addEventListener('change', () => {
+  const isGuest = $('#hold-type').value === 'manager_blocked_for_guest';
+  $('#hold-guest-fields').style.display = isGuest ? '' : 'none';
+});
+
+$('#hold-indeterminate').addEventListener('change', () => {
+  $('#hold-end').disabled = $('#hold-indeterminate').checked;
+  if ($('#hold-indeterminate').checked) $('#hold-end').value = '';
+});
+
+$('#hold-submit').addEventListener('click', async () => {
+  const body = {
+    cabana_id: parseInt($('#hold-cabana').value, 10),
+    block_type: $('#hold-type').value,
+    start_date: $('#hold-start').value,
+    end_date: $('#hold-end').value || null,
+    is_indeterminate: $('#hold-indeterminate').checked,
+    guest_name: $('#hold-guest-name').value.trim() || null,
+    guest_phone: $('#hold-guest-phone').value.trim() || null,
+    notes: $('#hold-notes').value.trim() || null,
+  };
+  if (!body.start_date) { showToast('Start date required', 'error'); return; }
+  if (!body.is_indeterminate && !body.end_date) { showToast('End date required or check indeterminate', 'error'); return; }
+
+  try {
+    const result = await api('/admin/block', { method: 'POST', body });
+    if (result.conflicts && result.conflicts.length > 0) {
+      showToast(`Block created. ${result.conflicts.length} conflicting booking(s) found — review in queue.`, 'error');
+    } else {
+      showToast('Block created!', 'success');
+    }
+    loadHolds(); renderCalendar();
+  } catch (e) { showToast(e.message, 'error'); }
+});
+
+async function loadHolds() {
+  try {
+    const data = await api('/admin/blocks');
+    const list = $('#holds-list');
+    if (!data.blocks || data.blocks.length === 0) {
+      list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;">No active blocks</p>';
+      return;
+    }
+    list.innerHTML = data.blocks.map(b => {
+      const typeLabel = b.block_type === 'maintenance' ? '🚧 Maintenance'
+        : b.block_type === 'manager_total_block' ? '✋ Total Block'
+        : b.block_type === 'manager_blocked_for_guest' ? `✋ Blocked for ${esc(b.guest_name || 'guest')}`
+        : '💲🚫 No Payment';
+      const dateRange = b.is_indeterminate ? `${fmtDate(b.start_date)} → Indeterminate` : `${fmtDate(b.start_date)} → ${b.end_date ? fmtDate(b.end_date) : '?'}`;
+      return `<div style="background:var(--card);border:1px solid var(--card-border);border-radius:8px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-weight:700;font-size:13px;">${esc(b.cabana_name)} — ${typeLabel}</div>
+          <div style="font-size:12px;color:var(--text-muted);">${dateRange}</div>
+          ${b.notes ? `<div style="font-size:11px;color:var(--text-muted);">${esc(b.notes)}</div>` : ''}
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="deleteBlock(${b.id})">Remove</button>
+      </div>`;
+    }).join('');
+  } catch (e) { showToast('Failed to load blocks: ' + e.message, 'error'); }
+}
+
+window.deleteBlock = async function(id) {
+  if (!confirm('Remove this block?')) return;
+  try {
+    await api(`/admin/block/${id}`, { method: 'DELETE' });
+    showToast('Block removed', 'success');
+    loadHolds(); renderCalendar();
+  } catch (e) { showToast(e.message, 'error'); }
+};
+
+// ── Cabana Management ─────────────────────────────────────────────────────────
+async function loadCabanasList() {
+  await loadCabanas();
+  const list = $('#cabanas-list');
+  list.innerHTML = cabanas.map(c => `
+    <div class="cabana-item ${c.is_active ? '' : 'inactive'}">
+      <div>
+        <span style="font-weight:700;">${esc(c.name)}</span>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:8px;">${c.is_active ? '✅ Active' : '❌ Inactive'}</span>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="renameCabana(${c.id},'${esc(c.name)}')">Rename</button>
+        <button class="btn btn-sm ${c.is_active ? 'btn-warning' : 'btn-success'}" onclick="toggleCabana(${c.id},${!c.is_active})">${c.is_active ? 'Deactivate' : 'Activate'}</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+$('#add-cabana-btn').addEventListener('click', async () => {
+  const name = $('#new-cabana-name').value.trim() || null;
+  try {
+    await api('/admin/cabanas', { method: 'POST', body: { name } });
+    showToast('Cabana added!', 'success');
+    $('#new-cabana-name').value = '';
+    loadCabanasList(); renderCalendar();
+  } catch (e) { showToast(e.message, 'error'); }
+});
+
+window.renameCabana = async function(id, currentName) {
+  const newName = prompt('Enter new name:', currentName);
+  if (!newName || newName === currentName) return;
+  try {
+    await api(`/admin/cabanas/${id}`, { method: 'PUT', body: { name: newName } });
+    showToast('Cabana renamed', 'success');
+    loadCabanasList(); renderCalendar();
+  } catch (e) { showToast(e.message, 'error'); }
+};
+
+window.toggleCabana = async function(id, activate) {
+  try {
+    await api(`/admin/cabanas/${id}`, { method: 'PUT', body: { is_active: activate } });
+    showToast(activate ? 'Cabana activated' : 'Cabana deactivated', 'success');
+    loadCabanasList(); renderCalendar();
+  } catch (e) { showToast(e.message, 'error'); }
+};
+
+// ── Cancellations ─────────────────────────────────────────────────────────────
+$('#cxl-load').addEventListener('click', async () => {
+  const start = $('#cxl-start').value;
+  const end = $('#cxl-end').value;
+  if (!start || !end) { showToast('Select date range', 'error'); return; }
+  try {
+    const data = await api(`/admin/cancellations?start=${start}&end=${end}`);
+    const list = $('#cxl-list');
+    if (!data.cancellations || data.cancellations.length === 0) {
+      list.innerHTML = '<p style="color:var(--text-muted);">No cancellations</p>';
+      return;
+    }
+    list.innerHTML = data.cancellations.map(c => `
+      <div class="cxl-item">
+        <div class="cxl-header">
+          <span class="cxl-title">${esc(c.cabana_name)} — ${fmtDate(c.booking_date)} (${getSlotLabel(c.slot)})</span>
+          <span class="cxl-date">${c.cancelled_at ? new Date(c.cancelled_at).toLocaleString() : ''}</span>
+        </div>
+        <div class="cxl-detail">Guest: ${esc(c.renter_name)} | Room: ${esc(c.room_number)} (${c.property})</div>
+        <div class="cxl-detail">Refund: ${c.refund_type || 'N/A'} ${c.cancellation_reason ? '| Reason: ' + esc(c.cancellation_reason) : ''}</div>
+      </div>
+    `).join('');
+  } catch (e) { showToast(e.message, 'error'); }
+});
+
+// ── Reports ───────────────────────────────────────────────────────────────────
+$('#rpt-load').addEventListener('click', async () => {
+  const start = $('#rpt-start').value;
+  const end = $('#rpt-end').value;
+  if (!start || !end) { showToast('Select date range', 'error'); return; }
+  try {
+    const data = await api(`/admin/report?start=${start}&end=${end}`);
+    const r = data.report;
+    const content = $('#report-content');
+    content.innerHTML = `
+      <div class="report-grid">
+        <div class="report-card">
+          <div class="report-stat">${r.bookings.total}</div>
+          <div class="report-label">Total Active Bookings</div>
+        </div>
+        <div class="report-card">
+          <div class="report-stat" style="color:var(--green)">${r.bookings.confirmed}</div>
+          <div class="report-label">Confirmed</div>
+        </div>
+        <div class="report-card">
+          <div class="report-stat" style="color:var(--blue)">${r.bookings.tentative}</div>
+          <div class="report-label">Tentative</div>
+        </div>
+        <div class="report-card">
+          <div class="report-stat" style="color:var(--red)">${r.bookings.paid_count}</div>
+          <div class="report-label">Paid</div>
+        </div>
+        <div class="report-card">
+          <div class="report-stat">${r.cancellations.total}</div>
+          <div class="report-label">Cancellations</div>
+        </div>
+        <div class="report-card">
+          <div class="report-stat">${r.cancellations.refunded}</div>
+          <div class="report-label">Refunds Issued</div>
+        </div>
+        <div class="report-card">
+          <div class="report-stat">${r.cancellations.hold_released}</div>
+          <div class="report-label">Holds Released</div>
+        </div>
+        <div class="report-card">
+          <div class="report-stat">${r.occupancy.rate}%</div>
+          <div class="report-label">Occupancy Rate</div>
+        </div>
+      </div>
+      <div class="report-card" style="margin-top:12px;">
+        <div style="font-size:13px;color:var(--text-muted);">
+          ${r.occupancy.booked_days} booked days out of ${r.occupancy.total_slots} available slots
+          (${fmtDate(start)} to ${fmtDate(end)})
+        </div>
+      </div>
+    `;
+  } catch (e) { showToast(e.message, 'error'); }
+});
+
+// ── Locks Management ──────────────────────────────────────────────────────────
+// Admin can view and clear abandoned locks from the review queue area
+// (accessible through the API but not surfaced as a separate tab to keep UI clean)
+
+</script>
+</body>
+</html>
