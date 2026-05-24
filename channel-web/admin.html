@@ -290,6 +290,7 @@
         <h2>Available Slides</h2>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost" id="clean-expired-btn">🗑 Clean Expired</button>
+          <button class="btn btn-purple" id="new-image-slide-btn">🖼 Image Slide</button>
           <button class="btn btn-blue" id="new-slide-btn">+ Register Slide</button>
         </div>
       </div>
@@ -370,6 +371,33 @@
     </div>
   </div>
 
+  <!-- ═══════════════════ IMAGE SLIDE MODAL ═══════════════════ -->
+  <div class="modal-bg" id="image-slide-modal">
+    <div class="modal">
+      <h2>Create Image Slide</h2>
+      <label>Static Image (from /static/images)</label>
+      <select id="img-slide-select">
+        <option value="">Loading images…</option>
+      </select>
+      <label>OR Image URL (optional override)</label>
+      <input type="url" id="img-slide-url" placeholder="https://example.com/image.jpg">
+      <label>Label</label>
+      <input type="text" id="img-slide-label" placeholder="e.g. Cape Grill Main Slide">
+      <label>Title (optional)</label>
+      <input type="text" id="img-slide-title" placeholder="e.g. CAPE GRILL">
+      <label>Message (optional)</label>
+      <textarea id="img-slide-message" placeholder="Optional text below title"></textarea>
+      <label>Background Color (optional)</label>
+      <input type="text" id="img-slide-bg" placeholder="#111111">
+      <label>Text Color (optional)</label>
+      <input type="text" id="img-slide-color" placeholder="#FFFFFF">
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="img-slide-cancel-btn">Cancel</button>
+        <button class="btn btn-purple" id="img-slide-save-btn">Create & Register</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══════════════════ BREAKTHROUGH MODAL ═══════════════════ -->
   <div class="modal-bg" id="bt-modal">
     <div class="modal">
@@ -402,6 +430,9 @@
   /* ── Config ─────────────────────────────────────────────────────────────── */
   const API = document.querySelector('meta[name="api-url"]')?.content || '';
   const PLAYER_BASE = window.location.href.replace(/\/[^/]*$/, '/player.html');
+  const SLIDE_TEMPLATE_BASE = window.location.href.replace(/\/[^/]*$/, '/slide.html');
+  const REPO_IMAGE_BASE = 'https://ccbractivix.github.io/RGP/static/images/';
+  const REPO_IMAGE_API = 'https://api.github.com/repos/ccbractivix/RGP/contents/static/images';
   let authCode = localStorage.getItem('channel_code') || '';
 
   /* ── DOM refs ───────────────────────────────────────────────────────────── */
@@ -421,6 +452,7 @@
   /* ── State ──────────────────────────────────────────────────────────────── */
   let allChannels = [];
   let allSlides   = [];
+  let staticImages = [];
   let playlistItems = []; // current editor state
   let dragItem    = null;
 
@@ -489,6 +521,7 @@
     loginScreen.style.display = 'none';
     dashboard.style.display = 'block';
     loadAll();
+    loadStaticImages();
   }
 
   function logout() {
@@ -823,6 +856,14 @@
   const slUrl    = document.getElementById('sl-url');
   const slLabel  = document.getElementById('sl-label');
   const slDesc   = document.getElementById('sl-desc');
+  const imgModal = document.getElementById('image-slide-modal');
+  const imgSelect = document.getElementById('img-slide-select');
+  const imgUrl = document.getElementById('img-slide-url');
+  const imgLabel = document.getElementById('img-slide-label');
+  const imgTitle = document.getElementById('img-slide-title');
+  const imgMessage = document.getElementById('img-slide-message');
+  const imgBg = document.getElementById('img-slide-bg');
+  const imgColor = document.getElementById('img-slide-color');
 
   document.getElementById('clean-expired-btn').addEventListener('click', async () => {
     try {
@@ -847,6 +888,87 @@
       await api('POST', '/admin/slides', { url, label, description: slDesc.value.trim() });
       toast('Slide registered!');
       slModal.classList.remove('open');
+      loadAll();
+    } catch (e) {
+      toast('Failed: ' + e.message, 'error');
+    }
+  });
+
+  async function loadStaticImages() {
+    try {
+      const data = await fetch(REPO_IMAGE_API).then(r => r.json());
+      staticImages = (Array.isArray(data) ? data : [])
+        .filter(f => f.type === 'file' && /\.(png|jpe?g|gif|webp|svg)$/i.test(f.name))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    } catch (_) {
+      staticImages = [];
+    }
+    renderImageOptions();
+  }
+
+  function renderImageOptions() {
+    imgSelect.innerHTML = '';
+    if (staticImages.length === 0) {
+      imgSelect.innerHTML = '<option value="">No static images found — use Image URL instead</option>';
+      return;
+    }
+    imgSelect.innerHTML = '<option value="">Select an image…</option>';
+    staticImages.forEach(file => {
+      const opt = document.createElement('option');
+      opt.value = file.name;
+      opt.textContent = file.name;
+      imgSelect.appendChild(opt);
+    });
+  }
+
+  function toImageSlideUrl() {
+    const customImage = imgUrl.value.trim();
+    const selected = imgSelect.value.trim();
+    const selectedImage = selected ? `${REPO_IMAGE_BASE}${encodeURIComponent(selected)}` : '';
+    const imageSrc = customImage || selectedImage;
+    if (!imageSrc) return '';
+
+    const p = new URLSearchParams();
+    p.set('image', imageSrc);
+    if (imgTitle.value.trim()) p.set('title', imgTitle.value.trim());
+    if (imgMessage.value.trim()) p.set('message', imgMessage.value.trim());
+    if (imgBg.value.trim()) p.set('bg', imgBg.value.trim());
+    if (imgColor.value.trim()) p.set('color', imgColor.value.trim());
+    return `${SLIDE_TEMPLATE_BASE}?${p.toString()}`;
+  }
+
+  document.getElementById('new-image-slide-btn').addEventListener('click', async () => {
+    if (staticImages.length === 0) await loadStaticImages();
+    imgSelect.value = '';
+    imgUrl.value = '';
+    imgLabel.value = '';
+    imgTitle.value = '';
+    imgMessage.value = '';
+    imgBg.value = '';
+    imgColor.value = '';
+    imgModal.classList.add('open');
+  });
+
+  imgSelect.addEventListener('change', () => {
+    const name = imgSelect.value || '';
+    if (!name && imgLabel.value.trim()) return;
+    const base = name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ').trim();
+    imgLabel.value = base || imgLabel.value;
+  });
+
+  document.getElementById('img-slide-cancel-btn').addEventListener('click', () => imgModal.classList.remove('open'));
+  document.getElementById('img-slide-save-btn').addEventListener('click', async () => {
+    const url = toImageSlideUrl();
+    const label = imgLabel.value.trim();
+    if (!url || !label) return toast('Image (or URL) and label are required', 'error');
+    try {
+      await api('POST', '/admin/slides', {
+        url,
+        label,
+        description: 'Image slide generated from static images',
+      });
+      toast('Image slide registered!');
+      imgModal.classList.remove('open');
       loadAll();
     } catch (e) {
       toast('Failed: ' + e.message, 'error');
