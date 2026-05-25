@@ -7,15 +7,15 @@
   <title>Theater TV Display</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       width: 100%; height: 100%;
-      background: #FFF8F0;
-      color: #3D3128;
-      font-family: 'Inter', sans-serif;
+      background: #F2F1E8;
+      color: #454040;
+      font-family: 'Montserrat', sans-serif;
       overflow: hidden;
     }
 
@@ -32,9 +32,9 @@
       padding: 18px 0 8px;
       font-size: clamp(28px, 3.5vw, 48px);
       font-weight: 700;
-      font-family: 'Fredoka', sans-serif;
+      font-family: 'PlayfairDisplay-SemiBold', 'Playfair Display', serif;
       letter-spacing: 6px;
-      color: #4A7A36;
+      color: #E6744A;
       text-transform: uppercase;
       flex-shrink: 0;
     }
@@ -54,7 +54,7 @@
       display: flex;
       flex-direction: column;
       padding: 0 10px;
-      border-right: 1px solid #E8D5C0;
+      border-right: 1px solid rgba(69, 64, 64, 0.18);
       overflow: hidden;
     }
 
@@ -72,20 +72,20 @@
     .tv-day-name {
       font-size: clamp(14px, 1.35vw, 20px);
       font-weight: 700;
-      color: #4A7A36;
+      color: #454040;
       text-transform: uppercase;
       letter-spacing: 2px;
     }
 
     .tv-date {
       font-size: clamp(10px, 0.9vw, 13px);
-      color: #7A6B5A;
+      color: #454040;
       font-weight: 500;
     }
 
     .tv-divider {
       height: 1px;
-      background: #E37433;
+      background: #E6744A;
       margin-bottom: 8px;
       opacity: 0.6;
     }
@@ -100,37 +100,37 @@
     .tv-show-item {
       font-size: clamp(13px, 1.25vw, 18px);
       line-height: 1.4;
-      color: #3D3128;
+      color: #454040;
     }
 
     .tv-show-time {
       font-weight: 600;
-      color: #E37433;
+      color: #E6744A;
       display: inline;
     }
 
     .tv-show-time::after {
       content: ' \00B7 ';
       font-weight: 400;
-      color: #B8A898;
+      color: rgba(69, 64, 64, 0.45);
     }
 
     .tv-show-title {
       display: inline;
-      color: #4A7A36;
+      color: #454040;
       font-weight: 700;
     }
 
     .tv-show-meta {
       display: block;
       font-size: clamp(11px, 1vw, 15px);
-      color: #7A6B5A;
+      color: #454040;
       margin-top: 1px;
     }
 
     .tv-empty {
       font-size: clamp(20px, 1.8vw, 26px);
-      color: #B8A898;
+      color: rgba(69, 64, 64, 0.55);
       font-style: italic;
     }
 
@@ -149,7 +149,7 @@
 
     .tv-closure-reopen {
       font-size: clamp(10px, 0.95vw, 14px);
-      color: #7A6B5A;
+      color: #454040;
       font-style: italic;
     }
 
@@ -160,7 +160,7 @@
       flex-direction: row;
       align-items: center;
       padding: 6px 12px 8px;
-      border-top: 1px solid #E8D5C0;
+      border-top: 1px solid rgba(69, 64, 64, 0.18);
     }
 
     #tv-promo {
@@ -183,13 +183,13 @@
     .promo-headline {
       font-size: clamp(14px, 1.4vw, 22px);
       font-weight: 700;
-      color: #E37433;
+      color: #454040;
       line-height: 1.3;
     }
 
     .promo-subline {
       font-size: clamp(10px, 1vw, 15px);
-      color: #7A6B5A;
+      color: #454040;
       line-height: 1.3;
       margin-top: 4px;
     }
@@ -212,7 +212,7 @@
     #tv-info {
       flex: 0 0 66.666%;
       padding-left: 20px;
-      color: #3D3128;
+      color: #454040;
       font-size: clamp(12px, 1.15vw, 17px);
       line-height: 1.55;
     }
@@ -221,7 +221,7 @@
       font-style: italic;
       margin-top: 6px;
       font-size: clamp(10px, 1vw, 14px);
-      color: #7A6B5A;
+      color: #454040;
     }
 
     /* Promo-active layout: image+text left-aligned, QR centered, info right of QR */
@@ -255,7 +255,7 @@
       bottom: 4px;
       right: 14px;
       font-size: 20px;
-      color: #B8A898;
+      color: rgba(69, 64, 64, 0.55);
     }
 
     #tv-loading {
@@ -264,7 +264,7 @@
       justify-content: center;
       flex: 1;
       font-size: 36px;
-      color: #7A6B5A;
+      color: #454040;
     }
   </style>
 </head>
