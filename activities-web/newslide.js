@@ -121,9 +121,7 @@
             noteText = 'Activity canceled';
           } else if (activity.status === 'relocated') {
             noteClass += ' relocated';
-            noteText = 'Now at ' + escapeHtml(activity.relocatedVenue || 'a new location');
-          } else if (activity.venue) {
-            noteText = escapeHtml(activity.venue);
+            noteText = 'Relocated';
           }
 
           return [
