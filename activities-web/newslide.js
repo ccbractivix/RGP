@@ -30,8 +30,15 @@
 
   function shouldHideActivity(activity) {
     var hiddenName = 'tennis, basketball, volleyball, pickleball and more! sports courts';
+    var hiddenEntry = 'all day tennis, basketball, volleyball, pickleball and more! sports courts';
     var activityName = ((activity && activity.name) || '').trim().toLowerCase();
-    return activityName === hiddenName;
+    var activityLine = [formatTime(activity), activity && activity.name, activity && activity.venue]
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+
+    return activityName === hiddenName || activityLine === hiddenEntry;
   }
 
   function renderToday(day) {
@@ -74,11 +81,11 @@
 
       return [
         '<article class="today-row">',
-          '<div class="time-pill">', formatTime(activity), '</div>',
-          '<div>',
+          '<div class="today-main">',
+            '<div class="time-pill">', formatTime(activity), '</div>',
             '<div class="', nameClass, '">', escapeHtml(activity.name || 'Activity'), '</div>',
-            '<div class="', detailClass, '">', detailText, '</div>',
           '</div>',
+          '<div class="', detailClass, '">', detailText, '</div>',
         '</article>'
       ].join('');
     }).join('');
@@ -121,8 +128,10 @@
 
           return [
             '<div class="day-item">',
-              '<div class="day-time">', formatTime(activity), '</div>',
-              '<div class="', activityClass, '">', escapeHtml(activity.name || 'Activity'), '</div>',
+              '<div class="day-main">',
+                '<div class="day-time">', formatTime(activity), '</div>',
+                '<div class="', activityClass, '">', escapeHtml(activity.name || 'Activity'), '</div>',
+              '</div>',
               noteText ? '<div class="' + noteClass + '">' + noteText + '</div>' : '',
             '</div>'
           ].join('');
