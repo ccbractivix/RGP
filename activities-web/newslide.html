@@ -340,12 +340,13 @@
     }
 
     #upcoming-portal-text {
-      max-width: 72%;
-      font-size: clamp(7px, 0.5vw, 10px);
+      flex: 1 1 auto;
+      font-size: clamp(6px, 0.42vw, 8px);
       line-height: 1.25;
       font-weight: 600;
       color: var(--text);
       text-align: right;
+      white-space: nowrap;
     }
 
     .empty-state {
@@ -396,7 +397,7 @@
             src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fsites.google.com%2Fview%2Fholidayinnclubcape%2Fhome"
             alt="QR code to Resort Guest Portal website"
           >
-          <div id="upcoming-portal-text">See our Resort Guest Portal website for the full week&apos;s activities schedule, movie theater listings, rocket launch info, things to do in the area, and a whole lot more!</div>
+          <div id="upcoming-portal-text">Scan to visit our website for activities schedule, movie theater listings, rocket launch info, things to do in the area, and a whole lot more!</div>
         </div>
       </section>
 
