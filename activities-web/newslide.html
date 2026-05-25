@@ -10,9 +10,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --text: #163246;
-      --muted: #516f82;
-      --accent: #0f5e84;
+      --text: #454040;
+      --muted: #454040;
+      --accent: #E6744A;
       --panel-bg: rgba(255, 255, 255, 0.74);
       --panel-border: rgba(255, 255, 255, 0.58);
       --shadow: 0 20px 45px rgba(14, 41, 61, 0.18);
@@ -81,6 +81,9 @@
       width: 59.1%;
       height: 39.7%;
       padding: 0.75% 0.9%;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5%;
     }
 
     .box-header {
@@ -126,33 +129,6 @@
       overflow: hidden;
     }
 
-    #today-portal {
-      margin-top: 12px;
-      padding-top: 10px;
-      border-top: 1px solid rgba(15, 94, 132, 0.16);
-      display: flex;
-      align-items: flex-end;
-      gap: 10px;
-    }
-
-    #today-qr {
-      width: clamp(66px, 5vw, 108px);
-      height: clamp(66px, 5vw, 108px);
-      flex: 0 0 auto;
-      padding: 4px;
-      border-radius: 10px;
-      background: #fff;
-      border: 1px solid rgba(15, 94, 132, 0.2);
-      object-fit: contain;
-    }
-
-    #today-portal-text {
-      font-size: clamp(9px, 0.62vw, 12px);
-      line-height: 1.25;
-      font-weight: 600;
-      color: var(--muted);
-    }
-
     .today-row {
       display: flex;
       flex-direction: column;
@@ -192,7 +168,7 @@
       font-size: clamp(20px, 1.5vw, 31px);
       font-weight: 800;
       line-height: 1.1;
-      color: #12354a;
+      color: var(--text);
     }
 
     #today-box .activity-name {
@@ -226,7 +202,8 @@
       align-items: start;
       gap: 0.85%;
       width: 100%;
-      height: 100%;
+      flex: 1;
+      min-height: 0;
     }
 
     .day-card {
@@ -234,10 +211,10 @@
       display: flex;
       flex-direction: column;
       height: 100%;
-      padding: 8% 10% 9%;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.78);
-      border: 1px solid rgba(15, 94, 132, 0.12);
+      padding: 0 4% 0 0;
+      border-radius: 0;
+      background: transparent;
+      border: none;
     }
 
     .day-name {
@@ -312,7 +289,7 @@
       font-size: clamp(13px, 1vw, 18px);
       font-weight: 700;
       line-height: 1.2;
-      color: #12354a;
+      color: var(--text);
       min-width: 0;
     }
 
@@ -339,6 +316,36 @@
 
     .day-note.relocated {
       color: #b63e2f;
+    }
+
+    #upcoming-footer {
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: auto;
+      padding-top: 1%;
+      border-top: 1px solid rgba(230, 116, 74, 0.25);
+    }
+
+    #upcoming-qr {
+      width: clamp(48px, 3.6vw, 78px);
+      height: clamp(48px, 3.6vw, 78px);
+      flex: 0 0 auto;
+      padding: 4px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid rgba(230, 116, 74, 0.3);
+      object-fit: contain;
+    }
+
+    #upcoming-portal-text {
+      max-width: 72%;
+      font-size: clamp(7px, 0.5vw, 10px);
+      line-height: 1.25;
+      font-weight: 600;
+      color: var(--text);
+      text-align: right;
     }
 
     .empty-state {
@@ -379,19 +386,18 @@
         <div id="today-list">
           <div class="empty-state">Loading today&apos;s schedule…</div>
         </div>
-        <div id="today-portal">
-          <img
-            id="today-qr"
-            src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fsites.google.com%2Fview%2Fholidayinnclubcape%2Fhome"
-            alt="QR code to Resort Guest Portal website"
-          >
-          <div id="today-portal-text">See our Resort Guest Portal website for the full week&apos;s activities schedule, movie theater listings, rocket launch info, things to do in the area, and a whole lot more!</div>
-        </div>
       </section>
 
       <section id="upcoming-box">
-      
         <div id="upcoming-grid"></div>
+        <div id="upcoming-footer">
+          <img
+            id="upcoming-qr"
+            src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fsites.google.com%2Fview%2Fholidayinnclubcape%2Fhome"
+            alt="QR code to Resort Guest Portal website"
+          >
+          <div id="upcoming-portal-text">See our Resort Guest Portal website for the full week&apos;s activities schedule, movie theater listings, rocket launch info, things to do in the area, and a whole lot more!</div>
+        </div>
       </section>
 
       <div id="status"></div>
