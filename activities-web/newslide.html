@@ -108,6 +108,14 @@
       text-align: right;
     }
 
+    #today-box .box-title {
+      font-size: clamp(15px, 1.33vw, 27px);
+    }
+
+    #today-box .box-subtitle {
+      font-size: clamp(10px, 0.8vw, 14px);
+    }
+
     #today-list {
       display: flex;
       flex-direction: column;
@@ -143,11 +151,19 @@
       text-align: center;
     }
 
+    #today-box .time-pill {
+      font-size: clamp(13px, 0.95vw, 20px);
+    }
+
     .activity-name {
       font-size: clamp(20px, 1.5vw, 31px);
       font-weight: 800;
       line-height: 1.12;
       color: #12354a;
+    }
+
+    #today-box .activity-name {
+      font-size: clamp(14px, 1.05vw, 22px);
     }
 
     .activity-detail {
@@ -156,6 +172,10 @@
       line-height: 1.25;
       color: var(--muted);
       font-weight: 600;
+    }
+
+    #today-box .activity-detail {
+      font-size: clamp(10px, 0.7vw, 14px);
     }
 
     .activity-name.canceled,
@@ -193,11 +213,23 @@
       color: var(--accent);
     }
 
+    #upcoming-box .box-title {
+      font-size: clamp(11px, 0.95vw, 19px);
+    }
+
+    #upcoming-box .day-name {
+      font-size: clamp(8px, 0.575vw, 12px);
+    }
+
     .day-date {
       margin-top: 3px;
       font-size: clamp(12px, 0.9vw, 16px);
       font-weight: 700;
       color: var(--muted);
+    }
+
+    #upcoming-box .day-date {
+      font-size: clamp(6px, 0.45vw, 8px);
     }
 
     .day-list {
@@ -226,6 +258,10 @@
       line-height: 1.15;
     }
 
+    #upcoming-box .day-time {
+      font-size: clamp(6px, 0.475vw, 9px);
+    }
+
     .day-activity {
       margin-top: 2px;
       font-size: clamp(13px, 1vw, 18px);
@@ -234,12 +270,20 @@
       color: #12354a;
     }
 
+    #upcoming-box .day-activity {
+      font-size: clamp(7px, 0.5vw, 9px);
+    }
+
     .day-note {
       margin-top: 2px;
       font-size: clamp(11px, 0.8vw, 14px);
       font-weight: 600;
       line-height: 1.2;
       color: var(--muted);
+    }
+
+    #upcoming-box .day-note {
+      font-size: clamp(6px, 0.4vw, 7px);
     }
 
     .day-activity.canceled,
@@ -257,6 +301,14 @@
       font-size: clamp(18px, 1.4vw, 28px);
       font-weight: 700;
       color: var(--muted);
+    }
+
+    #today-box .empty-state {
+      font-size: clamp(13px, 0.98vw, 20px);
+    }
+
+    #upcoming-box .empty-state {
+      font-size: clamp(9px, 0.7vw, 14px);
     }
 
     #status {
@@ -286,7 +338,6 @@
       <section id="upcoming-box" class="schedule-box">
         <div class="box-header">
           <h2 class="box-title">Next 4 Days</h2>
-          <div class="box-subtitle">Looking ahead</div>
         </div>
         <div id="upcoming-grid"></div>
       </section>
