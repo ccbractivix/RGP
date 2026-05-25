@@ -356,7 +356,10 @@ function esc(s) {
 
 function getLastName(fullName) {
   if (!fullName) return '';
-  const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
+  const normalized = String(fullName).trim();
+  const commaParts = normalized.split(',').map(p => p.trim()).filter(Boolean);
+  if (commaParts.length > 1) return commaParts[0];
+  const parts = normalized.split(/\s+/).filter(Boolean);
   return parts.length ? parts[parts.length - 1] : '';
 }
 

@@ -545,8 +545,12 @@ function openDayModal(date) {
       <option value="am">AM (until 1:00 PM)</option>
       <option value="pm">PM (from 2:00 PM)</option>
     </select></div>`;
-  html += `<div class="form-group"><label class="form-label">Guest Name</label>
-    <input class="form-input" id="bk-name" placeholder="Last name, First name"></div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Last Name</label>
+      <input class="form-input" id="bk-last-name" placeholder="Last name"></div>
+    <div class="form-group"><label class="form-label">First Name</label>
+      <input class="form-input" id="bk-first-name" placeholder="First name"></div>
+  </div>`;
   html += `<div class="form-group"><label class="form-label">Phone</label>
     <input class="form-input" id="bk-phone" placeholder="Contact phone number" type="tel"></div>`;
   html += `<div class="form-row">
@@ -582,15 +586,17 @@ async function submitBooking() {
   const date = $('#bk-submit').dataset.date;
   const cabanaId = parseInt($('#bk-cabana').value, 10);
   const slot = $('#bk-slot').value;
-  const name = $('#bk-name').value.trim();
+  const lastName = $('#bk-last-name').value.trim();
+  const firstName = $('#bk-first-name').value.trim();
+  const name = `${lastName}${firstName ? `, ${firstName}` : ''}`;
   const phone = $('#bk-phone').value.trim();
   const room = $('#bk-room').value.trim();
   const property = document.querySelector('input[name="bk-property"]:checked')?.value || 'CCBR';
   const instructions = $('#bk-instructions').value.trim();
   const receiptNumber = $('#bk-receipt').value.trim();
 
-  if (!name || !phone || !room || !receiptNumber) {
-    showToast('Please fill in guest name, phone, room number, and receipt number', 'error');
+  if (!lastName || !firstName || !phone || !room || !receiptNumber) {
+    showToast('Please fill in last name, first name, phone, room number, and receipt number', 'error');
     return;
   }
 
@@ -795,7 +801,10 @@ function esc(s) {
 
 function getLastName(fullName) {
   if (!fullName) return '';
-  const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
+  const normalized = String(fullName).trim();
+  const commaParts = normalized.split(',').map(p => p.trim()).filter(Boolean);
+  if (commaParts.length > 1) return commaParts[0];
+  const parts = normalized.split(/\s+/).filter(Boolean);
   return parts.length ? parts[parts.length - 1] : '';
 }
 
