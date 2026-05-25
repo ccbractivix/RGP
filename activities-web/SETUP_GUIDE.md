@@ -80,6 +80,7 @@ Open these five files in the repo and change the `api-base` or `api-url` `<meta>
 | `activities-web/admin.html` | `<meta name="api-url" content="…">` |
 | `activities-web/tv.html` | `<meta name="api-url" content="…/api/schedule/tv">` |
 | `activities-web/today.html` | `<meta name="api-url" content="…/api/schedule/today">` |
+| `activities-web/newslide.html` | `<meta name="api-url" content="…/api/schedule">` |
 
 Replace `https://activities-backend.onrender.com` with your actual URL in each file.
 
@@ -205,6 +206,12 @@ Enter one of the codes you set in `ACTIVITY_CODES` (e.g. `1234`).
 - Updates with canceled/relocated status automatically every 5 minutes.
 - Same bottom bar as tv.html (QR code + sports info).
 
+### activities-web/newslide.html — Branded Slide Layout
+
+- Uses `static/images/HICV_ACTIVIX_base.jpg` as a full-screen background.
+- Places today's schedule in the left-side layout box and the next 4 days in the lower-right box.
+- Uses the same schedule API as the guest web page and refreshes automatically every 5 minutes.
+
 ---
 
 ## Quick Reference — URLs
@@ -215,6 +222,7 @@ Enter one of the codes you set in `ACTIVITY_CODES` (e.g. `1234`).
 | Operator control (cancel/relocate) | `https://ccbractivix.github.io/RGP/activities-web/admin.html` |
 | 4-day TV display | `https://ccbractivix.github.io/RGP/activities-web/tv.html` |
 | Today-only TV screen | `https://ccbractivix.github.io/RGP/activities-web/today.html` |
+| Branded slide layout | `https://ccbractivix.github.io/RGP/activities-web/newslide.html` |
 | Admin schedule builder | `https://your-backend.onrender.com` |
 | Admin library builder | `https://your-backend.onrender.com/admin-ui/library.html` |
 
