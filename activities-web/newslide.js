@@ -28,6 +28,12 @@
     return escapeHtml(activity && activity.isAllDay ? 'All Day' : (activity && activity.time) || 'TBA');
   }
 
+  function shouldHideActivity(activity) {
+    var hiddenName = 'tennis, basketball, volleyball, pickleball and more! sports courts';
+    var activityName = ((activity && activity.name) || '').trim().toLowerCase();
+    return activityName === hiddenName;
+  }
+
   function renderToday(day) {
     var label = document.getElementById('today-label');
     var list = document.getElementById('today-list');
@@ -41,12 +47,16 @@
     var meta = formatDayMeta(day.label);
     label.textContent = day.label || '';
 
-    if (!day.activities || !day.activities.length) {
+    var visibleActivities = (day.activities || []).filter(function (activity) {
+      return !shouldHideActivity(activity);
+    });
+
+    if (!visibleActivities.length) {
       list.innerHTML = '<div class="empty-state">No activities scheduled for ' + escapeHtml(meta.dayName || 'today') + '.</div>';
       return;
     }
 
-    list.innerHTML = day.activities.map(function (activity) {
+    list.innerHTML = visibleActivities.map(function (activity) {
       var detailClass = 'activity-detail';
       var detailText = activity.venue || '';
       var nameClass = 'activity-name';
@@ -86,10 +96,14 @@
       var meta = formatDayMeta(day.label);
       var itemsHtml = '';
 
-      if (!day.activities || !day.activities.length) {
+      var visibleActivities = (day.activities || []).filter(function (activity) {
+        return !shouldHideActivity(activity);
+      });
+
+      if (!visibleActivities.length) {
         itemsHtml = '<div class="empty-state">No activities</div>';
       } else {
-        itemsHtml = day.activities.map(function (activity) {
+        itemsHtml = visibleActivities.map(function (activity) {
           var activityClass = 'day-activity';
           var noteClass = 'day-note';
           var noteText = '';
@@ -132,7 +146,7 @@
   function render(days) {
     var safeDays = Array.isArray(days) ? days : [];
     renderToday(safeDays[0]);
-    renderUpcoming(safeDays.slice(1, 5));
+    renderUpcoming(safeDays.slice(1, 6));
     updateStatus('Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
   }
 
