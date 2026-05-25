@@ -483,7 +483,9 @@ function buildBookingBadge(cabana, b) {
   }
 
   const slotSuffix = b.slot === 'full' ? '' : b.slot === 'am' ? ' AM' : ' PM';
-  return `<div class="slot-badge ${cls}" data-booking-id="${b.id}"><span class="slot-icon">${icon}</span><span class="slot-label">${cabana.name}${slotSuffix}</span></div>`;
+  const lastName = getLastName(b.renter_name);
+  const bookingLabel = lastName ? `${cabana.name} - ${lastName}${slotSuffix}` : `${cabana.name}${slotSuffix}`;
+  return `<div class="slot-badge ${cls}" data-booking-id="${b.id}"><span class="slot-icon">${icon}</span><span class="slot-label">${esc(bookingLabel)}</span></div>`;
 }
 
 // ── Day Modal ─────────────────────────────────────────────────────────────────
@@ -789,6 +791,12 @@ function esc(s) {
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
+}
+
+function getLastName(fullName) {
+  if (!fullName) return '';
+  const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : '';
 }
 
 </script>
