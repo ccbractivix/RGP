@@ -20,6 +20,11 @@
 
     * { box-sizing: border-box; }
 
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
     html, body {
       margin: 0;
       width: 100%;
@@ -65,6 +70,7 @@
       box-shadow: var(--shadow);
       backdrop-filter: blur(3px);
       -webkit-backdrop-filter: blur(3px);
+      overflow: hidden;
     }
 
     #today-box {
@@ -98,26 +104,28 @@
 
     .box-title {
       margin: 0;
-      font-size: clamp(22px, 1.9vw, 38px);
+      font-size: clamp(11px, 1.9vw, 38px);
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       color: var(--accent);
+      overflow-wrap: break-word;
     }
 
     .box-subtitle {
-      font-size: clamp(14px, 1.15vw, 20px);
+      font-size: clamp(7px, 1.15vw, 20px);
       font-weight: 600;
       color: var(--muted);
       text-align: right;
+      overflow-wrap: break-word;
     }
 
     #today-box .box-title {
-      font-size: clamp(15px, 1.33vw, 27px);
+      font-size: clamp(8px, 1.33vw, 27px);
     }
 
     #today-box .box-subtitle {
-      font-size: clamp(10px, 0.8vw, 14px);
+      font-size: clamp(5px, 0.8vw, 14px);
     }
 
     #today-list {
@@ -153,7 +161,7 @@
       border-radius: 12px;
       background: rgba(15, 94, 132, 0.1);
       color: var(--accent);
-      font-size: clamp(15px, 1.1vw, 22px);
+      font-size: clamp(8px, 1.1vw, 22px);
       font-weight: 800;
       line-height: 1.1;
       text-align: center;
@@ -161,30 +169,32 @@
     }
 
     #today-box .time-pill {
-      font-size: clamp(12px, 0.85vw, 17px);
+      font-size: clamp(6px, 0.85vw, 17px);
     }
 
     .activity-name {
-      font-size: clamp(20px, 1.5vw, 31px);
+      font-size: clamp(10px, 1.5vw, 31px);
       font-weight: 800;
       line-height: 1.1;
       color: var(--text);
+      overflow-wrap: break-word;
     }
 
     #today-box .activity-name {
-      font-size: clamp(14px, 1.05vw, 22px);
+      font-size: clamp(7px, 1.05vw, 22px);
     }
 
     .activity-detail {
       margin-left: 2px;
-      font-size: clamp(14px, 1vw, 20px);
+      font-size: clamp(7px, 1vw, 20px);
       line-height: 1.25;
       color: var(--muted);
       font-weight: 600;
+      overflow-wrap: break-word;
     }
 
     #today-box .activity-detail {
-      font-size: clamp(10px, 0.7vw, 14px);
+      font-size: clamp(5px, 0.7vw, 14px);
     }
 
     .activity-name.canceled,
@@ -218,30 +228,32 @@
     }
 
     .day-name {
-      font-size: clamp(16px, 1.15vw, 23px);
+      font-size: clamp(8px, 1.15vw, 23px);
       font-weight: 800;
       letter-spacing: 0.05em;
       text-transform: uppercase;
       color: var(--accent);
+      overflow-wrap: break-word;
     }
 
     #upcoming-box .box-title {
-      font-size: clamp(11px, 0.95vw, 19px);
+      font-size: clamp(6px, 0.95vw, 19px);
     }
 
     #upcoming-box .day-name {
-      font-size: clamp(9px, 0.62vw, 13px);
+      font-size: clamp(5px, 0.62vw, 13px);
     }
 
     .day-date {
       margin-top: 3px;
-      font-size: clamp(12px, 0.9vw, 16px);
+      font-size: clamp(6px, 0.9vw, 16px);
       font-weight: 700;
       color: var(--muted);
+      overflow-wrap: break-word;
     }
 
     #upcoming-box .day-date {
-      font-size: clamp(7px, 0.48vw, 10px);
+      font-size: clamp(4px, 0.48vw, 10px);
     }
 
     .day-list {
@@ -274,7 +286,7 @@
     }
 
     .day-time {
-      font-size: clamp(12px, 0.95vw, 17px);
+      font-size: clamp(6px, 0.95vw, 17px);
       font-weight: 800;
       color: var(--accent);
       line-height: 1.15;
@@ -282,31 +294,33 @@
     }
 
     #upcoming-box .day-time {
-      font-size: clamp(7px, 0.5vw, 10px);
+      font-size: clamp(4px, 0.5vw, 10px);
     }
 
     .day-activity {
-      font-size: clamp(13px, 1vw, 18px);
+      font-size: clamp(7px, 1vw, 18px);
       font-weight: 700;
       line-height: 1.2;
       color: var(--text);
       min-width: 0;
+      overflow-wrap: break-word;
     }
 
     #upcoming-box .day-activity {
-      font-size: clamp(7px, 0.5vw, 10px);
+      font-size: clamp(4px, 0.5vw, 10px);
     }
 
     .day-note {
       margin-top: 2px;
-      font-size: clamp(11px, 0.8vw, 14px);
+      font-size: clamp(6px, 0.8vw, 14px);
       font-weight: 600;
       line-height: 1.2;
       color: var(--muted);
+      overflow-wrap: break-word;
     }
 
     #upcoming-box .day-note {
-      font-size: clamp(6px, 0.44vw, 8px);
+      font-size: clamp(3px, 0.44vw, 8px);
     }
 
     .day-activity.canceled,
@@ -341,35 +355,35 @@
 
     #upcoming-portal-text {
       flex: 1 1 auto;
-      font-size: clamp(6px, 0.42vw, 8px);
+      font-size: clamp(3px, 0.42vw, 8px);
       line-height: 1.25;
       font-weight: 600;
       color: var(--text);
       text-align: right;
-      white-space: nowrap;
+      overflow-wrap: break-word;
     }
 
     .empty-state {
       margin: auto 0;
       text-align: center;
-      font-size: clamp(18px, 1.4vw, 28px);
+      font-size: clamp(9px, 1.4vw, 28px);
       font-weight: 700;
       color: var(--muted);
     }
 
     #today-box .empty-state {
-      font-size: clamp(13px, 0.98vw, 20px);
+      font-size: clamp(7px, 0.98vw, 20px);
     }
 
     #upcoming-box .empty-state {
-      font-size: clamp(9px, 0.7vw, 14px);
+      font-size: clamp(5px, 0.7vw, 14px);
     }
 
     #status {
       position: absolute;
       right: 1.6%;
       bottom: 1.2%;
-      font-size: clamp(11px, 0.8vw, 15px);
+      font-size: clamp(6px, 0.8vw, 15px);
       font-weight: 600;
       color: var(--text);
       letter-spacing: 0.03em;
