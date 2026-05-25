@@ -354,6 +354,12 @@ function esc(s) {
   return d.innerHTML;
 }
 
+function getLastName(fullName) {
+  if (!fullName) return '';
+  const parts = String(fullName).trim().split(/\s+/).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : '';
+}
+
 // ── Login ─────────────────────────────────────────────────────────────────────
 $('#login-btn').addEventListener('click', doLogin);
 $('#code-input').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
@@ -508,7 +514,9 @@ function buildBookingBadge(cabana, b) {
   else if (b.is_paid) { cls = 'booked-paid'; icon = '🔴'; }
   else { cls = 'booked-unpaid'; icon = '🟡'; }
   const slotSuffix = b.slot === 'full' ? '' : b.slot === 'am' ? ' AM' : ' PM';
-  return `<div class="slot-badge ${cls}"><span>${icon}</span><span>${cabana.name}${slotSuffix}</span></div>`;
+  const lastName = getLastName(b.renter_name);
+  const bookingLabel = lastName ? `${cabana.name} - ${lastName}${slotSuffix}` : `${cabana.name}${slotSuffix}`;
+  return `<div class="slot-badge ${cls}"><span>${icon}</span><span>${esc(bookingLabel)}</span></div>`;
 }
 
 // ── Day Modal (Admin can book + edit + cancel) ────────────────────────────────
