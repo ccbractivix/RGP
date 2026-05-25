@@ -75,11 +75,11 @@
     }
 
     #upcoming-box {
-      left: 36.719%;
-      top: 55.093%;
-      width: 60.521%;
-      height: 41.389%;
-      padding-bottom: 1.6%;
+      position: absolute;
+      left: 48.95%;
+      top: 73.45%;
+      width: 47.2%;
+      height: 22.8%;
     }
 
     .box-header {
@@ -123,6 +123,33 @@
       min-height: 0;
       flex: 1;
       overflow: hidden;
+    }
+
+    #today-portal {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(15, 94, 132, 0.16);
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    #today-qr {
+      width: clamp(66px, 5vw, 108px);
+      height: clamp(66px, 5vw, 108px);
+      flex: 0 0 auto;
+      padding: 4px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid rgba(15, 94, 132, 0.2);
+      object-fit: contain;
+    }
+
+    #today-portal-text {
+      font-size: clamp(9px, 0.62vw, 12px);
+      line-height: 1.25;
+      font-weight: 600;
+      color: var(--muted);
     }
 
     .today-row {
@@ -191,8 +218,8 @@
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 14px;
-      min-height: 0;
-      flex: 1;
+      width: 100%;
+      height: 100%;
     }
 
     .day-card {
@@ -333,9 +360,17 @@
         <div id="today-list">
           <div class="empty-state">Loading today&apos;s schedule…</div>
         </div>
+        <div id="today-portal">
+          <img
+            id="today-qr"
+            src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fsites.google.com%2Fview%2Fholidayinnclubcape%2Fhome"
+            alt="QR code to Resort Guest Portal website"
+          >
+          <div id="today-portal-text">See our Resort Guest Portal website for the full week&apos;s activities schedule, movie theater listings, rocket launch info, things to do in the area, and a whole lot more!</div>
+        </div>
       </section>
 
-      <section id="upcoming-box" class="schedule-box">
+      <section id="upcoming-box">
       
         <div id="upcoming-grid"></div>
       </section>
