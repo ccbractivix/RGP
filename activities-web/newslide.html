@@ -76,9 +76,9 @@
 
     #upcoming-box {
       position: absolute;
-      left: 23.95%;
+      left: 43.95%;
       top: 38.45%;
-      width: 47.2%;
+      width: 51.92%;
       height: 22.8%;
     }
 
@@ -153,9 +153,9 @@
     }
 
     .today-row {
-      display: grid;
-      grid-template-columns: minmax(98px, 22%) 1fr;
-      gap: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
       align-items: start;
       padding: 10px 0;
       border-bottom: 1px solid rgba(15, 94, 132, 0.12);
@@ -163,29 +163,34 @@
 
     .today-row:last-child { border-bottom: none; }
 
+    .today-main {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      width: 100%;
+    }
+
     .time-pill {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 46px;
-      padding: 8px 12px;
-      border-radius: 16px;
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
       background: rgba(15, 94, 132, 0.1);
       color: var(--accent);
-      font-size: clamp(18px, 1.35vw, 28px);
+      font-size: clamp(15px, 1.1vw, 22px);
       font-weight: 800;
-      line-height: 1.15;
+      line-height: 1.1;
       text-align: center;
+      white-space: nowrap;
     }
 
     #today-box .time-pill {
-      font-size: clamp(13px, 0.95vw, 20px);
+      font-size: clamp(12px, 0.85vw, 17px);
     }
 
     .activity-name {
       font-size: clamp(20px, 1.5vw, 31px);
       font-weight: 800;
-      line-height: 1.12;
+      line-height: 1.1;
       color: #12354a;
     }
 
@@ -194,7 +199,7 @@
     }
 
     .activity-detail {
-      margin-top: 4px;
+      margin-left: 2px;
       font-size: clamp(14px, 1vw, 20px);
       line-height: 1.25;
       color: var(--muted);
@@ -269,6 +274,9 @@
     }
 
     .day-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
       padding-top: 8px;
       border-top: 1px solid rgba(15, 94, 132, 0.1);
     }
@@ -278,11 +286,19 @@
       border-top: none;
     }
 
+    .day-main {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      min-width: 0;
+    }
+
     .day-time {
       font-size: clamp(12px, 0.95vw, 17px);
       font-weight: 800;
       color: var(--accent);
       line-height: 1.15;
+      white-space: nowrap;
     }
 
     #upcoming-box .day-time {
@@ -290,11 +306,11 @@
     }
 
     .day-activity {
-      margin-top: 2px;
       font-size: clamp(13px, 1vw, 18px);
       font-weight: 700;
       line-height: 1.2;
       color: #12354a;
+      min-width: 0;
     }
 
     #upcoming-box .day-activity {
