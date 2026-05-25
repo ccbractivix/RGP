@@ -138,8 +138,10 @@
 
       return [
         '<section class="day-card">',
-          '<div class="day-name">', escapeHtml(meta.dayName || day.label || ''), '</div>',
-          '<div class="day-date">', escapeHtml(meta.dateText), '</div>',
+          '<div class="day-header">',
+            '<div class="day-name">', escapeHtml(meta.dayName || day.label || ''), '</div>',
+            '<div class="day-date">', escapeHtml(meta.dateText), '</div>',
+          '</div>',
           '<div class="day-list">', itemsHtml, '</div>',
         '</section>'
       ].join('');

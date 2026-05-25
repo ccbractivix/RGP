@@ -227,6 +227,13 @@
       border: none;
     }
 
+    .day-header {
+      display: flex;
+      align-items: baseline;
+      gap: 3px;
+      flex-wrap: wrap;
+    }
+
     .day-name {
       font-size: clamp(8px, 1.15vw, 23px);
       font-weight: 800;
@@ -245,7 +252,7 @@
     }
 
     .day-date {
-      margin-top: 3px;
+      margin-top: 0;
       font-size: clamp(6px, 0.9vw, 16px);
       font-weight: 700;
       color: var(--muted);
@@ -253,7 +260,7 @@
     }
 
     #upcoming-box .day-date {
-      font-size: clamp(4px, 0.48vw, 10px);
+      font-size: clamp(2px, 0.24vw, 5px);
     }
 
     .day-list {
@@ -269,13 +276,6 @@
       display: flex;
       flex-direction: column;
       gap: 1px;
-      padding-top: 5px;
-      border-top: 1px solid rgba(15, 94, 132, 0.1);
-    }
-
-    .day-item:first-child {
-      padding-top: 0;
-      border-top: none;
     }
 
     .day-main {
@@ -294,7 +294,7 @@
     }
 
     #upcoming-box .day-time {
-      font-size: clamp(4px, 0.5vw, 10px);
+      font-size: clamp(2px, 0.3vw, 6px);
     }
 
     .day-activity {
@@ -307,7 +307,7 @@
     }
 
     #upcoming-box .day-activity {
-      font-size: clamp(4px, 0.5vw, 10px);
+      font-size: clamp(2px, 0.3vw, 6px);
     }
 
     .day-note {
@@ -334,9 +334,9 @@
 
     #upcoming-footer {
       display: flex;
-      align-items: flex-end;
-      justify-content: flex-end;
-      gap: 10px;
+      align-items: flex-start;
+      justify-content: flex-start;
+      gap: 6px;
       margin-top: auto;
       padding-top: 1%;
       border-top: 1px solid rgba(230, 116, 74, 0.25);
@@ -354,12 +354,12 @@
     }
 
     #upcoming-portal-text {
-      flex: 1 1 auto;
+      flex: 0 1 auto;
       font-size: clamp(3px, 0.42vw, 8px);
       line-height: 1.25;
       font-weight: 600;
       color: var(--text);
-      text-align: right;
+      text-align: left;
       overflow-wrap: break-word;
     }
 
@@ -411,7 +411,7 @@
             src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fsites.google.com%2Fview%2Fholidayinnclubcape%2Fhome"
             alt="QR code to Resort Guest Portal website"
           >
-          <div id="upcoming-portal-text">Scan to visit our website for activities schedule, movie theater listings, rocket launch info, things to do in the area, and a whole lot more!</div>
+          <div id="upcoming-portal-text">Scan to visit our website for activities schedule,<br>movie theater listings, rocket launch info,<br>things to do in the area, and a whole lot more!</div>
         </div>
       </section>
 
