@@ -285,6 +285,10 @@
           <input class="form-input" type="date" id="rpt-end"></div>
         <div class="form-group" style="align-self:flex-end;">
           <button class="btn btn-primary btn-sm" id="rpt-load">Generate</button></div>
+        <div class="form-group" style="align-self:flex-end;">
+          <button class="btn btn-success btn-sm" id="rpt-export-csv">Export CSV</button></div>
+        <div class="form-group" style="align-self:flex-end;">
+          <button class="btn btn-ghost btn-sm" id="rpt-export-pdf">Export PDF</button></div>
       </div>
       <div id="report-content"></div>
     </div>
@@ -514,7 +518,7 @@ function buildBookingBadge(cabana, b) {
   let cls, icon;
   if (b.status === 'tentative') { cls = 'tentative'; icon = '🔵'; }
   else if (b.status === 'needs_review') { cls = 'needs-review'; icon = '⚠️'; }
-  else if (b.is_paid) { cls = 'booked-paid'; icon = '🔴'; }
+  else if ((b.payment_status || '').toLowerCase() === 'paid_in_full' || b.is_paid) { cls = 'booked-paid'; icon = '🔴'; }
   else { cls = 'booked-unpaid'; icon = '🟡'; }
   const slotSuffix = b.slot === 'full' ? '' : b.slot === 'am' ? ' AM' : ' PM';
   const lastName = getLastName(b.renter_name);
@@ -539,14 +543,20 @@ function openDayModal(date) {
     html += `<div style="font-weight:700;margin-bottom:8px;">${cab?.name || 'Cabana'} — ${getSlotLabel(b.slot)}</div>`;
     html += `<div class="info-row"><span class="info-label">Guest</span><span class="info-value">${esc(b.renter_name)}</span></div>`;
     html += `<div class="info-row"><span class="info-label">Phone</span><span class="info-value">${esc(b.phone)}</span></div>`;
-    html += `<div class="info-row"><span class="info-label">Room</span><span class="info-value">${esc(b.room_number)} (${b.property})</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Villa/Room</span><span class="info-value">${esc(b.room_number)} (${b.property})</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Reservation #</span><span class="info-value">${esc(b.reservation_number || '—')}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Check-In Date</span><span class="info-value">${b.check_in_date ? fmtDate(b.check_in_date) : '—'}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Date Reserved</span><span class="info-value">${b.date_reserved ? fmtDate(b.date_reserved) : '—'}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Price Paid</span><span class="info-value">${b.price_paid != null ? `$${esc(String(b.price_paid))}` : '—'}</span></div>`;
     html += `<div class="info-row"><span class="info-label">Status</span><span class="info-value">
-      <span class="status-pill ${b.is_paid ? 'paid' : 'unpaid'}">${b.is_paid ? 'Paid' : 'Unpaid'}</span>
+      <span class="status-pill ${((b.payment_status || '') === 'paid_in_full' || b.is_paid) ? 'paid' : 'unpaid'}">${((b.payment_status || '') === 'paid_in_full' || b.is_paid) ? 'Paid In Full' : 'Pending Payment'}</span>
       <span class="status-pill ${b.status}">${b.status}</span></span></div>`;
+    html += `<div class="info-row"><span class="info-label">Payment Date</span><span class="info-value">${b.payment_date ? fmtDate(b.payment_date) : '—'}</span></div>`;
     if (b.special_instructions) {
       html += `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${esc(b.special_instructions)}</span></div>`;
     }
-    html += `<div class="info-row"><span class="info-label">Receipt #</span><span class="info-value">${b.infogenesis_receipt_number ? esc(b.infogenesis_receipt_number) : '<span style="color:var(--yellow);">Missing</span>'}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Infogenesis Check #</span><span class="info-value">${b.infogenesis_check_number ? esc(b.infogenesis_check_number) : '<span style="color:var(--yellow);">Missing</span>'}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Booking Agent</span><span class="info-value">${esc(b.booking_agent_name || '—')}</span></div>`;
     if (b.no_payment_review) {
       html += `<div class="info-row"><span class="info-label">⚠️ Alert</span><span class="info-value" style="color:var(--orange);">Booked under No-Payment hold — verify payment status</span></div>`;
     }
@@ -585,27 +595,57 @@ function openDayModal(date) {
       <option value="am">AM (until 1:00 PM)</option>
       <option value="pm">PM (from 2:00 PM)</option>
     </select></div>`;
-  html += `<div class="form-group"><label class="form-label">Guest Name</label>
-    <input class="form-input" id="bk-name" placeholder="Last name, First name"></div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Last Name</label>
+      <input class="form-input" id="bk-last-name" placeholder="Last name"></div>
+    <div class="form-group"><label class="form-label">First Name</label>
+      <input class="form-input" id="bk-first-name" placeholder="First name"></div>
+  </div>`;
   html += `<div class="form-group"><label class="form-label">Phone</label>
     <input class="form-input" id="bk-phone" placeholder="Contact phone number" type="tel"></div>`;
   html += `<div class="form-row">
-    <div class="form-group"><label class="form-label">Room #</label>
-      <input class="form-input" id="bk-room" placeholder="Room number"></div>
+    <div class="form-group"><label class="form-label">Villa/Room #</label>
+      <input class="form-input" id="bk-room" placeholder="Villa/Room number"></div>
     <div class="form-group"><label class="form-label">Property</label>
       <div style="display:flex;gap:16px;padding-top:6px;">
-        <div class="form-check"><input type="radio" name="bk-prop" value="CCBR" id="bk-ccbr" checked><label for="bk-ccbr">CCBR</label></div>
+        <div class="form-check"><input type="radio" name="bk-prop" value="HICV" id="bk-hicv" checked><label for="bk-hicv">HICV</label></div>
         <div class="form-check"><input type="radio" name="bk-prop" value="HIE" id="bk-hie"><label for="bk-hie">HIE</label></div>
       </div></div></div>`;
+  html += `<div class="form-group"><label class="form-label">Reservation Number</label>
+    <input class="form-input" id="bk-reservation-number" placeholder="Guest reservation number"></div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Check-In Date</label>
+      <input class="form-input" id="bk-check-in-date" type="date"></div>
+    <div class="form-group"><label class="form-label">Date Reserved</label>
+      <input class="form-input" id="bk-date-reserved" type="date"></div>
+  </div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Price Paid</label>
+      <input class="form-input" id="bk-price-paid" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    <div class="form-group"><label class="form-label">Payment Status</label>
+      <select class="form-select" id="bk-payment-status">
+        <option value="pending_payment">Pending Payment</option>
+        <option value="paid_in_full">Paid In Full</option>
+      </select></div>
+  </div>`;
+  html += `<div class="form-group"><label class="form-label">Payment Date</label>
+    <input class="form-input" id="bk-payment-date" type="date"></div>`;
   html += `<div class="form-group"><label class="form-label">Special Instructions</label>
     <textarea class="form-textarea" id="bk-instructions" placeholder="Optional notes..."></textarea></div>`;
-  html += `<div class="form-group"><label class="form-label">Infogenesis Receipt #</label>
-    <input class="form-input" id="bk-receipt" placeholder="Receipt number" required></div>`;
+  html += `<div class="form-group"><label class="form-label">Infogenesis Check Number</label>
+    <input class="form-input" id="bk-check-number" placeholder="Check number" required></div>`;
+  html += `<div class="form-group"><label class="form-label">Booking Agent Name</label>
+    <input class="form-input" id="bk-agent-name" placeholder="Booking agent"></div>`;
   html += `<button class="btn btn-primary btn-block" id="bk-submit" data-date="${date}">Book Cabana</button>`;
 
   sheet.innerHTML = html;
   $('#booking-popup').classList.add('open');
   $('#bk-submit').addEventListener('click', submitBooking);
+  $('#bk-payment-status').addEventListener('change', () => {
+    const paymentDate = $('#bk-payment-date');
+    paymentDate.required = $('#bk-payment-status').value === 'paid_in_full';
+    if (!paymentDate.required) paymentDate.value = '';
+  });
 }
 
 function closePopup() { $('#booking-popup').classList.remove('open'); }
@@ -613,21 +653,39 @@ $('#booking-popup').addEventListener('click', e => { if (e.target === $('#bookin
 
 async function submitBooking() {
   const date = $('#bk-submit').dataset.date;
-  const receiptNumber = $('#bk-receipt').value.trim();
+  const lastName = $('#bk-last-name').value.trim();
+  const firstName = $('#bk-first-name').value.trim();
+  const checkNumber = $('#bk-check-number').value.trim();
+  const phoneDigits = $('#bk-phone').value.trim().replace(/\D/g, '');
   const body = {
     cabana_id: parseInt($('#bk-cabana').value, 10),
     date,
     slot: $('#bk-slot').value,
-    renter_name: $('#bk-name').value.trim(),
+    renter_name: `${lastName}${firstName ? `, ${firstName}` : ''}`,
+    last_name: lastName,
+    first_name: firstName,
     phone: $('#bk-phone').value.trim(),
     room_number: $('#bk-room').value.trim(),
-    property: document.querySelector('input[name="bk-prop"]:checked')?.value || 'CCBR',
+    reservation_number: $('#bk-reservation-number').value.trim(),
+    check_in_date: $('#bk-check-in-date').value,
+    date_reserved: $('#bk-date-reserved').value,
+    price_paid: $('#bk-price-paid').value.trim(),
+    property: document.querySelector('input[name="bk-prop"]:checked')?.value || 'HICV',
+    payment_status: $('#bk-payment-status').value,
+    payment_date: $('#bk-payment-date').value || null,
     special_instructions: $('#bk-instructions').value.trim() || null,
-    infogenesis_receipt_number: receiptNumber,
+    infogenesis_check_number: checkNumber,
+    booking_agent_name: $('#bk-agent-name').value.trim(),
   };
 
-  if (!body.renter_name || !body.phone || !body.room_number || !receiptNumber) {
-    showToast('Fill in guest name, phone, room, and receipt number', 'error'); return;
+  if (!body.last_name || !body.first_name || !body.phone || !body.room_number || !body.reservation_number || !body.check_in_date || !body.date_reserved || !body.price_paid || !body.payment_status || !body.infogenesis_check_number || !body.booking_agent_name) {
+    showToast('Please complete all required fields', 'error'); return;
+  }
+  if (phoneDigits.length !== 10) {
+    showToast('Phone number must have 10 digits', 'error'); return;
+  }
+  if (body.payment_status === 'paid_in_full' && !body.payment_date) {
+    showToast('Payment date is required when paid in full', 'error'); return;
   }
 
   try {
@@ -653,53 +711,102 @@ window.openEditModal = async function(bookingId) {
   const sheet = $('#booking-sheet');
   let html = `<button class="popup-close" onclick="closePopup()">✕</button>`;
   html += `<div class="popup-title">Edit Booking</div>`;
-  html += `<div class="form-group"><label class="form-label">Guest Name</label>
-    <input class="form-input" id="ed-name" value="${esc(booking.renter_name)}"></div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Last Name</label>
+      <input class="form-input" id="ed-last-name" value="${esc(booking.last_name || getLastName(booking.renter_name) || '')}"></div>
+    <div class="form-group"><label class="form-label">First Name</label>
+      <input class="form-input" id="ed-first-name" value="${esc(booking.first_name || '')}"></div>
+  </div>`;
   html += `<div class="form-group"><label class="form-label">Phone</label>
     <input class="form-input" id="ed-phone" value="${esc(booking.phone)}" type="tel"></div>`;
   html += `<div class="form-row">
-    <div class="form-group"><label class="form-label">Room #</label>
+    <div class="form-group"><label class="form-label">Villa/Room #</label>
       <input class="form-input" id="ed-room" value="${esc(booking.room_number)}"></div>
     <div class="form-group"><label class="form-label">Property</label>
       <select class="form-select" id="ed-property">
-        <option value="CCBR" ${booking.property==='CCBR'?'selected':''}>CCBR</option>
+        <option value="HICV" ${booking.property==='HICV'?'selected':''}>HICV</option>
         <option value="HIE" ${booking.property==='HIE'?'selected':''}>HIE</option>
       </select></div></div>`;
+  html += `<div class="form-group"><label class="form-label">Reservation Number</label>
+    <input class="form-input" id="ed-reservation-number" value="${esc(booking.reservation_number || '')}"></div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Check-In Date</label>
+      <input class="form-input" id="ed-check-in-date" type="date" value="${booking.check_in_date || ''}"></div>
+    <div class="form-group"><label class="form-label">Date Reserved</label>
+      <input class="form-input" id="ed-date-reserved" type="date" value="${booking.date_reserved || ''}"></div>
+  </div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Price Paid</label>
+      <input class="form-input" id="ed-price-paid" type="number" min="0" step="0.01" value="${booking.price_paid ?? ''}"></div>
+    <div class="form-group"><label class="form-label">Payment Status</label>
+      <select class="form-select" id="ed-payment-status">
+        <option value="pending_payment" ${booking.payment_status==='pending_payment'?'selected':''}>Pending Payment</option>
+        <option value="paid_in_full" ${(booking.payment_status==='paid_in_full' || booking.is_paid)?'selected':''}>Paid In Full</option>
+      </select></div>
+  </div>`;
+  html += `<div class="form-group"><label class="form-label">Payment Date</label>
+    <input class="form-input" id="ed-payment-date" type="date" value="${booking.payment_date || ''}"></div>`;
   html += `<div class="form-group"><label class="form-label">Slot</label>
     <select class="form-select" id="ed-slot">
       <option value="full" ${booking.slot==='full'?'selected':''}>Full Day</option>
       <option value="am" ${booking.slot==='am'?'selected':''}>AM (until 1:00 PM)</option>
       <option value="pm" ${booking.slot==='pm'?'selected':''}>PM (from 2:00 PM)</option>
     </select></div>`;
-  html += `<div class="form-check"><input type="checkbox" id="ed-paid" ${booking.is_paid?'checked':''}>
-    <label for="ed-paid">Paid</label></div>`;
   html += `<div class="form-group"><label class="form-label">Special Instructions</label>
     <textarea class="form-textarea" id="ed-instructions">${esc(booking.special_instructions||'')}</textarea></div>`;
-  html += `<div class="form-group"><label class="form-label">Infogenesis Receipt #</label>
-    <input class="form-input" id="ed-receipt" value="${esc(booking.infogenesis_receipt_number||'')}" placeholder="Receipt number" required></div>`;
+  html += `<div class="form-group"><label class="form-label">Infogenesis Check Number</label>
+    <input class="form-input" id="ed-check-number" value="${esc(booking.infogenesis_check_number || booking.infogenesis_receipt_number || '')}" placeholder="Check number" required></div>`;
+  html += `<div class="form-group"><label class="form-label">Booking Agent Name</label>
+    <input class="form-input" id="ed-agent-name" value="${esc(booking.booking_agent_name || '')}" placeholder="Booking agent"></div>`;
   html += `<input type="hidden" id="ed-version" value="${booking.version}">`;
   html += `<button class="btn btn-primary btn-block" id="ed-save" data-id="${booking.id}">Save Changes</button>`;
 
   sheet.innerHTML = html;
+  $('#ed-payment-status').addEventListener('change', () => {
+    const paymentDate = $('#ed-payment-date');
+    paymentDate.required = $('#ed-payment-status').value === 'paid_in_full';
+    if (!paymentDate.required) paymentDate.value = '';
+  });
 
   $('#ed-save').addEventListener('click', async () => {
-    const receiptNumber = $('#ed-receipt').value.trim();
-    if (!receiptNumber) {
-      showToast('Receipt number is required', 'error');
+    const checkNumber = $('#ed-check-number').value.trim();
+    const phoneDigits = $('#ed-phone').value.trim().replace(/\D/g, '');
+    const paymentStatus = $('#ed-payment-status').value;
+    const paymentDate = $('#ed-payment-date').value;
+    if (!checkNumber) {
+      showToast('Infogenesis check number is required', 'error');
       return;
     }
+    if (phoneDigits.length !== 10) {
+      showToast('Phone number must have 10 digits', 'error');
+      return;
+    }
+    if (paymentStatus === 'paid_in_full' && !paymentDate) {
+      showToast('Payment date is required when paid in full', 'error');
+      return;
+    }
+    const lastName = $('#ed-last-name').value.trim();
+    const firstName = $('#ed-first-name').value.trim();
     try {
       await api(`/admin/booking/${booking.id}`, {
         method: 'PUT',
         body: {
-          renter_name: $('#ed-name').value.trim(),
+          renter_name: `${lastName}${firstName ? `, ${firstName}` : ''}`,
+          last_name: lastName,
+          first_name: firstName,
           phone: $('#ed-phone').value.trim(),
           room_number: $('#ed-room').value.trim(),
+          reservation_number: $('#ed-reservation-number').value.trim(),
+          check_in_date: $('#ed-check-in-date').value,
+          date_reserved: $('#ed-date-reserved').value,
+          price_paid: $('#ed-price-paid').value.trim(),
           property: $('#ed-property').value,
           slot: $('#ed-slot').value,
-          is_paid: $('#ed-paid').checked,
+          payment_status: paymentStatus,
+          payment_date: paymentDate || null,
           special_instructions: $('#ed-instructions').value.trim() || null,
-          infogenesis_receipt_number: receiptNumber,
+          infogenesis_check_number: checkNumber,
+          booking_agent_name: $('#ed-agent-name').value.trim(),
           version: parseInt($('#ed-version').value, 10),
         },
       });
@@ -939,6 +1046,110 @@ $('#cxl-load').addEventListener('click', async () => {
 });
 
 // ── Reports ───────────────────────────────────────────────────────────────────
+let latestReport = null;
+let latestReportRange = null;
+
+function reportRowsToCsv(rows) {
+  const headers = [
+    'Booking Date', 'Cabana', 'Slot', 'Status', 'Last Name', 'First Name', 'Guest Display',
+    'Phone', 'Villa/Room Number', 'Property', 'Reservation Number', 'Check-In Date', 'Date Reserved',
+    'Price Paid', 'Payment Status', 'Payment Date', 'Infogenesis Check Number', 'Booking Agent Name', 'Notes',
+  ];
+  const escCsv = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [headers.map(escCsv).join(',')];
+  for (const b of rows) {
+    lines.push([
+      b.booking_date || '',
+      b.cabana_name || '',
+      b.slot || '',
+      b.status || '',
+      b.last_name || '',
+      b.first_name || '',
+      b.renter_name || '',
+      b.phone || '',
+      b.room_number || '',
+      b.property || '',
+      b.reservation_number || '',
+      b.check_in_date || '',
+      b.date_reserved || '',
+      b.price_paid ?? '',
+      b.payment_status || '',
+      b.payment_date || '',
+      b.infogenesis_check_number || '',
+      b.booking_agent_name || '',
+      b.special_instructions || '',
+    ].map(escCsv).join(','));
+  }
+  return lines.join('\n');
+}
+
+function downloadCsv(content, filename) {
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportReportPdf(rows, range) {
+  const w = window.open('', '_blank');
+  if (!w) {
+    showToast('Popup blocked: allow popups to export PDF', 'error');
+    return;
+  }
+  const tableRows = rows.map(b => `
+    <tr>
+      <td>${b.booking_date || ''}</td>
+      <td>${esc(b.cabana_name || '')}</td>
+      <td>${esc(b.slot || '')}</td>
+      <td>${esc(b.status || '')}</td>
+      <td>${esc(b.last_name || '')}</td>
+      <td>${esc(b.first_name || '')}</td>
+      <td>${esc(b.phone || '')}</td>
+      <td>${esc(b.room_number || '')}</td>
+      <td>${esc(b.property || '')}</td>
+      <td>${esc(b.reservation_number || '')}</td>
+      <td>${b.check_in_date || ''}</td>
+      <td>${b.date_reserved || ''}</td>
+      <td>${b.price_paid ?? ''}</td>
+      <td>${esc(b.payment_status || '')}</td>
+      <td>${b.payment_date || ''}</td>
+      <td>${esc(b.infogenesis_check_number || '')}</td>
+      <td>${esc(b.booking_agent_name || '')}</td>
+    </tr>
+  `).join('');
+  w.document.write(`
+    <html><head><title>Cabana Activity Report</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:12px}
+      h1{font-size:18px;margin:0 0 8px}
+      p{margin:0 0 12px;color:#444}
+      table{width:100%;border-collapse:collapse;font-size:11px}
+      th,td{border:1px solid #ddd;padding:4px;vertical-align:top;text-align:left}
+      th{background:#f3f4f6}
+    </style></head><body>
+      <h1>Cabana Activity Report</h1>
+      <p>${esc(range.start)} to ${esc(range.end)} • ${rows.length} records</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Booking Date</th><th>Cabana</th><th>Slot</th><th>Status</th><th>Last</th><th>First</th><th>Phone</th><th>Villa/Room</th><th>Property</th>
+            <th>Reservation #</th><th>Check-In</th><th>Date Reserved</th><th>Price</th><th>Payment Status</th><th>Payment Date</th><th>Check #</th><th>Agent</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </body></html>
+  `);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+
 $('#rpt-load').addEventListener('click', async () => {
   const start = $('#rpt-start').value;
   const end = $('#rpt-end').value;
@@ -946,6 +1157,8 @@ $('#rpt-load').addEventListener('click', async () => {
   try {
     const data = await api(`/admin/report?start=${start}&end=${end}`);
     const r = data.report;
+    latestReport = r;
+    latestReportRange = { start, end };
     const content = $('#report-content');
 
     // ── Summary stats ──
@@ -1012,16 +1225,16 @@ $('#rpt-load').addEventListener('click', async () => {
       ${props.length === 0 ? '<div style="font-size:12px;color:var(--text-muted);">No data</div>' : ''}
     </div>`;
 
-    // Receipt coverage
+    // Check number coverage
     const withReceipt = r.receipt_coverage.with_receipt;
     const pctReceipt = r.receipt_coverage.total_bookings > 0
       ? (withReceipt / r.receipt_coverage.total_bookings * 100).toFixed(0)
       : '0';
     html += `<div class="report-card">
-      <div class="report-label" style="margin-bottom:10px;">Infogenesis Receipt Compliance</div>
-      <div style="font-size:13px;margin-bottom:4px;">With receipt: <strong>${withReceipt}</strong></div>
-      <div style="font-size:13px;margin-bottom:4px;">Missing receipt: <strong style="color:var(--yellow)">${r.receipt_coverage.missing_receipt}</strong></div>
-      <div style="font-size:12px;color:var(--text-muted);">${pctReceipt}% recorded across ${r.receipt_coverage.total_bookings} booking${r.receipt_coverage.total_bookings === 1 ? '' : 's'}. New and updated bookings require a receipt #.</div>
+      <div class="report-label" style="margin-bottom:10px;">Infogenesis Check Compliance</div>
+      <div style="font-size:13px;margin-bottom:4px;">With check #: <strong>${withReceipt}</strong></div>
+      <div style="font-size:13px;margin-bottom:4px;">Missing check #: <strong style="color:var(--yellow)">${r.receipt_coverage.missing_receipt}</strong></div>
+      <div style="font-size:12px;color:var(--text-muted);">${pctReceipt}% recorded across ${r.receipt_coverage.total_bookings} booking${r.receipt_coverage.total_bookings === 1 ? '' : 's'}.</div>
     </div>`;
 
     // No-payment flags + peak day
@@ -1065,17 +1278,27 @@ $('#rpt-load').addEventListener('click', async () => {
       html += `<div class="report-card" style="margin-top:12px;">
         <div class="report-label" style="margin-bottom:10px;">Booking Detail (${r.booking_list.length} records)</div>
         <div style="overflow-x:auto;">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:640px;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:1300px;">
           <thead>
             <tr style="background:var(--bg);">
-              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Date</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Booking Date</th>
               <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Cabana</th>
               <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Slot</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Status</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Last</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">First</th>
               <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Guest</th>
-              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Room</th>
-              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Prop</th>
-              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Receipt #</th>
-              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Paid</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Phone</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Villa/Room</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Property</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Reservation #</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Check-In</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Date Reserved</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Price</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Payment Status</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Payment Date</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Check #</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Agent</th>
             </tr>
           </thead>
           <tbody>
@@ -1084,11 +1307,21 @@ $('#rpt-load').addEventListener('click', async () => {
                 <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);white-space:nowrap;">${fmtDate(b.booking_date)}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.cabana_name)}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${b.slot === 'full' ? 'Full' : b.slot.toUpperCase()}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.status || '')}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.last_name || '')}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.first_name || '')}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.renter_name)}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.phone || '')}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.room_number)}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.property)}</td>
-                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);${!b.infogenesis_receipt_number ? 'color:var(--yellow)' : ''}">${b.infogenesis_receipt_number ? esc(b.infogenesis_receipt_number) : '—'}</td>
-                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);color:${b.is_paid ? 'var(--green)' : 'var(--yellow)'};">${b.is_paid ? '✓' : '✗'}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.reservation_number || '')}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${b.check_in_date ? fmtDate(b.check_in_date) : '—'}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${b.date_reserved ? fmtDate(b.date_reserved) : '—'}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${b.price_paid != null ? `$${esc(String(b.price_paid))}` : '—'}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${(b.payment_status || '') === 'paid_in_full' ? 'Paid In Full' : 'Pending Payment'}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${b.payment_date ? fmtDate(b.payment_date) : '—'}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);${!b.infogenesis_check_number ? 'color:var(--yellow)' : ''}">${b.infogenesis_check_number ? esc(b.infogenesis_check_number) : '—'}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.booking_agent_name || '')}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -1103,6 +1336,23 @@ $('#rpt-load').addEventListener('click', async () => {
 
     content.innerHTML = html;
   } catch (e) { showToast(e.message, 'error'); }
+});
+
+$('#rpt-export-csv').addEventListener('click', () => {
+  if (!latestReport || !latestReport.booking_list) {
+    showToast('Generate a report first', 'error');
+    return;
+  }
+  const csv = reportRowsToCsv(latestReport.booking_list);
+  downloadCsv(csv, `cabana-activity-${latestReportRange.start}-to-${latestReportRange.end}.csv`);
+});
+
+$('#rpt-export-pdf').addEventListener('click', () => {
+  if (!latestReport || !latestReport.booking_list) {
+    showToast('Generate a report first', 'error');
+    return;
+  }
+  exportReportPdf(latestReport.booking_list, latestReportRange);
 });
 
 // ── Locks Management ──────────────────────────────────────────────────────────
