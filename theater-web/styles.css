@@ -233,6 +233,48 @@ body {
   margin: 0 auto 12px auto;
 }
 
+.library-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  max-width: 520px;
+  margin: 20px auto 0;
+  padding: 14px 18px;
+  border: 1px solid #e0ddd5;
+  border-radius: 16px;
+  background: #fffdf8;
+  color: #2c2c2c;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.library-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+  border-color: #c8a45a;
+}
+
+.library-link-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #2c2c2c;
+  color: #ffd700;
+  font-size: 24px;
+}
+
+.library-link-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px;
+  line-height: 1.35;
+  text-align: left;
+}
+
 /* ===== BACK ARROW (floating top-left) ===== */
 .back-arrow {
   position: fixed;
@@ -335,6 +377,15 @@ body {
   }
 
   .card-info .show-title {
+    font-size: 14px;
+  }
+
+  .library-link {
+    align-items: flex-start;
+    padding: 12px 14px;
+  }
+
+  .library-link-text {
     font-size: 14px;
   }
 }
