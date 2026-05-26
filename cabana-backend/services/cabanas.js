@@ -4,6 +4,47 @@ const db = require('../db/db');
 
 // ── Schema ────────────────────────────────────────────────────────────────────
 
+function getAdminCodes() {
+  return (process.env.CABANA_ADMIN_CODES || '').split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function inferActorRole(code, fallback = 'operator') {
+  const cleanedCode = typeof code === 'string' ? code.trim() : '';
+  if (!cleanedCode) return fallback;
+  return getAdminCodes().includes(cleanedCode) ? 'admin' : fallback;
+}
+
+async function logActivity({
+  category,
+  activityType,
+  actorCode,
+  actorRole,
+  cabanaId = null,
+  bookingId = null,
+  blockId = null,
+  bookingDate = null,
+  blockType = null,
+  details = {},
+}) {
+  await db.query(
+    `INSERT INTO cabana_activity_log
+       (category, activity_type, actor_code, actor_role, cabana_id, booking_id, block_id, booking_date, block_type, details)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+    [
+      category,
+      activityType,
+      actorCode || null,
+      actorRole || inferActorRole(actorCode),
+      cabanaId,
+      bookingId,
+      blockId,
+      bookingDate,
+      blockType,
+      JSON.stringify(details || {}),
+    ]
+  );
+}
+
 async function ensureSchema() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS cabanas (
@@ -78,6 +119,23 @@ async function ensureSchema() {
       slot        TEXT NOT NULL DEFAULT 'full' CHECK (slot IN ('full','am','pm')),
       locked_by   TEXT NOT NULL,
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS cabana_activity_log (
+      id            SERIAL PRIMARY KEY,
+      category      TEXT NOT NULL CHECK (category IN ('booking','cancellation','block_hold')),
+      activity_type TEXT NOT NULL,
+      actor_code    TEXT,
+      actor_role    TEXT NOT NULL CHECK (actor_role IN ('admin','operator')),
+      cabana_id     INTEGER REFERENCES cabanas(id) ON DELETE SET NULL,
+      booking_id    INTEGER REFERENCES cabana_bookings(id) ON DELETE SET NULL,
+      block_id      INTEGER,
+      booking_date  DATE,
+      block_type    TEXT,
+      details       JSONB NOT NULL DEFAULT '{}'::jsonb,
+      activity_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
 
@@ -426,7 +484,7 @@ async function createBooking({
   cabanaId, bookingDate, slot, renterName, phone, roomNumber,
   property, specialInstructions, infogenesisReceiptNumber, createdByCode, isAdmin,
   lastName, firstName, reservationNumber, checkInDate, dateReserved, pricePaid,
-  paymentStatus, paymentDate, bookingAgentName, infogenesisCheckNumber,
+  paymentStatus, paymentDate, bookingAgentName, infogenesisCheckNumber, actorRole,
 }) {
   slot = slot || 'full';
   property = property || 'HICV';
@@ -507,6 +565,25 @@ async function createBooking({
      WHERE cabana_id = $1 AND lock_date = $2 AND slot = $3`,
     [cabanaId, bookingDate, slot]
   );
+
+  await logActivity({
+    category: 'booking',
+    activityType: 'booking_created',
+    actorCode: createdByCode,
+    actorRole: actorRole || (isAdmin ? 'admin' : inferActorRole(createdByCode)),
+    cabanaId: cabanaId,
+    bookingId: rows[0].id,
+    bookingDate: bookingDate,
+    details: {
+      cabana_id: cabanaId,
+      booking_date: bookingDate,
+      slot,
+      status,
+      renter_name: rows[0].renter_name,
+      last_name: rows[0].last_name,
+      first_name: rows[0].first_name,
+    },
+  });
 
   return rows[0];
 }
@@ -670,7 +747,7 @@ async function updateBooking(id, updates) {
   return rows[0];
 }
 
-async function cancelBooking(id, { cancellationReason, refundType }) {
+async function cancelBooking(id, { cancellationReason, refundType, actorCode, actorRole }) {
   const booking = await getBooking(id);
   if (!booking) throw new Error('Booking not found');
   if (booking.status === 'cancelled') throw new Error('Booking is already cancelled');
@@ -683,6 +760,25 @@ async function cancelBooking(id, { cancellationReason, refundType }) {
      RETURNING *`,
     [id, cancellationReason || null, refundType || null]
   );
+
+  await logActivity({
+    category: 'cancellation',
+    activityType: 'booking_cancelled',
+    actorCode,
+    actorRole: actorRole || inferActorRole(actorCode),
+    cabanaId: rows[0].cabana_id,
+    bookingId: rows[0].id,
+    bookingDate: rows[0].booking_date,
+    details: {
+      slot: rows[0].slot,
+      refund_type: rows[0].refund_type,
+      cancellation_reason: rows[0].cancellation_reason,
+      renter_name: rows[0].renter_name,
+      last_name: rows[0].last_name,
+      first_name: rows[0].first_name,
+    },
+  });
+
   return rows[0];
 }
 
@@ -716,10 +812,12 @@ async function approveBooking(id) {
   return rows[0];
 }
 
-async function rejectBooking(id, reason) {
+async function rejectBooking(id, reason, actor = {}) {
   return cancelBooking(id, {
     cancellationReason: reason || 'Rejected by admin',
     refundType: null,
+    actorCode: actor.actorCode,
+    actorRole: actor.actorRole || 'admin',
   });
 }
 
@@ -727,7 +825,7 @@ async function rejectBooking(id, reason) {
 
 async function createBlock({
   cabanaId, blockType, startDate, endDate, isIndeterminate,
-  guestName, guestPhone, notes, createdByCode,
+  guestName, guestPhone, notes, createdByCode, actorRole,
 }) {
   const { rows } = await db.query(
     `INSERT INTO cabana_blocks
@@ -741,6 +839,26 @@ async function createBlock({
       guestName || null, guestPhone || null, notes || null, createdByCode,
     ]
   );
+
+  await logActivity({
+    category: 'block_hold',
+    activityType: 'block_created',
+    actorCode: createdByCode,
+    actorRole: actorRole || inferActorRole(createdByCode),
+    cabanaId: rows[0].cabana_id,
+    blockId: rows[0].id,
+    bookingDate: rows[0].start_date,
+    blockType: rows[0].block_type,
+    details: {
+      start_date: rows[0].start_date,
+      end_date: rows[0].end_date,
+      is_indeterminate: rows[0].is_indeterminate,
+      guest_name: rows[0].guest_name,
+      guest_phone: rows[0].guest_phone,
+      notes: rows[0].notes,
+    },
+  });
+
   return rows[0];
 }
 
@@ -797,11 +915,64 @@ async function getBlocks(cabanaId) {
   return rows;
 }
 
-async function deleteBlock(id) {
-  await db.query('DELETE FROM cabana_blocks WHERE id = $1', [id]);
+async function deleteBlock(id, { actorCode, actorRole } = {}) {
+  const existingRes = await db.query('SELECT * FROM cabana_blocks WHERE id = $1', [id]);
+  const existing = existingRes.rows[0];
+
+  const deleteRes = await db.query('DELETE FROM cabana_blocks WHERE id = $1', [id]);
+
+  if (existing && deleteRes.rowCount > 0) {
+    await logActivity({
+      category: 'block_hold',
+      activityType: 'block_cleared',
+      actorCode,
+      actorRole: actorRole || inferActorRole(actorCode),
+      cabanaId: existing.cabana_id,
+      blockId: existing.id,
+      bookingDate: existing.start_date,
+      blockType: existing.block_type,
+      details: {
+        start_date: existing.start_date,
+        end_date: existing.end_date,
+        is_indeterminate: existing.is_indeterminate,
+        guest_name: existing.guest_name,
+        guest_phone: existing.guest_phone,
+        notes: existing.notes,
+      },
+    });
+  }
 }
 
 // ── Reports ───────────────────────────────────────────────────────────────────
+
+async function getDailyActivityReport(date, filter = 'all') {
+  const validFilters = {
+    all: null,
+    bookings: 'booking',
+    cancellations: 'cancellation',
+    blocks_holds: 'block_hold',
+  };
+
+  if (!Object.prototype.hasOwnProperty.call(validFilters, filter)) {
+    throw new Error('Invalid filter');
+  }
+
+  const category = validFilters[filter];
+
+  const { rows } = await db.query(
+    `SELECT al.id, al.category, al.activity_type, al.actor_code, al.actor_role, al.cabana_id,
+            al.booking_id, al.block_id, al.booking_date, al.block_type, al.details, al.activity_at,
+            c.name AS cabana_name
+     FROM cabana_activity_log al
+     LEFT JOIN cabanas c ON c.id = al.cabana_id
+     WHERE (al.activity_at AT TIME ZONE 'America/New_York')::date = $1
+       AND ($2::TEXT IS NULL OR al.category = $2)
+     ORDER BY al.activity_at DESC, al.id DESC`,
+    [date, category]
+  );
+
+  return rows;
+}
 
 async function getReport(startDate, endDate) {
   const [bookingsRes, cancelledRes, paidRes, bySlotRes, byPropertyRes, byCabanaRes, noPaymentRes, receiptRes, peakDayRes, bookingListRes] = await Promise.all([
@@ -968,5 +1139,6 @@ module.exports = {
   flagBookingForReview,
   getBlocks,
   deleteBlock,
+  getDailyActivityReport,
   getReport,
 };
