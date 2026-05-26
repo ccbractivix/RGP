@@ -23,13 +23,24 @@ async function ensureSchema() {
       status              TEXT NOT NULL DEFAULT 'confirmed'
                             CHECK (status IN ('confirmed','tentative','needs_review','cancelled')),
       renter_name         TEXT NOT NULL,
+      last_name           TEXT,
+      first_name          TEXT,
       phone               TEXT NOT NULL,
       room_number         TEXT NOT NULL,
-      property            TEXT NOT NULL DEFAULT 'CCBR' CHECK (property IN ('CCBR','HIE')),
+      reservation_number  TEXT,
+      check_in_date       DATE,
+      date_reserved       DATE,
+      price_paid          NUMERIC(10,2),
+      property            TEXT NOT NULL DEFAULT 'HICV' CHECK (property IN ('HICV','HIE')),
+      payment_status      TEXT NOT NULL DEFAULT 'pending_payment'
+                            CHECK (payment_status IN ('pending_payment','paid_in_full')),
+      payment_date        DATE,
       is_paid             BOOLEAN NOT NULL DEFAULT FALSE,
       paid_at             TIMESTAMPTZ,
       confirmed_at        TIMESTAMPTZ,
       special_instructions TEXT,
+      booking_agent_name  TEXT,
+      infogenesis_check_number TEXT,
       no_payment_review   BOOLEAN NOT NULL DEFAULT FALSE,
       cancellation_reason TEXT,
       refund_type         TEXT CHECK (refund_type IN ('refund_issued','hold_released','no_refund')),
@@ -80,6 +91,71 @@ async function ensureSchema() {
   await db.query(`
     ALTER TABLE cabana_bookings
     ADD COLUMN IF NOT EXISTS infogenesis_receipt_number TEXT
+  `).catch(() => {});
+
+  await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS last_name TEXT`).catch(() => {});
+  await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS first_name TEXT`).catch(() => {});
+  await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS reservation_number TEXT`).catch(() => {});
+  await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS check_in_date DATE`).catch(() => {});
+  await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS date_reserved DATE`).catch(() => {});
+  await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS price_paid NUMERIC(10,2)`).catch(() => {});
+  await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS payment_status TEXT`).catch(() => {});
+  await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS payment_date DATE`).catch(() => {});
+  await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS booking_agent_name TEXT`).catch(() => {});
+  await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS infogenesis_check_number TEXT`).catch(() => {});
+
+  await db.query(`
+    UPDATE cabana_bookings
+    SET property = 'HICV'
+    WHERE property = 'CCBR'
+  `).catch(() => {});
+  await db.query(`
+    ALTER TABLE cabana_bookings
+    ALTER COLUMN property SET DEFAULT 'HICV'
+  `).catch(() => {});
+  await db.query(`
+    ALTER TABLE cabana_bookings
+    DROP CONSTRAINT IF EXISTS cabana_bookings_property_check
+  `).catch(() => {});
+  await db.query(`
+    ALTER TABLE cabana_bookings
+    ADD CONSTRAINT cabana_bookings_property_check
+    CHECK (property IN ('HICV','HIE'))
+    NOT VALID
+  `).catch(() => {});
+
+  await db.query(`
+    UPDATE cabana_bookings
+    SET payment_status = CASE WHEN is_paid = TRUE THEN 'paid_in_full' ELSE 'pending_payment' END
+    WHERE payment_status IS NULL
+  `).catch(() => {});
+  await db.query(`
+    ALTER TABLE cabana_bookings
+    ALTER COLUMN payment_status SET DEFAULT 'pending_payment'
+  `).catch(() => {});
+  await db.query(`
+    ALTER TABLE cabana_bookings
+    DROP CONSTRAINT IF EXISTS cabana_bookings_payment_status_check
+  `).catch(() => {});
+  await db.query(`
+    ALTER TABLE cabana_bookings
+    ADD CONSTRAINT cabana_bookings_payment_status_check
+    CHECK (payment_status IN ('pending_payment','paid_in_full'))
+    NOT VALID
+  `).catch(() => {});
+
+  await db.query(`
+    UPDATE cabana_bookings
+    SET last_name = split_part(renter_name, ',', 1),
+        first_name = NULLIF(btrim(split_part(renter_name, ',', 2)), '')
+    WHERE (last_name IS NULL OR btrim(last_name) = '')
+      AND renter_name IS NOT NULL
+  `).catch(() => {});
+  await db.query(`
+    UPDATE cabana_bookings
+    SET infogenesis_check_number = infogenesis_receipt_number
+    WHERE (infogenesis_check_number IS NULL OR btrim(infogenesis_check_number) = '')
+      AND infogenesis_receipt_number IS NOT NULL AND btrim(infogenesis_receipt_number) <> ''
   `).catch(() => {});
 
   await db.query(`
@@ -329,13 +405,51 @@ function requireReceiptNumber(value) {
   return receiptNumber;
 }
 
+function normalizePhone(value) {
+  const phone = typeof value === 'string' ? value : '';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length !== 10) throw new Error('Phone number must contain exactly 10 digits');
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function requireField(value, label) {
+  const cleaned = typeof value === 'string' ? value.trim() : '';
+  if (!cleaned) throw new Error(`${label} is required`);
+  return cleaned;
+}
+
+function toDisplayName(lastName, firstName) {
+  return `${lastName}${firstName ? `, ${firstName}` : ''}`;
+}
+
 async function createBooking({
   cabanaId, bookingDate, slot, renterName, phone, roomNumber,
   property, specialInstructions, infogenesisReceiptNumber, createdByCode, isAdmin,
+  lastName, firstName, reservationNumber, checkInDate, dateReserved, pricePaid,
+  paymentStatus, paymentDate, bookingAgentName, infogenesisCheckNumber,
 }) {
   slot = slot || 'full';
-  property = property || 'CCBR';
-  const receiptNumber = requireReceiptNumber(infogenesisReceiptNumber);
+  property = property || 'HICV';
+  lastName = requireField(lastName || (typeof renterName === 'string' ? renterName.split(',')[0] : ''), 'Last name');
+  firstName = requireField(firstName || (typeof renterName === 'string' ? renterName.split(',')[1] : ''), 'First name');
+  const displayName = toDisplayName(lastName, firstName);
+  const normalizedPhone = normalizePhone(phone);
+  roomNumber = requireField(roomNumber, 'Villa/Room number');
+  reservationNumber = requireField(reservationNumber, 'Reservation number');
+  checkInDate = requireField(checkInDate, 'Check-in date');
+  dateReserved = requireField(dateReserved, 'Date reserved');
+  bookingAgentName = requireField(bookingAgentName, 'Booking agent name');
+  const checkNumber = requireReceiptNumber(infogenesisCheckNumber || infogenesisReceiptNumber);
+  paymentStatus = paymentStatus || 'pending_payment';
+  if (!['pending_payment', 'paid_in_full'].includes(paymentStatus)) {
+    throw new Error('payment_status must be pending_payment or paid_in_full');
+  }
+  const parsedPrice = Number(pricePaid);
+  if (!Number.isFinite(parsedPrice) || parsedPrice < 0) throw new Error('Price paid must be a non-negative number');
+  const normalizedPrice = parsedPrice.toFixed(2);
+  if (paymentStatus === 'paid_in_full' && !paymentDate) {
+    throw new Error('Payment date is required when payment status is paid in full');
+  }
 
   // Check for blocks
   const block = await getBlockingBlock(cabanaId, bookingDate);
@@ -356,7 +470,7 @@ async function createBooking({
     throw new Error('This slot is already booked');
   }
 
-  // All bookings are confirmed and paid at the time of entry
+  // All bookings are confirmed at entry
   const status = 'confirmed';
 
   // Flag for admin awareness when booked under a manager_no_payment hold
@@ -365,17 +479,22 @@ async function createBooking({
   const { rows } = await db.query(
     `INSERT INTO cabana_bookings
        (cabana_id, booking_date, slot, status, renter_name, phone, room_number,
-        property, is_paid, paid_at, special_instructions, infogenesis_receipt_number,
+        last_name, first_name, reservation_number, check_in_date, date_reserved, price_paid,
+        property, payment_status, payment_date, is_paid, paid_at, special_instructions,
+        infogenesis_receipt_number, infogenesis_check_number, booking_agent_name,
         no_payment_review, created_by_code, confirmed_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
      RETURNING *`,
     [
-      cabanaId, bookingDate, slot, status, renterName.trim(), phone.trim(),
-      roomNumber.trim(), property,
-      true,
-      new Date(),
+      cabanaId, bookingDate, slot, status, displayName, normalizedPhone,
+      roomNumber, lastName, firstName, reservationNumber, checkInDate, dateReserved, normalizedPrice, property,
+      paymentStatus, paymentDate || null,
+      paymentStatus === 'paid_in_full',
+      paymentStatus === 'paid_in_full' ? new Date(paymentDate) : null,
       specialInstructions || null,
-      receiptNumber,
+      checkNumber,
+      checkNumber,
+      bookingAgentName,
       noPaymentReview,
       createdByCode,
       new Date(),
@@ -409,15 +528,52 @@ async function updateBooking(id, updates) {
   if (booking.status === 'cancelled') throw new Error('Cannot edit a cancelled booking');
 
   const hasReceiptUpdate = Object.prototype.hasOwnProperty.call(updates, 'infogenesis_receipt_number');
-  if (hasReceiptUpdate || !booking.infogenesis_receipt_number || !booking.infogenesis_receipt_number.trim()) {
-    updates.infogenesis_receipt_number = requireReceiptNumber(
-      hasReceiptUpdate ? updates.infogenesis_receipt_number : booking.infogenesis_receipt_number
+  const hasCheckUpdate = Object.prototype.hasOwnProperty.call(updates, 'infogenesis_check_number');
+  if (hasCheckUpdate || hasReceiptUpdate || !booking.infogenesis_check_number || !booking.infogenesis_check_number.trim()) {
+    updates.infogenesis_check_number = requireReceiptNumber(
+      hasCheckUpdate
+        ? updates.infogenesis_check_number
+        : (hasReceiptUpdate ? updates.infogenesis_receipt_number : booking.infogenesis_check_number || booking.infogenesis_receipt_number)
     );
+    updates.infogenesis_receipt_number = updates.infogenesis_check_number;
+  }
+
+  if (updates.last_name !== undefined || updates.first_name !== undefined) {
+    const nextLast = updates.last_name !== undefined ? requireField(updates.last_name, 'Last name') : requireField(booking.last_name || booking.renter_name, 'Last name');
+    const nextFirst = updates.first_name !== undefined ? requireField(updates.first_name, 'First name') : requireField(booking.first_name || '', 'First name');
+    updates.last_name = nextLast;
+    updates.first_name = nextFirst;
+    updates.renter_name = toDisplayName(nextLast, nextFirst);
+  }
+
+  if (updates.phone !== undefined) updates.phone = normalizePhone(updates.phone);
+  if (updates.room_number !== undefined) updates.room_number = requireField(updates.room_number, 'Villa/Room number');
+  if (updates.reservation_number !== undefined) updates.reservation_number = requireField(updates.reservation_number, 'Reservation number');
+  if (updates.check_in_date !== undefined) updates.check_in_date = requireField(updates.check_in_date, 'Check-in date');
+  if (updates.date_reserved !== undefined) updates.date_reserved = requireField(updates.date_reserved, 'Date reserved');
+  if (updates.booking_agent_name !== undefined) updates.booking_agent_name = requireField(updates.booking_agent_name, 'Booking agent name');
+  if (updates.price_paid !== undefined) {
+    const parsedPrice = Number(updates.price_paid);
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) throw new Error('Price paid must be a non-negative number');
+    updates.price_paid = parsedPrice.toFixed(2);
+  }
+  if (updates.property !== undefined && !['HICV', 'HIE'].includes(updates.property)) {
+    throw new Error('property must be HICV or HIE');
+  }
+  if (updates.payment_status !== undefined) {
+    if (!['pending_payment', 'paid_in_full'].includes(updates.payment_status)) {
+      throw new Error('payment_status must be pending_payment or paid_in_full');
+    }
+    if (updates.payment_status === 'paid_in_full' && !updates.payment_date && !booking.payment_date) {
+      throw new Error('Payment date is required when payment status is paid in full');
+    }
   }
 
   const allowed = [
-    'renter_name', 'phone', 'room_number', 'property',
+    'renter_name', 'last_name', 'first_name', 'phone', 'room_number', 'reservation_number',
+    'check_in_date', 'date_reserved', 'price_paid', 'property', 'payment_status', 'payment_date',
     'is_paid', 'special_instructions', 'slot', 'infogenesis_receipt_number',
+    'infogenesis_check_number', 'booking_agent_name',
   ];
 
   const fields = [];
@@ -426,15 +582,54 @@ async function updateBooking(id, updates) {
 
   for (const key of allowed) {
     if (updates[key] !== undefined) {
-      if (key === 'is_paid' && updates[key] && !booking.is_paid) {
+      if (key === 'payment_status') {
+        fields.push(`payment_status = $${idx++}`);
+        params.push(updates[key]);
+        if (updates[key] === 'paid_in_full') {
+          const effectivePaymentDate = updates.payment_date || booking.payment_date || new Date().toISOString().slice(0, 10);
+          fields.push(`payment_date = $${idx++}`);
+          params.push(effectivePaymentDate);
+          fields.push(`is_paid = $${idx++}`);
+          params.push(true);
+          fields.push(`paid_at = $${idx++}`);
+          params.push(new Date(effectivePaymentDate));
+        } else {
+          fields.push(`payment_date = $${idx++}`);
+          params.push(null);
+          fields.push(`is_paid = $${idx++}`);
+          params.push(false);
+          fields.push(`paid_at = $${idx++}`);
+          params.push(null);
+        }
+      } else if (key === 'payment_date') {
+        fields.push(`payment_date = $${idx++}`);
+        params.push(updates[key] || null);
+        const nextStatus = updates.payment_status || booking.payment_status;
+        if (nextStatus === 'paid_in_full') {
+          fields.push(`is_paid = $${idx++}`);
+          params.push(true);
+          fields.push(`paid_at = $${idx++}`);
+          params.push(updates[key] ? new Date(updates[key]) : new Date());
+        }
+      } else if (key === 'is_paid' && updates[key] && !booking.is_paid) {
         fields.push(`is_paid = $${idx++}`);
         params.push(true);
         fields.push(`paid_at = $${idx++}`);
         params.push(new Date());
+        fields.push(`payment_status = $${idx++}`);
+        params.push('paid_in_full');
+        if (!booking.payment_date) {
+          fields.push(`payment_date = $${idx++}`);
+          params.push(new Date().toISOString().slice(0, 10));
+        }
       } else if (key === 'is_paid' && !updates[key]) {
         fields.push(`is_paid = $${idx++}`);
         params.push(false);
         fields.push(`paid_at = $${idx++}`);
+        params.push(null);
+        fields.push(`payment_status = $${idx++}`);
+        params.push('pending_payment');
+        fields.push(`payment_date = $${idx++}`);
         params.push(null);
       } else if (key === 'slot') {
         // Check if new slot is available
@@ -510,6 +705,8 @@ async function approveBooking(id) {
     `UPDATE cabana_bookings
      SET status = 'confirmed', confirmed_at = NOW(),
          is_paid = TRUE, paid_at = COALESCE(paid_at, NOW()),
+         payment_status = 'paid_in_full',
+         payment_date = COALESCE(payment_date, CURRENT_DATE),
          updated_at = NOW(), version = version + 1
      WHERE id = $1 AND status IN ('tentative','needs_review')
      RETURNING *`,
@@ -670,10 +867,10 @@ async function getReport(startDate, endDate) {
     // Infogenesis receipt coverage
     db.query(
       `SELECT COUNT(*) FILTER (
-               WHERE infogenesis_receipt_number IS NOT NULL AND btrim(infogenesis_receipt_number) <> ''
+              WHERE infogenesis_check_number IS NOT NULL AND btrim(infogenesis_check_number) <> ''
              ) AS with_receipt,
              COUNT(*) FILTER (
-               WHERE infogenesis_receipt_number IS NULL OR btrim(infogenesis_receipt_number) = ''
+               WHERE infogenesis_check_number IS NULL OR btrim(infogenesis_check_number) = ''
              ) AS missing_receipt,
              COUNT(*) AS total_bookings
        FROM cabana_bookings
@@ -692,13 +889,14 @@ async function getReport(startDate, endDate) {
     ),
     // Full booking detail list (for table view)
     db.query(
-      `SELECT b.id, b.booking_date, b.slot, b.status, b.renter_name, b.phone,
-              b.room_number, b.property, b.is_paid, b.infogenesis_receipt_number,
-              b.special_instructions, b.no_payment_review,
-              b.created_at, c.name AS cabana_name
+      `SELECT b.id, b.booking_date, b.slot, b.status, b.renter_name, b.last_name, b.first_name, b.phone,
+             b.room_number, b.reservation_number, b.check_in_date, b.date_reserved, b.price_paid,
+             b.property, b.payment_status, b.payment_date, b.is_paid, b.infogenesis_check_number,
+             b.special_instructions, b.booking_agent_name, b.no_payment_review,
+             b.created_at, c.name AS cabana_name
        FROM cabana_bookings b
        JOIN cabanas c ON c.id = b.cabana_id
-       WHERE b.booking_date BETWEEN $1 AND $2 AND b.status <> 'cancelled'
+       WHERE b.booking_date BETWEEN $1 AND $2
        ORDER BY b.booking_date ASC, c.id, b.slot`,
       [startDate, endDate]
     ),

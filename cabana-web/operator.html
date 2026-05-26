@@ -476,7 +476,7 @@ function buildBookingBadge(cabana, b) {
     cls = 'tentative'; icon = '🔵';
   } else if (b.status === 'needs_review') {
     cls = 'needs-review'; icon = '⚠️';
-  } else if (b.is_paid) {
+  } else if ((b.payment_status || '').toLowerCase() === 'paid_in_full' || b.is_paid) {
     cls = 'booked-paid'; icon = '🔴';
   } else {
     cls = 'booked-unpaid'; icon = '🟡';
@@ -506,12 +506,18 @@ function openDayModal(date) {
     html += `<div style="font-weight:700;margin-bottom:8px;">${cabana?.name || 'Cabana'} — ${getSlotLabel(b.slot)}</div>`;
     html += `<div class="info-row"><span class="info-label">Guest</span><span class="info-value">${esc(b.renter_name)}</span></div>`;
     html += `<div class="info-row"><span class="info-label">Phone</span><span class="info-value">${esc(b.phone)}</span></div>`;
-    html += `<div class="info-row"><span class="info-label">Room</span><span class="info-value">${esc(b.room_number)} (${b.property})</span></div>`;
-    html += `<div class="info-row"><span class="info-label">Status</span><span class="info-value"><span class="status-pill ${b.is_paid ? 'paid' : 'unpaid'}">${b.is_paid ? 'Paid' : 'Unpaid'}</span> <span class="status-pill ${b.status}">${b.status}</span></span></div>`;
+    html += `<div class="info-row"><span class="info-label">Villa/Room</span><span class="info-value">${esc(b.room_number)} (${b.property})</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Reservation #</span><span class="info-value">${esc(b.reservation_number || '—')}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Check-In Date</span><span class="info-value">${b.check_in_date ? fmtDate(b.check_in_date) : '—'}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Date Reserved</span><span class="info-value">${b.date_reserved ? fmtDate(b.date_reserved) : '—'}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Price Paid</span><span class="info-value">${b.price_paid != null ? `$${esc(String(b.price_paid))}` : '—'}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Payment Status</span><span class="info-value"><span class="status-pill ${((b.payment_status || '') === 'paid_in_full' || b.is_paid) ? 'paid' : 'unpaid'}">${((b.payment_status || '') === 'paid_in_full' || b.is_paid) ? 'Paid In Full' : 'Pending Payment'}</span> <span class="status-pill ${b.status}">${b.status}</span></span></div>`;
+    html += `<div class="info-row"><span class="info-label">Payment Date</span><span class="info-value">${b.payment_date ? fmtDate(b.payment_date) : '—'}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Infogenesis Check #</span><span class="info-value">${b.infogenesis_check_number ? esc(b.infogenesis_check_number) : '<span style="color:var(--yellow);">Missing</span>'}</span></div>`;
+    html += `<div class="info-row"><span class="info-label">Booking Agent</span><span class="info-value">${esc(b.booking_agent_name || '—')}</span></div>`;
     if (b.special_instructions) {
       html += `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${esc(b.special_instructions)}</span></div>`;
     }
-    html += `<div class="info-row"><span class="info-label">Receipt #</span><span class="info-value">${b.infogenesis_receipt_number ? esc(b.infogenesis_receipt_number) : '<span style="color:var(--yellow);">Missing</span>'}</span></div>`;
     if (b.no_payment_review) {
       html += `<div class="info-row"><span class="info-label">⚠️ Alert</span><span class="info-value" style="color:var(--orange);">Booked under No-Payment hold — payment review required</span></div>`;
     }
@@ -558,13 +564,34 @@ function openDayModal(date) {
       <input class="form-input" id="bk-room" placeholder="Room number"></div>
     <div class="form-group"><label class="form-label">Property</label>
       <div style="display:flex;gap:16px;padding-top:6px;">
-        <div class="form-check"><input type="radio" name="bk-property" value="CCBR" id="bk-ccbr" checked><label for="bk-ccbr">CCBR</label></div>
+        <div class="form-check"><input type="radio" name="bk-property" value="HICV" id="bk-hicv" checked><label for="bk-hicv">HICV</label></div>
         <div class="form-check"><input type="radio" name="bk-property" value="HIE" id="bk-hie"><label for="bk-hie">HIE</label></div>
       </div></div></div>`;
+  html += `<div class="form-group"><label class="form-label">Reservation Number</label>
+    <input class="form-input" id="bk-reservation-number" placeholder="Guest reservation number"></div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Check-In Date</label>
+      <input class="form-input" id="bk-check-in-date" type="date"></div>
+    <div class="form-group"><label class="form-label">Date Reserved</label>
+      <input class="form-input" id="bk-date-reserved" type="date"></div>
+  </div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Price Paid</label>
+      <input class="form-input" id="bk-price-paid" type="number" min="0" step="0.01" placeholder="0.00"></div>
+    <div class="form-group"><label class="form-label">Payment Status</label>
+      <select class="form-select" id="bk-payment-status">
+        <option value="pending_payment">Pending Payment</option>
+        <option value="paid_in_full">Paid In Full</option>
+      </select></div>
+  </div>`;
+  html += `<div class="form-group"><label class="form-label">Payment Date</label>
+    <input class="form-input" id="bk-payment-date" type="date"></div>`;
   html += `<div class="form-group"><label class="form-label">Special Instructions</label>
     <textarea class="form-textarea" id="bk-instructions" placeholder="Optional notes..."></textarea></div>`;
-  html += `<div class="form-group"><label class="form-label">Infogenesis Receipt #</label>
-    <input class="form-input" id="bk-receipt" placeholder="Receipt number" required></div>`;
+  html += `<div class="form-group"><label class="form-label">Infogenesis Check Number</label>
+    <input class="form-input" id="bk-check-number" placeholder="Check number" required></div>`;
+  html += `<div class="form-group"><label class="form-label">Booking Agent Name</label>
+    <input class="form-input" id="bk-agent-name" placeholder="Booking agent"></div>`;
   html += `<button class="btn btn-primary btn-block" id="bk-submit" data-date="${date}">Book Cabana</button>`;
 
   sheet.innerHTML = html;
@@ -572,6 +599,11 @@ function openDayModal(date) {
 
   // Bind submit
   $('#bk-submit').addEventListener('click', submitBooking);
+  $('#bk-payment-status').addEventListener('change', () => {
+    const paymentDate = $('#bk-payment-date');
+    paymentDate.required = $('#bk-payment-status').value === 'paid_in_full';
+    if (!paymentDate.required) paymentDate.value = '';
+  });
 }
 
 function closePopup() {
@@ -591,12 +623,28 @@ async function submitBooking() {
   const name = `${lastName}${firstName ? `, ${firstName}` : ''}`;
   const phone = $('#bk-phone').value.trim();
   const room = $('#bk-room').value.trim();
-  const property = document.querySelector('input[name="bk-property"]:checked')?.value || 'CCBR';
+  const property = document.querySelector('input[name="bk-property"]:checked')?.value || 'HICV';
+  const reservationNumber = $('#bk-reservation-number').value.trim();
+  const checkInDate = $('#bk-check-in-date').value;
+  const dateReserved = $('#bk-date-reserved').value;
+  const pricePaid = $('#bk-price-paid').value.trim();
+  const paymentStatus = $('#bk-payment-status').value;
+  const paymentDate = $('#bk-payment-date').value;
   const instructions = $('#bk-instructions').value.trim();
-  const receiptNumber = $('#bk-receipt').value.trim();
+  const checkNumber = $('#bk-check-number').value.trim();
+  const bookingAgentName = $('#bk-agent-name').value.trim();
+  const phoneDigits = phone.replace(/\D/g, '');
 
-  if (!lastName || !firstName || !phone || !room || !receiptNumber) {
-    showToast('Please fill in last name, first name, phone, room number, and receipt number', 'error');
+  if (!lastName || !firstName || !phone || !room || !reservationNumber || !checkInDate || !dateReserved || !pricePaid || !paymentStatus || !checkNumber || !bookingAgentName) {
+    showToast('Please complete all required fields', 'error');
+    return;
+  }
+  if (phoneDigits.length !== 10) {
+    showToast('Phone number must have 10 digits', 'error');
+    return;
+  }
+  if (paymentStatus === 'paid_in_full' && !paymentDate) {
+    showToast('Payment date is required when paid in full', 'error');
     return;
   }
 
@@ -605,9 +653,16 @@ async function submitBooking() {
       method: 'POST',
       body: {
         cabana_id: cabanaId, date, slot,
-        renter_name: name, phone, room_number: room,
+        renter_name: name, last_name: lastName, first_name: firstName, phone, room_number: room,
+        reservation_number: reservationNumber,
+        check_in_date: checkInDate,
+        date_reserved: dateReserved,
+        price_paid: pricePaid,
         property, special_instructions: instructions || null,
-        infogenesis_receipt_number: receiptNumber,
+        payment_status: paymentStatus,
+        payment_date: paymentDate || null,
+        infogenesis_check_number: checkNumber,
+        booking_agent_name: bookingAgentName,
       },
     });
 

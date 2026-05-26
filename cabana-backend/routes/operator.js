@@ -118,16 +118,22 @@ router.delete('/lock/:id', async (req, res) => {
 // ── POST /operator/booking ────────────────────────────────────────────────────
 router.post('/booking', async (req, res) => {
   const {
-    cabana_id, date, slot, renter_name, phone, room_number,
-    property, special_instructions, infogenesis_receipt_number,
+    cabana_id, date, slot, renter_name, last_name, first_name, phone, room_number,
+    reservation_number, check_in_date, date_reserved, price_paid,
+    property, payment_status, payment_date, special_instructions,
+    infogenesis_check_number, infogenesis_receipt_number, booking_agent_name,
   } = req.body || {};
-  const receiptNumber = typeof infogenesis_receipt_number === 'string'
-    ? infogenesis_receipt_number.trim()
+  const checkNumber = typeof (infogenesis_check_number || infogenesis_receipt_number) === 'string'
+    ? (infogenesis_check_number || infogenesis_receipt_number).trim()
     : '';
 
-  if (!cabana_id || !date || !renter_name || !phone || !room_number || !receiptNumber) {
+  if (
+    !cabana_id || !date || !last_name || !first_name || !phone || !room_number
+    || !reservation_number || !check_in_date || !date_reserved
+    || price_paid === undefined || !payment_status || !checkNumber || !booking_agent_name
+  ) {
     return res.status(400).json({
-      error: 'cabana_id, date, renter_name, phone, room_number, and infogenesis_receipt_number required',
+      error: 'Missing required booking fields',
     });
   }
 
@@ -137,11 +143,21 @@ router.post('/booking', async (req, res) => {
       bookingDate: date,
       slot: slot || 'full',
       renterName: renter_name,
+      lastName: last_name,
+      firstName: first_name,
       phone,
       roomNumber: room_number,
-      property: property || 'CCBR',
+      reservationNumber: reservation_number,
+      checkInDate: check_in_date,
+      dateReserved: date_reserved,
+      pricePaid: price_paid,
+      property: property || 'HICV',
+      paymentStatus: payment_status,
+      paymentDate: payment_date || null,
       specialInstructions: special_instructions,
       infogenesisReceiptNumber: infogenesis_receipt_number,
+      infogenesisCheckNumber: infogenesis_check_number,
+      bookingAgentName: booking_agent_name,
       createdByCode: req.operatorCode,
       isAdmin: false,
     });
