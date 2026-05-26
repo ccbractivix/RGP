@@ -6,15 +6,15 @@
   <title>Resort Weather</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       width: 100%; height: 100%;
-      background: #FFF8F0;
-      color: #3D3128;
-      font-family: 'Inter', sans-serif;
+      background: #F1F1E8;
+      color: #454040;
+      font-family: 'Montserrat', sans-serif;
       overflow: hidden;
     }
 
@@ -28,12 +28,12 @@
     /* ===== HEADLINE ===== */
     #tv-headline {
       text-align: center;
-      padding: 7px 0 3px;
-      font-size: clamp(24px, 3vw, 44px);
-      font-weight: 700;
-      font-family: 'Fredoka', sans-serif;
+      padding: 9px 0 5px;
+      font-size: clamp(28px, 3.5vw, 48px);
+      font-weight: 600;
+      font-family: 'Playfair Display', serif;
       letter-spacing: 3px;
-      color: #4A7A36;
+      color: #E6754B;
       text-transform: uppercase;
       flex-shrink: 0;
     }
@@ -41,7 +41,7 @@
     #tv-subhead {
       text-align: center;
       font-size: clamp(11px, 1vw, 15px);
-      color: #7A6B5A;
+      color: #6C6464;
       letter-spacing: 1px;
       text-transform: uppercase;
       flex-shrink: 0;
@@ -54,8 +54,8 @@
       flex-direction: row;
       align-items: stretch;
       margin: 0 12px 6px;
-      background: #FFFFFF;
-      border: 1px solid #E8D5C0;
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid #D2CDC5;
       border-radius: 6px;
       overflow: hidden;
       flex-shrink: 0;
@@ -67,8 +67,8 @@
       align-items: center;
       justify-content: center;
       padding: 8px 12px;
-      background: rgba(74, 122, 54, 0.06);
-      border-right: 1px solid #E8D5C0;
+      background: rgba(230, 117, 75, 0.08);
+      border-right: 1px solid #D2CDC5;
       min-width: 90px;
       flex-shrink: 0;
     }
@@ -80,9 +80,10 @@
     }
 
     #current-period-name {
-      font-family: 'Fredoka', sans-serif;
+      font-family: 'Montserrat', sans-serif;
       font-size: clamp(14px, 1.4vw, 20px);
-      color: #4A7A36;
+      color: #E6754B;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 1px;
       text-align: center;
@@ -91,7 +92,7 @@
     #current-temp {
       font-size: clamp(42px, 5.5vw, 76px);
       font-weight: 700;
-      color: #E37433;
+      color: #E6754B;
       line-height: 1;
       margin: 2px 0 1px;
     }
@@ -99,7 +100,7 @@
     #current-short {
       font-size: clamp(13px, 1.2vw, 17px);
       font-weight: 600;
-      color: #3D3128;
+      color: #454040;
       text-align: center;
     }
 
@@ -114,7 +115,7 @@
 
     #current-detail {
       font-size: clamp(11px, 1.05vw, 15px);
-      color: #7A6B5A;
+      color: #5F5757;
       line-height: 1.55;
       display: -webkit-box;
       -webkit-line-clamp: 4;
@@ -128,7 +129,7 @@
       justify-content: center;
       gap: 6px;
       padding: 8px 10px 8px 6px;
-      border-left: 1px solid #E8D5C0;
+      border-left: 1px solid #D2CDC5;
       min-width: 80px;
       flex-shrink: 0;
     }
@@ -139,7 +140,7 @@
 
     .current-meta-label {
       font-size: clamp(9px, 0.8vw, 11px);
-      color: #B8A898;
+      color: #8A8080;
       text-transform: uppercase;
       letter-spacing: 0.75px;
     }
@@ -147,7 +148,7 @@
     .current-meta-value {
       font-size: clamp(13px, 1.25vw, 18px);
       font-weight: 600;
-      color: #3D3128;
+      color: #454040;
       margin-top: 1px;
     }
 
@@ -162,8 +163,8 @@
     }
 
     .day-card {
-      background: #FFFFFF;
-      border: 1px solid #E8D5C0;
+      background: rgba(255, 255, 255, 0.58);
+      border: 1px solid #D2CDC5;
       border-radius: 5px;
       display: flex;
       flex-direction: column;
@@ -175,14 +176,15 @@
     }
 
     .day-card.is-today {
-      border-color: #4A7A36;
-      background: rgba(74, 122, 54, 0.06);
+      border-color: #E6754B;
+      background: rgba(230, 117, 75, 0.08);
     }
 
     .day-name {
-      font-family: 'Fredoka', sans-serif;
+      font-family: 'Montserrat', sans-serif;
       font-size: clamp(14px, 1.5vw, 21px);
-      color: #4A7A36;
+      color: #E6754B;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       line-height: 1;
@@ -190,14 +192,14 @@
 
     .day-date {
       font-size: clamp(10px, 0.9vw, 13px);
-      color: #7A6B5A;
+      color: #6C6464;
       line-height: 1;
     }
 
     .day-divider {
       width: 80%;
       height: 1px;
-      background: #E8D5C0;
+      background: #D2CDC5;
     }
 
     .day-icon {
@@ -211,25 +213,137 @@
       line-height: 1;
     }
 
-    .day-high { color: #E37433; }
-    .day-sep  { color: #B8A898; font-weight: 400; }
-    .day-low  { color: #7A6B5A; }
+    .day-high { color: #E6754B; }
+    .day-sep  { color: #9A9090; font-weight: 400; }
+    .day-low  { color: #6C6464; }
 
     .day-pop {
       font-size: clamp(11px, 1vw, 14px);
-      color: #3D3128;
+      color: #454040;
       font-weight: 500;
     }
 
     .day-wind {
       font-size: clamp(10px, 0.85vw, 12px);
-      color: #7A6B5A;
+      color: #6C6464;
       line-height: 1.3;
     }
 
-    /* ===== BOTTOM BAR ===== */
+    /* ===== BOTTOM GUTTER ===== */
     #tv-bottom {
-      display: none;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      padding: 6px 12px 8px;
+      border-top: 1px solid #D2CDC5;
+      gap: 8px;
+    }
+
+    #tv-gutter-left {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    #tv-gutter-left img {
+      width: clamp(80px, 9vw, 140px);
+      height: auto;
+      border-radius: 6px;
+    }
+
+    .gutter-promo-text {
+      text-align: left;
+    }
+
+    .gutter-promo-headline {
+      font-size: clamp(13px, 1.3vw, 20px);
+      font-weight: 600;
+      font-family: 'Playfair Display', serif;
+      color: #E6754B;
+      line-height: 1.3;
+    }
+
+    .gutter-promo-subline {
+      font-size: clamp(10px, 0.9vw, 14px);
+      color: #454040;
+      line-height: 1.3;
+      margin-top: 3px;
+    }
+
+    .gutter-promo-featuring {
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      font-weight: 600;
+      color: #E6754B;
+      font-size: clamp(10px, 0.9vw, 15px);
+      line-height: 1.3;
+    }
+
+    .gutter-promo-tickets {
+      margin-top: 4px;
+    }
+
+    #tv-gutter-center {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #tv-gutter-center img {
+      flex-shrink: 0;
+      width: clamp(80px, 9vw, 130px);
+      height: clamp(80px, 9vw, 130px);
+      border-radius: 6px;
+      background: #fff;
+      padding: 5px;
+    }
+
+    .gutter-qr-text {
+      font-size: clamp(10px, 1vw, 15px);
+      color: #454040;
+      line-height: 1.3;
+      text-align: center;
+      flex: 1;
+    }
+
+    .gutter-qr-headline {
+      font-size: clamp(12px, 1.2vw, 18px);
+      font-weight: 600;
+      font-family: 'Playfair Display', serif;
+      color: #E6754B;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    #tv-gutter-right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    #tv-gutter-right img {
+      width: clamp(140px, 15vw, 220px);
+      height: clamp(80px, 9.5vw, 150px);
+      object-fit: contain;
+      border-radius: 6px;
+    }
+
+    .gutter-arcade-text {
+      text-align: center;
+    }
+
+    .gutter-arcade-hours {
+      font-size: clamp(11px, 1vw, 15px);
+      font-weight: 600;
+      color: #454040;
+      line-height: 1.3;
     }
 
     /* ===== LOADING ===== */
@@ -239,12 +353,16 @@
       justify-content: center;
       flex: 1;
       font-size: clamp(16px, 1.5vw, 22px);
-      color: #7A6B5A;
+      color: #6C6464;
     }
 
     /* ===== STATUS STAMP ===== */
     #tv-status {
-      display: none;
+      position: fixed;
+      bottom: 4px;
+      right: 14px;
+      font-size: 20px;
+      color: #A59C90;
     }
   </style>
 </head>
@@ -285,7 +403,31 @@
     <!-- 6-day grid -->
     <div id="tv-grid"></div>
 
-    <div id="tv-bottom"></div>
+    <div id="tv-bottom">
+      <div id="tv-gutter-left">
+        <img src="../theater-web/static/MVN.jpg" alt="Comedy Magic Show">
+        <div class="gutter-promo-text">
+          <div class="gutter-promo-headline">Comedy Magic Show</div>
+          <div class="gutter-promo-featuring">featuring Michael Van Ness</div>
+          <div class="gutter-promo-subline gutter-promo-tickets">Tickets are on sale now!<br>Scan the QR code for more information</div>
+        </div>
+      </div>
+
+      <div id="tv-gutter-center">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=https%3A%2F%2Fccbractivix.github.io%2FRGP%2Ftheater-web%2Findex.html" alt="QR Code to movie library">
+        <div class="gutter-qr-text" id="gutter-qr-text">
+          <div class="gutter-qr-headline">We Love Movies!</div>
+          Scan the QR code to see our movie theater schedule and our DVD check-out library listings
+        </div>
+      </div>
+
+      <div id="tv-gutter-right">
+        <img src="../static/images/Atlas Arcade Logo c.png" alt="Atlas Arcade">
+        <div class="gutter-arcade-text">
+          <div class="gutter-arcade-hours">Open Daily 8 am to 11 pm</div>
+        </div>
+      </div>
+    </div>
   </div>
   <div id="tv-status"></div>
 
