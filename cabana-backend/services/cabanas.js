@@ -483,7 +483,7 @@ async function createBooking({
         property, payment_status, payment_date, is_paid, paid_at, special_instructions,
         infogenesis_receipt_number, infogenesis_check_number, booking_agent_name,
         no_payment_review, created_by_code, confirmed_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
      RETURNING *`,
     [
       cabanaId, bookingDate, slot, status, displayName, normalizedPhone,
