@@ -26,6 +26,14 @@ function getOperatorCodes() {
   return [...opCodes, ...adminCodes]; // admin codes also work as operator
 }
 
+function getAdminCodes() {
+  return (process.env.CABANA_ADMIN_CODES || '').split(',').map(s => s.trim()).filter(Boolean);
+}
+
+function getActorRole(code) {
+  return getAdminCodes().includes(code) ? 'admin' : 'operator';
+}
+
 function requireAuth(req, res, next) {
   const code = (req.headers['x-auth-code'] || '').trim();
   const codes = getOperatorCodes();
@@ -160,6 +168,7 @@ router.post('/booking', async (req, res) => {
       bookingAgentName: booking_agent_name,
       createdByCode: req.operatorCode,
       isAdmin: false,
+      actorRole: getActorRole(req.operatorCode),
     });
     return res.json({ ok: true, booking });
   } catch (e) {
@@ -192,6 +201,8 @@ router.post('/booking/:id/cancel', async (req, res) => {
     const booking = await cancelBooking(id, {
       cancellationReason: cancellation_reason,
       refundType: refund_type,
+      actorCode: req.operatorCode,
+      actorRole: getActorRole(req.operatorCode),
     });
     return res.json({ ok: true, booking });
   } catch (e) {
@@ -221,6 +232,7 @@ router.post('/maintenance', async (req, res) => {
       isIndeterminate: is_indeterminate || false,
       notes,
       createdByCode: req.operatorCode,
+      actorRole: getActorRole(req.operatorCode),
     });
 
     return res.json({
@@ -251,6 +263,8 @@ router.post('/maintenance/resolve-conflict', async (req, res) => {
       const booking = await cancelBooking(booking_id, {
         cancellationReason: cancellation_reason || 'Cleared due to maintenance',
         refundType: refund_type || null,
+        actorCode: req.operatorCode,
+        actorRole: getActorRole(req.operatorCode),
       });
       return res.json({ ok: true, booking });
     } else if (action === 'flag') {

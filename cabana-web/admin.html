@@ -291,6 +291,23 @@
           <button class="btn btn-ghost btn-sm" id="rpt-export-pdf">Export PDF</button></div>
       </div>
       <div id="report-content"></div>
+      <div class="report-card" style="margin-top:14px;">
+        <div class="report-label" style="margin-bottom:10px;">Daily Activity Report</div>
+        <div class="form-row" style="margin-bottom:10px;">
+          <div class="form-group"><label class="form-label">Date</label>
+            <input class="form-input" type="date" id="dar-date"></div>
+          <div class="form-group"><label class="form-label">Activity Type</label>
+            <select class="form-select" id="dar-filter">
+              <option value="all">All Activity</option>
+              <option value="bookings">Bookings Only</option>
+              <option value="cancellations">Cancellations</option>
+              <option value="blocks_holds">Blocks and Holds</option>
+            </select></div>
+          <div class="form-group" style="align-self:flex-end;">
+            <button class="btn btn-primary btn-sm" id="dar-load">Load Daily Activity</button></div>
+        </div>
+        <div id="daily-activity-content"></div>
+      </div>
     </div>
   </div>
 
@@ -344,6 +361,7 @@ function dateStr(d) {
 }
 
 function todayStr() { return dateStr(new Date()); }
+$('#dar-date').value = todayStr();
 
 function getSlotLabel(slot) {
   if (slot === 'am') return 'AM (till 1pm)';
@@ -1049,6 +1067,64 @@ $('#cxl-load').addEventListener('click', async () => {
 let latestReport = null;
 let latestReportRange = null;
 
+function formatActivityType(entry) {
+  if (entry.activity_type === 'booking_created') return 'Booking Created';
+  if (entry.activity_type === 'booking_cancelled') return 'Booking Cancelled';
+  if (entry.activity_type === 'block_created') return 'Block/Hold Added';
+  if (entry.activity_type === 'block_cleared') return 'Block/Hold Cleared';
+  return entry.activity_type;
+}
+
+function describeActivityDetails(entry) {
+  const details = entry.details || {};
+  if (entry.category === 'booking') {
+    return `Date ${entry.booking_date || details.booking_date || '—'} • Slot ${(details.slot || 'full').toUpperCase()}${details.renter_name ? ` • ${esc(details.renter_name)}` : ''}`;
+  }
+  if (entry.category === 'cancellation') {
+    return `Date ${entry.booking_date || '—'} • Refund ${esc(details.refund_type || 'N/A')}${details.cancellation_reason ? ` • ${esc(details.cancellation_reason)}` : ''}`;
+  }
+  if (entry.category === 'block_hold') {
+    return `Type ${esc(entry.block_type || '—')} • ${details.start_date || '—'} to ${details.is_indeterminate ? 'indeterminate' : (details.end_date || 'open')}`;
+  }
+  return '';
+}
+
+function renderDailyActivity(entries) {
+  const target = $('#daily-activity-content');
+  if (!entries || entries.length === 0) {
+    target.innerHTML = '<div style="font-size:13px;color:var(--text-muted);">No activity for this date.</div>';
+    return;
+  }
+  target.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px;">
+        <thead>
+          <tr style="background:var(--bg);">
+            <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Time</th>
+            <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Category</th>
+            <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Action</th>
+            <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Actor</th>
+            <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Cabana</th>
+            <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${entries.map(entry => `
+            <tr>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);white-space:nowrap;">${new Date(entry.activity_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);text-transform:capitalize;">${esc(entry.category.replace('_', ' '))}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(formatActivityType(entry))}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(entry.actor_role || 'operator')} (${esc(entry.actor_code || 'unknown')})</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(entry.cabana_name || '—')}</td>
+              <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${describeActivityDetails(entry)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
 function reportRowsToCsv(rows) {
   const headers = [
     'Booking Date', 'Cabana', 'Slot', 'Status', 'Last Name', 'First Name', 'Guest Display',
@@ -1353,6 +1429,18 @@ $('#rpt-export-pdf').addEventListener('click', () => {
     return;
   }
   exportReportPdf(latestReport.booking_list, latestReportRange);
+});
+
+$('#dar-load').addEventListener('click', async () => {
+  const date = $('#dar-date').value;
+  const filter = $('#dar-filter').value;
+  if (!date) { showToast('Select a date', 'error'); return; }
+  try {
+    const data = await api(`/admin/daily-activity-report?date=${date}&filter=${filter}`);
+    renderDailyActivity(data.entries || []);
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
 });
 
 // ── Locks Management ──────────────────────────────────────────────────────────

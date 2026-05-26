@@ -22,6 +22,7 @@ const {
   flagBookingForReview,
   getBlocks,
   deleteBlock,
+  getDailyActivityReport,
   getReport,
 } = require('../services/cabanas');
 
@@ -180,6 +181,7 @@ router.post('/booking', async (req, res) => {
       bookingAgentName: booking_agent_name,
       createdByCode: req.adminCode,
       isAdmin: true,
+      actorRole: 'admin',
     });
     return res.json({ ok: true, booking });
   } catch (e) {
@@ -221,6 +223,8 @@ router.post('/booking/:id/cancel', async (req, res) => {
     const booking = await cancelBooking(id, {
       cancellationReason: cancellation_reason,
       refundType: refund_type,
+      actorCode: req.adminCode,
+      actorRole: 'admin',
     });
     return res.json({ ok: true, booking });
   } catch (e) {
@@ -254,7 +258,10 @@ router.post('/booking/:id/reject', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking id' });
   try {
-    const booking = await rejectBooking(id, (req.body || {}).reason);
+    const booking = await rejectBooking(id, (req.body || {}).reason, {
+      actorCode: req.adminCode,
+      actorRole: 'admin',
+    });
     return res.json({ ok: true, booking });
   } catch (e) {
     return res.status(400).json({ error: e.message });
@@ -306,6 +313,7 @@ router.post('/block', async (req, res) => {
       guestPhone: guest_phone,
       notes,
       createdByCode: req.adminCode,
+      actorRole: 'admin',
     });
 
     return res.json({
@@ -328,7 +336,7 @@ router.delete('/block/:id', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'Invalid block id' });
   try {
-    await deleteBlock(id);
+    await deleteBlock(id, { actorCode: req.adminCode, actorRole: 'admin' });
     return res.json({ ok: true });
   } catch (e) {
     return res.status(400).json({ error: e.message });
@@ -336,6 +344,17 @@ router.delete('/block/:id', async (req, res) => {
 });
 
 // ── Reports ───────────────────────────────────────────────────────────────────
+
+router.get('/daily-activity-report', async (req, res) => {
+  const { date, filter = 'all' } = req.query;
+  if (!date) return res.status(400).json({ error: 'date is required' });
+  try {
+    const entries = await getDailyActivityReport(date, filter);
+    return res.json({ entries });
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
+});
 
 router.get('/report', async (req, res) => {
   const { start, end } = req.query;
