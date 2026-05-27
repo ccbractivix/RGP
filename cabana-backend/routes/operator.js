@@ -208,11 +208,13 @@ router.get('/booking/:id', async (req, res) => {
 router.post('/booking/:id/cancel', async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking id' });
-  const { cancellation_reason, refund_type } = req.body || {};
+  const { cancellation_reason, refund_type, cancellation_by_agent, refund_approved_by } = req.body || {};
   try {
     const booking = await cancelBooking(id, {
       cancellationReason: cancellation_reason,
       refundType: refund_type,
+      cancellationByAgent: cancellation_by_agent,
+      refundApprovedBy: refund_approved_by,
       actorCode: req.operatorCode,
       actorRole: getActorRole(req.operatorCode),
     });
