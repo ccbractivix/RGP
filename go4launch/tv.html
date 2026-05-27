@@ -570,6 +570,7 @@
       var RETRY_MS   = 60000;  // 1 minute on error
       var RTL_GRACE_MS = 120 * 60 * 1000; // 120 minutes after RTL time
       var MAX_CENTER_LAUNCHES = 5;
+      var FOOTER_SCROLL_SECONDS_PER_IMAGE = 6;
       var FOOTER_SLIDE_IMAGES = [
         { src: 'images/tv_10237339136830208_738048345749025240_n.jpg', alt: 'Launch viewing area at the resort' },
         { src: 'images/tv_122124905607148829_4664336842369730371_n.jpg', alt: 'Guests watching a rocket launch' },
@@ -988,15 +989,15 @@
         if (!container) return;
         var slides = FOOTER_SLIDE_IMAGES.slice();
         if (!slides.length) {
-          container.innerHTML = '<div class="footer-slideshow-fallback">Go4Launch photo slideshow unavailable</div>';
+          container.innerHTML = '<div class="footer-slideshow-fallback">No slideshow images configured</div>';
           return;
         }
         var track = document.createElement('div');
         track.className = 'footer-slides-track';
+        var loopSlides = slides.concat(slides);
+        track.style.animationDuration = (slides.length * FOOTER_SCROLL_SECONDS_PER_IMAGE) + 's';
 
-        track.style.animationDuration = (slides.length * 6) + 's';
-
-        slides.concat(slides).forEach(function (slide) {
+        loopSlides.forEach(function (slide) {
           var img = document.createElement('img');
           img.src = slide.src;
           img.alt = slide.alt;
