@@ -995,7 +995,7 @@
         var track = document.createElement('div');
         track.className = 'footer-slides-track';
         var loopSlides = slides.concat(slides);
-        track.style.animationDuration = (slides.length * FOOTER_SCROLL_SECONDS_PER_IMAGE) + 's';
+        track.style.animationDuration = ((loopSlides.length / 2) * FOOTER_SCROLL_SECONDS_PER_IMAGE) + 's';
 
         loopSlides.forEach(function (slide) {
           var img = document.createElement('img');
