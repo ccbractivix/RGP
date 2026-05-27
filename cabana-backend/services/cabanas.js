@@ -169,7 +169,7 @@ async function ensureSchema() {
       WHEN upper(btrim(property)) = 'CCBR' THEN 'HICV'
       WHEN upper(btrim(property)) = 'HICV' THEN 'HICV'
       WHEN upper(btrim(property)) = 'HIE' THEN 'HIE'
-      ELSE property
+      ELSE 'HICV'
     END
     WHERE property IS NULL
        OR btrim(property) = ''
