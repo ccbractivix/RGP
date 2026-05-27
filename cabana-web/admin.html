@@ -648,8 +648,8 @@ function openDayModal(date) {
   </div>`;
   html += `<div class="form-group"><label class="form-label">Payment Date</label>
     <input class="form-input" id="bk-payment-date" type="date"></div>`;
-  html += `<div class="form-group"><label class="form-label">Special Instructions</label>
-    <textarea class="form-textarea" id="bk-instructions" placeholder="Optional notes..."></textarea></div>`;
+  html += `<div class="form-group"><label class="form-label">Notes</label>
+    <textarea class="form-textarea" id="bk-instructions" placeholder="Notes..."></textarea></div>`;
   html += `<div class="form-group"><label class="form-label">Infogenesis Check Number</label>
     <input class="form-input" id="bk-check-number" placeholder="Check number" required></div>`;
   html += `<div class="form-group"><label class="form-label">Booking Agent Name</label>
@@ -701,6 +701,12 @@ async function submitBooking() {
   }
   if (phoneDigits.length !== 10) {
     showToast('Phone number must have 10 digits', 'error'); return;
+  }
+  if (body.payment_status === 'pending_payment') {
+    const notes = $('#bk-instructions').value.trim();
+    if (!notes || notes.length < 10) {
+      showToast('Notes must be at least 10 characters for Payment Pending bookings', 'error'); return;
+    }
   }
   if (body.payment_status === 'paid_in_full' && !body.payment_date) {
     showToast('Payment date is required when paid in full', 'error'); return;
@@ -850,18 +856,29 @@ window.openCancelModal = function(bookingId) {
       <option value="hold_released">CC/RC Hold Released</option>
       <option value="no_refund">No Refund</option>
     </select></div>`;
-  html += `<div class="form-group"><label class="form-label">Reason</label>
-    <textarea class="form-textarea" id="cxl-reason" placeholder="Optional..."></textarea></div>`;
+  html += `<div class="form-group"><label class="form-label">Cancellation By Agent</label>
+    <input class="form-input" id="cxl-by-agent" placeholder="Agent name"></div>`;
+  html += `<div class="form-group"><label class="form-label">Refund Approved By</label>
+    <input class="form-input" id="cxl-approved-by" placeholder="Approver name"></div>`;
+  html += `<div class="form-group"><label class="form-label">Notes <span style="color:var(--text-muted);font-size:11px;">(min. 10 characters)</span></label>
+    <textarea class="form-textarea" id="cxl-reason" placeholder="Cancellation notes..."></textarea></div>`;
   html += `<div class="btn-group">
     <button class="btn btn-danger btn-block" id="cxl-confirm" data-id="${bookingId}">Confirm Cancel</button>
     <button class="btn btn-ghost btn-block" onclick="closePopup()">Go Back</button></div>`;
   sheet.innerHTML = html;
 
   $('#cxl-confirm').addEventListener('click', async () => {
+    const reason = $('#cxl-reason').value.trim();
+    const byAgent = $('#cxl-by-agent').value.trim() || null;
+    const approvedBy = $('#cxl-approved-by').value.trim() || null;
+    if (!reason || reason.length < 10) {
+      showToast('Notes must be at least 10 characters', 'error');
+      return;
+    }
     try {
       await api(`/admin/booking/${bookingId}/cancel`, {
         method: 'POST',
-        body: { cancellation_reason: $('#cxl-reason').value.trim()||null, refund_type: $('#cxl-refund').value||null },
+        body: { cancellation_reason: reason, refund_type: $('#cxl-refund').value||null, cancellation_by_agent: byAgent, refund_approved_by: approvedBy },
       });
       showToast('Booking cancelled', 'success');
       closePopup(); renderCalendar();
@@ -1057,7 +1074,12 @@ $('#cxl-load').addEventListener('click', async () => {
           <span class="cxl-date">${c.cancelled_at ? new Date(c.cancelled_at).toLocaleString() : ''}</span>
         </div>
         <div class="cxl-detail">Guest: ${esc(c.renter_name)} | Room: ${esc(c.room_number)} (${c.property})</div>
-        <div class="cxl-detail">Refund: ${c.refund_type || 'N/A'} ${c.cancellation_reason ? '| Reason: ' + esc(c.cancellation_reason) : ''}</div>
+        <div class="cxl-detail">Refund: ${c.refund_type || 'N/A'} ${c.cancellation_reason ? '| Notes: ' + esc(c.cancellation_reason) : ''}</div>
+        ${(c.cancellation_by_agent || c.refund_approved_by) ? `<div class="cxl-detail">
+          ${c.cancellation_by_agent ? 'Cancelled By: ' + esc(c.cancellation_by_agent) : ''}
+          ${c.cancellation_by_agent && c.refund_approved_by ? ' | ' : ''}
+          ${c.refund_approved_by ? 'Refund Approved By: ' + esc(c.refund_approved_by) : ''}
+        </div>` : ''}
       </div>
     `).join('');
   } catch (e) { showToast(e.message, 'error'); }
@@ -1081,7 +1103,10 @@ function describeActivityDetails(entry) {
     return `Date ${entry.booking_date || details.booking_date || '—'} • Slot ${(details.slot || 'full').toUpperCase()}${details.renter_name ? ` • ${esc(details.renter_name)}` : ''}`;
   }
   if (entry.category === 'cancellation') {
-    return `Date ${entry.booking_date || '—'} • Refund ${esc(details.refund_type || 'N/A')}${details.cancellation_reason ? ` • ${esc(details.cancellation_reason)}` : ''}`;
+    let s = `Date ${entry.booking_date || '—'} • Refund ${esc(details.refund_type || 'N/A')}${details.cancellation_reason ? ` • ${esc(details.cancellation_reason)}` : ''}`;
+    if (details.cancellation_by_agent) s += ` • By: ${esc(details.cancellation_by_agent)}`;
+    if (details.refund_approved_by) s += ` • Approved: ${esc(details.refund_approved_by)}`;
+    return s;
   }
   if (entry.category === 'block_hold') {
     return `Type ${esc(entry.block_type || '—')} • ${details.start_date || '—'} to ${details.is_indeterminate ? 'indeterminate' : (details.end_date || 'open')}`;

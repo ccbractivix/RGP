@@ -85,6 +85,8 @@ async function ensureSchema() {
       no_payment_review   BOOLEAN NOT NULL DEFAULT FALSE,
       cancellation_reason TEXT,
       refund_type         TEXT CHECK (refund_type IN ('refund_issued','hold_released','no_refund')),
+      cancellation_by_agent TEXT,
+      refund_approved_by  TEXT,
       cancelled_at        TIMESTAMPTZ,
       created_by_code     TEXT,
       created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -161,6 +163,8 @@ async function ensureSchema() {
   await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS payment_date DATE`).catch(() => {});
   await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS booking_agent_name TEXT`).catch(() => {});
   await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS infogenesis_check_number TEXT`).catch(() => {});
+  await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS cancellation_by_agent TEXT`).catch(() => {});
+  await db.query(`ALTER TABLE cabana_bookings ADD COLUMN IF NOT EXISTS refund_approved_by TEXT`).catch(() => {});
 
   await db.query(`
     UPDATE cabana_bookings
@@ -809,7 +813,7 @@ async function updateBooking(id, updates) {
   return rows[0];
 }
 
-async function cancelBooking(id, { cancellationReason, refundType, actorCode, actorRole }) {
+async function cancelBooking(id, { cancellationReason, refundType, cancellationByAgent, refundApprovedBy, actorCode, actorRole }) {
   const booking = await getBooking(id);
   if (!booking) throw new Error('Booking not found');
   if (booking.status === 'cancelled') throw new Error('Booking is already cancelled');
@@ -818,10 +822,12 @@ async function cancelBooking(id, { cancellationReason, refundType, actorCode, ac
   const { rows } = await db.query(
     `UPDATE cabana_bookings
      SET status = 'cancelled', cancellation_reason = $2, refund_type = $3,
-        property = $4, cancelled_at = NOW(), updated_at = NOW(), version = version + 1
+        cancellation_by_agent = $4, refund_approved_by = $5,
+        property = $6, cancelled_at = NOW(), updated_at = NOW(), version = version + 1
      WHERE id = $1
      RETURNING *`,
-    [id, cancellationReason || null, refundType || null, normalizedProperty]
+    [id, cancellationReason || null, refundType || null,
+     cancellationByAgent || null, refundApprovedBy || null, normalizedProperty]
   );
 
   await logActivity({
@@ -836,6 +842,8 @@ async function cancelBooking(id, { cancellationReason, refundType, actorCode, ac
       slot: rows[0].slot,
       refund_type: rows[0].refund_type,
       cancellation_reason: rows[0].cancellation_reason,
+      cancellation_by_agent: rows[0].cancellation_by_agent,
+      refund_approved_by: rows[0].refund_approved_by,
       renter_name: rows[0].renter_name,
       last_name: rows[0].last_name,
       first_name: rows[0].first_name,
