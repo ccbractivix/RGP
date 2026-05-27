@@ -227,8 +227,15 @@ async function ensureSchema() {
 
   await db.query(`
     ALTER TABLE cabana_bookings
+    DROP CONSTRAINT IF EXISTS cabana_bookings_infogenesis_receipt_required
+  `).catch(() => {});
+  await db.query(`
+    ALTER TABLE cabana_bookings
     ADD CONSTRAINT cabana_bookings_infogenesis_receipt_required
-    CHECK (infogenesis_receipt_number IS NOT NULL AND btrim(infogenesis_receipt_number) <> '')
+    CHECK (
+      payment_status <> 'paid_in_full'
+      OR (infogenesis_receipt_number IS NOT NULL AND btrim(infogenesis_receipt_number) <> '')
+    )
     NOT VALID
   `).catch(() => {});
 
