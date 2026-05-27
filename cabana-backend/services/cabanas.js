@@ -164,8 +164,17 @@ async function ensureSchema() {
 
   await db.query(`
     UPDATE cabana_bookings
-    SET property = 'HICV'
-    WHERE property = 'CCBR'
+    SET property = CASE
+      WHEN property IS NULL OR btrim(property) = '' THEN 'HICV'
+      WHEN upper(btrim(property)) = 'CCBR' THEN 'HICV'
+      WHEN upper(btrim(property)) = 'HICV' THEN 'HICV'
+      WHEN upper(btrim(property)) = 'HIE' THEN 'HIE'
+      ELSE 'HICV'
+    END
+    WHERE property IS NULL
+       OR btrim(property) = ''
+       OR property <> btrim(property)
+       OR upper(btrim(property)) IN ('CCBR', 'HICV', 'HIE')
   `).catch(() => {});
   await db.query(`
     ALTER TABLE cabana_bookings
@@ -476,6 +485,28 @@ function requireField(value, label) {
   return cleaned;
 }
 
+function getCanonicalProperty(value) {
+  const raw = typeof value === 'string' ? value : '';
+  const cleaned = raw.trim().toUpperCase();
+  if (cleaned === 'CCBR') return 'HICV';
+  if (cleaned === 'HICV' || cleaned === 'HIE') return cleaned;
+  return '';
+}
+
+function normalizeProperty(value, defaultValue = null) {
+  const canonical = getCanonicalProperty(value);
+  if (canonical) return canonical;
+  if (defaultValue !== null) return defaultValue;
+  throw new Error('property must be HICV or HIE');
+}
+
+function propertyNeedsNormalization(value) {
+  const raw = typeof value === 'string' ? value : '';
+  const canonical = getCanonicalProperty(raw);
+  if (!canonical) return true;
+  return canonical !== raw;
+}
+
 function toDisplayName(lastName, firstName) {
   return `${lastName}${firstName ? `, ${firstName}` : ''}`;
 }
@@ -487,7 +518,7 @@ async function createBooking({
   paymentStatus, paymentDate, bookingAgentName, infogenesisCheckNumber, actorRole,
 }) {
   slot = slot || 'full';
-  property = property || 'HICV';
+  property = normalizeProperty(property, 'HICV');
   lastName = requireField(lastName || (typeof renterName === 'string' ? renterName.split(',')[0] : ''), 'Last name');
   firstName = requireField(firstName || (typeof renterName === 'string' ? renterName.split(',')[1] : ''), 'First name');
   const displayName = toDisplayName(lastName, firstName);
@@ -634,8 +665,10 @@ async function updateBooking(id, updates) {
     if (!Number.isFinite(parsedPrice) || parsedPrice < 0) throw new Error('Price paid must be a non-negative number');
     updates.price_paid = parsedPrice.toFixed(2);
   }
-  if (updates.property !== undefined && !['HICV', 'HIE'].includes(updates.property)) {
-    throw new Error('property must be HICV or HIE');
+  if (updates.property !== undefined) {
+    updates.property = normalizeProperty(updates.property);
+  } else if (propertyNeedsNormalization(booking.property)) {
+    updates.property = normalizeProperty(booking.property, 'HICV');
   }
   if (updates.payment_status !== undefined) {
     if (!['pending_payment', 'paid_in_full'].includes(updates.payment_status)) {
@@ -751,14 +784,15 @@ async function cancelBooking(id, { cancellationReason, refundType, actorCode, ac
   const booking = await getBooking(id);
   if (!booking) throw new Error('Booking not found');
   if (booking.status === 'cancelled') throw new Error('Booking is already cancelled');
+  const normalizedProperty = normalizeProperty(booking.property, 'HICV');
 
   const { rows } = await db.query(
     `UPDATE cabana_bookings
      SET status = 'cancelled', cancellation_reason = $2, refund_type = $3,
-         cancelled_at = NOW(), updated_at = NOW(), version = version + 1
+        property = $4, cancelled_at = NOW(), updated_at = NOW(), version = version + 1
      WHERE id = $1
      RETURNING *`,
-    [id, cancellationReason || null, refundType || null]
+    [id, cancellationReason || null, refundType || null, normalizedProperty]
   );
 
   await logActivity({
