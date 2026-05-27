@@ -143,19 +143,25 @@ router.post('/booking', async (req, res) => {
     reservation_number, check_in_date, date_reserved, price_paid,
     property, payment_status, payment_date, special_instructions,
     infogenesis_check_number, infogenesis_receipt_number, booking_agent_name,
+    comp_authorized_by,
   } = req.body || {};
   const checkNumber = typeof (infogenesis_check_number || infogenesis_receipt_number) === 'string'
     ? (infogenesis_check_number || infogenesis_receipt_number).trim()
     : '';
+  const isComped = payment_status === 'comped';
 
   if (
     !cabana_id || !date || !last_name || !first_name || !phone || !room_number
     || !reservation_number || !check_in_date || !date_reserved
-    || price_paid === undefined || !payment_status || !checkNumber || !booking_agent_name
+    || (!isComped && price_paid === undefined) || !payment_status || !checkNumber || !booking_agent_name
   ) {
     return res.status(400).json({
       error: 'Missing required booking fields',
     });
+  }
+
+  if (isComped && !comp_authorized_by) {
+    return res.status(400).json({ error: 'Comp authorized by is required when payment status is comped' });
   }
 
   try {
@@ -179,6 +185,7 @@ router.post('/booking', async (req, res) => {
       infogenesisReceiptNumber: infogenesis_receipt_number,
       infogenesisCheckNumber: infogenesis_check_number,
       bookingAgentName: booking_agent_name,
+      compAuthorizedBy: comp_authorized_by || null,
       createdByCode: req.adminCode,
       isAdmin: true,
       actorRole: 'admin',

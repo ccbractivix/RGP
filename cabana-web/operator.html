@@ -68,6 +68,7 @@
     .slot-badge.available { background: var(--green-dim); color: var(--green); }
     .slot-badge.booked-paid { background: var(--red-dim); color: var(--red); }
     .slot-badge.booked-unpaid { background: var(--yellow-dim); color: var(--yellow); }
+    .slot-badge.booked-comped { background: var(--blue-dim); color: var(--blue); }
     .slot-badge.tentative { background: var(--blue-dim); color: var(--blue); border: 1px dashed var(--blue); }
     .slot-badge.needs-review { background: var(--purple-dim); color: var(--purple); }
     .slot-badge.maintenance { background: var(--orange-dim); color: var(--orange); }
@@ -116,6 +117,7 @@
     .status-pill { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
     .status-pill.paid { background: var(--red-dim); color: var(--red); }
     .status-pill.unpaid { background: var(--yellow-dim); color: var(--yellow); }
+    .status-pill.comped { background: var(--blue-dim); color: var(--blue); }
     .status-pill.tentative { background: var(--blue-dim); color: var(--blue); }
     .status-pill.confirmed { background: var(--green-dim); color: var(--green); }
     .status-pill.needs_review { background: var(--purple-dim); color: var(--purple); }
@@ -184,6 +186,7 @@
       <div class="legend">
         <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Available</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Booked &amp; Paid</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div> Comped</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> Needs Review</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> 🚧 Maintenance</div>
         <div class="legend-item"><div class="legend-dot" style="background:#374151;border:1px solid var(--red)"></div> ✋ Manager Hold</div>
@@ -478,6 +481,8 @@ function buildBookingBadge(cabana, b) {
     cls = 'needs-review'; icon = '⚠️';
   } else if ((b.payment_status || '').toLowerCase() === 'paid_in_full' || b.is_paid) {
     cls = 'booked-paid'; icon = '🔴';
+  } else if ((b.payment_status || '').toLowerCase() === 'comped') {
+    cls = 'booked-comped'; icon = '🔵';
   } else {
     cls = 'booked-unpaid'; icon = '🟡';
   }
@@ -511,8 +516,14 @@ function openDayModal(date) {
     html += `<div class="info-row"><span class="info-label">Check-In Date</span><span class="info-value">${b.check_in_date ? fmtDate(b.check_in_date) : '—'}</span></div>`;
     html += `<div class="info-row"><span class="info-label">Date Reserved</span><span class="info-value">${b.date_reserved ? fmtDate(b.date_reserved) : '—'}</span></div>`;
     html += `<div class="info-row"><span class="info-label">Price Paid</span><span class="info-value">${b.price_paid != null ? `$${esc(String(b.price_paid))}` : '—'}</span></div>`;
-    html += `<div class="info-row"><span class="info-label">Payment Status</span><span class="info-value"><span class="status-pill ${((b.payment_status || '') === 'paid_in_full' || b.is_paid) ? 'paid' : 'unpaid'}">${((b.payment_status || '') === 'paid_in_full' || b.is_paid) ? 'Paid In Full' : 'Pending Payment'}</span> <span class="status-pill ${b.status}">${b.status}</span></span></div>`;
+    const payStatus = b.payment_status || '';
+    const payLabel = payStatus === 'paid_in_full' || b.is_paid ? 'Paid In Full' : payStatus === 'comped' ? 'Comped' : 'Pending Payment';
+    const payPillClass = payStatus === 'paid_in_full' || b.is_paid ? 'paid' : payStatus === 'comped' ? 'comped' : 'unpaid';
+    html += `<div class="info-row"><span class="info-label">Payment Status</span><span class="info-value"><span class="status-pill ${payPillClass}">${payLabel}</span> <span class="status-pill ${b.status}">${b.status}</span></span></div>`;
     html += `<div class="info-row"><span class="info-label">Payment Date</span><span class="info-value">${b.payment_date ? fmtDate(b.payment_date) : '—'}</span></div>`;
+    if (payStatus === 'comped' && b.comp_authorized_by) {
+      html += `<div class="info-row"><span class="info-label">Comp Authorized By</span><span class="info-value">${esc(b.comp_authorized_by)}</span></div>`;
+    }
     html += `<div class="info-row"><span class="info-label">Infogenesis Check #</span><span class="info-value">${b.infogenesis_check_number ? esc(b.infogenesis_check_number) : '<span style="color:var(--yellow);">Missing</span>'}</span></div>`;
     html += `<div class="info-row"><span class="info-label">Booking Agent</span><span class="info-value">${esc(b.booking_agent_name || '—')}</span></div>`;
     if (b.special_instructions) {
@@ -582,8 +593,11 @@ function openDayModal(date) {
       <select class="form-select" id="bk-payment-status">
         <option value="pending_payment">Pending Payment</option>
         <option value="paid_in_full">Paid In Full</option>
+        <option value="comped">Comped</option>
       </select></div>
   </div>`;
+  html += `<div class="form-group" id="bk-comp-auth-group" style="display:none;"><label class="form-label">Comp Authorized By</label>
+    <input class="form-input" id="bk-comp-authorized-by" placeholder="Name of authorizing manager"></div>`;
   html += `<div class="form-group"><label class="form-label">Payment Date</label>
     <input class="form-input" id="bk-payment-date" type="date"></div>`;
   html += `<div class="form-group"><label class="form-label">Notes</label>
@@ -600,9 +614,12 @@ function openDayModal(date) {
   // Bind submit
   $('#bk-submit').addEventListener('click', submitBooking);
   $('#bk-payment-status').addEventListener('change', () => {
+    const status = $('#bk-payment-status').value;
     const paymentDate = $('#bk-payment-date');
-    paymentDate.required = $('#bk-payment-status').value === 'paid_in_full';
+    paymentDate.required = status === 'paid_in_full';
     if (!paymentDate.required) paymentDate.value = '';
+    $('#bk-comp-auth-group').style.display = status === 'comped' ? '' : 'none';
+    $('#bk-comp-authorized-by').required = status === 'comped';
   });
 }
 
@@ -633,15 +650,28 @@ async function submitBooking() {
   const instructions = $('#bk-instructions').value.trim();
   const checkNumber = $('#bk-check-number').value.trim();
   const bookingAgentName = $('#bk-agent-name').value.trim();
+  const compAuthorizedBy = ($('#bk-comp-authorized-by') || {value:''}).value?.trim() || '';
   const phoneDigits = phone.replace(/\D/g, '');
+  const isComped = paymentStatus === 'comped';
 
   const hasMissingRequiredFields = (
-    !lastName || !firstName || !phone || !room || !reservationNumber || !checkInDate || !dateReserved || !pricePaid || !paymentStatus || !checkNumber || !bookingAgentName
+    !lastName || !firstName || !phone || !room || !reservationNumber || !checkInDate || !dateReserved || (!isComped && !pricePaid) || !paymentStatus || !checkNumber || !bookingAgentName
   );
 
   if (paymentStatus === 'paid_in_full' && hasMissingRequiredFields) {
     showToast('Please complete all required fields', 'error');
     return;
+  }
+
+  if (isComped) {
+    if (!lastName || !firstName || !phone || !room || !reservationNumber || !checkInDate || !dateReserved || !checkNumber || !bookingAgentName) {
+      showToast('Please complete all required fields', 'error');
+      return;
+    }
+    if (!compAuthorizedBy) {
+      showToast('Comp Authorized By is required for Comped bookings', 'error');
+      return;
+    }
   }
 
   if (paymentStatus === 'pending_payment') {
@@ -677,12 +707,13 @@ async function submitBooking() {
         reservation_number: reservationNumber,
         check_in_date: checkInDate,
         date_reserved: dateReserved,
-        price_paid: pricePaid,
+        price_paid: pricePaid || null,
         property, special_instructions: instructions || null,
         payment_status: paymentStatus,
         payment_date: paymentDate || null,
         infogenesis_check_number: checkNumber,
         booking_agent_name: bookingAgentName,
+        comp_authorized_by: isComped ? compAuthorizedBy : null,
       },
     });
 
