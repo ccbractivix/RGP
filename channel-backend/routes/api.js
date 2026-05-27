@@ -18,6 +18,14 @@ router.get('/channels/:id', async (req, res) => {
     if (!channel) return res.status(404).json({ error: 'Channel not found' });
 
     const slides = await getChannelSlides(req.params.id);
+    const rules = await getChannelRules(req.params.id);
+    const ruleMap = {};
+    rules.forEach(r => {
+      ruleMap[r.rule_type] = {
+        enabled: !!r.enabled,
+        config: r.config || {},
+      };
+    });
     return res.json({
       id:   channel.id,
       name: channel.name,
@@ -27,6 +35,7 @@ router.get('/channels/:id', async (req, res) => {
         label:    s.label,
         order:    s.display_order,
       })),
+      rules: ruleMap,
     });
   } catch (e) {
     console.error('[api] /channels/:id error:', e);
