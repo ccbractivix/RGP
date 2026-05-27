@@ -9,7 +9,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #E37433;
+      --bg: #F2F1E8;
       --card-bg: #C25A1E;
       --card-border: #D4743A;
       --text: #FFFFFF;
@@ -390,56 +390,108 @@
     /* ===== FOOTER ===== */
     #tv-footer {
       display: flex;
-      align-items: center;
-      padding: 2.5px 6px 3.5px;
-      border-top: 1px solid var(--card-border);
+      align-items: stretch;
+      padding: 6px 12px 8px;
+      border-top: 1px solid #E8D5C0;
       flex-shrink: 0;
-      gap: 5px;
+      gap: 8px;
     }
 
     .footer-cell {
       flex: 1;
+      min-width: 0;
     }
 
     .footer-left {
       display: flex;
       align-items: center;
-      gap: 3px;
+      gap: 8px;
     }
 
     .footer-left .qr-code {
-      width: clamp(40px, 4vw, 60px);
-      height: clamp(40px, 4vw, 60px);
-      border-radius: 3px;
+      width: clamp(80px, 9vw, 130px);
+      height: clamp(80px, 9vw, 130px);
+      border-radius: 6px;
       background: #fff;
-      padding: 2px;
+      padding: 5px;
       flex-shrink: 0;
     }
 
     .footer-left-text {
-      font-size: clamp(5px, 0.425vw, 6.5px);
-      color: var(--text-muted);
-      line-height: 1.5;
+      font-size: clamp(10px, 1vw, 15px);
+      color: #454040;
+      line-height: 1.35;
+      text-align: left;
     }
 
     .footer-center {
-      font-size: clamp(4.5px, 0.375vw, 6px);
-      color: var(--text-dim);
-      line-height: 1.5;
-      font-style: italic;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .footer-slideshow {
+      width: 100%;
+      height: clamp(80px, 9vw, 130px);
+      border: 1px solid #D2CDC5;
+      border-radius: 6px;
+      background: #fff;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .footer-slides-track {
+      display: flex;
+      width: max-content;
+      height: 100%;
+      animation: footer-scroll 45s linear infinite;
+    }
+
+    .footer-slides-track img {
+      width: clamp(120px, 14vw, 210px);
+      height: 100%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .footer-slideshow-fallback {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8A8378;
+      font-size: clamp(10px, 1vw, 14px);
       text-align: center;
+      padding: 8px;
     }
 
     .footer-right {
       display: flex;
       align-items: center;
-      justify-content: flex-end;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .footer-right-text {
+      flex: 1;
+      font-size: clamp(9px, 0.9vw, 13px);
+      color: #454040;
+      line-height: 1.35;
+      text-align: left;
     }
 
     .footer-right-logo {
-      max-height: clamp(30px, 3.5vw, 50px);
+      max-height: clamp(60px, 8vw, 110px);
       width: auto;
       object-fit: contain;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    @keyframes footer-scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
     }
 
     /* ===== LOADING ===== */
@@ -475,7 +527,7 @@
       <div id="header-logo">
         <img src="images/go4launch_main_t.png" alt="Go4Launch" onerror="this.style.display='none';this.parentElement.insertAdjacentHTML('beforeend','<span style=&quot;color:#FFFFFF;font-weight:700;font-size:clamp(32px, 3.6vw, 56px);&quot;>GO4LAUNCH</span>')">
       </div>
-      <div id="header-title">Rocket Roundup</div>
+      <div id="header-title">Upcoming Rocket Launch Information</div>
     </div>
 
     <!-- Loading -->
@@ -495,9 +547,10 @@
         <div class="footer-left-text">The Go4Launch app has all the information you need for launch viewing at the resort!<br>Scan the QR code or use the shortcut <strong>rocketbeachresort.com</strong></div>
       </div>
       <div class="footer-cell footer-center">
-        Rocket launches are subject to weather, mechanical and other conditions that may delay, postpone, or cancel a launch. Follow the Go4Launch app for the latest information.
+        <div class="footer-slideshow" id="footer-slideshow"></div>
       </div>
       <div class="footer-cell footer-right">
+        <div class="footer-right-text">Rocket launches are subject to weather, mechanical and other conditions that may delay, postpone, or cancel a launch. Follow the Go4Launch app for the latest information.</div>
         <img class="footer-right-logo" src="images/ctrg_t.png" alt="CTRG" onerror="this.style.display='none'">
       </div>
     </div>
@@ -517,6 +570,16 @@
       var RETRY_MS   = 60000;  // 1 minute on error
       var RTL_GRACE_MS = 120 * 60 * 1000; // 120 minutes after RTL time
       var MAX_CENTER_LAUNCHES = 5;
+      var FOOTER_SCROLL_SECONDS_PER_IMAGE = 6;
+      var FOOTER_SLIDE_IMAGES = [
+        { src: 'images/tv_10237339136830208_738048345749025240_n.jpg', alt: 'Launch viewing area at the resort' },
+        { src: 'images/tv_122124905607148829_4664336842369730371_n.jpg', alt: 'Guests watching a rocket launch' },
+        { src: 'images/tv_122126917239148829_1522892770188139604_n.jpg', alt: 'Evening launch sky over the coast' },
+        { src: 'images/tv_1256623983117749_4412877648315315623_n.jpg', alt: 'Rocket trail visible from resort grounds' },
+        { src: 'images/tv_1265106332269514_5629049751309498218_n.jpg', alt: 'Go4Launch launch event moment' },
+        { src: 'images/tv_1267364818710332_2528535706527877359_n.jpg', alt: 'Night launch plume in the sky' },
+        { src: 'images/tv_950681631105014_2117367159778265847_n.jpg', alt: 'Resort launch viewing experience photo' }
+      ];
 
       var TV_CACHE_KEY = 'go4launch_tv_v1';
       var TV_CACHE_TTL = 3600000; // 1 hour
@@ -921,7 +984,35 @@
         });
       }
 
-      document.addEventListener('DOMContentLoaded', fetchAndRender);
+      function initFooterSlideshow() {
+        var container = document.getElementById('footer-slideshow');
+        if (!container) return;
+        var slides = FOOTER_SLIDE_IMAGES.slice();
+        if (!slides.length) {
+          container.innerHTML = '<div class="footer-slideshow-fallback">No slideshow images configured</div>';
+          return;
+        }
+        var track = document.createElement('div');
+        track.className = 'footer-slides-track';
+        var loopSlides = slides.concat(slides);
+
+        loopSlides.forEach(function (slide) {
+          var img = document.createElement('img');
+          img.src = slide.src;
+          img.alt = slide.alt;
+          img.loading = 'eager';
+          track.appendChild(img);
+        });
+
+        container.innerHTML = '';
+        container.appendChild(track);
+        track.style.animationDuration = (slides.length * FOOTER_SCROLL_SECONDS_PER_IMAGE) + 's';
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        initFooterSlideshow();
+        fetchAndRender();
+      });
     })();
   </script>
 </body>
