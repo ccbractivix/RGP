@@ -130,6 +130,7 @@ router.post('/booking', async (req, res) => {
     reservation_number, check_in_date, date_reserved, price_paid,
     property, payment_status, payment_date, special_instructions,
     infogenesis_check_number, infogenesis_receipt_number, booking_agent_name,
+    comp_authorized_by,
   } = req.body || {};
   const checkNumber = typeof (infogenesis_check_number || infogenesis_receipt_number) === 'string'
     ? (infogenesis_check_number || infogenesis_receipt_number).trim()
@@ -157,6 +158,10 @@ router.post('/booking', async (req, res) => {
     });
   }
 
+  if (normalizedPaymentStatus === 'comped' && !comp_authorized_by) {
+    return res.status(400).json({ error: 'Comp authorized by is required when payment status is comped' });
+  }
+
   try {
     const booking = await createBooking({
       cabanaId: cabana_id,
@@ -178,6 +183,7 @@ router.post('/booking', async (req, res) => {
       infogenesisReceiptNumber: infogenesis_receipt_number,
       infogenesisCheckNumber: infogenesis_check_number,
       bookingAgentName: booking_agent_name,
+      compAuthorizedBy: comp_authorized_by || null,
       createdByCode: req.operatorCode,
       isAdmin: false,
       actorRole: getActorRole(req.operatorCode),
