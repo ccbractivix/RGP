@@ -869,7 +869,11 @@ async function loadCancellations() {
         </div>
         <div class="cxl-detail">Guest: ${esc(c.renter_name)} | Room: ${esc(c.room_number)} (${c.property})</div>
         <div class="cxl-detail">Refund: ${c.refund_type || 'N/A'} ${c.cancellation_reason ? '| Notes: ' + esc(c.cancellation_reason) : ''}</div>
-        ${(c.cancellation_by_agent || c.refund_approved_by) ? `<div class="cxl-detail">${c.cancellation_by_agent ? 'Cancelled By: ' + esc(c.cancellation_by_agent) : ''}${c.cancellation_by_agent && c.refund_approved_by ? ' | ' : ''}${c.refund_approved_by ? 'Refund Approved By: ' + esc(c.refund_approved_by) : ''}</div>` : ''}
+        ${(c.cancellation_by_agent || c.refund_approved_by) ? `<div class="cxl-detail">
+          ${c.cancellation_by_agent ? 'Cancelled By: ' + esc(c.cancellation_by_agent) : ''}
+          ${c.cancellation_by_agent && c.refund_approved_by ? ' | ' : ''}
+          ${c.refund_approved_by ? 'Refund Approved By: ' + esc(c.refund_approved_by) : ''}
+        </div>` : ''}
       </div>
     `).join('');
   } catch (e) {

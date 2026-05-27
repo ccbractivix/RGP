@@ -822,12 +822,12 @@ async function cancelBooking(id, { cancellationReason, refundType, cancellationB
   const { rows } = await db.query(
     `UPDATE cabana_bookings
      SET status = 'cancelled', cancellation_reason = $2, refund_type = $3,
-        cancellation_by_agent = $5, refund_approved_by = $6,
-        property = $4, cancelled_at = NOW(), updated_at = NOW(), version = version + 1
+        cancellation_by_agent = $4, refund_approved_by = $5,
+        property = $6, cancelled_at = NOW(), updated_at = NOW(), version = version + 1
      WHERE id = $1
      RETURNING *`,
-    [id, cancellationReason || null, refundType || null, normalizedProperty,
-     cancellationByAgent || null, refundApprovedBy || null]
+    [id, cancellationReason || null, refundType || null,
+     cancellationByAgent || null, refundApprovedBy || null, normalizedProperty]
   );
 
   await logActivity({
