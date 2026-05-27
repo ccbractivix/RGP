@@ -994,9 +994,7 @@
         }
         var track = document.createElement('div');
         track.className = 'footer-slides-track';
-        var visibleSlideCount = slides.length;
         var loopSlides = slides.concat(slides);
-        track.style.animationDuration = (visibleSlideCount * FOOTER_SCROLL_SECONDS_PER_IMAGE) + 's';
 
         loopSlides.forEach(function (slide) {
           var img = document.createElement('img');
@@ -1008,6 +1006,7 @@
 
         container.innerHTML = '';
         container.appendChild(track);
+        track.style.animationDuration = (slides.length * FOOTER_SCROLL_SECONDS_PER_IMAGE) + 's';
       }
 
       document.addEventListener('DOMContentLoaded', function () {
