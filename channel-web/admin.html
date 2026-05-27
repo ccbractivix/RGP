@@ -333,6 +333,12 @@
         <option value="1">Enabled — show banner when lightning is active</option>
       </select>
 
+      <label style="margin-top:8px">Forced Express Checkout Rule</label>
+      <select id="ch-edit-forced-express">
+        <option value="0">Disabled — normal playlist all day</option>
+        <option value="1">Enabled — only Express Checkout + Amenities Status from 7:00 AM to 10:30 AM</option>
+      </select>
+
       <h3 style="font-size:14px; margin: 16px 0 8px;">Slide Playlist</h3>
       <div class="slide-editor">
         <div class="slide-pool">
@@ -608,6 +614,7 @@
   const chSlug      = document.getElementById('ch-edit-slug');
   const chName      = document.getElementById('ch-edit-name');
   const chLightning = document.getElementById('ch-edit-lightning');
+  const chForcedExpress = document.getElementById('ch-edit-forced-express');
   const chSave      = document.getElementById('ch-save-btn');
   const chCancel    = document.getElementById('ch-cancel-btn');
   const chDelete    = document.getElementById('ch-delete-btn');
@@ -622,6 +629,7 @@
     chSlug.disabled = false;
     chName.value = '';
     chLightning.value = '0';
+    chForcedExpress.value = '0';
     chDelete.style.display = 'none';
     chPreview.style.display = 'none';
     playlistItems = [];
@@ -644,6 +652,9 @@
 
       const ltRule = (ruleData.rules || []).find(r => r.rule_type === 'lightning_alert');
       chLightning.value = ltRule && ltRule.enabled ? '1' : '0';
+
+      const fxRule = (ruleData.rules || []).find(r => r.rule_type === 'forced_express_checkout');
+      chForcedExpress.value = fxRule && fxRule.enabled ? '1' : '0';
 
       chDelete.style.display = '';
       chPreview.style.display = '';
@@ -783,6 +794,13 @@
       await api('PUT', `/admin/channels/${slug}/rules`, {
         rule_type: 'lightning_alert',
         enabled: chLightning.value === '1',
+      });
+
+      // Save forced express checkout rule
+      await api('PUT', `/admin/channels/${slug}/rules`, {
+        rule_type: 'forced_express_checkout',
+        enabled: chForcedExpress.value === '1',
+        config: { start: '07:00', end: '10:30' },
       });
 
       toast(isNew ? 'Channel created!' : 'Channel saved!');
