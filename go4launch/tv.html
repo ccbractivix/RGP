@@ -571,13 +571,13 @@
       var RTL_GRACE_MS = 120 * 60 * 1000; // 120 minutes after RTL time
       var MAX_CENTER_LAUNCHES = 5;
       var FOOTER_SLIDE_IMAGES = [
-        'images/tv_10237339136830208_738048345749025240_n.jpg',
-        'images/tv_122124905607148829_4664336842369730371_n.jpg',
-        'images/tv_122126917239148829_1522892770188139604_n.jpg',
-        'images/tv_1256623983117749_4412877648315315623_n.jpg',
-        'images/tv_1265106332269514_5629049751309498218_n.jpg',
-        'images/tv_1267364818710332_2528535706527877359_n.jpg',
-        'images/tv_950681631105014_2117367159778265847_n.jpg'
+        { src: 'images/tv_10237339136830208_738048345749025240_n.jpg', alt: 'Launch viewing area at the resort' },
+        { src: 'images/tv_122124905607148829_4664336842369730371_n.jpg', alt: 'Guests watching a rocket launch' },
+        { src: 'images/tv_122126917239148829_1522892770188139604_n.jpg', alt: 'Evening launch sky over the coast' },
+        { src: 'images/tv_1256623983117749_4412877648315315623_n.jpg', alt: 'Rocket trail visible from resort grounds' },
+        { src: 'images/tv_1265106332269514_5629049751309498218_n.jpg', alt: 'Go4Launch launch event moment' },
+        { src: 'images/tv_1267364818710332_2528535706527877359_n.jpg', alt: 'Night launch plume in the sky' },
+        { src: 'images/tv_950681631105014_2117367159778265847_n.jpg', alt: 'Resort launch viewing experience photo' }
       ];
 
       var TV_CACHE_KEY = 'go4launch_tv_v1';
@@ -994,11 +994,13 @@
         var track = document.createElement('div');
         track.className = 'footer-slides-track';
 
-        slides.concat(slides).forEach(function (src, index) {
+        track.style.animationDuration = (slides.length * 6) + 's';
+
+        slides.concat(slides).forEach(function (slide) {
           var img = document.createElement('img');
-          img.src = src;
-          img.alt = 'Go4Launch TV photo ' + ((index % slides.length) + 1);
-          img.loading = 'lazy';
+          img.src = slide.src;
+          img.alt = slide.alt;
+          img.loading = 'eager';
           track.appendChild(img);
         });
 
