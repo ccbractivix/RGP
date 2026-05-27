@@ -134,11 +134,23 @@ router.post('/booking', async (req, res) => {
   const checkNumber = typeof (infogenesis_check_number || infogenesis_receipt_number) === 'string'
     ? (infogenesis_check_number || infogenesis_receipt_number).trim()
     : '';
+  const normalizedPaymentStatus = payment_status || 'pending_payment';
 
   if (
-    !cabana_id || !date || !last_name || !first_name || !phone || !room_number
-    || !reservation_number || !check_in_date || !date_reserved
-    || price_paid === undefined || !payment_status || !checkNumber || !booking_agent_name
+    !cabana_id || !date || !normalizedPaymentStatus
+  ) {
+    return res.status(400).json({
+      error: 'Missing required booking fields',
+    });
+  }
+
+  if (
+    normalizedPaymentStatus === 'paid_in_full'
+    && (
+      !last_name || !first_name || !phone || !room_number
+      || !reservation_number || !check_in_date || !date_reserved
+      || price_paid === undefined || !checkNumber || !booking_agent_name
+    )
   ) {
     return res.status(400).json({
       error: 'Missing required booking fields',
@@ -160,7 +172,7 @@ router.post('/booking', async (req, res) => {
       dateReserved: date_reserved,
       pricePaid: price_paid,
       property: property || 'HICV',
-      paymentStatus: payment_status,
+      paymentStatus: normalizedPaymentStatus,
       paymentDate: payment_date || null,
       specialInstructions: special_instructions,
       infogenesisReceiptNumber: infogenesis_receipt_number,
