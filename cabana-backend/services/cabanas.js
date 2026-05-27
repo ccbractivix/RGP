@@ -518,25 +518,47 @@ async function createBooking({
   paymentStatus, paymentDate, bookingAgentName, infogenesisCheckNumber, actorRole,
 }) {
   slot = slot || 'full';
-  property = normalizeProperty(property, 'HICV');
-  lastName = requireField(lastName || (typeof renterName === 'string' ? renterName.split(',')[0] : ''), 'Last name');
-  firstName = requireField(firstName || (typeof renterName === 'string' ? renterName.split(',')[1] : ''), 'First name');
-  const displayName = toDisplayName(lastName, firstName);
-  const normalizedPhone = normalizePhone(phone);
-  roomNumber = requireField(roomNumber, 'Villa/Room number');
-  reservationNumber = requireField(reservationNumber, 'Reservation number');
-  checkInDate = requireField(checkInDate, 'Check-in date');
-  dateReserved = requireField(dateReserved, 'Date reserved');
-  bookingAgentName = requireField(bookingAgentName, 'Booking agent name');
-  const checkNumber = requireReceiptNumber(infogenesisCheckNumber || infogenesisReceiptNumber);
   paymentStatus = paymentStatus || 'pending_payment';
   if (!['pending_payment', 'paid_in_full'].includes(paymentStatus)) {
     throw new Error('payment_status must be pending_payment or paid_in_full');
   }
-  const parsedPrice = Number(pricePaid);
-  if (!Number.isFinite(parsedPrice) || parsedPrice < 0) throw new Error('Price paid must be a non-negative number');
-  const normalizedPrice = parsedPrice.toFixed(2);
-  if (paymentStatus === 'paid_in_full' && !paymentDate) {
+  const isPaidInFull = paymentStatus === 'paid_in_full';
+  property = normalizeProperty(property, 'HICV');
+  const rawLastName = lastName || (typeof renterName === 'string' ? renterName.split(',')[0] : '');
+  const rawFirstName = firstName || (typeof renterName === 'string' ? renterName.split(',')[1] : '');
+  lastName = isPaidInFull ? requireField(rawLastName, 'Last name') : (typeof rawLastName === 'string' ? rawLastName.trim() : '');
+  firstName = isPaidInFull ? requireField(rawFirstName, 'First name') : (typeof rawFirstName === 'string' ? rawFirstName.trim() : '');
+  const displayName = (lastName || firstName)
+    ? toDisplayName(lastName, firstName)
+    : (typeof renterName === 'string' ? renterName.trim() : '');
+
+  const phoneValue = typeof phone === 'string' ? phone.trim() : '';
+  const normalizedPhone = (isPaidInFull || phoneValue) ? normalizePhone(phoneValue) : '';
+  roomNumber = isPaidInFull ? requireField(roomNumber, 'Villa/Room number') : (typeof roomNumber === 'string' ? roomNumber.trim() : '');
+  reservationNumber = isPaidInFull ? requireField(reservationNumber, 'Reservation number') : (typeof reservationNumber === 'string' ? reservationNumber.trim() : '');
+  checkInDate = isPaidInFull ? requireField(checkInDate, 'Check-in date') : (checkInDate || null);
+  dateReserved = isPaidInFull ? requireField(dateReserved, 'Date reserved') : (dateReserved || null);
+  bookingAgentName = isPaidInFull ? requireField(bookingAgentName, 'Booking agent name') : (typeof bookingAgentName === 'string' ? bookingAgentName.trim() : '');
+  const checkNumber = isPaidInFull
+    ? requireReceiptNumber(infogenesisCheckNumber || infogenesisReceiptNumber)
+    : (() => {
+      const pendingCheckNumber = typeof (infogenesisCheckNumber || infogenesisReceiptNumber) === 'string'
+        ? (infogenesisCheckNumber || infogenesisReceiptNumber).trim()
+        : '';
+      return pendingCheckNumber || null;
+    })();
+
+  let normalizedPrice = null;
+  const hasPriceValue = !(pricePaid === undefined || pricePaid === null || `${pricePaid}`.trim() === '');
+  if (hasPriceValue) {
+    const parsedPrice = Number(pricePaid);
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) throw new Error('Price paid must be a non-negative number');
+    normalizedPrice = parsedPrice.toFixed(2);
+  } else if (isPaidInFull) {
+    throw new Error('Price paid must be a non-negative number');
+  }
+
+  if (isPaidInFull && !paymentDate) {
     throw new Error('Payment date is required when payment status is paid in full');
   }
 
@@ -578,8 +600,8 @@ async function createBooking({
       cabanaId, bookingDate, slot, status, displayName, normalizedPhone,
       roomNumber, lastName, firstName, reservationNumber, checkInDate, dateReserved, normalizedPrice, property,
       paymentStatus, paymentDate || null,
-      paymentStatus === 'paid_in_full',
-      paymentStatus === 'paid_in_full' ? new Date(paymentDate) : null,
+      isPaidInFull,
+      isPaidInFull ? new Date(paymentDate) : null,
       specialInstructions || null,
       checkNumber,
       checkNumber,

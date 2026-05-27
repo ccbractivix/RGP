@@ -635,11 +635,21 @@ async function submitBooking() {
   const bookingAgentName = $('#bk-agent-name').value.trim();
   const phoneDigits = phone.replace(/\D/g, '');
 
-  if (!lastName || !firstName || !phone || !room || !reservationNumber || !checkInDate || !dateReserved || !pricePaid || !paymentStatus || !checkNumber || !bookingAgentName) {
+  const hasMissingRequiredFields = (
+    !lastName || !firstName || !phone || !room || !reservationNumber || !checkInDate || !dateReserved || !pricePaid || !paymentStatus || !checkNumber || !bookingAgentName
+  );
+
+  if (paymentStatus === 'paid_in_full' && hasMissingRequiredFields) {
     showToast('Please complete all required fields', 'error');
     return;
   }
-  if (phoneDigits.length !== 10) {
+
+  if (paymentStatus === 'pending_payment' && hasMissingRequiredFields) {
+    const proceedWithMissingFields = window.confirm('Not all required fields have been entered. Continue booking with pending payment?');
+    if (!proceedWithMissingFields) return;
+  }
+
+  if (phone && phoneDigits.length !== 10) {
     showToast('Phone number must have 10 digits', 'error');
     return;
   }
