@@ -360,6 +360,30 @@ async function getCancellations(startDate, endDate) {
   return rows;
 }
 
+// ── Cabana Slide Info ─────────────────────────────────────────────────────────
+
+/**
+ * Return the last_name for today's active booking on the Nth active cabana
+ * (ordered by id, 1-based).  Returns null when no booking exists.
+ */
+async function getTodaySlideInfo(cabanaOrder) {
+  const todayEastern = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+
+  const { rows: cabanas } = await db.query(
+    'SELECT id FROM cabanas WHERE is_active = TRUE ORDER BY id'
+  );
+  if (cabanas.length < cabanaOrder) return null;
+  const cabanaId = cabanas[cabanaOrder - 1].id;
+
+  const { rows } = await db.query(
+    `SELECT last_name FROM cabana_bookings
+     WHERE cabana_id = $1 AND booking_date = $2 AND status <> 'cancelled'
+     LIMIT 1`,
+    [cabanaId, todayEastern]
+  );
+  return rows[0]?.last_name || null;
+}
+
 // ── Slot Conflict Check ───────────────────────────────────────────────────────
 
 /**
@@ -1219,6 +1243,7 @@ module.exports = {
   updateCabana,
   getCalendarData,
   getCancellations,
+  getTodaySlideInfo,
   checkSlotAvailable,
   getBlockingBlock,
   acquireLock,
