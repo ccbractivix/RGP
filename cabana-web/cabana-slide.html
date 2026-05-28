@@ -33,18 +33,19 @@
     /*
      * Text placement derived from the 1920×1080 @ 72 DPI design:
      *   X:  14.707" → 55.15%   to   26.155" → 98.08%   (width ≈ 42.93%)
-     *   Y:  11.555" → 77.03%   (vertical center of text)
+     *   Y:  12.805" → 85.36%   (original 11.555" + 1.25" = 12.805")
+     * Font size increased 25% from original (clamp 28/3.5vw/64 → 35/4.375vw/80).
      */
     #name-text {
       position: absolute;
       left: 55.15%;
       width: 42.93%;
-      top: 77.03%;
+      top: 85.36%;
       transform: translateY(-50%);
       font-family: 'Playfair Display', serif;
       font-weight: 500;
       font-style: italic;
-      font-size: clamp(28px, 3.5vw, 64px);
+      font-size: clamp(35px, 4.375vw, 80px);
       color: #fff;
       text-align: center;
       line-height: 1.2;
@@ -72,6 +73,23 @@
   const bgImage  = document.getElementById('bg-image');
   const nameText = document.getElementById('name-text');
 
+  // Shrink font size until the text element fits within the slide boundaries.
+  function fitText() {
+    const slide = document.getElementById('slide');
+    const slideRect = slide.getBoundingClientRect();
+    let rect = nameText.getBoundingClientRect();
+    let size = parseFloat(window.getComputedStyle(nameText).fontSize);
+    while (
+      (rect.bottom > slideRect.bottom || rect.top < slideRect.top ||
+       rect.right > slideRect.right  || rect.left < slideRect.left) &&
+      size > 10
+    ) {
+      size -= 1;
+      nameText.style.fontSize = size + 'px';
+      rect = nameText.getBoundingClientRect();
+    }
+  }
+
   async function update() {
     try {
       const res  = await fetch(`${API_BASE}/api/cabana-slide?cabana=${cabanaNo}`);
@@ -81,7 +99,9 @@
       if (data.last_name) {
         bgImage.src            = IMAGES_BASE + 'HICV_YOUR_CABANA.jpg';
         nameText.textContent   = `The ${data.last_name} Family`;
+        nameText.style.fontSize = '';   // reset to CSS clamp default
         nameText.style.display = 'block';
+        fitText();
       } else {
         bgImage.src            = IMAGES_BASE + 'HICV_AVAILABLE_CABANA.jpg';
         nameText.style.display = 'none';
