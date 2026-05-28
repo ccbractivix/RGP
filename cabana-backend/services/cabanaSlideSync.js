@@ -66,7 +66,7 @@ async function syncCabanaSlides() {
 
   for (const { channel, param, label } of cabanas) {
     const url    = `${channelApiUrl}/admin/channels/${channel}/slides`;
-    const slides = [{ url: `${slideBase}?cabana=${param}`, label, duration: 30 }];
+    const slides = [{ url: `${slideBase}?cabana=${param}`, label, duration: 30 /* seconds */ }];
     try {
       const result = await jsonRequest(
         url, 'PUT', { slides },

@@ -367,7 +367,7 @@ async function getCancellations(startDate, endDate) {
  * (ordered by id, 1-based).  Returns null when no booking exists.
  */
 async function getTodaySlideInfo(cabanaOrder) {
-  const todayEastern = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const todayDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 
   const { rows: cabanas } = await db.query(
     'SELECT id FROM cabanas WHERE is_active = TRUE ORDER BY id'
@@ -379,7 +379,7 @@ async function getTodaySlideInfo(cabanaOrder) {
     `SELECT last_name FROM cabana_bookings
      WHERE cabana_id = $1 AND booking_date = $2 AND status <> 'cancelled'
      LIMIT 1`,
-    [cabanaId, todayEastern]
+    [cabanaId, todayDateStr]
   );
   return rows[0]?.last_name || null;
 }
