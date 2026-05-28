@@ -569,7 +569,8 @@
       var REFRESH_MS = 3600000; // 1 hour
       var RETRY_MS   = 60000;  // 1 minute on error
       var RTL_GRACE_MS = 120 * 60 * 1000; // 120 minutes after RTL time
-      var MAX_CENTER_LAUNCHES = 5;
+      var MAX_UPCOMING_LAUNCHES = 4; // featured + 3 compact cards
+      var MAX_CENTER_LAUNCHES = 3;
       var FOOTER_SCROLL_SECONDS_PER_IMAGE = 6;
       var FOOTER_SLIDE_IMAGES = [
         { src: 'images/tv_10237339136830208_738048345749025240_n.jpg', alt: 'Launch viewing area at the resort' },
@@ -653,7 +654,7 @@
         var d = new Date(dateStr);
         return d.toLocaleTimeString('en-US', {
           timeZone: 'America/New_York',
-          hour: 'numeric', minute: '2-digit', timeZoneName: 'short'
+          hour: 'numeric', minute: '2-digit'
         });
       }
 
@@ -800,7 +801,7 @@
 
         // Sort all launches by NET and filter to upcoming (non-completed) only
         var sorted = launches.slice().sort(function (a, b) { return new Date(a.net) - new Date(b.net); });
-        var upcoming = sorted.filter(function (l) { return !isCompleted(l); });
+        var upcoming = sorted.filter(function (l) { return !isCompleted(l); }).slice(0, MAX_UPCOMING_LAUNCHES);
 
         // === LEFT CELL: Featured next upcoming launch ===
         if (upcoming.length > 0) {
@@ -811,7 +812,7 @@
           leftEl.innerHTML = '<div class="no-data">No launch data available</div>';
         }
 
-        // === CENTER CELL: Next 5 upcoming launches as compact cards ===
+        // === CENTER CELL: Next 3 upcoming launches as compact cards ===
         if (upcoming.length > 1) {
           var centerHtml = '';
           var count = Math.min(upcoming.length - 1, MAX_CENTER_LAUNCHES);
