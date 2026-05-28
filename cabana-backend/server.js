@@ -10,7 +10,10 @@ const { Pool }  = require('pg');
 
 const operatorRouter = require('./routes/operator');
 const adminRouter    = require('./routes/admin');
+const apiRouter      = require('./routes/api');
 const { ensureSchema } = require('./services/cabanas');
+const { syncCabanaSlides } = require('./services/cabanaSlideSync');
+const cron = require('node-cron');
 
 const app  = express();
 const PORT = process.env.PORT || 3007;
@@ -48,6 +51,7 @@ app.use(session({
 }));
 
 // ── Rate Limiting ─────────────────────────────────────────────────────────────
+const apiLimiter      = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false });
 const operatorLimiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false });
 const adminLimiter    = rateLimit({ windowMs: 15 * 60_000, max: 200, standardHeaders: true, legacyHeaders: false });
 
@@ -83,6 +87,7 @@ app.use('/admin', (req, res, next) => {
 });
 
 // ── Routes ────────────────────────────────────────────────────────────────────
+app.use('/api',      apiLimiter,      apiRouter);
 app.use('/operator', operatorLimiter, operatorRouter);
 app.use('/admin',    adminLimiter,    adminRouter);
 
@@ -98,6 +103,14 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
     console.error('Failed to initialise schema:', e);
     process.exit(1);
   }
+
+  // Daily at 6:00 AM Eastern — ensure each cabana channel contains only its slide
+  cron.schedule('0 6 * * *', () => {
+    syncCabanaSlides().catch(e => console.error('[cabana-slide-sync] Cron error:', e));
+  }, { timezone: 'America/New_York' });
+
+  // Also sync once at startup so channels are correct immediately
+  syncCabanaSlides().catch(e => console.error('[cabana-slide-sync] Startup sync failed:', e));
 
   app.listen(PORT, () => console.log(`Cabana backend running on port ${PORT}`));
 })();
