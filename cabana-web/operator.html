@@ -574,10 +574,13 @@ function openDayModal(date) {
     <div class="form-group"><label class="form-label">Room #</label>
       <input class="form-input" id="bk-room" placeholder="Room number"></div>
     <div class="form-group"><label class="form-label">Property</label>
-      <div style="display:flex;gap:16px;padding-top:6px;">
-        <div class="form-check"><input type="radio" name="bk-property" value="HICV" id="bk-hicv" checked><label for="bk-hicv">HICV</label></div>
-        <div class="form-check"><input type="radio" name="bk-property" value="HIE" id="bk-hie"><label for="bk-hie">HIE</label></div>
-      </div></div></div>`;
+      <select class="form-select" id="bk-property">
+        <option value="HICV" selected>HICV</option>
+        <option value="HIE">HIE</option>
+        <option value="Day Guest">Day Guest</option>
+        <option value="Splash Pass Member">Splash Pass Member</option>
+        <option value="Day Pass Guest">Day Pass Guest</option>
+      </select></div></div>`;
   html += `<div class="form-group"><label class="form-label">Reservation Number</label>
     <input class="form-input" id="bk-reservation-number" placeholder="Guest reservation number"></div>`;
   html += `<div class="form-row">
@@ -640,7 +643,7 @@ async function submitBooking() {
   const name = `${lastName}${firstName ? `, ${firstName}` : ''}`;
   const phone = $('#bk-phone').value.trim();
   const room = $('#bk-room').value.trim();
-  const property = document.querySelector('input[name="bk-property"]:checked')?.value || 'HICV';
+  const property = $('#bk-property').value || 'HICV';
   const reservationNumber = $('#bk-reservation-number').value.trim();
   const checkInDate = $('#bk-check-in-date').value;
   const dateReserved = $('#bk-date-reserved').value;
