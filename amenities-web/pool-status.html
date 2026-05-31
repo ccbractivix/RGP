@@ -210,8 +210,10 @@
     function formatTime12(t) {
       if (!t) return '';
       var parts = t.split(':');
+      if (parts.length < 2) return '';
       var h = parseInt(parts[0], 10);
       var m = parseInt(parts[1], 10);
+      if (!Number.isFinite(h) || !Number.isFinite(m)) return '';
       var ampm = h >= 12 ? 'PM' : 'AM';
       if (h === 0) h = 12;
       else if (h > 12) h -= 12;
@@ -219,14 +221,23 @@
       return h + ':' + String(m).padStart(2, '0') + ' ' + ampm;
     }
 
+    function parseTimeToMinutes(timeStr) {
+      if (!timeStr || typeof timeStr !== 'string') return null;
+      var parts = timeStr.split(':');
+      if (parts.length < 2) return null;
+      var h = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+      return h * 60 + m;
+    }
+
     function isWithinHours(now, openTime, closeTime) {
       var h = now.getHours();
       var m = now.getMinutes();
       var current = h * 60 + m;
-      var openParts = openTime.split(':');
-      var closeParts = closeTime.split(':');
-      var open = parseInt(openParts[0], 10) * 60 + parseInt(openParts[1], 10);
-      var close = parseInt(closeParts[0], 10) * 60 + parseInt(closeParts[1], 10);
+      var open = parseTimeToMinutes(openTime);
+      var close = parseTimeToMinutes(closeTime);
+      if (open == null || close == null) return false;
       return current >= open && current < close;
     }
 
