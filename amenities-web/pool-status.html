@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="api-url" content="https://amenities-web.onrender.com/api/status">
-  <title>Pool Status</title>
+  <title>Pool &amp; Spa Status</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -165,7 +165,7 @@
 <body>
   <div class="overlay">
     <section class="left-panel">
-      <h1>Pool Status</h1>
+      <h1>Pool &amp; Spa Status</h1>
       <div id="loading">Loading status…</div>
       <ul id="amenity-list" style="display:none;"></ul>
       <div class="status-note" id="status-note"></div>
@@ -191,9 +191,11 @@
     var REFRESH_MS = 60000;
     var PRIMARY_AMENITIES = [
       'Main Pool',
+      'Main Spa',
       'Lazy River',
       'Water Slide',
-      'Signature Pool'
+      'Signature Pool',
+      'Signature Spa'
     ];
 
     function escapeHtml(str) {
@@ -261,7 +263,7 @@
         .filter(Boolean);
 
       if (visibleAmenities.length === 0) {
-        loading.textContent = 'No pool status data available.';
+        loading.textContent = 'No pool or spa status data available.';
         loading.style.display = 'block';
         list.style.display = 'none';
         statusNote.textContent = '';
@@ -302,7 +304,7 @@
         .catch(function (err) {
           console.error('[pool-status] fetch failed:', err);
           var loading = document.getElementById('loading');
-          loading.textContent = 'Unable to load pool status.';
+          loading.textContent = 'Unable to load pool and spa status.';
           loading.style.display = 'block';
           document.getElementById('amenity-list').style.display = 'none';
           document.getElementById('status-note').textContent = '';
