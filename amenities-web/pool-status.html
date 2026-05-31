@@ -214,6 +214,7 @@
       var h = parseInt(parts[0], 10);
       var m = parseInt(parts[1], 10);
       if (!Number.isFinite(h) || !Number.isFinite(m)) return '';
+      if (h < 0 || h > 23 || m < 0 || m > 59) return '';
       var ampm = h >= 12 ? 'PM' : 'AM';
       if (h === 0) h = 12;
       else if (h > 12) h -= 12;
@@ -228,6 +229,7 @@
       var h = parseInt(parts[0], 10);
       var m = parseInt(parts[1], 10);
       if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+      if (h < 0 || h > 23 || m < 0 || m > 59) return null;
       return h * 60 + m;
     }
 
@@ -299,7 +301,8 @@
           render(data);
           setTimeout(fetchAndRender, REFRESH_MS);
         })
-        .catch(function () {
+        .catch(function (err) {
+          console.error('[pool-status] fetch failed:', err);
           var loading = document.getElementById('loading');
           loading.textContent = 'Unable to load pool status.';
           loading.style.display = 'block';
