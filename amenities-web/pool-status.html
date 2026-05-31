@@ -237,7 +237,7 @@
       var current = h * 60 + m;
       var open = parseTimeToMinutes(openTime);
       var close = parseTimeToMinutes(closeTime);
-      if (open == null || close == null) return false;
+      if (open === null || close === null) return false;
       return current >= open && current < close;
     }
 
@@ -274,7 +274,7 @@
         html += '<li class="amenity-row">';
         html += '<span class="badge ' + statusClass + '"></span>';
         html += '<span class="amenity-name">' + escapeHtml(a.name) + '</span>';
-        html += '<span class="amenity-hours ' + statusClass + '">' + escapeHtml(formatTime12(a.openTime) + ' - ' + formatTime12(a.closeTime)) + '</span>';
+        html += '<span class="amenity-hours ' + statusClass + '">' + escapeHtml(formatTime12(a.openTime)) + ' - ' + escapeHtml(formatTime12(a.closeTime)) + '</span>';
         html += '</li>';
       });
 
