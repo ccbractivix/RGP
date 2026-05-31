@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IHG One Rewards Member Discounts</title>
+  <style>
+    :root {
+      --bg: #0c1220;
+      --panel: #111a2d;
+      --text: #eff3ff;
+      --muted: #a8b3cc;
+      --accent: #2f81f7;
+      --border: #243250;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      background: radial-gradient(circle at top, #162340 0%, var(--bg) 55%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 16px 40px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.7rem, 2vw + 1rem, 2.3rem);
+      letter-spacing: 0.02em;
+    }
+    .sub {
+      margin: 0 0 24px;
+      color: var(--muted);
+    }
+    .tier { margin-bottom: 26px; }
+    .tier h2 {
+      margin: 0 0 10px;
+      font-size: 1.2rem;
+      color: #d3ddf8;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      min-height: 240px;
+      text-decoration: none;
+      color: inherit;
+      transition: transform .12s ease, border-color .12s ease;
+    }
+    .card.link:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+    .logo-wrap {
+      height: 110px;
+      background: #fff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .logo-wrap img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .name { font-size: 1.02rem; margin: 0 0 8px; }
+    .offer {
+      margin: 0;
+      color: var(--muted);
+      font-size: .93rem;
+      line-height: 1.4;
+    }
+    .hint {
+      margin-top: auto;
+      font-size: .82rem;
+      color: #8ec1ff;
+      padding-top: 10px;
+    }
+    footer {
+      margin-top: 14px;
+      color: #8f9dbb;
+      font-size: .85rem;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>IHG One Rewards Member Discounts</h1>
+    <p class="sub">Converted from the in-room discounts flyer. QR images were intentionally omitted and replaced with direct links where QR destinations were provided.</p>
+
+    <section class="tier">
+      <h2>Silver</h2>
+      <div class="grid">
+        <article class="card">
+          <div class="logo-wrap"><img src="CB%20Fish%20Camp%20Grill.png" alt="Cocoa Beach Fish Camp Grill logo" /></div>
+          <h3 class="name">Cocoa Beach Fish Camp Grill</h3>
+          <p class="offer">15% off regular menu items (excludes alcohol, taxes, and gratuity).</p>
+        </article>
+
+        <article class="card">
+          <div class="logo-wrap"><img src="Rising%20Tide%20logo.png" alt="Rising Tide Tap & Table logo" /></div>
+          <h3 class="name">Rising Tide Tap &amp; Table</h3>
+          <p class="offer">10% off regular menu items (excludes alcohol, taxes, and gratuity).</p>
+        </article>
+
+        <article class="card">
+          <div class="logo-wrap"><img src="Pompano%20Grill.png" alt="Pompano Grill logo" /></div>
+          <h3 class="name">Pompano Grill</h3>
+          <p class="offer">Creative waterfront cuisine featured on the member discounts flyer.</p>
+        </article>
+
+        <article class="card">
+          <div class="logo-wrap"><img src="FishlipsLogo.png" alt="Fishlips Waterfront Bar and Grill logo" /></div>
+          <h3 class="name">Fishlips Waterfront Bar &amp; Grill</h3>
+          <p class="offer">10% off regular menu items (excludes alcohol, taxes, and gratuity).</p>
+        </article>
+
+        <article class="card">
+          <div class="logo-wrap"><img src="Gator%27s%20Dockside%20logo.png" alt="Gator's Dockside logo" /></div>
+          <h3 class="name">Gator's Dockside</h3>
+          <p class="offer">Featured in the member discounts set; see venue for current IHG offer details.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="tier">
+      <h2>Gold</h2>
+      <div class="grid">
+        <article class="card">
+          <div class="logo-wrap"><img src="CB%20Aerial%20Adventures.jpg" alt="Cocoa Beach Aerial Adventures logo" /></div>
+          <h3 class="name">Cocoa Beach Aerial Adventures</h3>
+          <p class="offer">10% off tour with room key/reservation.</p>
+        </article>
+
+        <article class="card">
+          <div class="logo-wrap"><img src="wizard%20of%20oz%20museum.jfif" alt="Wizard of Oz Museum logo" /></div>
+          <h3 class="name">Wizard of Oz Museum &amp; Gift Shop</h3>
+          <p class="offer">10% off tour when booked with the promo path shown on the flyer.</p>
+        </article>
+
+        <a class="card link" href="https://qrfy.io/UaQ5oEQIJe" target="_blank" rel="noopener noreferrer">
+          <div class="logo-wrap"><img src="Past%20Presence%20Ghost%20Tous.png" alt="Past and Presence Ghost Tour logo" /></div>
+          <h3 class="name">Past &amp; Presence Tours</h3>
+          <p class="offer">10% off tour. Use the linked destination from the provided QR code.</p>
+          <p class="hint">Open partner site ↗</p>
+        </a>
+
+        <article class="card">
+          <div class="logo-wrap"><img src="Brevard%20Zoo.png" alt="Brevard Zoo logo" /></div>
+          <h3 class="name">Brevard Zoo</h3>
+          <p class="offer">Featured member offer shown on flyer (front desk redemption note included on source artwork).</p>
+        </article>
+
+        <article class="card">
+          <div class="logo-wrap"><img src="Cocoa%20Beach%20Helicopters.png" alt="Cocoa Beach Helicopters logo" /></div>
+          <h3 class="name">Cocoa Beach Helicopters</h3>
+          <p class="offer">10% off tour with room key/reservation (as represented in the flyer set).</p>
+        </article>
+
+        <a class="card link" href="https://www.adayawaykayaktours.com/holidayinncapecanaveral" target="_blank" rel="noopener noreferrer">
+          <div class="logo-wrap"><img src="Cocoa%20Kayaking.webp" alt="A Day Away Kayak Tours logo" /></div>
+          <h3 class="name">A Day Away Kayak Tours</h3>
+          <p class="offer">15% off tour (up to 3–4 people, per flyer variants).</p>
+          <p class="hint">Open partner site ↗</p>
+        </a>
+      </div>
+    </section>
+
+    <section class="tier">
+      <h2>Platinum</h2>
+      <div class="grid">
+        <article class="card">
+          <div class="logo-wrap"><img src="Escape%20Cocoa%20Beach.png" alt="Escape Cocoa Beach logo" /></div>
+          <h3 class="name">Escape Cocoa Beach</h3>
+          <p class="offer">Exclusive discounts listed as coming soon on the source flyer.</p>
+        </article>
+
+        <article class="card">
+          <div class="logo-wrap"><img src="Surfside%20logo.png" alt="Surfside Playhouse logo" /></div>
+          <h3 class="name">Surfside Playhouse</h3>
+          <p class="offer">$10 off ticket with code <strong>IHGCLUB</strong> (online or at door).</p>
+        </article>
+
+        <article class="card">
+          <div class="logo-wrap"><img src="Midway%20Airboats%20logo.png" alt="Midway Airboats logo" /></div>
+          <h3 class="name">Midway Airboats</h3>
+          <p class="offer">Group rate listed on flyer: $48 adult / $45 child (up to 4 people).</p>
+        </article>
+      </div>
+    </section>
+
+    <footer>
+      Offers are transcribed from the provided flyer artwork and may change over time. Please confirm current terms directly with each partner.
+    </footer>
+  </main>
+</body>
+</html>
