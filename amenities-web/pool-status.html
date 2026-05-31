@@ -307,6 +307,7 @@
           loading.textContent = 'Unable to load pool status.';
           loading.style.display = 'block';
           document.getElementById('amenity-list').style.display = 'none';
+          document.getElementById('status-note').textContent = '';
           setTimeout(fetchAndRender, REFRESH_MS);
         });
     }
