@@ -91,63 +91,6 @@
     }).join('');
   }
 
-  function renderUpcoming(days) {
-    var grid = document.getElementById('upcoming-grid');
-
-    if (!days || !days.length) {
-      grid.innerHTML = '<div class="empty-state">No upcoming activities available.</div>';
-      return;
-    }
-
-    grid.innerHTML = days.map(function (day) {
-      var meta = formatDayMeta(day.label);
-      var itemsHtml = '';
-
-      var visibleActivities = (day.activities || []).filter(function (activity) {
-        return !shouldHideActivity(activity);
-      });
-
-      if (!visibleActivities.length) {
-        itemsHtml = '<div class="empty-state">No activities</div>';
-      } else {
-        itemsHtml = visibleActivities.map(function (activity) {
-          var activityClass = 'day-activity';
-          var noteClass = 'day-note';
-          var noteText = '';
-
-          if (activity.status === 'canceled') {
-            activityClass += ' canceled';
-            noteClass += ' canceled';
-            noteText = 'Activity canceled';
-          } else if (activity.status === 'relocated') {
-            noteClass += ' relocated';
-            noteText = 'Relocated';
-          }
-
-          return [
-            '<div class="day-item">',
-              '<div class="day-main">',
-                '<div class="day-time">', formatTime(activity), '</div>',
-                '<div class="', activityClass, '">', escapeHtml(activity.name || 'Activity'), '</div>',
-              '</div>',
-              noteText ? '<div class="' + noteClass + '">' + noteText + '</div>' : '',
-            '</div>'
-          ].join('');
-        }).join('');
-      }
-
-      return [
-        '<section class="day-card">',
-          '<div class="day-header">',
-            '<div class="day-name">', escapeHtml(meta.dayName || day.label || ''), '</div>',
-            '<div class="day-date">', escapeHtml(meta.dateText), '</div>',
-          '</div>',
-          '<div class="day-list">', itemsHtml, '</div>',
-        '</section>'
-      ].join('');
-    }).join('');
-  }
-
   function updateStatus(message) {
     document.getElementById('status').textContent = message || '';
   }
@@ -155,7 +98,6 @@
   function render(days) {
     var safeDays = Array.isArray(days) ? days : [];
     renderToday(safeDays[0]);
-    renderUpcoming(safeDays.slice(1, 6));
     updateStatus('Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
   }
 

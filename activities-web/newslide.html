@@ -55,7 +55,7 @@
       width: min(100vw, calc(100vh * 16 / 9));
       height: min(100vh, calc(100vw * 9 / 16));
       aspect-ratio: 16 / 9;
-      background: url('../static/images/HICV_ACTIVIX_newslide2.jpg') center center / cover no-repeat;
+      background: url('../static/images/HICV_ACTIVIX_blank.jpg') center center / cover no-repeat;
       overflow: hidden;
     }
 
@@ -75,21 +75,47 @@
 
     #today-box {
       left: 2.083%;
-      top: 10.833%;
+      top: 6.5%;
       width: 32.188%;
-      height: 85.648%;
+      height: 89.981%;
     }
 
-    #upcoming-box {
+    #promo-bubbles {
       position: absolute;
       left: 37.2%;
       top: 55.4%;
       width: 59.1%;
       height: 39.7%;
-      padding: 0.75% 0.9%;
       display: flex;
-      flex-direction: column;
-      gap: 2.5%;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 1.8%;
+    }
+
+    .promo-bubble {
+      flex: 1 1 0;
+      min-width: 0;
+      border-radius: 30px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 7% 5%;
+    }
+
+    .promo-bubble-text {
+      font-size: clamp(11px, 1.4vw, 28px);
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      text-transform: uppercase;
+      overflow-wrap: break-word;
     }
 
     .box-header {
@@ -395,7 +421,7 @@
     <div class="slide-canvas">
       <section id="today-box" class="schedule-box">
         <div class="box-header">
-          <h1 class="box-title">Today</h1>
+          <h1 class="box-title">TODAY'S ACTIVITIES</h1>
           <div id="today-label" class="box-subtitle"></div>
         </div>
         <div id="today-list">
@@ -403,16 +429,16 @@
         </div>
       </section>
 
-      <section id="upcoming-box">
-        <div id="upcoming-grid"></div>
-        <div id="upcoming-footer">
-          <img
-            id="upcoming-qr"
-            src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fsites.google.com%2Fview%2Fholidayinnclubcape%2Fhome"
-            alt="QR code to Resort Guest Portal website"
-          >
-          <div id="upcoming-portal-text">Scan to visit our website for activities schedule,<br>movie theater listings, rocket launch info,<br>things to do in the area, and a whole lot more!</div>
-        </div>
+      <section id="promo-bubbles" aria-label="Upcoming activities highlights">
+        <article class="promo-bubble">
+          <div class="promo-bubble-text">Pool Party Thursday 3 PM</div>
+        </article>
+        <article class="promo-bubble">
+          <div class="promo-bubble-text">Coming Soon</div>
+        </article>
+        <article class="promo-bubble">
+          <div class="promo-bubble-text">Coming Soon</div>
+        </article>
       </section>
 
       <div id="status"></div>
