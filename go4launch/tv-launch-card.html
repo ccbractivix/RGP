@@ -40,9 +40,32 @@
       box-shadow: 0 1vw 2.8vw rgba(15,24,42,0.14);
       padding: 2.3vw;
       display: grid;
-      grid-template-columns: 1.45fr 0.8fr;
+      grid-template-columns: 1.45fr auto 0.6fr;
       gap: 1.8vw;
       overflow: hidden;
+    }
+    .launch-alert-header {
+      grid-column: 1 / -1;
+      font-size: 3vw;
+      font-weight: 600;
+      color: #e63946;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      text-align: center;
+      margin: -1vw -1vw 1vw -1vw;
+      padding: 1vw;
+    }
+    .rocket-image {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 10vw;
+      height: auto;
+    }
+    .rocket-image img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
     }
     .headline {
       font-size: 2.35vw;
@@ -82,19 +105,20 @@
       font-size: 1.3vw;
       font-weight: 700;
     }
-    .rtl {
+    .pre-launch-briefing {
       margin-top: 0.4vw;
-      background: var(--panel);
+      background: rgba(76, 175, 80, 0.15);
+      border: 0.15vw solid rgba(76, 175, 80, 0.35);
       border-radius: 0.9vw;
-      border: 0.1vw solid rgba(16,22,35,0.13);
       padding: 0.8vw 1vw;
       font-size: 1.05vw;
       line-height: 1.35;
     }
-    .rtl strong {
+    .pre-launch-briefing strong {
       font-weight: 700;
       display: block;
       margin-bottom: 0.25vw;
+      color: #2d5016;
     }
     .right {
       display: grid;
@@ -110,10 +134,13 @@
       border: 0.1vw solid rgba(16,22,35,0.14);
       padding: 0.8vw;
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     .qr-wrap img {
       width: 100%;
-      max-width: 12.8vw;
+      max-width: 8vw;
       height: auto;
       display: block;
       margin: 0 auto 0.55vw;
@@ -121,20 +148,40 @@
       background: #fff;
       border: 0.12vw solid rgba(16,22,35,0.08);
     }
+    .bottom-bubble {
+      width: 100%;
+      background: var(--panel);
+      border-radius: 0.95vw;
+      border: 0.1vw solid rgba(16,22,35,0.14);
+      padding: 0.8vw;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5vw;
+    }
+    .bottom-bubble img {
+      width: 100%;
+      max-width: 7vw;
+      height: auto;
+      border-radius: 0.45vw;
+    }
+    .bottom-bubble-text {
+      font-size: 0.9vw;
+      line-height: 1.25;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .binoculars-icon {
+      font-size: 3vw;
+      margin-bottom: 0.3vw;
+    }
     .cta {
       margin: 0;
-      font-size: 1vw;
-      line-height: 1.27;
+      font-size: 0.9vw;
+      line-height: 1.25;
       color: var(--muted);
       font-weight: 700;
-    }
-    .note {
-      align-self: end;
-      width: 100%;
-      font-size: 0.88vw;
-      line-height: 1.25;
-      color: rgba(16,22,35,0.75);
-      font-weight: 600;
     }
     .state {
       font-size: 2vw;
@@ -149,6 +196,12 @@
     (function () {
       var LAUNCH_APP_URL = 'https://ccbractivix.github.io/RGP/go4launch/index.html';
       var QR_URL = 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=' + encodeURIComponent(LAUNCH_APP_URL);
+      var ROCKET_IMAGE_URLS = {
+        falcon: 'https://ccbractivix.github.io/RGP/static/images/falcon.jpg',
+        atlas: 'https://ccbractivix.github.io/RGP/static/images/atlas.jpg',
+        vulcan: 'https://ccbractivix.github.io/RGP/static/images/vulcan.jpg'
+      };
+      var PROFESSIONAL_LAUNCH_PHOTO_URL = 'https://ccbractivix.github.io/RGP/go4launch/images/tv_1256623983117749_4412877648315315623_n.jpg';
       var API_BASE = (document.querySelector('meta[name="api-base"]') || {}).content || '';
       var params = new URLSearchParams(window.location.search);
       var launchId = params.get('launchId');
@@ -195,17 +248,57 @@
           : 'Scan for full launch details and live updates in the Go4Launch app.';
         var rtlDate = cms.rtl_datetime ? formatDateEt(cms.rtl_datetime) : '';
         var rtlNotes = cms.rtl_notes ? escapeHtml(cms.rtl_notes) : '';
-        var rtlHtml = '';
-        if (rtlDate || rtlNotes) {
-          rtlHtml = '<div class="rtl"><strong>Rocket Talk LIVE!</strong>' +
+        var hasRocketTalkLive = !!(rtlDate || rtlNotes);
+        
+        // Determine rocket image based on rocket type
+        var rocketImageUrl = '';
+        if (rocketName) {
+          var rocketNameLower = rocketName.toLowerCase();
+          if (rocketNameLower.includes('falcon')) {
+            rocketImageUrl = ROCKET_IMAGE_URLS.falcon;
+          } else if (rocketNameLower.includes('atlas')) {
+            rocketImageUrl = ROCKET_IMAGE_URLS.atlas;
+          } else if (rocketNameLower.includes('vulcan')) {
+            rocketImageUrl = ROCKET_IMAGE_URLS.vulcan;
+          }
+        }
+        
+        // Build Pre-Launch Briefing section if RTL is scheduled
+        var preLaunchHtml = '';
+        if (hasRocketTalkLive) {
+          preLaunchHtml = '<div class="pre-launch-briefing"><strong>Pre-Launch Briefing</strong>' +
             (rtlDate ? '<div>' + escapeHtml(rtlDate) + '</div>' : '') +
             (rtlNotes ? '<div>' + rtlNotes + '</div>' : '') +
+            '</div>';
+        }
+        
+        // Build rocket image column HTML
+        var rocketImageHtml = '';
+        if (rocketImageUrl && rocketName) {
+          var rocketAlt = 'Image of ' + rocketName + ' rocket';
+          rocketImageHtml = '<div class="rocket-image"><img src="' + escapeHtml(rocketImageUrl) + '" alt="' + escapeHtml(rocketAlt) + '"></div>';
+        }
+        
+        // Build bottom bubble based on RTL scheduling
+        var bottomBubbleHtml = '';
+        if (hasRocketTalkLive) {
+          // Show professional launch photo
+          bottomBubbleHtml = '<div class="bottom-bubble">' +
+            '<img src="' + escapeHtml(PROFESSIONAL_LAUNCH_PHOTO_URL) + '" alt="Professional launch photo">' +
+            '<p class="bottom-bubble-text">See professional launch photos on the Go4Launch app!</p>' +
+            '</div>';
+        } else {
+          // Show viewing guide icon and message
+          bottomBubbleHtml = '<div class="bottom-bubble">' +
+            '<div class="binoculars-icon" role="img" aria-label="Telescope">🔭</div>' +
+            '<p class="bottom-bubble-text">See the Go4Launch app for our exclusive viewing guide!</p>' +
             '</div>';
         }
 
         root.className = '';
         root.innerHTML =
           '<main class="card">' +
+            '<div class="launch-alert-header">LAUNCH ALERT</div>' +
             '<section>' +
               '<h1 class="headline">' + escapeHtml(headline) + '</h1>' +
               '<div class="row-label">Rocket</div>' +
@@ -214,14 +307,15 @@
               '<p class="mission">' + escapeHtml(mission) + '</p>' +
               '<div class="row-label">Date & Time</div>' +
               '<div class="datetime">' + escapeHtml(formatDateEt(launch.net)) + '</div>' +
-              rtlHtml +
+              preLaunchHtml +
             '</section>' +
+            rocketImageHtml +
             '<aside class="right">' +
               '<div class="qr-wrap">' +
                 '<img src="' + escapeHtml(QR_URL) + '" alt="QR code for Go4Launch app">' +
                 '<p class="cta">' + escapeHtml(ctaText) + '</p>' +
               '</div>' +
-              '<div class="note">go4launch • Rocket Beach Resort • Display card rotates every 15 seconds</div>' +
+              bottomBubbleHtml +
             '</aside>' +
           '</main>';
       }
