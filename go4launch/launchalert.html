@@ -243,6 +243,7 @@
       var metaTag = document.querySelector('meta[name="api-base"]');
       var API_BASE = (metaTag && metaTag.getAttribute('content')) || '';
       var countdownTimer = null;
+      var MOVIE_THEATER_TIME_ET = '7:00 PM';
 
       function isCompleted(launch) {
         var id = launch && launch.status && launch.status.id;
@@ -274,7 +275,7 @@
           hour: 'numeric',
           minute: '2-digit'
         });
-        if (time === '7:00 PM') {
+        if (time === MOVIE_THEATER_TIME_ET) {
           return formatted + ' — Movie Theater';
         }
         return formatted;
@@ -299,7 +300,7 @@
           return;
         }
         img.src = src;
-        img.alt = rocketName + ' image';
+        img.alt = rocketName;
         wrap.classList.remove('hidden');
       }
 
