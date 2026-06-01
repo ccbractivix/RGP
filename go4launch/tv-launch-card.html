@@ -275,7 +275,8 @@
         // Build rocket image column HTML
         var rocketImageHtml = '';
         if (rocketImageUrl) {
-          rocketImageHtml = '<div class="rocket-image"><img src="' + escapeHtml(rocketImageUrl) + '" alt="' + escapeHtml(rocketName) + '"></div>';
+          var rocketAlt = 'Image of ' + escapeHtml(rocketName) + ' rocket';
+          rocketImageHtml = '<div class="rocket-image"><img src="' + escapeHtml(rocketImageUrl) + '" alt="' + rocketAlt + '"></div>';
         }
         
         // Build bottom bubble based on RTL scheduling
@@ -297,9 +298,9 @@
         root.className = '';
         root.innerHTML =
           '<main class="card">' +
-            '<div class="launch-alert-header">LAUNCH ALERT</div>' +
+            '<h2 class="launch-alert-header">LAUNCH ALERT</h2>' +
             '<section>' +
-              '<h1 class="headline">' + escapeHtml(headline) + '</h1>' +
+              '<h3 class="headline">' + escapeHtml(headline) + '</h3>' +
               '<div class="row-label">Rocket</div>' +
               '<div class="rocket-name">' + escapeHtml(rocketName) + '</div>' +
               '<div class="row-label">Mission</div>' +
