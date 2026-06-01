@@ -274,7 +274,7 @@
         
         // Build rocket image column HTML
         var rocketImageHtml = '';
-        if (rocketImageUrl) {
+        if (rocketImageUrl && rocketName) {
           var rocketAlt = 'Image of ' + rocketName + ' rocket';
           rocketImageHtml = '<div class="rocket-image"><img src="' + escapeHtml(rocketImageUrl) + '" alt="' + escapeHtml(rocketAlt) + '"></div>';
         }
@@ -290,7 +290,7 @@
         } else {
           // Show viewing guide icon and message
           bottomBubbleHtml = '<div class="bottom-bubble">' +
-            '<div class="binoculars-icon">🔭</div>' +
+            '<div class="binoculars-icon" role="img" aria-label="Binoculars">🔭</div>' +
             '<p class="bottom-bubble-text">See the Go4Launch app for our exclusive viewing guide!</p>' +
             '</div>';
         }
@@ -298,9 +298,9 @@
         root.className = '';
         root.innerHTML =
           '<main class="card">' +
-            '<h1 class="launch-alert-header">LAUNCH ALERT</h1>' +
+            '<div class="launch-alert-header">LAUNCH ALERT</div>' +
             '<section>' +
-              '<h2 class="headline">' + escapeHtml(headline) + '</h2>' +
+              '<h1 class="headline">' + escapeHtml(headline) + '</h1>' +
               '<div class="row-label">Rocket</div>' +
               '<div class="rocket-name">' + escapeHtml(rocketName) + '</div>' +
               '<div class="row-label">Mission</div>' +
