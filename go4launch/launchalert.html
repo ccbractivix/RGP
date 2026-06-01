@@ -216,12 +216,6 @@
       var API_BASE = (metaTag && metaTag.getAttribute('content')) || '';
       var countdownTimer = null;
 
-      function esc(text) {
-        var div = document.createElement('div');
-        div.textContent = text == null ? '' : String(text);
-        return div.textContent;
-      }
-
       function isCompleted(launch) {
         var id = launch && launch.status && launch.status.id;
         return id === 3 || id === 4 || id === 7;
@@ -278,7 +272,7 @@
 
       function setText(id, value) {
         var el = document.getElementById(id);
-        if (el) el.textContent = esc(value);
+        if (el) el.textContent = value == null ? '' : String(value);
       }
 
       function startCountdown(launchNet) {
