@@ -22,9 +22,9 @@ const DEFAULT_SLIDES = [
 ];
 
 const DEFAULT_CHANNELS = [
-  { id: 'front-lobby',  name: 'Front Lobby' },
-  { id: 'building-2',   name: 'Building Two' },
-  { id: 'building-3',   name: 'Building Three' },
+  { id: 'building-1',   name: 'building-1' },
+  { id: 'building-2',   name: 'building-2' },
+  { id: 'building-3',   name: 'building-3' },
   { id: 'restaurant',   name: 'Restaurant' },
   { id: 'no-limits',    name: 'No Limits' },
 ];
@@ -104,6 +104,7 @@ async function ensureSchema() {
 
 async function seed() {
   await ensureSchema();
+  await migrateLegacyFrontLobbyChannel();
 
   // Seed available slides
   for (const s of DEFAULT_SLIDES) {
@@ -118,22 +119,73 @@ async function seed() {
   for (const c of DEFAULT_CHANNELS) {
     await db.query(`
       INSERT INTO channels (id, name) VALUES ($1, $2)
-      ON CONFLICT (id) DO NOTHING
+      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = NOW()
     `, [c.id, c.name]);
   }
 
-  // Seed front-lobby with all three slides if it has none
+  // Seed building-1 with all three slides if it has none
   const { rows } = await db.query(
-    'SELECT COUNT(*) AS cnt FROM channel_slides WHERE channel_id = $1', ['front-lobby']
+    'SELECT COUNT(*) AS cnt FROM channel_slides WHERE channel_id = $1', ['building-1']
   );
   if (Number(rows[0].cnt) === 0) {
     for (let i = 0; i < DEFAULT_SLIDES.length; i++) {
       await db.query(`
         INSERT INTO channel_slides (channel_id, slide_url, display_order, duration_sec, label)
         VALUES ($1, $2, $3, $4, $5)
-      `, ['front-lobby', DEFAULT_SLIDES[i].url, i + 1, 30, DEFAULT_SLIDES[i].label]);
+      `, ['building-1', DEFAULT_SLIDES[i].url, i + 1, 30, DEFAULT_SLIDES[i].label]);
     }
   }
+}
+
+async function migrateLegacyFrontLobbyChannel() {
+  const { rows: legacyRows } = await db.query(
+    'SELECT id FROM channels WHERE id = $1',
+    ['front-lobby']
+  );
+  if (legacyRows.length === 0) return;
+
+  await db.query(`
+    INSERT INTO channels (id, name) VALUES ($1, $2)
+    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = NOW()
+  `, ['building-1', 'building-1']);
+
+  const { rows: existingSlidesRows } = await db.query(
+    'SELECT COUNT(*) AS cnt FROM channel_slides WHERE channel_id = $1',
+    ['building-1']
+  );
+  if (Number(existingSlidesRows[0].cnt) === 0) {
+    await db.query(`
+      INSERT INTO channel_slides (channel_id, slide_url, display_order, duration_sec, label)
+      SELECT $1, slide_url, display_order, duration_sec, label
+      FROM channel_slides
+      WHERE channel_id = $2
+    `, ['building-1', 'front-lobby']);
+  }
+
+  await db.query(`
+    INSERT INTO channel_rules (channel_id, rule_type, enabled, config)
+    SELECT $1, rule_type, enabled, config
+    FROM channel_rules
+    WHERE channel_id = $2
+    ON CONFLICT (channel_id, rule_type) DO UPDATE SET enabled = EXCLUDED.enabled, config = EXCLUDED.config
+  `, ['building-1', 'front-lobby']);
+
+  await db.query(`
+    INSERT INTO heartbeats (channel_id, user_agent, last_seen)
+    SELECT $1, user_agent, last_seen
+    FROM heartbeats
+    WHERE channel_id = $2
+    ON CONFLICT (channel_id) DO UPDATE SET user_agent = EXCLUDED.user_agent, last_seen = EXCLUDED.last_seen
+  `, ['building-1', 'front-lobby']);
+
+  await db.query(`
+    UPDATE breakthroughs
+    SET target_channels = array_replace(target_channels, $1, $2)
+    WHERE target_channels IS NOT NULL
+      AND target_channels @> ARRAY[$1]::TEXT[]
+  `, ['front-lobby', 'building-1']);
+
+  await db.query('DELETE FROM channels WHERE id = $1', ['front-lobby']);
 }
 
 /* ── Channel CRUD ──────────────────────────────────────────────────────────── */
