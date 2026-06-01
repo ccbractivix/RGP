@@ -119,9 +119,10 @@ async function seed() {
   for (const c of DEFAULT_CHANNELS) {
     await db.query(`
       INSERT INTO channels (id, name) VALUES ($1, $2)
-      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = NOW()
+      ON CONFLICT (id) DO NOTHING
     `, [c.id, c.name]);
   }
+  await normalizeLegacyBuildingChannelNames();
 
   // Seed building-1 with all three slides if it has none
   const { rows } = await db.query(
@@ -146,7 +147,7 @@ async function migrateLegacyFrontLobbyChannel() {
 
   await db.query(`
     INSERT INTO channels (id, name) VALUES ($1, $2)
-    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = NOW()
+    ON CONFLICT (id) DO NOTHING
   `, ['building-1', 'building-1']);
 
   const { rows: existingSlidesRows } = await db.query(
@@ -189,6 +190,27 @@ async function migrateLegacyFrontLobbyChannel() {
   `, ['front-lobby', 'building-1']);
 
   await db.query('DELETE FROM channels WHERE id = $1', ['front-lobby']);
+}
+
+async function normalizeLegacyBuildingChannelNames() {
+  await db.query(`
+    UPDATE channels
+    SET name = $2, updated_at = NOW()
+    WHERE id = $1
+      AND name IN ('Building One', 'Building 1', 'Front Lobby')
+  `, ['building-1', 'building-1']);
+  await db.query(`
+    UPDATE channels
+    SET name = $2, updated_at = NOW()
+    WHERE id = $1
+      AND name IN ('Building Two', 'Building 2')
+  `, ['building-2', 'building-2']);
+  await db.query(`
+    UPDATE channels
+    SET name = $2, updated_at = NOW()
+    WHERE id = $1
+      AND name IN ('Building Three', 'Building 3')
+  `, ['building-3', 'building-3']);
 }
 
 /* ── Channel CRUD ──────────────────────────────────────────────────────────── */
