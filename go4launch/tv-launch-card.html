@@ -199,6 +199,12 @@
     (function () {
       var LAUNCH_APP_URL = 'https://ccbractivix.github.io/RGP/go4launch/index.html';
       var QR_URL = 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=' + encodeURIComponent(LAUNCH_APP_URL);
+      var ROCKET_IMAGE_URLS = {
+        falcon: 'https://ccbractivix.github.io/RGP/static/images/falcon.jpg',
+        atlas: 'https://ccbractivix.github.io/RGP/static/images/atlas.jpg',
+        vulcan: 'https://ccbractivix.github.io/RGP/static/images/vulcan.jpg'
+      };
+      var PROFESSIONAL_LAUNCH_PHOTO_URL = 'https://ccbractivix.github.io/RGP/go4launch/images/tv_1256623983117749_4412877648315315623_n.jpg';
       var API_BASE = (document.querySelector('meta[name="api-base"]') || {}).content || '';
       var params = new URLSearchParams(window.location.search);
       var launchId = params.get('launchId');
@@ -251,11 +257,11 @@
         if (rocketName && typeof rocketName === 'string') {
           var rocketNameLower = rocketName.toLowerCase();
           if (rocketNameLower.includes('falcon')) {
-            rocketImageUrl = 'https://ccbractivix.github.io/RGP/static/images/falcon.jpg';
+            rocketImageUrl = ROCKET_IMAGE_URLS.falcon;
           } else if (rocketNameLower.includes('atlas')) {
-            rocketImageUrl = 'https://ccbractivix.github.io/RGP/static/images/atlas.jpg';
+            rocketImageUrl = ROCKET_IMAGE_URLS.atlas;
           } else if (rocketNameLower.includes('vulcan')) {
-            rocketImageUrl = 'https://ccbractivix.github.io/RGP/static/images/vulcan.jpg';
+            rocketImageUrl = ROCKET_IMAGE_URLS.vulcan;
           }
         }
         
@@ -268,18 +274,23 @@
             '</div>';
         }
         
+        // Build rocket image column HTML
+        var rocketImageHtml = '<div class="rocket-image">' +
+          (rocketImageUrl ? '<img src="' + escapeHtml(rocketImageUrl) + '" alt="' + escapeHtml(rocketName) + '">' : '') +
+          '</div>';
+        
         // Build bottom bubble based on RTL scheduling
         var bottomBubbleHtml = '';
         if (rtlDate) {
           // Show professional launch photo
           bottomBubbleHtml = '<div class="bottom-bubble">' +
-            '<img src="https://ccbractivix.github.io/RGP/go4launch/images/tv_1256623983117749_4412877648315315623_n.jpg" alt="Professional launch photo">' +
+            '<img src="' + escapeHtml(PROFESSIONAL_LAUNCH_PHOTO_URL) + '" alt="Professional launch photo">' +
             '<p class="bottom-bubble-text">See professional launch photos on the Go4Launch app!</p>' +
             '</div>';
         } else {
           // Show binoculars and viewing guide message
           bottomBubbleHtml = '<div class="bottom-bubble">' +
-            '<div class="binoculars-icon" aria-label="Binoculars">🔭</div>' +
+            '<div class="binoculars-icon" role="img" aria-label="Binoculars">🔭</div>' +
             '<p class="bottom-bubble-text">See the Go4Launch app for our exclusive viewing guide!</p>' +
             '</div>';
         }
@@ -298,7 +309,7 @@
               '<div class="datetime">' + escapeHtml(formatDateEt(launch.net)) + '</div>' +
               preLaunchHtml +
             '</section>' +
-            (rocketImageUrl ? '<div class="rocket-image"><img src="' + escapeHtml(rocketImageUrl) + '" alt="' + escapeHtml(rocketName) + '"></div>' : '') +
+            rocketImageHtml +
             '<aside class="right">' +
               '<div class="qr-wrap">' +
                 '<img src="' + escapeHtml(QR_URL) + '" alt="QR code for Go4Launch app">' +
