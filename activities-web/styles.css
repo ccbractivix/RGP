@@ -17,30 +17,23 @@
 html, body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 14px;
   min-height: 100%;
 }
 
 /* ===== PAGE HEADER ===== */
 .page-header {
-  background: var(--green);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px 24px;
-}
-
-.page-header-logo {
+  background: var(--bg);
   display: flex;
   justify-content: center;
-  align-items: center;
+  padding: 0;
 }
 
-.header-logo-img {
-  max-height: 80px;
-  width: auto;
+.header-banner-img {
+  width: 100%;
+  max-width: 1280px;
+  height: auto;
   display: block;
 }
 
@@ -118,7 +111,7 @@ html, body {
 }
 
 .day-name {
-  font-family: 'Fredoka', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 20px;
   font-weight: 700;
   color: var(--green);
@@ -167,7 +160,7 @@ html, body {
 .act-info { flex: 1; min-width: 0; }
 
 .act-name {
-  font-family: 'Fredoka', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 18px;
   font-weight: 700;
   color: var(--green);
@@ -177,7 +170,7 @@ html, body {
 
 .act-name.canceled {
   color: #9ca3af;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-weight: 400;
 }
 
@@ -350,7 +343,7 @@ html, body {
 .popup-close:hover { color: var(--text); }
 
 .popup-title {
-  font-family: 'Fredoka', sans-serif;
+  font-family: 'Montserrat', sans-serif;
   font-size: 20px;
   font-weight: 700;
   color: var(--green);
