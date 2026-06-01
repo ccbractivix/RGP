@@ -243,7 +243,6 @@
       var metaTag = document.querySelector('meta[name="api-base"]');
       var API_BASE = (metaTag && metaTag.getAttribute('content')) || '';
       var countdownTimer = null;
-      var MOVIE_THEATER_TIME_ET = '7:00 PM';
 
       function isCompleted(launch) {
         var id = launch && launch.status && launch.status.id;
@@ -268,17 +267,27 @@
       }
 
       function formatRTLDateTime(dateStr) {
-        var d = new Date(dateStr);
         var formatted = formatDateTimeET(dateStr);
-        var time = d.toLocaleTimeString('en-US', {
-          timeZone: 'America/New_York',
-          hour: 'numeric',
-          minute: '2-digit'
-        });
-        if (time === MOVIE_THEATER_TIME_ET) {
+        if (isSevenPmET(dateStr)) {
           return formatted + ' — Movie Theater';
         }
         return formatted;
+      }
+
+      function isSevenPmET(dateStr) {
+        var parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).formatToParts(new Date(dateStr));
+        var hour = null;
+        var minute = null;
+        parts.forEach(function (part) {
+          if (part.type === 'hour') hour = parseInt(part.value, 10);
+          if (part.type === 'minute') minute = parseInt(part.value, 10);
+        });
+        return hour === 19 && minute === 0;
       }
 
       function getRocketImageSrc(rocketName) {
@@ -300,7 +309,7 @@
           return;
         }
         img.src = src;
-        img.alt = rocketName;
+        img.alt = rocketName + ' rocket image';
         wrap.classList.remove('hidden');
       }
 
