@@ -83,9 +83,9 @@
     #promo-bubbles {
       position: absolute;
       left: 37.2%;
-      top: 55.4%;
+      top: 47.5%;
       width: 59.1%;
-      height: 39.7%;
+      height: 47.6%;
       display: flex;
       align-items: stretch;
       justify-content: space-between;
@@ -102,10 +102,12 @@
       backdrop-filter: blur(3px);
       -webkit-backdrop-filter: blur(3px);
       display: flex;
-      align-items: center;
-      justify-content: center;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
       text-align: center;
-      padding: 7% 5%;
+      padding: 5.5% 5%;
+      gap: 4%;
     }
 
     .promo-bubble-text {
@@ -118,24 +120,69 @@
       overflow-wrap: break-word;
     }
 
+    .promo-bubble-title {
+      font-size: clamp(11px, 1.4vw, 28px);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .promo-bubble-title.accent {
+      color: var(--accent);
+    }
+
+    .promo-bubble-image {
+      width: 100%;
+      flex: 1 1 auto;
+      min-height: 0;
+      object-fit: cover;
+      border-radius: 16px;
+    }
+
+    .promo-bubble-detail {
+      font-size: clamp(9px, 1vw, 18px);
+      font-weight: 700;
+      line-height: 1.15;
+      color: var(--text);
+    }
+
+    .promo-bubble-footer {
+      font-size: clamp(7px, 0.74vw, 14px);
+      font-weight: 700;
+      line-height: 1.15;
+      color: var(--muted);
+      margin-top: auto;
+    }
+
     .promo-bubble-qr-wrap {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 8%;
+      justify-content: flex-start;
+      gap: 6%;
       width: 100%;
+      height: 100%;
     }
 
     .promo-bubble-qr {
-      width: clamp(52px, 7vw, 130px);
-      height: clamp(52px, 7vw, 130px);
+      width: clamp(70px, 9vw, 170px);
+      height: clamp(70px, 9vw, 170px);
       flex: 0 0 auto;
       padding: 4px;
       border-radius: 8px;
       background: #fff;
       border: 1px solid rgba(230, 116, 74, 0.3);
       object-fit: contain;
+    }
+
+    .promo-bubble-qr-detail {
+      font-size: clamp(8px, 0.82vw, 15px);
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--text);
+      max-width: 92%;
     }
 
     .box-header {
@@ -450,23 +497,27 @@
       </section>
 
       <section id="promo-bubbles" aria-label="Upcoming activities highlights">
-        <article class="promo-bubble" style="flex-direction: column; padding: 5% 5%; gap: 6%;">
-          <img src="../static/images/ACT-pool.jpg" alt="Pool Party" style="width: 100%; flex: 1 1 0; min-height: 0; object-fit: cover; border-radius: 16px;">
-          <div class="promo-bubble-text"><span style="color: var(--accent);">Pool Party</span><br><span style="white-space: nowrap;">Thursday 3 PM</span></div>
+        <article class="promo-bubble">
+          <div class="promo-bubble-title accent">Pool Party</div>
+          <img class="promo-bubble-image" src="../static/images/ACT-pool.jpg" alt="Pool Party">
+          <div class="promo-bubble-detail">Thursday 3 PM</div>
+          <div class="promo-bubble-footer">Weather permitting</div>
         </article>
-        <article class="promo-bubble" style="flex-direction: column; padding: 5% 5%; gap: 4%;">
-          <img src="../static/images/ACT-bingo.jpg" alt="Cash Bingo" style="width: 100%; flex: 1 1 0; min-height: 0; object-fit: cover; border-radius: 16px;">
-          <div style="font-size: clamp(8px, 1vw, 18px); font-weight: 700; color: var(--muted); line-height: 1.1;">Weather Permitting</div>
-          <div class="promo-bubble-text">Cash Bingo<br>Wednesday and Sunday<br><span style="white-space: nowrap;">Main Pool 3PM</span></div>
+        <article class="promo-bubble">
+          <div class="promo-bubble-title accent">Cash Bingo</div>
+          <img class="promo-bubble-image" src="../static/images/ACT-bingo.jpg" alt="Cash Bingo">
+          <div class="promo-bubble-detail">Wednesday and Sunday<br><span style="white-space: nowrap;">Main Pool 3 PM</span></div>
+          <div class="promo-bubble-footer">Weather permitting</div>
         </article>
         <article class="promo-bubble">
           <div class="promo-bubble-qr-wrap">
+            <div class="promo-bubble-title accent">Activities Schedule</div>
             <img
               class="promo-bubble-qr"
               src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https%3A%2F%2Fsites.google.com%2Fview%2Fholidayinnclubcape%2Fhome%2Finfo-director"
               alt="QR code – weekly activities schedule"
             >
-            <div class="promo-bubble-text">Scan for our weekly Activities Schedule</div>
+            <div class="promo-bubble-qr-detail">Activities, Amenities, Movies, Rockets and more on our app</div>
           </div>
         </article>
       </section>
