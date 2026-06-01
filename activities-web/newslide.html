@@ -118,6 +118,26 @@
       overflow-wrap: break-word;
     }
 
+    .promo-bubble-qr-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8%;
+      width: 100%;
+    }
+
+    .promo-bubble-qr {
+      width: clamp(52px, 7vw, 130px);
+      height: clamp(52px, 7vw, 130px);
+      flex: 0 0 auto;
+      padding: 4px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid rgba(230, 116, 74, 0.3);
+      object-fit: contain;
+    }
+
     .box-header {
       display: flex;
       align-items: flex-end;
@@ -437,7 +457,14 @@
           <div class="promo-bubble-text">CASH BINGO</div>
         </article>
         <article class="promo-bubble">
-          <div class="promo-bubble-text"></div>
+          <div class="promo-bubble-qr-wrap">
+            <img
+              class="promo-bubble-qr"
+              src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https%3A%2F%2Fsites.google.com%2Fview%2Fholidayinnclubcape%2Fhome%2Finfo-director"
+              alt="QR code – weekly activities schedule"
+            >
+            <div class="promo-bubble-text">Scan for our weekly Activities Schedule</div>
+          </div>
         </article>
       </section>
 
