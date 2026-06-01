@@ -195,7 +195,7 @@ Important: because these are auto-managed, they may appear and disappear as laun
 
 ---
 
-## 9. Why you may not see it in “Channel Master”
+## 9. Why you may not see it in Channel Manager
 
 If you built `go4launch/tv-launch-card.html` but do not see it in Channel Manager, check these items in order.
 
