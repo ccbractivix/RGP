@@ -248,13 +248,15 @@
         
         // Determine rocket image based on rocket type
         var rocketImageUrl = '';
-        var rocketNameLower = rocketName.toLowerCase();
-        if (rocketNameLower.includes('falcon')) {
-          rocketImageUrl = 'https://ccbractivix.github.io/RGP/static/images/falcon.jpg';
-        } else if (rocketNameLower.includes('atlas')) {
-          rocketImageUrl = 'https://ccbractivix.github.io/RGP/static/images/atlas.jpg';
-        } else if (rocketNameLower.includes('vulcan')) {
-          rocketImageUrl = 'https://ccbractivix.github.io/RGP/static/images/vulcan.jpg';
+        if (rocketName && typeof rocketName === 'string') {
+          var rocketNameLower = rocketName.toLowerCase();
+          if (rocketNameLower.includes('falcon')) {
+            rocketImageUrl = 'https://ccbractivix.github.io/RGP/static/images/falcon.jpg';
+          } else if (rocketNameLower.includes('atlas')) {
+            rocketImageUrl = 'https://ccbractivix.github.io/RGP/static/images/atlas.jpg';
+          } else if (rocketNameLower.includes('vulcan')) {
+            rocketImageUrl = 'https://ccbractivix.github.io/RGP/static/images/vulcan.jpg';
+          }
         }
         
         // Build Pre-Launch Briefing section if RTL is scheduled
@@ -277,7 +279,7 @@
         } else {
           // Show binoculars and viewing guide message
           bottomBubbleHtml = '<div class="bottom-bubble">' +
-            '<div class="binoculars-icon">🔭</div>' +
+            '<div class="binoculars-icon" aria-label="Binoculars">🔭</div>' +
             '<p class="bottom-bubble-text">See the Go4Launch app for our exclusive viewing guide!</p>' +
             '</div>';
         }
