@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-base" content="https://go4launch-backend.onrender.com">
+  <title>go4launch TV Launch Card</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #EDEEE1;
+      --ink: #101623;
+      --muted: #2b364a;
+      --accent: #0b6bbd;
+      --panel: rgba(255,255,255,0.66);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+    }
+    body {
+      display: grid;
+      place-items: center;
+      padding: 2.2vw;
+    }
+    .card {
+      width: 100%;
+      height: 100%;
+      border-radius: 2.2vw;
+      background: linear-gradient(150deg, rgba(255,255,255,0.88), rgba(255,255,255,0.44));
+      border: 0.2vw solid rgba(16,22,35,0.18);
+      box-shadow: 0 1vw 2.8vw rgba(15,24,42,0.14);
+      padding: 2.3vw;
+      display: grid;
+      grid-template-columns: 1.45fr 0.8fr;
+      gap: 1.8vw;
+      overflow: hidden;
+    }
+    .headline {
+      font-size: 2.35vw;
+      line-height: 1.08;
+      margin: 0 0 1.2vw;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    .row-label {
+      font-size: 1vw;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.82;
+      margin-bottom: 0.35vw;
+      font-weight: 700;
+    }
+    .rocket-name {
+      font-size: 2.3vw;
+      line-height: 1.05;
+      margin: 0 0 1.1vw;
+      font-weight: 700;
+    }
+    .mission {
+      font-size: 1.35vw;
+      line-height: 1.28;
+      margin: 0 0 1.5vw;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .datetime {
+      display: inline-block;
+      background: rgba(11,107,189,0.11);
+      border: 0.15vw solid rgba(11,107,189,0.28);
+      border-radius: 0.85vw;
+      padding: 0.8vw 1vw;
+      margin-bottom: 1vw;
+      font-size: 1.3vw;
+      font-weight: 700;
+    }
+    .rtl {
+      margin-top: 0.4vw;
+      background: var(--panel);
+      border-radius: 0.9vw;
+      border: 0.1vw solid rgba(16,22,35,0.13);
+      padding: 0.8vw 1vw;
+      font-size: 1.05vw;
+      line-height: 1.35;
+    }
+    .rtl strong {
+      font-weight: 700;
+      display: block;
+      margin-bottom: 0.25vw;
+    }
+    .right {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 1vw;
+      align-items: start;
+      justify-items: center;
+    }
+    .qr-wrap {
+      width: 100%;
+      background: var(--panel);
+      border-radius: 0.95vw;
+      border: 0.1vw solid rgba(16,22,35,0.14);
+      padding: 0.8vw;
+      text-align: center;
+    }
+    .qr-wrap img {
+      width: 100%;
+      max-width: 12.8vw;
+      height: auto;
+      display: block;
+      margin: 0 auto 0.55vw;
+      border-radius: 0.45vw;
+      background: #fff;
+      border: 0.12vw solid rgba(16,22,35,0.08);
+    }
+    .cta {
+      margin: 0;
+      font-size: 1vw;
+      line-height: 1.27;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .note {
+      align-self: end;
+      width: 100%;
+      font-size: 0.88vw;
+      line-height: 1.25;
+      color: rgba(16,22,35,0.75);
+      font-weight: 600;
+    }
+    .state {
+      font-size: 2vw;
+      text-align: center;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div id="root" class="state">Loading launch card…</div>
+  <script>
+    (function () {
+      var LAUNCH_APP_URL = 'https://ccbractivix.github.io/RGP/go4launch/index.html';
+      var QR_URL = 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=' + encodeURIComponent(LAUNCH_APP_URL);
+      var API_BASE = (document.querySelector('meta[name="api-base"]') || {}).content || '';
+      var params = new URLSearchParams(window.location.search);
+      var launchId = params.get('launchId');
+      var root = document.getElementById('root');
+
+      function esc(value) {
+        return String(value == null ? '' : value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function formatDateEt(dateValue) {
+        return new Date(dateValue).toLocaleString('en-US', {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true,
+          timeZone: 'America/New_York',
+        }) + ' ET';
+      }
+
+      function requestJson(url) {
+        return fetch(url).then(function (response) {
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+          return response.json();
+        });
+      }
+
+      function renderCard(launch, cms) {
+        var netMs = new Date(launch.net).getTime();
+        var now = Date.now();
+        var isRecent = now >= netMs && now <= (netMs + 48 * 60 * 60 * 1000);
+        var rocketName = ((launch.rocket || {}).configuration || {}).full_name || launch.name || 'Launch';
+        var mission = (launch.mission || {}).name || launch.name || 'Mission details to be announced';
+        var headline = isRecent ? 'Did you see this launch?' : (cms.headline || 'Upcoming Launch');
+        var ctaText = isRecent
+          ? 'See professional launch photo galleries in the Go4Launch app.'
+          : 'Scan for full launch details and live updates in the Go4Launch app.';
+        var rtlDate = cms.rtl_datetime ? formatDateEt(cms.rtl_datetime) : '';
+        var rtlNotes = cms.rtl_notes ? esc(cms.rtl_notes) : '';
+        var rtlHtml = '';
+        if (rtlDate || rtlNotes) {
+          rtlHtml = '<div class="rtl"><strong>Rocket Talk LIVE!</strong>' +
+            (rtlDate ? '<div>' + esc(rtlDate) + '</div>' : '') +
+            (rtlNotes ? '<div>' + rtlNotes + '</div>' : '') +
+            '</div>';
+        }
+
+        root.className = '';
+        root.innerHTML =
+          '<main class="card">' +
+            '<section>' +
+              '<h1 class="headline">' + esc(headline) + '</h1>' +
+              '<div class="row-label">Rocket</div>' +
+              '<div class="rocket-name">' + esc(rocketName) + '</div>' +
+              '<div class="row-label">Mission</div>' +
+              '<p class="mission">' + esc(mission) + '</p>' +
+              '<div class="row-label">Date & Time</div>' +
+              '<div class="datetime">' + esc(formatDateEt(launch.net)) + '</div>' +
+              rtlHtml +
+            '</section>' +
+            '<aside class="right">' +
+              '<div class="qr-wrap">' +
+                '<img src="' + esc(QR_URL) + '" alt="QR code for Go4Launch app">' +
+                '<p class="cta">' + esc(ctaText) + '</p>' +
+              '</div>' +
+              '<div class="note">go4launch • Rocket Beach Resort • Display card rotates every 15 seconds</div>' +
+            '</aside>' +
+          '</main>';
+      }
+
+      if (!launchId) {
+        root.textContent = 'Launch card unavailable (missing launchId).';
+        return;
+      }
+
+      Promise.all([
+        requestJson(API_BASE + '/api/launches'),
+        requestJson(API_BASE + '/api/content').catch(function () { return {}; }),
+      ]).then(function (results) {
+        var launches = results[0] || [];
+        var content = results[1] || {};
+        var launch = launches.find(function (item) { return item.id === launchId; });
+        if (!launch) {
+          root.textContent = 'Launch card unavailable (launch not found).';
+          return;
+        }
+        renderCard(launch, content[launchId] || {});
+      }).catch(function () {
+        root.textContent = 'Launch card unavailable (data error).';
+      });
+    })();
+  </script>
+</body>
+</html>
