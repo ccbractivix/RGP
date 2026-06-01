@@ -40,7 +40,7 @@
     .top {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-start;
       gap: 2vw;
     }
 
@@ -50,10 +50,12 @@
       letter-spacing: 0.02em;
     }
 
-    .logo {
-      height: clamp(80px, 8.5vh, 140px);
+    .side-logo {
+      height: clamp(70px, 7vh, 125px);
       width: auto;
       object-fit: contain;
+      align-self: center;
+      margin-bottom: 0.2vh;
     }
 
     .main {
@@ -69,6 +71,11 @@
       border: 2px solid rgba(16, 24, 32, 0.12);
       border-radius: 18px;
       padding: 2.6vh 1.8vw;
+    }
+
+    .main-panel {
+      display: flex;
+      flex-direction: column;
     }
 
     .label {
@@ -96,7 +103,7 @@
     }
 
     .datetime {
-      font-size: clamp(30px, 2.2vw, 50px);
+      font-size: clamp(24px, 1.9vw, 40px);
       font-weight: 800;
       margin: 0;
     }
@@ -112,6 +119,22 @@
       gap: 0.6vw;
       font-size: clamp(22px, 1.7vw, 34px);
       font-weight: 700;
+    }
+
+    .rocket-image-wrap {
+      margin: 0.4vh 0 1.5vh 0;
+      width: 100%;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 2px solid rgba(16, 24, 32, 0.15);
+      background: #f7f7f2;
+    }
+
+    .rocket-image-wrap img {
+      width: 100%;
+      height: clamp(170px, 26vh, 330px);
+      object-fit: cover;
+      display: block;
     }
 
     .side {
@@ -170,17 +193,20 @@
 <body>
   <div class="slide">
     <div class="top">
-      <h1>Next Upcoming Launch</h1>
-      <img class="logo" src="images/go4launch_main_t.png" alt="Go4Launch logo">
+      <h1>LAUNCH ALERT</h1>
     </div>
 
     <div class="main">
-      <section class="panel">
+      <section class="panel main-panel">
         <div class="label">Rocket</div>
         <h2 id="rocketName" class="value">Loading…</h2>
 
         <div class="label">Mission</div>
         <p id="missionName" class="subvalue">Loading…</p>
+
+        <div id="rocketImageWrap" class="rocket-image-wrap hidden">
+          <img id="rocketImage" src="" alt="Rocket image">
+        </div>
 
         <div class="label">Launch Date &amp; Time (ET)</div>
         <p id="launchDateTime" class="datetime">Loading…</p>
@@ -192,6 +218,8 @@
       </section>
 
       <aside class="side">
+        <img class="side-logo" src="images/go4launch_main_t.png" alt="Go4Launch logo">
+
         <section id="rtlBox" class="panel rtl-box hidden">
           <img src="../theater-web/static/RTL.png" alt="Rocket Talk Live">
           <div class="label">Rocket Talk Live</div>
@@ -236,6 +264,43 @@
           minute: '2-digit'
         });
         return date + ' — ' + time;
+      }
+
+      function formatRTLDateTime(dateStr) {
+        var d = new Date(dateStr);
+        var formatted = formatDateTimeET(dateStr);
+        var time = d.toLocaleTimeString('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          minute: '2-digit'
+        });
+        if (time === '7:00 PM') {
+          return formatted + ' — Movie Theater';
+        }
+        return formatted;
+      }
+
+      function getRocketImageSrc(rocketName) {
+        var name = String(rocketName || '').toLowerCase();
+        if (name.indexOf('falcon 9') !== -1) return '../static/images/falcon.jpg';
+        if (name.indexOf('atlas') !== -1) return '../static/images/atlas.jpg';
+        if (name.indexOf('vulcan') !== -1) return '../static/images/vulcan.jpg';
+        return '';
+      }
+
+      function setRocketImage(rocketName) {
+        var wrap = document.getElementById('rocketImageWrap');
+        var img = document.getElementById('rocketImage');
+        if (!wrap || !img) return;
+        var src = getRocketImageSrc(rocketName);
+        if (!src) {
+          img.removeAttribute('src');
+          wrap.classList.add('hidden');
+          return;
+        }
+        img.src = src;
+        img.alt = rocketName + ' image';
+        wrap.classList.remove('hidden');
       }
 
       function findNextLaunch(launches) {
@@ -321,6 +386,7 @@
         if (!next) {
           setText('rocketName', 'No upcoming launch available');
           setText('missionName', 'Please check again soon.');
+          setRocketImage('');
           setText('launchDateTime', '—');
           document.getElementById('countdownWrap').classList.add('hidden');
           document.getElementById('status').textContent = 'No upcoming launch data available.';
@@ -332,13 +398,14 @@
 
         setText('rocketName', rocketName);
         setText('missionName', missionName);
+        setRocketImage(rocketName);
         setText('launchDateTime', formatDateTimeET(next.net));
         startCountdown(next.net);
 
         var nextRTL = findNextRTL(content);
         var rtlBox = document.getElementById('rtlBox');
         if (nextRTL) {
-          setText('rtlDateTime', formatDateTimeET(nextRTL.datetime));
+          setText('rtlDateTime', formatRTLDateTime(nextRTL.datetime));
           rtlBox.classList.remove('hidden');
         } else {
           rtlBox.classList.add('hidden');
@@ -360,6 +427,7 @@
       .catch(function (err) {
         setText('rocketName', 'Launch data unavailable');
         setText('missionName', 'Please retry shortly.');
+        setRocketImage('');
         setText('launchDateTime', '—');
         document.getElementById('countdownWrap').classList.add('hidden');
         document.getElementById('rtlBox').classList.add('hidden');
