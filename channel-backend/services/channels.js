@@ -180,7 +180,10 @@ async function migrateLegacyFrontLobbyChannel() {
 
   await db.query(`
     UPDATE breakthroughs
-    SET target_channels = array_replace(target_channels, $1, $2)
+    SET target_channels = (
+      SELECT array_agg(CASE WHEN ch = $1 THEN $2 ELSE ch END)
+      FROM unnest(target_channels) AS ch
+    )
     WHERE target_channels IS NOT NULL
       AND target_channels @> ARRAY[$1]::TEXT[]
   `, ['front-lobby', 'building-1']);
