@@ -7,12 +7,11 @@ const DEFAULT_LOC_IDS = [12, 27];
 const UPCOMING_WINDOW_MS = 5 * 24 * 60 * 60 * 1000;
 const RECENT_WINDOW_MS = 48 * 60 * 60 * 1000;
 const MAX_CARDS = 3;
-const TARGET_PLAYLIST_NAMES = ['Building One', 'Building Two', 'Building Three'];
-const DEFAULT_CHANNEL_FALLBACKS = {
-  'Building One': 'front-lobby',
-  'Building Two': 'building-2',
-  'Building Three': 'building-3',
-};
+const TARGET_CHANNEL_CONFIGS = [
+  { ids: ['building-1', 'front-lobby'], names: ['building-1', 'building one', 'front lobby'] },
+  { ids: ['building-2'], names: ['building-2', 'building two'] },
+  { ids: ['building-3'], names: ['building-3', 'building three'] },
+];
 
 function getLocationIds() {
   const fromEnv = String(process.env.GO4LAUNCH_LOCATION_IDS || '')
@@ -136,15 +135,16 @@ async function channelRequest(channelApiUrl, channelAdminCode, method, path, bod
 
 function resolveTargetChannels(channels) {
   const resolved = [];
-  for (const displayName of TARGET_PLAYLIST_NAMES) {
-    const byName = channels.find(c => String(c.name || '').toLowerCase() === displayName.toLowerCase());
-    if (byName) {
-      resolved.push(byName.id);
-      continue;
+  for (const target of TARGET_CHANNEL_CONFIGS) {
+    let match = null;
+    for (const fallbackId of target.ids) {
+      match = channels.find(c => c.id === fallbackId);
+      if (match) break;
     }
-    const fallbackId = DEFAULT_CHANNEL_FALLBACKS[displayName];
-    const byFallbackId = channels.find(c => c.id === fallbackId);
-    if (byFallbackId) resolved.push(byFallbackId.id);
+    if (!match) {
+      match = channels.find(c => target.names.includes(String(c.name || '').toLowerCase()));
+    }
+    if (match) resolved.push(match.id);
   }
   return Array.from(new Set(resolved));
 }
@@ -232,7 +232,7 @@ async function syncTvLaunchCards() {
   const channelList = channelsResponse.data?.channels || [];
   const targetChannelIds = resolveTargetChannels(channelList);
   if (!targetChannelIds.length) {
-    console.warn('[go4launch-tv-sync] No Building One/Two/Three channels found — skipping playlist sync');
+    console.warn('[go4launch-tv-sync] No building-1/2/3 channels found — skipping playlist sync');
     return;
   }
 
