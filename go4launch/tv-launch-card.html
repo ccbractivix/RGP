@@ -183,9 +183,6 @@
       color: var(--muted);
       font-weight: 700;
     }
-    .note {
-      display: none;
-    }
     .state {
       font-size: 2vw;
       text-align: center;
@@ -251,10 +248,11 @@
           : 'Scan for full launch details and live updates in the Go4Launch app.';
         var rtlDate = cms.rtl_datetime ? formatDateEt(cms.rtl_datetime) : '';
         var rtlNotes = cms.rtl_notes ? escapeHtml(cms.rtl_notes) : '';
+        var hasRocketTalkLive = !!(rtlDate || rtlNotes);
         
         // Determine rocket image based on rocket type
         var rocketImageUrl = '';
-        if (rocketName && typeof rocketName === 'string') {
+        if (rocketName) {
           var rocketNameLower = rocketName.toLowerCase();
           if (rocketNameLower.includes('falcon')) {
             rocketImageUrl = ROCKET_IMAGE_URLS.falcon;
@@ -267,9 +265,9 @@
         
         // Build Pre-Launch Briefing section if RTL is scheduled
         var preLaunchHtml = '';
-        if (rtlDate) {
+        if (hasRocketTalkLive) {
           preLaunchHtml = '<div class="pre-launch-briefing"><strong>Pre-Launch Briefing</strong>' +
-            '<div>' + escapeHtml(rtlDate) + '</div>' +
+            (rtlDate ? '<div>' + escapeHtml(rtlDate) + '</div>' : '') +
             (rtlNotes ? '<div>' + rtlNotes + '</div>' : '') +
             '</div>';
         }
@@ -282,7 +280,7 @@
         
         // Build bottom bubble based on RTL scheduling
         var bottomBubbleHtml = '';
-        if (rtlDate) {
+        if (hasRocketTalkLive) {
           // Show professional launch photo
           bottomBubbleHtml = '<div class="bottom-bubble">' +
             '<img src="' + escapeHtml(PROFESSIONAL_LAUNCH_PHOTO_URL) + '" alt="Professional launch photo">' +
