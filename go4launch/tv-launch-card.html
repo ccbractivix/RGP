@@ -275,9 +275,10 @@
         }
         
         // Build rocket image column HTML
-        var rocketImageHtml = '<div class="rocket-image">' +
-          (rocketImageUrl ? '<img src="' + escapeHtml(rocketImageUrl) + '" alt="' + escapeHtml(rocketName) + '">' : '') +
-          '</div>';
+        var rocketImageHtml = '';
+        if (rocketImageUrl) {
+          rocketImageHtml = '<div class="rocket-image"><img src="' + escapeHtml(rocketImageUrl) + '" alt="' + escapeHtml(rocketName) + '"></div>';
+        }
         
         // Build bottom bubble based on RTL scheduling
         var bottomBubbleHtml = '';
@@ -288,9 +289,9 @@
             '<p class="bottom-bubble-text">See professional launch photos on the Go4Launch app!</p>' +
             '</div>';
         } else {
-          // Show binoculars and viewing guide message
+          // Show viewing guide icon and message
           bottomBubbleHtml = '<div class="bottom-bubble">' +
-            '<div class="binoculars-icon" role="img" aria-label="Binoculars">🔭</div>' +
+            '<div class="binoculars-icon" role="img" aria-label="Viewing guide">🔭</div>' +
             '<p class="bottom-bubble-text">See the Go4Launch app for our exclusive viewing guide!</p>' +
             '</div>';
         }
