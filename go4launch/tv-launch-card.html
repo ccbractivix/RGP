@@ -154,7 +154,7 @@
       var launchId = params.get('launchId');
       var root = document.getElementById('root');
 
-      function esc(value) {
+      function escapeHtml(value) {
         return String(value == null ? '' : value)
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
@@ -194,11 +194,11 @@
           ? 'See professional launch photo galleries in the Go4Launch app.'
           : 'Scan for full launch details and live updates in the Go4Launch app.';
         var rtlDate = cms.rtl_datetime ? formatDateEt(cms.rtl_datetime) : '';
-        var rtlNotes = cms.rtl_notes ? esc(cms.rtl_notes) : '';
+        var rtlNotes = cms.rtl_notes ? escapeHtml(cms.rtl_notes) : '';
         var rtlHtml = '';
         if (rtlDate || rtlNotes) {
           rtlHtml = '<div class="rtl"><strong>Rocket Talk LIVE!</strong>' +
-            (rtlDate ? '<div>' + esc(rtlDate) + '</div>' : '') +
+            (rtlDate ? '<div>' + escapeHtml(rtlDate) + '</div>' : '') +
             (rtlNotes ? '<div>' + rtlNotes + '</div>' : '') +
             '</div>';
         }
@@ -207,19 +207,19 @@
         root.innerHTML =
           '<main class="card">' +
             '<section>' +
-              '<h1 class="headline">' + esc(headline) + '</h1>' +
+              '<h1 class="headline">' + escapeHtml(headline) + '</h1>' +
               '<div class="row-label">Rocket</div>' +
-              '<div class="rocket-name">' + esc(rocketName) + '</div>' +
+              '<div class="rocket-name">' + escapeHtml(rocketName) + '</div>' +
               '<div class="row-label">Mission</div>' +
-              '<p class="mission">' + esc(mission) + '</p>' +
+              '<p class="mission">' + escapeHtml(mission) + '</p>' +
               '<div class="row-label">Date & Time</div>' +
-              '<div class="datetime">' + esc(formatDateEt(launch.net)) + '</div>' +
+              '<div class="datetime">' + escapeHtml(formatDateEt(launch.net)) + '</div>' +
               rtlHtml +
             '</section>' +
             '<aside class="right">' +
               '<div class="qr-wrap">' +
-                '<img src="' + esc(QR_URL) + '" alt="QR code for Go4Launch app">' +
-                '<p class="cta">' + esc(ctaText) + '</p>' +
+                '<img src="' + escapeHtml(QR_URL) + '" alt="QR code for Go4Launch app">' +
+                '<p class="cta">' + escapeHtml(ctaText) + '</p>' +
               '</div>' +
               '<div class="note">go4launch • Rocket Beach Resort • Display card rotates every 15 seconds</div>' +
             '</aside>' +

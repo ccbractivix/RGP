@@ -45,12 +45,28 @@ app.get('/', (_req, res) => res.redirect(302, '/admin-ui/index.html'));
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 const TV_SYNC_INTERVAL_MS = 15 * 60 * 1000;
+let tvSyncInFlight = false;
+
+async function runTvLaunchCardSync() {
+  if (tvSyncInFlight) {
+    console.warn('[go4launch-tv-sync] Previous sync still running — skipping overlap');
+    return;
+  }
+  tvSyncInFlight = true;
+  try {
+    await syncTvLaunchCards();
+  } catch (e) {
+    console.error('[go4launch-tv-sync] Sync failed:', e.message);
+  } finally {
+    tvSyncInFlight = false;
+  }
+}
 
 app.listen(PORT, () => console.log(`go4launch backend running on port ${PORT}`));
 
-syncTvLaunchCards().catch(e => console.error('[go4launch-tv-sync] Startup sync failed:', e.message));
+runTvLaunchCardSync();
 setInterval(() => {
-  syncTvLaunchCards().catch(e => console.error('[go4launch-tv-sync] Interval sync failed:', e.message));
+  runTvLaunchCardSync();
 }, TV_SYNC_INTERVAL_MS);
 
 module.exports = app;

@@ -42,7 +42,10 @@ function isManagedTvCardUrl(url, base) {
       candidate.pathname === managed.pathname &&
       candidate.searchParams.has('launchId')
     );
-  } catch (_e) {
+  } catch (e) {
+    if (e && e.name !== 'TypeError') {
+      console.warn('[go4launch-tv-sync] URL parse warning:', e.message);
+    }
     return false;
   }
 }
@@ -76,7 +79,7 @@ async function fetchCandidateLaunches() {
   const upcomingCutoff = new Date(now + UPCOMING_WINDOW_MS).toISOString();
   const recentCutoff = new Date(now - RECENT_WINDOW_MS).toISOString();
 
-  const [upcomingRes, previousRes] = await Promise.allSettled([
+  const [upcomingResult, previousResult] = await Promise.allSettled([
     fetchLL2('/launches/upcoming/', {
       location__ids: locationIds,
       limit: 50,
@@ -91,14 +94,14 @@ async function fetchCandidateLaunches() {
     }),
   ]);
 
-  const upcoming = upcomingRes.status === 'fulfilled' ? (upcomingRes.value.results || []) : [];
-  const previous = previousRes.status === 'fulfilled' ? (previousRes.value.results || []) : [];
+  const upcoming = upcomingResult.status === 'fulfilled' ? (upcomingResult.value.results || []) : [];
+  const previous = previousResult.status === 'fulfilled' ? (previousResult.value.results || []) : [];
 
-  if (upcomingRes.status === 'rejected') {
-    console.warn('[go4launch-tv-sync] upcoming fetch failed:', upcomingRes.reason?.message);
+  if (upcomingResult.status === 'rejected') {
+    console.warn('[go4launch-tv-sync] upcoming fetch failed:', upcomingResult.reason?.message);
   }
-  if (previousRes.status === 'rejected') {
-    console.warn('[go4launch-tv-sync] previous fetch failed:', previousRes.reason?.message);
+  if (previousResult.status === 'rejected') {
+    console.warn('[go4launch-tv-sync] previous fetch failed:', previousResult.reason?.message);
   }
 
   const all = dedupeAndSortByNetAsc([...upcoming, ...previous]);
@@ -146,10 +149,11 @@ function resolveTargetChannels(channels) {
   return Array.from(new Set(resolved));
 }
 
-async function syncAvailableSlides(channelApiUrl, channelAdminCode, desiredSlides) {
+async function syncAvailableSlides(channelApiUrl, channelAdminCode, desiredSlides, tvCardBaseUrl) {
   try {
     const current = await channelRequest(channelApiUrl, channelAdminCode, 'GET', '/admin/slides');
-    const existingUrls = new Set((current.data?.slides || []).map(s => s.url));
+    const existingSlides = current.data?.slides || [];
+    const existingUrls = new Set(existingSlides.map(s => s.url));
     for (const slide of desiredSlides) {
       if (existingUrls.has(slide.url)) continue;
       await channelRequest(channelApiUrl, channelAdminCode, 'POST', '/admin/slides', {
@@ -159,6 +163,17 @@ async function syncAvailableSlides(channelApiUrl, channelAdminCode, desiredSlide
         expires_at: slide.expires_at,
         source: slide.source,
       });
+    }
+    const desiredUrls = new Set(desiredSlides.map(s => s.url));
+    for (const slide of existingSlides) {
+      if (!slide || !slide.id || !isManagedTvCardUrl(slide.url, tvCardBaseUrl)) continue;
+      if (desiredUrls.has(slide.url)) continue;
+      await channelRequest(
+        channelApiUrl,
+        channelAdminCode,
+        'DELETE',
+        `/admin/slides/${encodeURIComponent(slide.id)}`
+      );
     }
     await channelRequest(channelApiUrl, channelAdminCode, 'DELETE', '/admin/slides/expired');
   } catch (e) {
@@ -221,7 +236,7 @@ async function syncTvLaunchCards() {
     return;
   }
 
-  await syncAvailableSlides(channelApiUrl, channelAdminCode, desiredSlides);
+  await syncAvailableSlides(channelApiUrl, channelAdminCode, desiredSlides, tvCardBaseUrl);
   await Promise.all(targetChannelIds.map(channelId =>
     syncChannelPlaylist(channelApiUrl, channelAdminCode, channelId, desiredSlides, tvCardBaseUrl)
   ));
