@@ -477,6 +477,9 @@
       var posterSrc = show.poster || '';
       if (posterSrc && posterSrc.charAt(0) === '/') {
         posterSrc = theaterApiBase + posterSrc;
+      } else if (posterSrc && posterSrc.indexOf('static/') === 0) {
+        // Relative static path from theater-web (e.g. live event art like RTL.png)
+        posterSrc = '../theater-web/' + posterSrc;
       }
       if (posterSrc) {
         posterEl.src = posterSrc;
