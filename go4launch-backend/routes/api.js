@@ -114,7 +114,7 @@ router.get('/launches/:id', async (req, res) => {
     if (err.response && err.response.status === 404) {
       return res.status(404).json({ error: 'Launch not found' });
     }
-    console.error(`[go4launch] /api/launches/${id} error:`, err.message);
+    console.error('[go4launch] /api/launches/:id error:', err.message);
     return res.status(502).json({ error: 'Failed to fetch launch' });
   }
 });
