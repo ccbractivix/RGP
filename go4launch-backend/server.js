@@ -45,7 +45,9 @@ app.get('/', (_req, res) => res.redirect(302, '/admin-ui/index.html'));
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 const TV_SYNC_INTERVAL_MS = 15 * 60 * 1000;
+const TV_SYNC_URGENT_INTERVAL_MS = 60 * 1000; // 60s when a launch is within 2 hours
 let tvSyncInFlight = false;
+let tvSyncTimer = null;
 
 async function runTvLaunchCardSync() {
   if (tvSyncInFlight) {
@@ -53,20 +55,23 @@ async function runTvLaunchCardSync() {
     return;
   }
   tvSyncInFlight = true;
+  let urgent = false;
   try {
-    await syncTvLaunchCards();
+    const result = await syncTvLaunchCards();
+    urgent = result?.urgent || false;
   } catch (e) {
     console.error('[go4launch-tv-sync] Sync failed:', e.message);
   } finally {
     tvSyncInFlight = false;
+    // Schedule next sync with adaptive interval (always runs, even on error)
+    if (tvSyncTimer) clearTimeout(tvSyncTimer);
+    const nextInterval = urgent ? TV_SYNC_URGENT_INTERVAL_MS : TV_SYNC_INTERVAL_MS;
+    tvSyncTimer = setTimeout(runTvLaunchCardSync, nextInterval);
   }
 }
 
 app.listen(PORT, () => console.log(`go4launch backend running on port ${PORT}`));
 
 runTvLaunchCardSync();
-setInterval(() => {
-  runTvLaunchCardSync();
-}, TV_SYNC_INTERVAL_MS);
 
 module.exports = app;

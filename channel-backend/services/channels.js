@@ -81,6 +81,9 @@ async function ensureSchema() {
       created_at      TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  // Migration: add slide_url and source columns for URL-based breakthroughs
+  await db.query('ALTER TABLE breakthroughs ADD COLUMN IF NOT EXISTS slide_url TEXT');
+  await db.query('ALTER TABLE breakthroughs ADD COLUMN IF NOT EXISTS source TEXT');
   await db.query(`
     CREATE TABLE IF NOT EXISTS channel_rules (
       id              SERIAL PRIMARY KEY,
@@ -337,13 +340,15 @@ async function listBreakthroughs() {
 
 async function createBreakthrough(data) {
   const r = await db.query(`
-    INSERT INTO breakthroughs (title, message, bg_color, text_color, priority, target_channels)
-    VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+    INSERT INTO breakthroughs (title, message, bg_color, text_color, priority, target_channels, slide_url, source)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
   `, [
     data.title, data.message,
     data.bg_color || '#D32F2F', data.text_color || '#FFFFFF',
     data.priority || 1,
     data.target_channels || null,
+    data.slide_url || null,
+    data.source || null,
   ]);
   return r.rows[0];
 }
@@ -356,9 +361,11 @@ async function updateBreakthrough(id, data) {
         bg_color = COALESCE($4, bg_color),
         text_color = COALESCE($5, text_color),
         priority = COALESCE($6, priority),
-        target_channels = COALESCE($7, target_channels)
+        target_channels = COALESCE($7, target_channels),
+        slide_url = COALESCE($8, slide_url),
+        source = COALESCE($9, source)
     WHERE id = $1
-  `, [id, data.title, data.message, data.bg_color, data.text_color, data.priority, data.target_channels]);
+  `, [id, data.title, data.message, data.bg_color, data.text_color, data.priority, data.target_channels, data.slide_url, data.source]);
 }
 
 async function activateBreakthrough(id) {

@@ -112,8 +112,14 @@ async function fetchCandidateLaunches() {
   }).slice(0, MAX_CARDS);
 }
 
+const BREAKTHROUGH_SOURCE = 'go4launch-tv-breakthrough';
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+
 function toManagedSlide(launch, tvCardBaseUrl) {
   const netMs = new Date(launch.net).getTime();
+  const now = Date.now();
+  const hoursUntilLaunch = (netMs - now) / (60 * 60 * 1000);
   return {
     url: buildTvCardUrl(tvCardBaseUrl, launch.id),
     label: `go4launch TV • ${launch.name || 'Launch'}`,
@@ -121,6 +127,10 @@ function toManagedSlide(launch, tvCardBaseUrl) {
     description: 'Auto-managed go4launch TV launch card',
     source: 'go4launch-tv-launch-cards',
     expires_at: new Date(netMs + RECENT_WINDOW_MS).toISOString(),
+    isWithin2Hours: Math.abs(hoursUntilLaunch) <= 2,
+    isWithin12Hours: hoursUntilLaunch > 0 && hoursUntilLaunch <= 12,
+    launchName: launch.name || 'Launch',
+    launchId: launch.id,
   };
 }
 
@@ -217,12 +227,68 @@ async function syncChannelPlaylist(channelApiUrl, channelAdminCode, channelId, d
   }
 }
 
+async function syncBreakthroughs(channelApiUrl, channelAdminCode, desiredSlides) {
+  try {
+    // Get existing breakthroughs
+    const btResponse = await channelRequest(channelApiUrl, channelAdminCode, 'GET', '/admin/breakthroughs');
+    const existingBts = btResponse.data?.breakthroughs || [];
+    const managedBts = existingBts.filter(bt => bt.source === BREAKTHROUGH_SOURCE);
+
+    // Find slides that need a breakthrough (within 2 hours)
+    const breakthroughSlides = desiredSlides.filter(s => s.isWithin2Hours);
+
+    if (breakthroughSlides.length > 0) {
+      const slide = breakthroughSlides[0]; // Use the nearest launch
+      const existingManaged = managedBts[0];
+
+      if (existingManaged) {
+        // Update existing breakthrough with current slide URL
+        await channelRequest(channelApiUrl, channelAdminCode, 'PUT', `/admin/breakthroughs/${existingManaged.id}`, {
+          title: `Launch Alert: ${slide.launchName}`,
+          message: 'Launch imminent — watch live!',
+          slide_url: slide.url,
+          source: BREAKTHROUGH_SOURCE,
+          priority: 10,
+        });
+        // Ensure it's activated
+        if (!existingManaged.active) {
+          await channelRequest(channelApiUrl, channelAdminCode, 'POST', `/admin/breakthroughs/${existingManaged.id}/activate`);
+        }
+      } else {
+        // Create new breakthrough
+        const createRes = await channelRequest(channelApiUrl, channelAdminCode, 'POST', '/admin/breakthroughs', {
+          title: `Launch Alert: ${slide.launchName}`,
+          message: 'Launch imminent — watch live!',
+          slide_url: slide.url,
+          source: BREAKTHROUGH_SOURCE,
+          priority: 10,
+        });
+        const newBt = createRes.data?.breakthrough;
+        if (newBt) {
+          await channelRequest(channelApiUrl, channelAdminCode, 'POST', `/admin/breakthroughs/${newBt.id}/activate`);
+        }
+      }
+      console.log(`[go4launch-tv-sync] Breakthrough active for: ${slide.launchName}`);
+    } else {
+      // No launch within 2 hours — deactivate and clean up managed breakthroughs
+      for (const bt of managedBts) {
+        if (bt.active) {
+          await channelRequest(channelApiUrl, channelAdminCode, 'POST', `/admin/breakthroughs/${bt.id}/deactivate`);
+        }
+        await channelRequest(channelApiUrl, channelAdminCode, 'DELETE', `/admin/breakthroughs/${bt.id}`);
+      }
+    }
+  } catch (e) {
+    console.error('[go4launch-tv-sync] breakthrough sync failed:', e.response?.data || e.message);
+  }
+}
+
 async function syncTvLaunchCards() {
   const channelApiUrl = (process.env.CHANNEL_API_URL || '').trim();
   const channelAdminCode = (process.env.CHANNEL_ADMIN_CODE || '').trim();
   if (!channelApiUrl || !channelAdminCode) {
     console.warn('[go4launch-tv-sync] CHANNEL_API_URL or CHANNEL_ADMIN_CODE not set — skipping');
-    return;
+    return { urgent: false };
   }
 
   const launches = await fetchCandidateLaunches();
@@ -234,7 +300,7 @@ async function syncTvLaunchCards() {
   const targetChannelIds = resolveTargetChannels(channelList);
   if (!targetChannelIds.length) {
     console.warn('[go4launch-tv-sync] No building-1/2/3 channels found — skipping playlist sync');
-    return;
+    return { urgent: false };
   }
 
   await syncAvailableSlides(channelApiUrl, channelAdminCode, desiredSlides, tvCardBaseUrl);
@@ -242,7 +308,12 @@ async function syncTvLaunchCards() {
     syncChannelPlaylist(channelApiUrl, channelAdminCode, channelId, desiredSlides, tvCardBaseUrl)
   ));
 
-  console.log(`[go4launch-tv-sync] Synced ${desiredSlides.length} cards to channels: ${targetChannelIds.join(', ')}`);
+  // Manage breakthroughs for launches within 2 hours
+  await syncBreakthroughs(channelApiUrl, channelAdminCode, desiredSlides);
+
+  const hasUrgent = desiredSlides.some(s => s.isWithin2Hours);
+  console.log(`[go4launch-tv-sync] Synced ${desiredSlides.length} cards to channels: ${targetChannelIds.join(', ')}${hasUrgent ? ' (URGENT — breakthrough active)' : ''}`);
+  return { urgent: hasUrgent };
 }
 
 module.exports = { syncTvLaunchCards };

@@ -35,6 +35,8 @@ CREATE TABLE IF NOT EXISTS breakthroughs (
   priority        INT DEFAULT 1,
   active          BOOLEAN DEFAULT false,
   target_channels TEXT[],
+  slide_url       TEXT,
+  source          TEXT,
   activated_at    TIMESTAMPTZ,
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
