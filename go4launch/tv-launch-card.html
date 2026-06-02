@@ -66,14 +66,6 @@
       border-radius: 16px;
     }
 
-    /* 2× font sizes (doubled from original clamp values) */
-    .headline {
-      font-size: clamp(36px, 4.8vw, 92px);
-      font-weight: 800;
-      line-height: 1.1;
-      margin-bottom: 2.5vh;
-    }
-
     .row-label {
       font-size: clamp(20px, 1.7vw, 32px);
       text-transform: uppercase;
@@ -322,7 +314,6 @@
 
         var rocketName = ((launch.rocket || {}).configuration || {}).full_name || launch.name || 'Launch';
         var mission = (launch.mission || {}).name || launch.name || 'Mission details to be announced';
-        var headline = cms.headline || 'Upcoming Launch';
         var bgImage = matchSlideImage(rocketName);
 
         /*
@@ -373,7 +364,6 @@
             '<img class="slide-bg" src="' + escapeHtml(bgImage) + '" alt="Launch alert background">' +
             '<div class="info-panel"></div>' +
             '<div class="info-overlay">' +
-              '<div class="headline" id="headline">' + escapeHtml(headline) + '</div>' +
               '<div class="row-label">Rocket</div>' +
               '<div class="rocket-name">' + escapeHtml(rocketName) + '</div>' +
               '<div class="row-label">Mission</div>' +
