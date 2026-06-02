@@ -147,6 +147,7 @@
     <div id="bt-pulse"></div>
     <div id="bt-title"></div>
     <div id="bt-message"></div>
+    <iframe id="bt-slide" style="display:none; position:absolute; inset:0; width:100%; height:100%; border:none; z-index:1;"></iframe>
   </div>
 
   <!-- Lightning banner -->
@@ -522,16 +523,38 @@
   }
 
   function showBreakthrough(bt) {
-    btTitle.textContent = bt.title;
-    btMessage.textContent = bt.message;
-    btOverlay.style.background = bt.bg_color || '#D32F2F';
-    btOverlay.style.color = bt.text_color || '#FFFFFF';
+    const btSlide = document.getElementById('bt-slide');
+    if (bt.slide_url) {
+      // URL-based breakthrough: show as full-screen iframe
+      btTitle.style.display = 'none';
+      btMessage.style.display = 'none';
+      document.getElementById('bt-pulse').style.display = 'none';
+      btSlide.src = bt.slide_url;
+      btSlide.style.display = 'block';
+      btOverlay.style.background = 'transparent';
+      btOverlay.style.padding = '0';
+    } else {
+      // Text-based breakthrough
+      btSlide.style.display = 'none';
+      btSlide.removeAttribute('src');
+      btTitle.style.display = '';
+      btMessage.style.display = '';
+      document.getElementById('bt-pulse').style.display = '';
+      btTitle.textContent = bt.title;
+      btMessage.textContent = bt.message;
+      btOverlay.style.background = bt.bg_color || '#D32F2F';
+      btOverlay.style.color = bt.text_color || '#FFFFFF';
+      btOverlay.style.padding = '60px';
+    }
     btOverlay.classList.add('active');
     breakthroughActive = true;
   }
 
   function hideBreakthrough() {
     if (!breakthroughActive) return;
+    const btSlide = document.getElementById('bt-slide');
+    btSlide.style.display = 'none';
+    btSlide.removeAttribute('src');
     btOverlay.classList.remove('active');
     breakthroughActive = false;
   }

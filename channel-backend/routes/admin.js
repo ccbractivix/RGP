@@ -193,10 +193,10 @@ router.get('/breakthroughs', async (_req, res) => {
 });
 
 router.post('/breakthroughs', async (req, res) => {
-  const { title, message } = req.body;
-  if (!title || !message) return res.status(400).json({ error: 'title and message required' });
+  const { title, message, slide_url } = req.body;
+  if (!title || (!message && !slide_url)) return res.status(400).json({ error: 'title and (message or slide_url) required' });
   try {
-    const bt = await createBreakthrough(req.body);
+    const bt = await createBreakthrough({ ...req.body, message: message || '' });
     return res.status(201).json({ breakthrough: bt });
   } catch (e) {
     console.error('[admin] create breakthrough error:', e);

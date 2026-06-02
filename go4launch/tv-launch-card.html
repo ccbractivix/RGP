@@ -7,339 +7,317 @@
   <title>go4launch TV Launch Card</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg: #EDEEE1;
-      --ink: #101623;
-      --muted: #2b364a;
-      --accent: #0b6bbd;
-      --panel: rgba(255,255,255,0.66);
-    }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      background: var(--bg);
-      color: var(--ink);
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #000;
       font-family: 'Montserrat', sans-serif;
-      font-weight: 600;
     }
-    body {
-      display: grid;
-      place-items: center;
-      padding: 2.2vw;
+
+    /* Full-screen background image */
+    .slide {
+      position: relative;
+      width: 100%; height: 100%;
     }
-    .card {
-      width: 100%;
-      height: 100%;
-      border-radius: 2.2vw;
-      background: linear-gradient(150deg, rgba(255,255,255,0.88), rgba(255,255,255,0.44));
-      border: 0.2vw solid rgba(16,22,35,0.18);
-      box-shadow: 0 1vw 2.8vw rgba(15,24,42,0.14);
-      padding: 2.3vw;
-      display: grid;
-      grid-template-columns: 1.45fr auto 0.6fr;
-      gap: 1.8vw;
+    .slide-bg {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+    }
+
+    /*
+     * Text overlay area:
+     *   10.896" wide × 11.469" high
+     *   positioned .972" from left, 2.844" from top
+     *   At 72 DPI on 1920×1080 (26.667"×15"):
+     *     left:   3.645%    top: 18.96%
+     *     width: 40.86%     height: 76.46%
+     */
+    .info-overlay {
+      position: absolute;
+      left: 3.645%;
+      top: 18.96%;
+      width: 40.86%;
+      height: 76.46%;
+      display: flex;
+      flex-direction: column;
+      color: #fff;
       overflow: hidden;
     }
-    .launch-alert-header {
-      grid-column: 1 / -1;
-      font-size: 3vw;
-      font-weight: 600;
-      color: #e63946;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
-      text-align: center;
-      margin: -1vw -1vw 1vw -1vw;
-      padding: 1vw;
+
+    .headline {
+      font-size: clamp(18px, 2.4vw, 46px);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 2.5vh;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
     }
-    .rocket-image {
+
+    .row-label {
+      font-size: clamp(10px, 0.85vw, 16px);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      opacity: 0.85;
+      margin-bottom: 0.3vh;
+      font-weight: 700;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+
+    .rocket-name {
+      font-size: clamp(16px, 2vw, 40px);
+      font-weight: 800;
+      line-height: 1.05;
+      margin-bottom: 1.8vh;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+    .mission-name {
+      font-size: clamp(13px, 1.3vw, 26px);
+      font-weight: 600;
+      line-height: 1.25;
+      margin-bottom: 2vh;
+      opacity: 0.95;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+
+    .datetime {
+      font-size: clamp(14px, 1.3vw, 26px);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 2vh;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+
+    .countdown {
+      display: none;
+      margin-bottom: 2vh;
+      padding: 0.8vh 1vw;
+      border-radius: 8px;
+      background: rgba(230, 57, 70, 0.85);
+      color: #fff;
+      font-size: clamp(15px, 1.4vw, 28px);
+      font-weight: 800;
+      text-align: center;
+      align-self: flex-start;
+    }
+    .countdown.visible { display: block; }
+
+    .rtl-section {
+      display: none;
+      margin-top: auto;
+      padding: 1vh 1vw;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(6px);
+    }
+    .rtl-section.visible { display: block; }
+
+    .rtl-label {
+      font-size: clamp(11px, 0.9vw, 18px);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.3vh;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+    .rtl-datetime {
+      font-size: clamp(13px, 1.15vw, 22px);
+      font-weight: 700;
+      line-height: 1.3;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+
+    .state-msg {
+      position: absolute;
+      inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 10vw;
-      height: auto;
-    }
-    .rocket-image img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-    .headline {
-      font-size: 2.35vw;
-      line-height: 1.08;
-      margin: 0 0 1.2vw;
-      font-weight: 700;
-      letter-spacing: 0.01em;
-    }
-    .row-label {
-      font-size: 1vw;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      opacity: 0.82;
-      margin-bottom: 0.35vw;
-      font-weight: 700;
-    }
-    .rocket-name {
-      font-size: 2.3vw;
-      line-height: 1.05;
-      margin: 0 0 1.1vw;
-      font-weight: 700;
-    }
-    .mission {
-      font-size: 1.35vw;
-      line-height: 1.28;
-      margin: 0 0 1.5vw;
-      color: var(--muted);
-      font-weight: 600;
-    }
-    .datetime {
-      display: inline-block;
-      background: rgba(11,107,189,0.11);
-      border: 0.15vw solid rgba(11,107,189,0.28);
-      border-radius: 0.85vw;
-      padding: 0.8vw 1vw;
-      margin-bottom: 1vw;
-      font-size: 1.3vw;
-      font-weight: 700;
-    }
-    .pre-launch-briefing {
-      margin-top: 0.4vw;
-      background: rgba(76, 175, 80, 0.15);
-      border: 0.15vw solid rgba(76, 175, 80, 0.35);
-      border-radius: 0.9vw;
-      padding: 0.8vw 1vw;
-      font-size: 1.05vw;
-      line-height: 1.35;
-    }
-    .pre-launch-briefing strong {
-      font-weight: 700;
-      display: block;
-      margin-bottom: 0.25vw;
-      color: #2d5016;
-    }
-    .right {
-      display: grid;
-      grid-template-rows: auto 1fr;
-      gap: 1vw;
-      align-items: start;
-      justify-items: center;
-    }
-    .qr-wrap {
-      width: 100%;
-      background: var(--panel);
-      border-radius: 0.95vw;
-      border: 0.1vw solid rgba(16,22,35,0.14);
-      padding: 0.8vw;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .qr-wrap img {
-      width: 100%;
-      max-width: 8vw;
-      height: auto;
-      display: block;
-      margin: 0 auto 0.55vw;
-      border-radius: 0.45vw;
-      background: #fff;
-      border: 0.12vw solid rgba(16,22,35,0.08);
-    }
-    .bottom-bubble {
-      width: 100%;
-      background: var(--panel);
-      border-radius: 0.95vw;
-      border: 0.1vw solid rgba(16,22,35,0.14);
-      padding: 0.8vw;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.5vw;
-    }
-    .bottom-bubble img {
-      width: 100%;
-      max-width: 7vw;
-      height: auto;
-      border-radius: 0.45vw;
-    }
-    .bottom-bubble-text {
-      font-size: 0.9vw;
-      line-height: 1.25;
-      color: var(--muted);
-      font-weight: 600;
-    }
-    .binoculars-icon {
-      font-size: 3vw;
-      margin-bottom: 0.3vw;
-    }
-    .cta {
-      margin: 0;
-      font-size: 0.9vw;
-      line-height: 1.25;
-      color: var(--muted);
-      font-weight: 700;
-    }
-    .state {
       font-size: 2vw;
-      text-align: center;
       font-weight: 700;
+      color: #fff;
+      text-align: center;
+      background: #1a1a2e;
     }
   </style>
 </head>
 <body>
-  <div id="root" class="state">Loading launch card…</div>
+  <div id="root" class="state-msg">Loading launch card…</div>
+
   <script>
     (function () {
-      var LAUNCH_APP_URL = 'https://ccbractivix.github.io/RGP/go4launch/index.html';
-      var QR_URL = 'https://api.qrserver.com/v1/create-qr-code/?size=420x420&data=' + encodeURIComponent(LAUNCH_APP_URL);
-      var ROCKET_IMAGE_URLS = {
-        falcon: 'https://ccbractivix.github.io/RGP/static/images/falcon.jpg',
-        atlas: 'https://ccbractivix.github.io/RGP/static/images/atlas.jpg',
-        vulcan: 'https://ccbractivix.github.io/RGP/static/images/vulcan.jpg'
+      'use strict';
+
+      var IMAGE_BASE = 'https://ccbractivix.github.io/RGP/go4launch/images/';
+      var SLIDE_IMAGES = {
+        falcon:   IMAGE_BASE + 'LAUNCH-ALERT-FALCON.jpg',
+        starship: IMAGE_BASE + 'LAUNCH-ALERT-STARSHIP.jpg',
+        sls:      IMAGE_BASE + 'LAUNCH-ALERT-SLS.jpg',
+        atlas:    IMAGE_BASE + 'LAUNCH-ALERT-ATLAS.jpg',
+        vulcan:   IMAGE_BASE + 'LAUNCH-ALERT-VULCAN.jpg',
+        nova:     IMAGE_BASE + 'LAUNCH-ALERT-NOVA.jpg',
       };
-      var PROFESSIONAL_LAUNCH_PHOTO_URL = 'https://ccbractivix.github.io/RGP/go4launch/images/tv_1256623983117749_4412877648315315623_n.jpg';
+      var FUZZY_KEYWORDS = Object.keys(SLIDE_IMAGES);
+      var DEFAULT_SLIDE = SLIDE_IMAGES.falcon;
+
       var API_BASE = (document.querySelector('meta[name="api-base"]') || {}).content || '';
       var params = new URLSearchParams(window.location.search);
       var launchId = params.get('launchId');
       var root = document.getElementById('root');
+      var countdownTimer = null;
+      var refreshTimer = null;
 
-      function escapeHtml(value) {
-        return String(value == null ? '' : value)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
+      function escapeHtml(v) {
+        return String(v == null ? '' : v)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       }
 
-      function formatDateEt(dateValue) {
+      function formatDateET(dateValue) {
         return new Date(dateValue).toLocaleString('en-US', {
-          weekday: 'long',
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true,
+          weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+          hour: 'numeric', minute: '2-digit', hour12: true,
+          timeZone: 'America/New_York',
+        }) + ' ET';
+      }
+
+      function formatRTLDateTimeET(dateValue) {
+        return new Date(dateValue).toLocaleString('en-US', {
+          weekday: 'long', month: 'long', day: 'numeric',
+          hour: 'numeric', minute: '2-digit', hour12: true,
           timeZone: 'America/New_York',
         }) + ' ET';
       }
 
       function requestJson(url) {
-        return fetch(url).then(function (response) {
-          if (!response.ok) throw new Error('HTTP ' + response.status);
-          return response.json();
+        return fetch(url).then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
         });
+      }
+
+      /**
+       * Fuzzy-match the rocket name to a LAUNCH-ALERT slide image.
+       * Checks if any keyword (falcon, starship, sls, atlas, vulcan, nova)
+       * appears as a substring in the rocket name (case-insensitive).
+       */
+      function matchSlideImage(rocketName) {
+        var name = String(rocketName || '').toLowerCase();
+        for (var i = 0; i < FUZZY_KEYWORDS.length; i++) {
+          if (name.indexOf(FUZZY_KEYWORDS[i]) !== -1) {
+            return SLIDE_IMAGES[FUZZY_KEYWORDS[i]];
+          }
+        }
+        return DEFAULT_SLIDE;
       }
 
       function renderCard(launch, cms) {
         var netMs = new Date(launch.net).getTime();
         var now = Date.now();
-        var isRecent = now >= netMs && now <= (netMs + 48 * 60 * 60 * 1000);
+        var hoursUntilLaunch = (netMs - now) / (60 * 60 * 1000);
+
         var rocketName = ((launch.rocket || {}).configuration || {}).full_name || launch.name || 'Launch';
         var mission = (launch.mission || {}).name || launch.name || 'Mission details to be announced';
-        var headline = isRecent ? 'Did you see this launch?' : (cms.headline || 'Upcoming Launch');
-        var ctaText = isRecent
-          ? 'See professional launch photo galleries in the Go4Launch app.'
-          : 'Scan for full launch details and live updates in the Go4Launch app.';
-        var rtlDate = cms.rtl_datetime ? formatDateEt(cms.rtl_datetime) : '';
-        var rtlNotes = cms.rtl_notes ? escapeHtml(cms.rtl_notes) : '';
-        var hasRocketTalkLive = !!(rtlDate || rtlNotes);
-        
-        // Determine rocket image based on rocket type
-        var rocketImageUrl = '';
-        if (rocketName) {
-          var rocketNameLower = rocketName.toLowerCase();
-          if (rocketNameLower.includes('falcon')) {
-            rocketImageUrl = ROCKET_IMAGE_URLS.falcon;
-          } else if (rocketNameLower.includes('atlas')) {
-            rocketImageUrl = ROCKET_IMAGE_URLS.atlas;
-          } else if (rocketNameLower.includes('vulcan')) {
-            rocketImageUrl = ROCKET_IMAGE_URLS.vulcan;
-          }
-        }
-        
-        // Build Pre-Launch Briefing section if RTL is scheduled
-        var preLaunchHtml = '';
-        if (hasRocketTalkLive) {
-          preLaunchHtml = '<div class="pre-launch-briefing"><strong>Pre-Launch Briefing</strong>' +
-            (rtlDate ? '<div>' + escapeHtml(rtlDate) + '</div>' : '') +
-            (rtlNotes ? '<div>' + rtlNotes + '</div>' : '') +
-            '</div>';
-        }
-        
-        // Build rocket image column HTML
-        var rocketImageHtml = '';
-        if (rocketImageUrl && rocketName) {
-          var rocketAlt = 'Image of ' + rocketName + ' rocket';
-          rocketImageHtml = '<div class="rocket-image"><img src="' + escapeHtml(rocketImageUrl) + '" alt="' + escapeHtml(rocketAlt) + '"></div>';
-        }
-        
-        // Build bottom bubble based on RTL scheduling
-        var bottomBubbleHtml = '';
-        if (hasRocketTalkLive) {
-          // Show professional launch photo
-          bottomBubbleHtml = '<div class="bottom-bubble">' +
-            '<img src="' + escapeHtml(PROFESSIONAL_LAUNCH_PHOTO_URL) + '" alt="Professional launch photo">' +
-            '<p class="bottom-bubble-text">See professional launch photos on the Go4Launch app!</p>' +
-            '</div>';
-        } else {
-          // Show viewing guide icon and message
-          bottomBubbleHtml = '<div class="bottom-bubble">' +
-            '<div class="binoculars-icon" role="img" aria-label="Telescope">🔭</div>' +
-            '<p class="bottom-bubble-text">See the Go4Launch app for our exclusive viewing guide!</p>' +
-            '</div>';
-        }
+        var headline = cms.headline || 'Upcoming Launch';
+        var bgImage = matchSlideImage(rocketName);
+
+        // RTL: only show date/time + "in the Movie Theater" if scheduled (no notes)
+        var rtlDatetime = cms.rtl_datetime || '';
+        var hasRTL = !!rtlDatetime && new Date(rtlDatetime).getTime() > now;
 
         root.className = '';
         root.innerHTML =
-          '<main class="card">' +
-            '<div class="launch-alert-header">LAUNCH ALERT</div>' +
-            '<section>' +
-              '<h1 class="headline">' + escapeHtml(headline) + '</h1>' +
+          '<div class="slide">' +
+            '<img class="slide-bg" src="' + escapeHtml(bgImage) + '" alt="Launch alert background">' +
+            '<div class="info-overlay">' +
+              '<div class="headline" id="headline">' + escapeHtml(headline) + '</div>' +
               '<div class="row-label">Rocket</div>' +
               '<div class="rocket-name">' + escapeHtml(rocketName) + '</div>' +
               '<div class="row-label">Mission</div>' +
-              '<p class="mission">' + escapeHtml(mission) + '</p>' +
-              '<div class="row-label">Date & Time</div>' +
-              '<div class="datetime">' + escapeHtml(formatDateEt(launch.net)) + '</div>' +
-              preLaunchHtml +
-            '</section>' +
-            rocketImageHtml +
-            '<aside class="right">' +
-              '<div class="qr-wrap">' +
-                '<img src="' + escapeHtml(QR_URL) + '" alt="QR code for Go4Launch app">' +
-                '<p class="cta">' + escapeHtml(ctaText) + '</p>' +
-              '</div>' +
-              bottomBubbleHtml +
-            '</aside>' +
-          '</main>';
+              '<div class="mission-name">' + escapeHtml(mission) + '</div>' +
+              '<div class="row-label">Launch Date &amp; Time</div>' +
+              '<div class="datetime">' + escapeHtml(formatDateET(launch.net)) + '</div>' +
+              '<div class="countdown" id="countdown"></div>' +
+              (hasRTL
+                ? '<div class="rtl-section visible">' +
+                    '<div class="rtl-label">Rocket Talk LIVE!</div>' +
+                    '<div class="rtl-datetime">' + escapeHtml(formatRTLDateTimeET(rtlDatetime)) + ' in the Movie Theater</div>' +
+                  '</div>'
+                : '') +
+            '</div>' +
+          '</div>';
+
+        // Countdown clock: show when launch is within 12 hours
+        if (hoursUntilLaunch > 0 && hoursUntilLaunch <= 12) {
+          startCountdown(netMs);
+        }
+
+        // Auto-refresh every 60 seconds when launch is within 2 hours
+        if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+        if (Math.abs(hoursUntilLaunch) <= 2) {
+          refreshTimer = setInterval(function () { loadAndRender(); }, 60000);
+        }
+      }
+
+      function startCountdown(launchMs) {
+        var el = document.getElementById('countdown');
+        if (!el) return;
+        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+
+        el.classList.add('visible');
+
+        function tick() {
+          var delta = launchMs - Date.now();
+          if (delta <= 0) {
+            el.textContent = 'LIFTOFF!';
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+            return;
+          }
+          var h = Math.floor(delta / 3600000);
+          var m = Math.floor((delta % 3600000) / 60000);
+          var s = Math.floor((delta % 60000) / 1000);
+          el.textContent = 'T-' +
+            String(h).padStart(2, '0') + ':' +
+            String(m).padStart(2, '0') + ':' +
+            String(s).padStart(2, '0');
+        }
+
+        tick();
+        countdownTimer = setInterval(tick, 1000);
+      }
+
+      function loadAndRender() {
+        return Promise.all([
+          requestJson(API_BASE + '/api/launches'),
+          requestJson(API_BASE + '/api/content').catch(function () { return {}; }),
+        ]).then(function (results) {
+          var launches = results[0] || [];
+          var content = results[1] || {};
+          var launch = launches.find(function (item) { return item.id === launchId; });
+          if (!launch) {
+            root.className = 'state-msg';
+            root.textContent = 'Launch card unavailable (launch not found).';
+            return;
+          }
+          renderCard(launch, content[launchId] || {});
+        }).catch(function () {
+          root.className = 'state-msg';
+          root.textContent = 'Launch card unavailable (data error).';
+        });
       }
 
       if (!launchId) {
+        root.className = 'state-msg';
         root.textContent = 'Launch card unavailable (missing launchId).';
         return;
       }
 
-      Promise.all([
-        requestJson(API_BASE + '/api/launches'),
-        requestJson(API_BASE + '/api/content').catch(function () { return {}; }),
-      ]).then(function (results) {
-        var launches = results[0] || [];
-        var content = results[1] || {};
-        var launch = launches.find(function (item) { return item.id === launchId; });
-        if (!launch) {
-          root.textContent = 'Launch card unavailable (launch not found).';
-          return;
-        }
-        renderCard(launch, content[launchId] || {});
-      }).catch(function () {
-        root.textContent = 'Launch card unavailable (data error).';
-      });
+      loadAndRender();
     })();
   </script>
 </body>
