@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="amenities-api-url" content="https://amenities-web.onrender.com/api/status">
+  <meta name="theater-api-url" content="https://theater-backend-qf1b.onrender.com/api/schedule/tv">
+  <title>Amenities Operating Status</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 1920px;
+      height: 1080px;
+      background: #F2F1E8;
+      color: #454040;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600; /* SemiBold */
+      overflow: hidden;
+    }
+
+    /* Background image */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url('../channel-web/HICV_BASE.jpg');
+      background-size: cover;
+      background-position: center;
+      z-index: 0;
+    }
+
+    #page {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      padding: 36px; /* 1/2" margin at 72 DPI */
+    }
+
+    /* ===== HEADER ===== */
+    #header {
+      text-align: center;
+      padding: 9px 0 15px;
+      font-size: 48px;
+      font-weight: 600;
+      font-family: 'Playfair Display', serif;
+      letter-spacing: 3px;
+      color: #E5754A;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    #main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      gap: 24px;
+      min-height: 0;
+    }
+
+    /* ===== LEFT SECTION (2/3) ===== */
+    #left-section {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .amenity-bubble {
+      flex: 1;
+      background: rgba(242, 241, 232, 0.92);
+      border: 2px solid #D2CDC5;
+      border-radius: 20px;
+      padding: 14px 24px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      min-height: 0;
+    }
+
+    .amenity-bubble.is-open {
+      border-color: #AFA59B;
+      background: rgba(242, 245, 240, 0.94);
+    }
+
+    .amenity-bubble.is-closed {
+      border-color: #E5754A;
+      background: rgba(252, 245, 242, 0.94);
+    }
+
+    .amenity-left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .amenity-name {
+      font-size: 28px;
+      font-weight: 600;
+      color: #454040;
+      line-height: 1.2;
+    }
+
+    .amenity-status {
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .amenity-status.open {
+      color: #2D8A3E;
+    }
+
+    .amenity-status.closed {
+      color: #E5754A;
+    }
+
+    .amenity-right {
+      flex: 0 0 auto;
+      text-align: right;
+      padding-left: 20px;
+    }
+
+    .amenity-hours {
+      font-size: 20px;
+      color: #6B6460;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    /* ===== RIGHT SECTION (1/3) ===== */
+    #right-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 0;
+    }
+
+    /* Theater section (upper half) */
+    #theater-section {
+      flex: 1;
+      background: rgba(7, 9, 26, 0.95);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      min-height: 0;
+    }
+
+    #theater-poster {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 8px;
+      object-fit: contain;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    #theater-title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #FFFFFF;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    #theater-meta {
+      font-size: 16px;
+      color: #9098C8;
+      font-weight: 500;
+      text-align: center;
+    }
+
+    #theater-countdown {
+      font-size: 18px;
+      color: #F5C518;
+      font-weight: 600;
+      text-align: center;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    #theater-empty {
+      font-size: 16px;
+      color: #6A70A0;
+      font-style: italic;
+      text-align: center;
+    }
+
+    /* Arcade section (lower half) */
+    #arcade-section {
+      flex: 1;
+      background: rgba(242, 241, 232, 0.94);
+      border-radius: 16px;
+      border: 2px solid #D2CDC5;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      min-height: 0;
+    }
+
+    #arcade-image {
+      max-width: 100%;
+      max-height: 140px;
+      object-fit: contain;
+      border-radius: 6px;
+    }
+
+    #arcade-hours {
+      font-size: 18px;
+      font-weight: 600;
+      color: #454040;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    /* Loading state */
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 32px;
+      color: #454040;
+      z-index: 10;
+    }
+
+    /* Status indicator */
+    #status {
+      position: fixed;
+      bottom: 4px;
+      right: 14px;
+      font-size: 12px;
+      color: #A59C90;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading amenities status…</div>
+  <div id="page" style="display:none;">
+    <div id="header">Amenities Operating Status</div>
+    
+    <div id="main-content">
+      <!-- Left section: Amenity bubbles -->
+      <div id="left-section">
+        <!-- Bubbles will be populated by JavaScript -->
+      </div>
+
+      <!-- Right section -->
+      <div id="right-section">
+        <!-- Theater section -->
+        <div id="theater-section">
+          <img id="theater-poster" src="" alt="" style="display:none;">
+          <div id="theater-title"></div>
+          <div id="theater-meta"></div>
+          <div id="theater-countdown"></div>
+          <div id="theater-empty" style="display:none;">No shows scheduled</div>
+        </div>
+
+        <!-- Arcade section -->
+        <div id="arcade-section">
+          <img id="arcade-image" src="../static/images/Atlas Arcade Logo c.png" alt="Atlas Arcade">
+          <div id="arcade-hours">Open 8 am to 11 pm daily!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="status"></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var amenitiesApiUrl = document.querySelector('meta[name="amenities-api-url"]').getAttribute('content') || '/api/status';
+    var theaterApiUrl = document.querySelector('meta[name="theater-api-url"]').getAttribute('content') || 'https://theater-backend-qf1b.onrender.com/api/schedule/tv';
+    var REFRESH_MS = 60000; // 1 minute
+
+    // Target amenities in order
+    var TARGET_AMENITIES = ['Pools', 'Lazy River', 'Water Slide', 'Sports Courts', 'Mini Golf', 'Guest Tram'];
+
+    var theaterApiBase = theaterApiUrl.replace(/\/api\/.*$/, '');
+    var theaterCountdownInterval = null;
+    var nextShowEntry = null;
+
+    // ===== UTILITY FUNCTIONS =====
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatTime12(t) {
+      if (!t) return '';
+      var parts = t.split(':');
+      var h = parseInt(parts[0], 10);
+      var m = parseInt(parts[1], 10);
+      var ampm = h >= 12 ? 'pm' : 'am';
+      if (h === 0) h = 12;
+      else if (h > 12) h -= 12;
+      if (m === 0) return h + ' ' + ampm;
+      return h + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+    }
+
+    function isWithinHours(now, openTime, closeTime) {
+      var h = now.getHours();
+      var m = now.getMinutes();
+      var current = h * 60 + m;
+      var openParts = openTime.split(':');
+      var closeParts = closeTime.split(':');
+      var open = parseInt(openParts[0], 10) * 60 + parseInt(openParts[1], 10);
+      var close = parseInt(closeParts[0], 10) * 60 + parseInt(closeParts[1], 10);
+      return current >= open && current < close;
+    }
+
+    function formatRuntime(min) {
+      if (!min) return '';
+      var n = parseInt(min, 10);
+      if (isNaN(n) || n <= 0) return '';
+      var h = Math.floor(n / 60), m = n % 60;
+      if (h > 0 && m > 0) return h + 'h ' + m + 'm';
+      if (h > 0) return h + 'h';
+      return m + 'm';
+    }
+
+    // ===== THEATER FUNCTIONS =====
+
+    var MONTH_MAP = {
+      Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5,
+      Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11,
+      January:0, February:1, March:2, April:3, May:4, June:5,
+      July:6, August:7, September:8, October:9, November:10, December:11
+    };
+
+    function parseDayLabel(label) {
+      if (!label) return null;
+      var parts = label.split(',');
+      if (parts.length < 2) return null;
+      var datePart = parts[1].trim();
+      var tokens = datePart.split(' ');
+      var monthStr = tokens[0];
+      var day = parseInt(tokens[1], 10);
+      var monthNum = MONTH_MAP[monthStr];
+      if (monthNum === undefined || isNaN(day)) return null;
+      var now = new Date();
+      var year = now.getFullYear();
+      if (monthNum === 0 && now.getMonth() === 11) year += 1;
+      return { year: year, month: monthNum, day: day };
+    }
+
+    function parseTime(timeStr) {
+      if (!timeStr) return null;
+      var m = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!m) return null;
+      var h = parseInt(m[1], 10);
+      var min = parseInt(m[2], 10);
+      var ampm = m[3].toUpperCase();
+      if (ampm === 'AM' && h === 12) h = 0;
+      if (ampm === 'PM' && h !== 12) h += 12;
+      return { h: h, m: min };
+    }
+
+    function toDate(dayLabel, timeStr) {
+      var dp = parseDayLabel(dayLabel);
+      var tp = parseTime(timeStr);
+      if (!dp || !tp) return null;
+      return new Date(dp.year, dp.month, dp.day, tp.h, tp.m, 0, 0);
+    }
+
+    function findNextShow(days) {
+      if (!days) return null;
+      var cutoff = new Date(Date.now() - 60 * 1000);
+      var best = null;
+
+      for (var i = 0; i < days.length; i++) {
+        var dayObj = days[i];
+        if (dayObj.closure) continue;
+        var shows = dayObj.shows || [];
+        for (var j = 0; j < shows.length; j++) {
+          var show = shows[j];
+          if (show.contentType === 'live event') continue;
+          var startDate = toDate(dayObj.label, show.time);
+          if (!startDate) continue;
+          if (startDate < cutoff) continue;
+          if (!best || startDate < best.startDate) {
+            best = { show: show, startDate: startDate, dayLabel: dayObj.label };
+          }
+        }
+      }
+
+      return best;
+    }
+
+    function formatCountdown(totalSeconds) {
+      if (totalSeconds < 0) totalSeconds = 0;
+      var h = Math.floor(totalSeconds / 3600);
+      var m = Math.floor((totalSeconds % 3600) / 60);
+      if (h > 0) return h + 'h ' + m + 'm';
+      if (m > 0) return m + ' minutes';
+      return 'Starting now!';
+    }
+
+    function updateTheaterCountdown() {
+      if (!nextShowEntry) return;
+      var diffSec = Math.round((nextShowEntry.startDate.getTime() - Date.now()) / 1000);
+      var countdownEl = document.getElementById('theater-countdown');
+      
+      if (diffSec > 0) {
+        countdownEl.textContent = 'Coming up in ' + formatCountdown(diffSec);
+        countdownEl.style.display = '';
+      } else if (diffSec >= -60) {
+        countdownEl.textContent = 'Now Playing!';
+        countdownEl.style.display = '';
+      } else {
+        // Movie has started more than 1 minute ago
+        countdownEl.style.display = 'none';
+      }
+    }
+
+    function renderTheater(days) {
+      var entry = findNextShow(days);
+      nextShowEntry = entry;
+
+      var posterEl = document.getElementById('theater-poster');
+      var titleEl = document.getElementById('theater-title');
+      var metaEl = document.getElementById('theater-meta');
+      var countdownEl = document.getElementById('theater-countdown');
+      var emptyEl = document.getElementById('theater-empty');
+
+      if (!entry) {
+        posterEl.style.display = 'none';
+        titleEl.textContent = '';
+        metaEl.textContent = '';
+        countdownEl.style.display = 'none';
+        emptyEl.style.display = '';
+        if (theaterCountdownInterval) {
+          clearInterval(theaterCountdownInterval);
+          theaterCountdownInterval = null;
+        }
+        return;
+      }
+
+      var show = entry.show;
+
+      // Poster
+      var posterSrc = show.poster || '';
+      if (posterSrc && posterSrc.charAt(0) === '/') {
+        posterSrc = theaterApiBase + posterSrc;
+      }
+      if (posterSrc) {
+        posterEl.src = posterSrc;
+        posterEl.alt = show.title || '';
+        posterEl.style.display = '';
+      } else {
+        posterEl.style.display = 'none';
+      }
+
+      // Title
+      titleEl.textContent = show.title || '';
+
+      // Meta: runtime · rating
+      var metaParts = [];
+      var rt = formatRuntime(show.runtime);
+      if (rt) metaParts.push(rt);
+      if (show.rating) metaParts.push(show.rating);
+      metaEl.textContent = metaParts.join(' · ');
+
+      // Countdown
+      emptyEl.style.display = 'none';
+      updateTheaterCountdown();
+
+      if (theaterCountdownInterval) clearInterval(theaterCountdownInterval);
+      theaterCountdownInterval = setInterval(updateTheaterCountdown, 1000);
+    }
+
+    // ===== AMENITIES FUNCTIONS =====
+
+    function renderAmenities(data) {
+      var amenities = data.amenities;
+      var now = new Date(data.serverTime);
+      var leftSection = document.getElementById('left-section');
+
+      if (!amenities || amenities.length === 0) {
+        leftSection.innerHTML = '<div style="text-align:center;color:#454040;font-size:24px;">No amenity data available.</div>';
+        return;
+      }
+
+      // Create a map of amenities by name
+      var amenityMap = {};
+      amenities.forEach(function(a) {
+        // Handle variations in naming
+        var key = a.name;
+        if (key === 'Main Pool' || key === 'Signature Pool') key = 'Pools';
+        amenityMap[key] = a;
+      });
+
+      var html = '';
+      TARGET_AMENITIES.forEach(function(name) {
+        var a = amenityMap[name];
+        if (!a) {
+          // Create a placeholder if amenity not found
+          html += '<div class="amenity-bubble">';
+          html += '<div class="amenity-left">';
+          html += '<div class="amenity-name">' + escapeHtml(name) + '</div>';
+          html += '<div class="amenity-status">N/A</div>';
+          html += '</div>';
+          html += '<div class="amenity-right">';
+          html += '<div class="amenity-hours">—</div>';
+          html += '</div>';
+          html += '</div>';
+          return;
+        }
+
+        var withinHours = isWithinHours(now, a.openTime, a.closeTime);
+        var bubbleClass = '', statusClass = '', statusText = '';
+
+        if (a.status === 'closed' || a.lightning) {
+          bubbleClass = 'is-closed';
+          statusClass = 'closed';
+          statusText = 'CLOSED';
+        } else if (!withinHours) {
+          bubbleClass = '';
+          statusClass = 'closed';
+          statusText = 'CLOSED';
+        } else {
+          bubbleClass = 'is-open';
+          statusClass = 'open';
+          statusText = 'OPEN';
+        }
+
+        html += '<div class="amenity-bubble ' + bubbleClass + '">';
+        html += '<div class="amenity-left">';
+        html += '<div class="amenity-name">' + escapeHtml(name) + '</div>';
+        html += '<div class="amenity-status ' + statusClass + '">' + statusText + '</div>';
+        html += '</div>';
+        html += '<div class="amenity-right">';
+        html += '<div class="amenity-hours">' + formatTime12(a.openTime) + ' – ' + formatTime12(a.closeTime) + '</div>';
+        html += '</div>';
+        html += '</div>';
+      });
+
+      leftSection.innerHTML = html;
+    }
+
+    // ===== FETCH AND RENDER =====
+
+    function fetchAndRender() {
+      Promise.all([
+        fetch(amenitiesApiUrl).then(function(r) { 
+          if (!r.ok) throw new Error('Amenities API HTTP ' + r.status);
+          return r.json();
+        }),
+        fetch(theaterApiUrl).then(function(r) {
+          if (!r.ok) throw new Error('Theater API HTTP ' + r.status);
+          return r.json();
+        })
+      ])
+      .then(function(results) {
+        var amenitiesData = results[0];
+        var theaterData = results[1];
+
+        renderAmenities(amenitiesData);
+        renderTheater(theaterData);
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('page').style.display = 'flex';
+
+        var ts = new Date();
+        document.getElementById('status').textContent = 'Updated ' + ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+        setTimeout(fetchAndRender, REFRESH_MS);
+      })
+      .catch(function(err) {
+        console.error('[current] Fetch failed:', err);
+        document.getElementById('loading').textContent = 'Loading…';
+        setTimeout(fetchAndRender, REFRESH_MS);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchAndRender);
+  })();
+  </script>
+</body>
+</html>
