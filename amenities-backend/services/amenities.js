@@ -59,7 +59,7 @@ const LIGHTNING_IDS = [
 ];
 
 const VALID_CLOSURE_MINUTES = [15, 30, 60, 120, 240, 360, 720, 1440, 2880, 4320];
-const VALID_CLOSURE_TYPES   = ['close', 'wind', 'maintenance', 'delay'];
+const VALID_CLOSURE_TYPES   = ['close', 'wind', 'lightning', 'maintenance', 'delay'];
 
 /** Return the current date (YYYY-MM-DD) and time (HH:MM) in America/New_York. */
 function getETDateAndTime() {
@@ -256,6 +256,8 @@ async function closeAmenity(id, minutes, isLightning, closureType) {
     reopenAt = minutes != null ? new Date(now.getTime() + minutes * 60_000) : null;
   }
 
+  const lightningFlag = !!isLightning || closureType === 'lightning';
+
   await db.query(`
     UPDATE amenities
     SET status          = 'closed',
@@ -266,7 +268,7 @@ async function closeAmenity(id, minutes, isLightning, closureType) {
         last_updated_at = NULL,
         lightning       = $6
     WHERE id = $1
-  `, [id, minutes, closureType || 'close', now, reopenAt, !!isLightning]);
+  `, [id, minutes, closureType || 'close', now, reopenAt, lightningFlag]);
 }
 
 /**

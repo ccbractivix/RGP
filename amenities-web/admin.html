@@ -554,7 +554,7 @@
             html += '</span>';
           } else {
             html += '<span class="closed-text">CLOSED</span>';
-            var typeLabels = { wind: 'Wind Closure', maintenance: 'Maintenance Closure' };
+            var typeLabels = { wind: 'Wind Closure', maintenance: 'Maintenance Closure', lightning: 'Lightning Closure' };
             if (typeLabels[a.closureType]) html += ' — ' + typeLabels[a.closureType];
             if (a.lightning) html += ' <span style="color:var(--amber)">⚡</span>';
             if (a.closureMinutes != null && a.closureMinutes < 1440) {
@@ -593,6 +593,7 @@
           html += '<select class="close-type" data-id="' + escapeHtml(a.id) + '">';
           html += '<option value="close">Close</option>';
           html += '<option value="wind">Wind Closure</option>';
+          html += '<option value="lightning">Lightning Closure</option>';
           html += '<option value="maintenance">Maintenance Closure</option>';
           html += '<option value="delay">Delay Opening</option>';
           html += '</select>';
