@@ -94,6 +94,31 @@ router.get('/launches', async (_req, res) => {
   }
 });
 
+// GET /api/launches/:id — single launch by ID (cache-first, then LL2 fallback)
+router.get('/launches/:id', async (req, res) => {
+  const id = req.params.id;
+  try {
+    // 1. Check in-memory cache first
+    if (launchCache.data && Date.now() - launchCache.ts < CACHE_TTL) {
+      const cached = launchCache.data.find(l => l.id === id);
+      if (cached) return res.json(cached);
+    }
+
+    // 2. Direct LL2 lookup
+    const data = await fetchLL2(`/launches/${encodeURIComponent(id)}/`, { mode: 'detailed' });
+    if (data && data.id) return res.json(data);
+
+    return res.status(404).json({ error: 'Launch not found' });
+  } catch (err) {
+    // LL2 may 404 for old/unknown IDs — return 404 cleanly
+    if (err.response && err.response.status === 404) {
+      return res.status(404).json({ error: 'Launch not found' });
+    }
+    console.error('[go4launch] /api/launches/:id error:', err.message);
+    return res.status(502).json({ error: 'Failed to fetch launch' });
+  }
+});
+
 // ============================================================
 // AUTO-ARCHIVE COMPLETED LAUNCHES
 // ============================================================

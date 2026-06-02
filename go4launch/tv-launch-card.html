@@ -291,20 +291,36 @@
         countdownTimer = setInterval(tick, 1000);
       }
 
+      function delay(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+      }
+
+      function fetchLaunchById(id, attempt) {
+        attempt = attempt || 1;
+        return requestJson(API_BASE + '/api/launches/' + encodeURIComponent(id))
+          .catch(function (err) {
+            if (attempt < 3) {
+              return delay(2000 * attempt).then(function () {
+                return fetchLaunchById(id, attempt + 1);
+              });
+            }
+            throw err;
+          });
+      }
+
       function loadAndRender() {
         return Promise.all([
-          requestJson(API_BASE + '/api/launches'),
-          requestJson(API_BASE + '/api/content').catch(function () { return {}; }),
+          fetchLaunchById(launchId),
+          requestJson(API_BASE + '/api/content/' + encodeURIComponent(launchId)).catch(function () { return null; }),
         ]).then(function (results) {
-          var launches = results[0] || [];
-          var content = results[1] || {};
-          var launch = launches.find(function (item) { return item.id === launchId; });
-          if (!launch) {
+          var launch = results[0];
+          var cms = results[1] || {};
+          if (!launch || !launch.id) {
             root.className = 'state-msg';
             root.textContent = 'Launch card unavailable (launch not found).';
             return;
           }
-          renderCard(launch, content[launchId] || {});
+          renderCard(launch, cms);
         }).catch(function () {
           root.className = 'state-msg';
           root.textContent = 'Launch card unavailable (data error).';
