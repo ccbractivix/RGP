@@ -63,11 +63,11 @@ async function runTvLaunchCardSync() {
     console.error('[go4launch-tv-sync] Sync failed:', e.message);
   } finally {
     tvSyncInFlight = false;
+    // Schedule next sync with adaptive interval (always runs, even on error)
+    if (tvSyncTimer) clearTimeout(tvSyncTimer);
+    const nextInterval = urgent ? TV_SYNC_URGENT_INTERVAL_MS : TV_SYNC_INTERVAL_MS;
+    tvSyncTimer = setTimeout(runTvLaunchCardSync, nextInterval);
   }
-  // Schedule next sync with adaptive interval
-  if (tvSyncTimer) clearTimeout(tvSyncTimer);
-  const nextInterval = urgent ? TV_SYNC_URGENT_INTERVAL_MS : TV_SYNC_INTERVAL_MS;
-  tvSyncTimer = setTimeout(runTvLaunchCardSync, nextInterval);
 }
 
 app.listen(PORT, () => console.log(`go4launch backend running on port ${PORT}`));
