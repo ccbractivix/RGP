@@ -91,10 +91,32 @@
     }
 
     .datetime {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2vh;
       font-size: clamp(28px, 2.6vw, 52px);
       font-weight: 700;
       line-height: 1.2;
       margin-bottom: 2vh;
+    }
+
+    .datetime-time {
+      font-size: clamp(30px, 2.75vw, 54px);
+    }
+
+    .overnight-note {
+      align-self: flex-start;
+      margin: 0 0 2vh;
+      padding: 0.7vh 1vw;
+      border-radius: 999px;
+      background: rgba(115, 190, 255, 0.18);
+      border: 1px solid rgba(160, 215, 255, 0.5);
+      box-shadow: 0 0 20px rgba(69, 161, 235, 0.22);
+      color: #1d5f92;
+      font-size: clamp(13px, 1vw, 20px);
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
     }
 
     .countdown {
@@ -239,8 +261,14 @@
       }
 
       function formatDateET(dateValue) {
-        return new Date(dateValue).toLocaleString('en-US', {
-          weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+        return new Date(dateValue).toLocaleDateString('en-US', {
+          month: 'long', day: 'numeric', year: 'numeric',
+          timeZone: 'America/New_York',
+        });
+      }
+
+      function formatTimeET(dateValue) {
+        return new Date(dateValue).toLocaleTimeString('en-US', {
           hour: 'numeric', minute: '2-digit', hour12: true,
           timeZone: 'America/New_York',
         }) + ' ET';
@@ -252,6 +280,34 @@
           hour: 'numeric', minute: '2-digit', hour12: true,
           timeZone: 'America/New_York',
         }) + ' ET';
+      }
+
+      function getEasternHour(dateValue) {
+        var parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          hourCycle: 'h23'
+        }).formatToParts(new Date(dateValue));
+        for (var i = 0; i < parts.length; i++) {
+          if (parts[i].type === 'hour') return parseInt(parts[i].value, 10);
+        }
+        return NaN;
+      }
+
+      function getEasternWeekday(dateValue) {
+        return new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          weekday: 'long'
+        }).format(new Date(dateValue));
+      }
+
+      function getOvernightLaunchLabel(dateValue) {
+        var hour = getEasternHour(dateValue);
+        if (!Number.isFinite(hour) || hour < 0 || hour > 5) return '';
+        var launchDate = new Date(dateValue);
+        var dayOf = getEasternWeekday(launchDate);
+        var dayBefore = getEasternWeekday(launchDate.getTime() - 24 * 60 * 60 * 1000);
+        return 'Launch is overnight ' + dayBefore + ' night / ' + dayOf + ' morning';
       }
 
       function requestJson(url) {
@@ -328,6 +384,7 @@
         var rtlExpired = hasRTL && (now >= rtlMs + RTL_EXPIRED_MS);
         var showRTL = hasRTL && !rtlExpired;
         var showCTA = hasRTL && rtlExpired;
+        var overnightLabel = getOvernightLaunchLabel(launch.net);
 
         var signupUrl = GUEST_PAGE_BASE + '?launch=' + encodeURIComponent(launch.id) + '#saw-it';
 
@@ -369,7 +426,11 @@
               '<div class="row-label">Mission</div>' +
               '<div class="mission-name">' + escapeHtml(mission) + '</div>' +
               '<div class="row-label">Launch Date &amp; Time</div>' +
-              '<div class="datetime">' + escapeHtml(formatDateET(launch.net)) + '</div>' +
+              '<div class="datetime">' +
+                '<div>' + escapeHtml(formatDateET(launch.net)) + '</div>' +
+                '<div class="datetime-time">at ' + escapeHtml(formatTimeET(launch.net)) + '</div>' +
+              '</div>' +
+              (overnightLabel ? '<div class="overnight-note">' + escapeHtml(overnightLabel) + '</div>' : '') +
               '<div class="countdown" id="countdown"></div>' +
               bottomHtml +
             '</div>' +

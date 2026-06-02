@@ -235,10 +235,19 @@
     }
 
     .featured-date {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
       font-size: clamp(16px, 1.4vw, 22px);
       color: var(--accent-gold);
       font-weight: 500;
       margin-top: 3px;
+    }
+
+    .featured-time {
+      font-size: clamp(18px, 1.55vw, 24px);
+      font-weight: 700;
     }
 
     .featured-chris-says {
@@ -320,9 +329,44 @@
     }
 
     .compact-datetime {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
       font-size: clamp(16px, 1.5vw, 24px);
       color: var(--accent-gold);
       margin-bottom: 3px;
+    }
+
+    .compact-time {
+      font-size: clamp(17px, 1.55vw, 24px);
+      font-weight: 700;
+    }
+
+    .overnight-note {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      max-width: 100%;
+      margin-top: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(120, 195, 255, 0.18);
+      border: 1px solid rgba(185, 225, 255, 0.45);
+      box-shadow: 0 0 18px rgba(66, 165, 245, 0.24);
+      color: #eaf6ff;
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .featured-overnight {
+      font-size: clamp(11px, 0.95vw, 15px);
+      align-self: center;
+    }
+
+    .compact-overnight {
+      font-size: clamp(10px, 0.88vw, 14px);
+      margin-bottom: 5px;
     }
 
     .compact-status {
@@ -662,6 +706,34 @@
         return formatDateET(dateStr) + ' \u2014 ' + formatTimeET(dateStr);
       }
 
+      function getEasternHour(dateStr) {
+        var parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          hourCycle: 'h23'
+        }).formatToParts(new Date(dateStr));
+        for (var i = 0; i < parts.length; i++) {
+          if (parts[i].type === 'hour') return parseInt(parts[i].value, 10);
+        }
+        return NaN;
+      }
+
+      function getEasternWeekday(dateValue) {
+        return new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          weekday: 'long'
+        }).format(new Date(dateValue));
+      }
+
+      function getOvernightLaunchLabel(dateStr) {
+        var hour = getEasternHour(dateStr);
+        if (!Number.isFinite(hour) || hour < 0 || hour > 5) return '';
+        var launchDate = new Date(dateStr);
+        var dayOf = getEasternWeekday(launchDate);
+        var dayBefore = getEasternWeekday(launchDate.getTime() - 24 * 60 * 60 * 1000);
+        return 'Launch is overnight ' + dayBefore + ' night / ' + dayOf + ' morning';
+      }
+
       // ── RTL lookup ─────────────────────────────────────────
 
       function findNextRTL(cmsContent) {
@@ -708,8 +780,14 @@
         // Launch vehicle
         if (vehicle) html += '<div class="featured-meta">' + esc(vehicle) + '</div>';
 
-        // Date and time with day of week
-        html += '<div class="featured-date">' + esc(formatDateWithDayET(launch.net)) + ' \u2014 ' + esc(formatTimeET(launch.net)) + '</div>';
+        html += '<div class="featured-date">' +
+          '<div>' + esc(formatDateET(launch.net)) + '</div>' +
+          '<div class="featured-time">at ' + esc(formatTimeET(launch.net)) + '</div>' +
+          '</div>';
+        var featuredOvernightLabel = getOvernightLaunchLabel(launch.net);
+        if (featuredOvernightLabel) {
+          html += '<div class="overnight-note featured-overnight">' + esc(featuredOvernightLabel) + '</div>';
+        }
 
         html += '</div>'; // featured-body
         html += '</div>'; // featured-card
@@ -737,7 +815,14 @@
         html += '<div class="compact-info">';
         if (vehicle) html += '<div class="compact-vehicle">' + esc(vehicle) + '</div>';
         html += '<div class="compact-mission">' + esc(missionName) + '</div>';
-        html += '<div class="compact-datetime">' + esc(formatDateET(launch.net)) + ' \u2014 ' + esc(formatTimeET(launch.net)) + '</div>';
+        html += '<div class="compact-datetime">' +
+          '<div>' + esc(formatDateET(launch.net)) + '</div>' +
+          '<div class="compact-time">at ' + esc(formatTimeET(launch.net)) + '</div>' +
+          '</div>';
+        var compactOvernightLabel = getOvernightLaunchLabel(launch.net);
+        if (compactOvernightLabel) {
+          html += '<div class="overnight-note compact-overnight">' + esc(compactOvernightLabel) + '</div>';
+        }
         html += '<span class="compact-status ' + statusClass(launch.status) + '">' + esc(statusLabel(launch.status)) + '</span>';
         html += '</div>'; // compact-info
 
