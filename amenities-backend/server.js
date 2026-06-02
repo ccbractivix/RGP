@@ -30,7 +30,7 @@ const adminLimiter  = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: req => req.path === '/verify',
+  skip: req => req.path === '/admin/verify',
 });
 
 // Routes
