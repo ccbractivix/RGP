@@ -7,7 +7,7 @@ const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
 const DEFAULT_LOC_IDS = [12, 27];
 const UPCOMING_WINDOW_MS = 5 * 24 * 60 * 60 * 1000;
 const RECENT_WINDOW_MS = 48 * 60 * 60 * 1000;
-const MAX_CARDS = 3;
+const MAX_CARDS = 1;
 const TARGET_CHANNEL_CONFIGS = [
   // Keep front-lobby fallback during channel-manager migration to building-1.
   { ids: ['building-1', 'front-lobby'], names: ['building-1', 'building one', 'front lobby'] },
