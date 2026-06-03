@@ -319,6 +319,7 @@
     var REFRESH_MS = 60000; // 1 minute
     var BASE_WIDTH = 1920;
     var BASE_HEIGHT = 1080;
+    var resizeTimer = null;
 
     // Target amenities in order
     var TARGET_AMENITIES = ['Pools', 'Lazy River', 'Water Slide', 'Sports Courts', 'Mini Golf', 'Guest Tram'];
@@ -625,15 +626,19 @@
     }
 
     function applyTvScale() {
-      var viewportWidth = window.innerWidth || document.documentElement.clientWidth || BASE_WIDTH;
-      var viewportHeight = window.innerHeight || document.documentElement.clientHeight || BASE_HEIGHT;
+      var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+      var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      if (!viewportWidth || !viewportHeight) return;
       var scale = Math.min(viewportWidth / BASE_WIDTH, viewportHeight / BASE_HEIGHT);
       var offsetX = (viewportWidth - BASE_WIDTH * scale) / 2;
       var offsetY = (viewportHeight - BASE_HEIGHT * scale) / 2;
       document.body.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px) scale(' + scale + ')';
     }
 
-    window.addEventListener('resize', applyTvScale);
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(applyTvScale, 100);
+    });
     document.addEventListener('DOMContentLoaded', function () {
       applyTvScale();
       fetchAndRender();
