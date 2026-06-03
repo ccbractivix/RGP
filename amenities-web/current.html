@@ -553,48 +553,48 @@
           countdownEl.style.display = 'none';
         }
       }
+    }
 
-      function fitTheaterText() {
-        var contentEl = document.getElementById('theater-content');
-        var infoEl = document.getElementById('theater-info');
-        var statusLine1El = document.getElementById('theater-status-line1');
-        var statusLine2El = document.getElementById('theater-status-line2');
-        var titleEl = document.getElementById('theater-title');
-        var metaEl = document.getElementById('theater-meta');
-        var countdownEl = document.getElementById('theater-countdown');
-        var emptyEl = document.getElementById('theater-empty');
-        var baseSizes = {
-          status1: 48,
-          status2: 32,
-          title: 39,
-          meta: 28,
-          countdown: 32,
-          empty: 28
-        };
-        var minSizes = {
-          status1: 34,
-          status2: 24,
-          title: 28,
-          meta: 20,
-          countdown: 24,
-          empty: 22
-        };
+    function fitTheaterText() {
+      var contentEl = document.getElementById('theater-content');
+      var infoEl = document.getElementById('theater-info');
+      var statusLine1El = document.getElementById('theater-status-line1');
+      var statusLine2El = document.getElementById('theater-status-line2');
+      var titleEl = document.getElementById('theater-title');
+      var metaEl = document.getElementById('theater-meta');
+      var countdownEl = document.getElementById('theater-countdown');
+      var emptyEl = document.getElementById('theater-empty');
+      var baseSizes = {
+        status1: 48,
+        status2: 32,
+        title: 39,
+        meta: 28,
+        countdown: 32,
+        empty: 28
+      };
+      var minSizes = {
+        status1: 34,
+        status2: 24,
+        title: 28,
+        meta: 20,
+        countdown: 24,
+        empty: 22
+      };
 
-        function applySizes(scale) {
-          statusLine1El.style.fontSize = Math.max(minSizes.status1, Math.round(baseSizes.status1 * scale)) + 'px';
-          statusLine2El.style.fontSize = Math.max(minSizes.status2, Math.round(baseSizes.status2 * scale)) + 'px';
-          titleEl.style.fontSize = Math.max(minSizes.title, Math.round(baseSizes.title * scale)) + 'px';
-          metaEl.style.fontSize = Math.max(minSizes.meta, Math.round(baseSizes.meta * scale)) + 'px';
-          countdownEl.style.fontSize = Math.max(minSizes.countdown, Math.round(baseSizes.countdown * scale)) + 'px';
-          emptyEl.style.fontSize = Math.max(minSizes.empty, Math.round(baseSizes.empty * scale)) + 'px';
-        }
+      function applySizes(scale) {
+        statusLine1El.style.fontSize = Math.max(minSizes.status1, Math.round(baseSizes.status1 * scale)) + 'px';
+        statusLine2El.style.fontSize = Math.max(minSizes.status2, Math.round(baseSizes.status2 * scale)) + 'px';
+        titleEl.style.fontSize = Math.max(minSizes.title, Math.round(baseSizes.title * scale)) + 'px';
+        metaEl.style.fontSize = Math.max(minSizes.meta, Math.round(baseSizes.meta * scale)) + 'px';
+        countdownEl.style.fontSize = Math.max(minSizes.countdown, Math.round(baseSizes.countdown * scale)) + 'px';
+        emptyEl.style.fontSize = Math.max(minSizes.empty, Math.round(baseSizes.empty * scale)) + 'px';
+      }
 
-        var scale = 1;
+      var scale = 1;
+      applySizes(scale);
+      while (scale > 0.72 && (contentEl.scrollHeight > contentEl.clientHeight || infoEl.scrollHeight > infoEl.clientHeight)) {
+        scale -= 0.04;
         applySizes(scale);
-        while (scale > 0.72 && (contentEl.scrollHeight > contentEl.clientHeight || infoEl.scrollHeight > infoEl.clientHeight)) {
-          scale -= 0.04;
-          applySizes(scale);
-        }
       }
     }
 
