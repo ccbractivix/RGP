@@ -22,6 +22,7 @@
     body {
       width: 1920px;
       height: 1080px;
+      --headline-star-scale: 0.72;
       background: #EDEEE1;
       color: #454040;
       font-family: 'Montserrat', sans-serif;
@@ -230,7 +231,7 @@
 
     .headline-stars {
       color: #F5C518;
-      font-size: 0.72em;
+      font-size: calc(1em * var(--headline-star-scale));
       letter-spacing: 0.14em;
       white-space: nowrap;
     }
@@ -384,6 +385,9 @@
     var REFRESH_MS = 60000; // 1 minute
     var BASE_WIDTH = 1920;
     var BASE_HEIGHT = 1080;
+    var MIN_THEATER_TEXT_SCALE = 0.72;
+    var THEATER_TEXT_SCALE_STEP = 0.04;
+    var THEATER_HEADLINE_STARS = ['★', '★', '★'];
     var resizeTimer = null;
     var hasLoggedViewportWarning = false;
 
@@ -592,10 +596,34 @@
 
       var scale = 1;
       applySizes(scale);
-      while (scale > 0.72 && (contentEl.scrollHeight > contentEl.clientHeight || infoEl.scrollHeight > infoEl.clientHeight)) {
-        scale -= 0.04;
+      while (scale > MIN_THEATER_TEXT_SCALE && (contentEl.scrollHeight > contentEl.clientHeight || infoEl.scrollHeight > infoEl.clientHeight)) {
+        scale -= THEATER_TEXT_SCALE_STEP;
         applySizes(scale);
       }
+    }
+
+    function setTheaterHeadline(element, mode) {
+      element.replaceChildren();
+      if (mode !== 'now') {
+        element.textContent = 'COMING UP NEXT';
+        return;
+      }
+
+      function buildStarGroup() {
+        var stars = document.createElement('span');
+        stars.className = 'headline-stars';
+        stars.setAttribute('aria-hidden', 'true');
+        stars.textContent = THEATER_HEADLINE_STARS.join(' ');
+        return stars;
+      }
+
+      var headlineText = document.createElement('span');
+      headlineText.className = 'headline-text';
+      headlineText.textContent = 'NOW SHOWING';
+
+      element.appendChild(buildStarGroup());
+      element.appendChild(headlineText);
+      element.appendChild(buildStarGroup());
     }
 
     function renderTheater(days) {
@@ -654,11 +682,7 @@
         return;
       }
 
-      if (theaterDisplayState.mode === 'now') {
-        statusLine1El.innerHTML = '<span class="headline-stars" aria-hidden="true">★ ★ ★</span><span class="headline-text">NOW SHOWING</span><span class="headline-stars" aria-hidden="true">★ ★ ★</span>';
-      } else {
-        statusLine1El.textContent = 'COMING UP NEXT';
-      }
+      setTheaterHeadline(statusLine1El, theaterDisplayState.mode);
       statusLine1El.style.display = '';
       statusLine2El.style.display = '';
 
