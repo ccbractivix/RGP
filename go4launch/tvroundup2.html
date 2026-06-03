@@ -15,6 +15,7 @@
       --bg: #F2F1E8;
       --text: #454040;
       --accent: #E5754A;
+      --accent-dark: #cf6843;
       --active: #2D8A3E;
       --secondary: #6B6460;
       --border: #D2CDC5;
@@ -190,7 +191,7 @@
     }
 
     .next-headline {
-      background: linear-gradient(135deg, #E5754A, #cf6843);
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
       color: #fff;
       text-align: center;
       padding: 12px 16px;
@@ -361,9 +362,14 @@
       var BASE_WIDTH = 1920;
       var BASE_HEIGHT = 1080;
       var REFRESH_MS = 60000;
+      // Keep Rocket Talk LIVE visible for 30 minutes after scheduled time.
       var RTL_GRACE_MS = 30 * 60 * 1000;
       var MAX_LEFT = 3;
+      var MAX_FETCH_LAUNCHES = 12;
+      var RTL_VENUE_LABEL = 'In the Movie Theater';
+      var RESIZE_DEBOUNCE_MS = 250;
       var resizeTimer = null;
+      var hasLoggedViewportWarning = false;
 
       var API_BASE = (function () {
         var meta = document.querySelector('meta[name="api-base"]');
@@ -371,6 +377,7 @@
       })();
 
       var LL2_BASE = 'https://lldev.thespacedevs.com/2.3.0';
+      // Launch Library 2 location IDs for Kennedy Space Center and Cape Canaveral SFS.
       var LOCATION_IDS = '12,27';
 
       function esc(str) {
@@ -445,7 +452,7 @@
 
       function formatCountdown(dateStr) {
         var diff = new Date(dateStr).getTime() - Date.now();
-        if (diff <= 0) return 'T-00:00:00';
+        if (diff <= 0) return 'LIFTOFF';
         var total = Math.floor(diff / 1000);
         var hours = Math.floor(total / 3600);
         var mins = Math.floor((total % 3600) / 60);
@@ -480,17 +487,17 @@
         var img = getImageUrl(launch, cms);
         var mission = getMissionName(launch);
         var day = formatDayET(launch.net);
-        var date = formatDateET(launch.net);
+        var formattedDate = formatDateET(launch.net);
         var time = formatTimeET(launch.net);
 
         return '<div class="launch-bubble panel">' +
           '<div class="bubble-image">' + (img
-            ? '<img src="' + esc(img) + '" alt="' + esc(mission) + '" onerror="this.parentElement.innerHTML=\'<div class=&quot;empty-state&quot; style=&quot;font-size:20px;&quot;>No image</div>\'">'
+            ? '<img class="js-fallback-image" data-fallback-text="No image" src="' + esc(img) + '" alt="' + esc(mission) + '">'
             : '<div class="empty-state" style="font-size:20px;">No image</div>') + '</div>' +
           '<div class="bubble-info">' +
             '<div class="bubble-rocket">' + esc(getRocketName(launch)) + '</div>' +
             '<div class="bubble-mission">' + esc(mission) + '</div>' +
-            '<div class="bubble-datetime">' + esc(day + ' • ' + date + ' • ' + time + ' ET') + '</div>' +
+            '<div class="bubble-datetime">' + esc(day + ' • ' + formattedDate + ' • ' + time + ' ET') + '</div>' +
           '</div>' +
           '<div class="bubble-status ' + statusClass(launch.status) + '">' + esc(statusLabel(launch.status)) + '</div>' +
         '</div>';
@@ -511,7 +518,7 @@
 
         html += '<div class="next-image">' +
           (img
-            ? '<img src="' + esc(img) + '" alt="' + esc(mission) + '" onerror="this.parentElement.innerHTML=\'<div class=&quot;empty-state&quot;>No launch image available</div>\'">'
+            ? '<img class="js-fallback-image" data-fallback-text="No launch image available" src="' + esc(img) + '" alt="' + esc(mission) + '">'
             : '<div class="empty-state">No launch image available</div>') +
           '</div>';
 
@@ -542,8 +549,23 @@
           '<div>' +
             '<div class="rtl-title">Rocket Talk LIVE!</div>' +
             '<div class="rtl-time">' + esc(formatDayET(rtl.datetime)) + '<br>' + esc(formatDateET(rtl.datetime)) + '<br>' + esc(formatTimeET(rtl.datetime) + ' ET') + '</div>' +
-            '<div class="rtl-location">In the Movie Theater</div>' +
+            '<div class="rtl-location">' + esc(RTL_VENUE_LABEL) + '</div>' +
           '</div>';
+      }
+
+      function wireImageFallbacks() {
+        var imgs = document.querySelectorAll('.js-fallback-image');
+        imgs.forEach(function (img) {
+          img.onerror = function () {
+            var parent = img.parentElement;
+            if (!parent) return;
+            parent.textContent = '';
+            var fallback = document.createElement('div');
+            fallback.className = 'empty-state';
+            fallback.textContent = img.getAttribute('data-fallback-text') || 'Image unavailable';
+            parent.appendChild(fallback);
+          };
+        });
       }
 
       function render(launches, cmsContent) {
@@ -567,7 +589,7 @@
             if (upcoming[i]) {
               leftHtml += buildBubble(upcoming[i], cmsContent[upcoming[i].id] || {});
             } else {
-              leftHtml += '<div class="launch-bubble panel empty-state">No additional launch in this slot.</div>';
+              leftHtml += '<div class="launch-bubble panel empty-state">Awaiting additional launch data.</div>';
             }
           }
           leftCol.innerHTML = leftHtml;
@@ -577,10 +599,15 @@
         }
 
         renderRTL(cmsContent);
+        wireImageFallbacks();
 
         document.getElementById('loading').style.display = 'none';
         document.getElementById('main').style.display = 'flex';
-        document.getElementById('status').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        document.getElementById('status').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          minute: '2-digit'
+        }) + ' ET';
       }
 
       function refreshCountdown() {
@@ -612,7 +639,7 @@
       }
 
       function fetchLL2Direct() {
-        return fetchWithTimeout(LL2_BASE + '/launches/upcoming/?location__ids=' + LOCATION_IDS + '&limit=12&mode=detailed')
+        return fetchWithTimeout(LL2_BASE + '/launches/upcoming/?location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed')
           .then(function (r) {
             if (!r.ok) throw new Error('LL2 HTTP ' + r.status);
             return r.json();
@@ -657,7 +684,14 @@
       function applyTvScale() {
         var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
         var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-        if (!viewportWidth || !viewportHeight) return;
+        if (!viewportWidth || !viewportHeight) {
+          if (!hasLoggedViewportWarning) {
+            console.warn('[tvroundup2] Unable to determine viewport dimensions for TV scaling');
+            hasLoggedViewportWarning = true;
+          }
+          return;
+        }
+        hasLoggedViewportWarning = false;
         var scale = Math.min(viewportWidth / BASE_WIDTH, viewportHeight / BASE_HEIGHT);
         var offsetX = (viewportWidth - BASE_WIDTH * scale) / 2;
         var offsetY = (viewportHeight - BASE_HEIGHT * scale) / 2;
@@ -667,7 +701,7 @@
       document.addEventListener('DOMContentLoaded', function () {
         window.addEventListener('resize', function () {
           clearTimeout(resizeTimer);
-          resizeTimer = setTimeout(applyTvScale, 250);
+          resizeTimer = setTimeout(applyTvScale, RESIZE_DEBOUNCE_MS);
         });
 
         applyTvScale();
