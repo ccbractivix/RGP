@@ -22,7 +22,6 @@
     body {
       width: 1920px;
       height: 1080px;
-      --headline-star-scale: 0.72;
       background: #EDEEE1;
       color: #454040;
       font-family: 'Montserrat', sans-serif;
@@ -183,7 +182,7 @@
     }
 
     #theater-poster {
-      max-width: 260px;
+      max-width: 320px;
       max-height: 100%;
       border-radius: 8px;
       object-fit: contain;
@@ -229,13 +228,6 @@
       text-wrap: balance;
     }
 
-    .headline-stars {
-      color: #F5C518;
-      font-size: calc(1em * var(--headline-star-scale));
-      letter-spacing: 0.14em;
-      white-space: nowrap;
-    }
-
     .headline-text {
       text-wrap: balance;
     }
@@ -245,21 +237,22 @@
       font-weight: 600;
       color: #FFFFFF;
       text-align: center;
-      line-height: 1.15;
+      line-height: 1.12;
       width: 100%;
       text-wrap: balance;
       overflow-wrap: anywhere;
     }
 
     #theater-meta {
-      font-size: 28px;
+      font-size: 22px;
       color: #9098C8;
       font-weight: 500;
       text-align: center;
       line-height: 1.22;
       width: 100%;
-      text-wrap: balance;
-      overflow-wrap: anywhere;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     #theater-countdown {
@@ -385,9 +378,8 @@
     var REFRESH_MS = 60000; // 1 minute
     var BASE_WIDTH = 1920;
     var BASE_HEIGHT = 1080;
-    var MIN_THEATER_TEXT_SCALE = 0.72;
+    var MIN_THEATER_TEXT_SCALE = 0.66;
     var THEATER_TEXT_SCALE_STEP = 0.04;
-    var THEATER_HEADLINE_STARS = ['★', '★', '★'];
     var resizeTimer = null;
     var hasLoggedViewportWarning = false;
 
@@ -572,26 +564,46 @@
         status1: 48,
         status2: 32,
         title: 39,
-        meta: 28,
+        meta: 22,
         countdown: 32,
         empty: 28
       };
       var minSizes = {
         status1: 34,
         status2: 24,
-        title: 28,
-        meta: 20,
+        title: 20,
+        meta: 16,
         countdown: 24,
         empty: 22
       };
 
+      function getAdaptiveTitleScale() {
+        var titleText = (titleEl.textContent || '').trim();
+        var titleLength = titleText.length;
+        if (!titleLength || titleLength <= 24) return 1;
+        if (titleLength >= 64) return 0.64;
+        return 1 - ((titleLength - 24) * 0.009);
+      }
+
       function applySizes(scale) {
+        var adaptiveTitleScale = getAdaptiveTitleScale();
         statusLine1El.style.fontSize = Math.max(minSizes.status1, Math.round(baseSizes.status1 * scale)) + 'px';
         statusLine2El.style.fontSize = Math.max(minSizes.status2, Math.round(baseSizes.status2 * scale)) + 'px';
-        titleEl.style.fontSize = Math.max(minSizes.title, Math.round(baseSizes.title * scale)) + 'px';
+        titleEl.style.fontSize = Math.max(minSizes.title, Math.round(baseSizes.title * scale * adaptiveTitleScale)) + 'px';
         metaEl.style.fontSize = Math.max(minSizes.meta, Math.round(baseSizes.meta * scale)) + 'px';
         countdownEl.style.fontSize = Math.max(minSizes.countdown, Math.round(baseSizes.countdown * scale)) + 'px';
         emptyEl.style.fontSize = Math.max(minSizes.empty, Math.round(baseSizes.empty * scale)) + 'px';
+      }
+
+      function fitSingleLineText(el, minFontSize) {
+        if (!el || !el.textContent || el.style.display === 'none' || el.clientWidth <= 0) return;
+        var guard = 0;
+        while (el.scrollWidth > el.clientWidth && guard < 20) {
+          var current = parseInt(el.style.fontSize, 10);
+          if (isNaN(current) || current <= minFontSize) break;
+          el.style.fontSize = (current - 1) + 'px';
+          guard += 1;
+        }
       }
 
       var scale = 1;
@@ -600,6 +612,7 @@
         scale -= THEATER_TEXT_SCALE_STEP;
         applySizes(scale);
       }
+      fitSingleLineText(metaEl, minSizes.meta);
     }
 
     function setTheaterHeadline(element, mode) {
@@ -609,21 +622,10 @@
         return;
       }
 
-      function buildStarGroup() {
-        var stars = document.createElement('span');
-        stars.className = 'headline-stars';
-        stars.setAttribute('aria-hidden', 'true');
-        stars.textContent = THEATER_HEADLINE_STARS.join(' ');
-        return stars;
-      }
-
       var headlineText = document.createElement('span');
       headlineText.className = 'headline-text';
       headlineText.textContent = 'NOW SHOWING';
-
-      element.appendChild(buildStarGroup());
       element.appendChild(headlineText);
-      element.appendChild(buildStarGroup());
     }
 
     function renderTheater(days) {
@@ -707,13 +709,13 @@
       // Title
       titleEl.textContent = show.title || '';
 
-      // Meta: year · rating · runtime · start time
+      // Meta: year · rating · runtime (+ start time for upcoming shows only)
       var metaParts = [];
       if (show.year) metaParts.push(show.year);
       if (show.rating) metaParts.push(show.rating);
       var rt = formatRuntime(show.runtime);
       if (rt) metaParts.push(rt);
-      if (show.time) metaParts.push('Starts ' + show.time);
+      if (theaterDisplayState.mode === 'next' && show.time) metaParts.push('Starts ' + show.time);
       metaEl.textContent = metaParts.join(' · ');
 
       // Countdown
