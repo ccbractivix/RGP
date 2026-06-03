@@ -635,11 +635,11 @@
       document.body.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px) scale(' + scale + ')';
     }
 
-    window.addEventListener('resize', function () {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(applyTvScale, 100);
-    });
     document.addEventListener('DOMContentLoaded', function () {
+      window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(applyTvScale, 100);
+      });
       applyTvScale();
       fetchAndRender();
     });
