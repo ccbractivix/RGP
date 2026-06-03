@@ -263,7 +263,8 @@
       font-family: 'Montserrat', sans-serif;
       line-height: 1.15;
       width: 100%;
-      text-wrap: balance;
+      white-space: nowrap;
+      overflow: hidden;
     }
 
     #theater-empty {
@@ -621,6 +622,7 @@
         applySizes(scale);
       }
       fitSingleLineText(metaEl, minSizes.meta);
+      fitSingleLineText(countdownEl, minSizes.countdown);
     }
 
     function setTheaterHeadline(element, mode) {
