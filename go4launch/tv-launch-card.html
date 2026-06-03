@@ -312,7 +312,12 @@
 
       function requestJson(url) {
         return fetch(url).then(function (r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
+          if (!r.ok) {
+            var err = new Error('HTTP ' + r.status);
+            err.status = r.status;
+            err.url = url;
+            throw err;
+          }
           return r.json();
         });
       }
@@ -415,6 +420,111 @@
             '</div>';
         }
 
+        function normalizeArchivedLaunch(payload, fallbackId) {
+          var launchData = payload && payload.launch_data;
+          if (typeof launchData === 'string') {
+            try { launchData = JSON.parse(launchData); } catch (_e) { launchData = null; }
+          }
+          if (!launchData || typeof launchData !== 'object') return null;
+          if (!launchData.id) launchData.id = fallbackId;
+          return launchData;
+        }
+
+        function fetchArchivedLaunchById(id) {
+          return requestJson(API_BASE + '/api/archive/launch/' + encodeURIComponent(id))
+            .then(function (row) { return normalizeArchivedLaunch(row, id); })
+            .catch(function (err) {
+              if (err && err.status === 404) return null;
+              var wrapped = new Error('Archive launch lookup failed for ' + id + ': ' + (err && err.message ? err.message : String(err || 'no error details available')));
+              wrapped.cause = err;
+              throw wrapped;
+            });
+        }
+
+        function fetchLaunchForCard(id) {
+          return fetchLaunchById(id).then(function (launch) {
+            return { launch: launch, source: 'live' };
+          }).catch(function (liveErr) {
+            console.warn('[go4launch-tv-card] Live launch lookup failed; trying archive:', id, liveErr && liveErr.message);
+            return fetchArchivedLaunchById(id).then(function (archivedLaunch) {
+              if (archivedLaunch) {
+                console.warn('[go4launch-tv-card] Using archived launch payload for:', id);
+                return { launch: archivedLaunch, source: 'archive' };
+              }
+              console.warn('[go4launch-tv-card] Launch ID unresolved in live + archive:', id);
+              return { launch: null, source: 'missing' };
+            }).catch(function (archiveErr) {
+              console.warn('[go4launch-tv-card] Archive lookup failed for launch:', id, archiveErr && archiveErr.message);
+              return { launch: null, source: 'error' };
+            });
+          });
+        }
+
+        function hasCmsFallbackData(cms) {
+          return !!(cms && (
+            cms.headline ||
+            cms.rtl_datetime ||
+            cms.viewing_guide ||
+            cms.chris_says ||
+            cms.trajectory
+          ));
+        }
+
+        function renderUnavailableCard(cms, activeLaunchId, reason) {
+          var now = Date.now();
+          var rtlDatetime = cms && cms.rtl_datetime ? cms.rtl_datetime : '';
+          var rtlMs = rtlDatetime ? new Date(rtlDatetime).getTime() : 0;
+          var hasRTL = !!rtlDatetime && Number.isFinite(rtlMs);
+          var rtlExpired = hasRTL && (now >= rtlMs + RTL_EXPIRED_MS);
+          var showRTL = hasRTL && !rtlExpired;
+          var showCTA = hasRTL && rtlExpired;
+          var signupUrl = GUEST_PAGE_BASE + '?launch=' + encodeURIComponent(activeLaunchId || '') + '#saw-it';
+          var headline = (cms && cms.headline) ? cms.headline : 'Launch information temporarily unavailable';
+          var statusText = reason === 'missing'
+            ? 'Launch data is no longer available for this mission.<br>Please check the app for current launches.'
+            : 'Mission data is temporarily unavailable.<br>Please check back shortly.';
+          var qrSrc = showCTA ? generateQRDataUrl(signupUrl, 200) : '';
+          var bottomHtml = '';
+
+          if (showRTL) {
+            bottomHtml =
+              '<div class="rtl-section visible">' +
+                '<div class="rtl-header">' +
+                  '<span class="rtl-icon">🚨</span>' +
+                  '<span class="rtl-label">Rocket Talk LIVE!</span>' +
+                  '<span class="rtl-icon">🚨</span>' +
+                '</div>' +
+                '<div class="rtl-datetime">' + escapeHtml(formatRTLDateTimeET(rtlDatetime)) + '</div>' +
+                '<div class="rtl-datetime">in the Movie Theater</div>' +
+              '</div>';
+          } else if (showCTA) {
+            bottomHtml =
+              '<div class="cta-section visible">' +
+                '<div class="cta-text">' +
+                  '<span class="cta-camera">📸</span>' +
+                  'Get the photos!<br>Scan &amp; we\u2019ll email<br>you the gallery.' +
+                '</div>' +
+                (qrSrc
+                  ? '<div class="cta-qr"><img src="' + qrSrc + '" alt="Scan for launch photos"></div>'
+                  : '') +
+              '</div>';
+          }
+
+          root.className = '';
+          root.innerHTML =
+            '<div class="slide">' +
+              '<img class="slide-bg" src="' + escapeHtml(DEFAULT_SLIDE) + '" alt="Launch alert background">' +
+              '<div class="info-panel"></div>' +
+              '<div class="info-overlay">' +
+                '<div class="row-label">Launch Update</div>' +
+                '<div class="rocket-name">' + escapeHtml(headline) + '</div>' +
+                '<div class="row-label">Status</div>' +
+                '<div class="mission-name">' + statusText + '</div>' +
+                bottomHtml +
+              '</div>' +
+            '</div>';
+        }
+
         root.className = '';
         root.innerHTML =
           '<div class="slide">' +
@@ -499,17 +609,33 @@
 
       function loadAndRender() {
         return Promise.all([
-          fetchLaunchById(launchId),
+          fetchLaunchForCard(launchId),
           requestJson(API_BASE + '/api/content/' + encodeURIComponent(launchId)).catch(function () { return null; }),
         ]).then(function (results) {
-          var launch = results[0];
+          var launchLookup = results[0] || {};
+          var launch = launchLookup.launch;
           var cms = results[1] || {};
-          if (!launch || !launch.id) {
+          if (launch && launch.id) {
+            renderCard(launch, cms);
+            return;
+          }
+          if (hasCmsFallbackData(cms)) {
+            console.warn('[go4launch-tv-card] Rendering fallback card from CMS-only content for unresolved launch:', launchId);
+            renderUnavailableCard(cms, launchId, launchLookup.source);
+            return;
+          }
+          if (launchLookup.source === 'missing') {
             root.className = 'state-msg';
             root.textContent = 'Launch card unavailable (launch not found).';
             return;
           }
-          renderCard(launch, cms);
+          if (launchLookup.source === 'error') {
+            root.className = 'state-msg';
+            root.textContent = 'Launch card unavailable (data error).';
+            return;
+          }
+          root.className = 'state-msg';
+          root.textContent = 'Launch card unavailable (unknown state).';
         }).catch(function () {
           root.className = 'state-msg';
           root.textContent = 'Launch card unavailable (data error).';
