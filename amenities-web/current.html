@@ -380,6 +380,8 @@
     var BASE_HEIGHT = 1080;
     var MIN_THEATER_TEXT_SCALE = 0.66;
     var THEATER_TEXT_SCALE_STEP = 0.04;
+    var TITLE_ADAPTIVE_SCALE_FACTOR = 0.009;
+    var MAX_FONT_REDUCTION_ITERATIONS = 20;
     var resizeTimer = null;
     var hasLoggedViewportWarning = false;
 
@@ -582,7 +584,7 @@
         var titleLength = titleText.length;
         if (!titleLength || titleLength <= 24) return 1;
         if (titleLength >= 64) return 0.64;
-        return 1 - ((titleLength - 24) * 0.009);
+        return 1 - ((titleLength - 24) * TITLE_ADAPTIVE_SCALE_FACTOR);
       }
 
       function applySizes(scale) {
@@ -598,7 +600,7 @@
       function fitSingleLineText(el, minFontSize) {
         if (!el || !el.textContent || el.style.display === 'none' || el.clientWidth <= 0) return;
         var guard = 0;
-        while (el.scrollWidth > el.clientWidth && guard < 20) {
+        while (el.scrollWidth > el.clientWidth && guard < MAX_FONT_REDUCTION_ITERATIONS) {
           var current = parseInt(el.style.fontSize, 10);
           if (isNaN(current) || current <= minFontSize) break;
           el.style.fontSize = (current - 1) + 'px';
