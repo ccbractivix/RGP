@@ -320,6 +320,7 @@
     var BASE_WIDTH = 1920;
     var BASE_HEIGHT = 1080;
     var resizeTimer = null;
+    var hasLoggedViewportWarning = false;
 
     // Target amenities in order
     var TARGET_AMENITIES = ['Pools', 'Lazy River', 'Water Slide', 'Sports Courts', 'Mini Golf', 'Guest Tram'];
@@ -628,7 +629,14 @@
     function applyTvScale() {
       var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
       var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-      if (!viewportWidth || !viewportHeight) return;
+      if (!viewportWidth || !viewportHeight) {
+        if (!hasLoggedViewportWarning) {
+          console.warn('[current] Unable to determine viewport dimensions for TV scaling');
+          hasLoggedViewportWarning = true;
+        }
+        return;
+      }
+      hasLoggedViewportWarning = false;
       var scale = Math.min(viewportWidth / BASE_WIDTH, viewportHeight / BASE_HEIGHT);
       var offsetX = (viewportWidth - BASE_WIDTH * scale) / 2;
       var offsetY = (viewportHeight - BASE_HEIGHT * scale) / 2;
@@ -638,7 +646,7 @@
     document.addEventListener('DOMContentLoaded', function () {
       window.addEventListener('resize', function () {
         clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(applyTvScale, 100);
+        resizeTimer = setTimeout(applyTvScale, 250);
       });
       applyTvScale();
       fetchAndRender();
