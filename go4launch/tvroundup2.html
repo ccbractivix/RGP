@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-base" content="https://go4launch-backend.onrender.com">
+  <title>Go4Launch — TV Roundup 2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F2F1E8;
+      --text: #454040;
+      --accent: #E5754A;
+      --accent-dark: #cf6843;
+      --active: #2D8A3E;
+      --secondary: #6B6460;
+      --border: #D2CDC5;
+      --base-w: 1920;
+      --base-h: 1080;
+      --radius: 28px;
+      --shadow: 0 10px 24px rgba(69, 64, 64, 0.08);
+    }
+
+    html {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    body {
+      width: 1920px;
+      height: 1080px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      overflow: hidden;
+      transform-origin: top left;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #page {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 36px;
+      padding-left: 108px;
+      gap: 24px;
+    }
+
+    #header {
+      flex: 0 0 auto;
+      text-align: center;
+      color: var(--accent);
+      font-family: 'Playfair Display', serif;
+      font-size: 54px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      gap: 24px;
+      min-height: 0;
+    }
+
+    #left-column {
+      flex: 1.15;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-height: 0;
+    }
+
+    #right-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-height: 0;
+    }
+
+    .panel {
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.62);
+      box-shadow: var(--shadow);
+    }
+
+    .launch-bubble {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 18px 20px;
+    }
+
+    .bubble-image {
+      flex: 0 0 182px;
+      height: 100%;
+      min-height: 164px;
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      overflow: hidden;
+    }
+
+    .bubble-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .bubble-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .bubble-rocket {
+      font-size: 31px;
+      line-height: 1.1;
+      color: var(--accent);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bubble-mission {
+      font-size: 29px;
+      line-height: 1.15;
+      color: var(--text);
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .bubble-datetime {
+      font-size: 27px;
+      line-height: 1.1;
+      color: var(--secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .bubble-status {
+      flex: 0 0 auto;
+      align-self: center;
+      min-width: 132px;
+      text-align: center;
+      border-radius: 999px;
+      padding: 14px 18px;
+      font-size: 22px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #fff;
+      background: var(--secondary);
+    }
+
+    .status-go, .status-success { background: var(--active); }
+    .status-tbd, .status-tbc { background: #C68231; }
+    .status-hold, .status-failure { background: #B04040; }
+    .status-inflight { background: #545DC2; }
+
+    #next-launch-panel {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .next-headline {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #fff;
+      text-align: center;
+      padding: 12px 16px;
+      font-size: 22px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .next-image {
+      height: 255px;
+      border-top: 2px solid var(--border);
+      border-bottom: 2px solid var(--border);
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .next-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .next-body {
+      flex: 1;
+      min-height: 0;
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .next-mission {
+      font-size: 34px;
+      line-height: 1.15;
+      color: var(--text);
+    }
+
+    .next-status {
+      width: fit-content;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 19px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #fff;
+      background: var(--secondary);
+    }
+
+    .next-meta {
+      font-size: 21px;
+      color: var(--secondary);
+      line-height: 1.25;
+    }
+
+    .next-countdown {
+      margin-top: 6px;
+      font-size: 31px;
+      color: var(--accent);
+      letter-spacing: 1px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .next-day, .next-date {
+      font-size: 25px;
+      color: var(--text);
+      line-height: 1.15;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    #rtl-panel {
+      flex: 0 0 235px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 22px;
+      border-color: #E4B49E;
+      background: #FFF5F0;
+      color: var(--text);
+    }
+
+    .rtl-title {
+      font-family: 'Playfair Display', serif;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-size: 38px;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+
+    .rtl-time {
+      font-size: 25px;
+      line-height: 1.2;
+      color: var(--text);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .rtl-location {
+      font-size: 25px;
+      line-height: 1.2;
+      color: var(--active);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .empty-state {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--secondary);
+      font-size: 26px;
+      padding: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    #loading {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--secondary);
+      font-size: 32px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    #status {
+      flex: 0 0 auto;
+      text-align: center;
+      color: var(--secondary);
+      font-size: 18px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div id="page">
+    <div id="header">GO4LAUNCH ROUNDUP</div>
+
+    <div id="loading">Loading launch roundup…</div>
+
+    <div id="main" style="display:none;">
+      <div id="left-column"></div>
+
+      <div id="right-column">
+        <div id="next-launch-panel" class="panel"></div>
+        <div id="rtl-panel" class="panel" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div id="status">Loading…</div>
+  </div>
+
+  <script>
+    (function () {
+      var BASE_WIDTH = 1920;
+      var BASE_HEIGHT = 1080;
+      var REFRESH_MS = 60000;
+      // Keep Rocket Talk LIVE visible for 30 minutes after scheduled time.
+      var RTL_GRACE_MS = 30 * 60 * 1000;
+      var MAX_LEFT = 3;
+      var MAX_FETCH_LAUNCHES = 12;
+      var RTL_VENUE_LABEL = 'In the Movie Theater';
+      var RESIZE_DEBOUNCE_MS = 250;
+      var resizeTimer = null;
+      var hasLoggedViewportWarning = false;
+
+      var API_BASE = (function () {
+        var meta = document.querySelector('meta[name="api-base"]');
+        return (meta && meta.getAttribute('content')) || '';
+      })();
+
+      var LL2_BASE = 'https://lldev.thespacedevs.com/2.3.0';
+      // Launch Library 2 location IDs for Kennedy Space Center and Cape Canaveral SFS.
+      var LOCATION_IDS = '12,27';
+
+      function esc(str) {
+        if (str == null) return '';
+        var d = document.createElement('div');
+        d.textContent = String(str);
+        return d.innerHTML;
+      }
+
+      function statusClass(status) {
+        if (!status) return 'status-tbd';
+        switch (status.id) {
+          case 1: return 'status-go';
+          case 2: return 'status-tbd';
+          case 3: return 'status-success';
+          case 4: return 'status-failure';
+          case 5: return 'status-hold';
+          case 6: return 'status-inflight';
+          case 7: return 'status-failure';
+          case 8: return 'status-tbc';
+          default: return 'status-tbd';
+        }
+      }
+
+      function statusLabel(status) {
+        if (!status) return 'TBD';
+        return status.abbrev || status.name || 'TBD';
+      }
+
+      function getImageUrl(launch, cms) {
+        if (cms && cms.card_image_path) return 'images/launches/' + cms.card_image_path;
+        var img = launch.image;
+        if (img && img.image_url) return img.image_url;
+        if (img && img.thumbnail_url) return img.thumbnail_url;
+        var cfg = launch.rocket && launch.rocket.configuration;
+        if (cfg && cfg.image_url) return cfg.image_url;
+        return null;
+      }
+
+      function getRocketName(launch) {
+        var cfg = launch.rocket && launch.rocket.configuration;
+        return (cfg && (cfg.full_name || cfg.name)) || 'Rocket TBA';
+      }
+
+      function getMissionName(launch) {
+        return launch.name || (launch.mission && launch.mission.name) || 'Mission TBA';
+      }
+
+      function formatDayET(dateStr) {
+        return new Date(dateStr).toLocaleDateString('en-US', {
+          timeZone: 'America/New_York',
+          weekday: 'long'
+        });
+      }
+
+      function formatDateET(dateStr) {
+        return new Date(dateStr).toLocaleDateString('en-US', {
+          timeZone: 'America/New_York',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
+
+      function formatTimeET(dateStr) {
+        return new Date(dateStr).toLocaleTimeString('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          minute: '2-digit'
+        });
+      }
+
+      function formatCountdown(dateStr) {
+        var diff = new Date(dateStr).getTime() - Date.now();
+        if (diff <= 0) return 'LIFTOFF';
+        var total = Math.floor(diff / 1000);
+        var hours = Math.floor(total / 3600);
+        var mins = Math.floor((total % 3600) / 60);
+        var secs = total % 60;
+        return 'T-' + String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+      }
+
+      function getProvider(launch) {
+        return (launch.launch_service_provider && launch.launch_service_provider.name) || '';
+      }
+
+      function getLocation(launch) {
+        return (launch.pad && launch.pad.location && launch.pad.location.name) || (launch.pad && launch.pad.name) || '';
+      }
+
+      function findNextRTL(cmsContent) {
+        var now = Date.now();
+        var next = null;
+        for (var launchId in cmsContent) {
+          if (!Object.prototype.hasOwnProperty.call(cmsContent, launchId)) continue;
+          var cms = cmsContent[launchId];
+          if (!cms || !cms.rtl_datetime) continue;
+          var rtlTime = new Date(cms.rtl_datetime).getTime();
+          if (rtlTime >= now - RTL_GRACE_MS && (!next || rtlTime < next.time)) {
+            next = { launchId: launchId, datetime: cms.rtl_datetime, time: rtlTime };
+          }
+        }
+        return next;
+      }
+
+      function buildBubble(launch, cms) {
+        var img = getImageUrl(launch, cms);
+        var mission = getMissionName(launch);
+        var day = formatDayET(launch.net);
+        var formattedDate = formatDateET(launch.net);
+        var time = formatTimeET(launch.net);
+
+        return '<div class="launch-bubble panel">' +
+          '<div class="bubble-image">' + (img
+            ? '<img class="js-fallback-image" data-fallback-text="No image" src="' + esc(img) + '" alt="' + esc(mission) + '">'
+            : '<div class="empty-state" style="font-size:20px;">No image</div>') + '</div>' +
+          '<div class="bubble-info">' +
+            '<div class="bubble-rocket">' + esc(getRocketName(launch)) + '</div>' +
+            '<div class="bubble-mission">' + esc(mission) + '</div>' +
+            '<div class="bubble-datetime">' + esc(day + ' • ' + formattedDate + ' • ' + time + ' ET') + '</div>' +
+          '</div>' +
+          '<div class="bubble-status ' + statusClass(launch.status) + '">' + esc(statusLabel(launch.status)) + '</div>' +
+        '</div>';
+      }
+
+      function buildNextCard(launch, cms) {
+        var img = getImageUrl(launch, cms);
+        var provider = getProvider(launch);
+        var location = getLocation(launch);
+        var mission = getMissionName(launch);
+
+        var html = '';
+        if (cms && cms.headline) {
+          html += '<div class="next-headline">' + esc(cms.headline) + '</div>';
+        } else {
+          html += '<div class="next-headline">Next Upcoming Launch</div>';
+        }
+
+        html += '<div class="next-image">' +
+          (img
+            ? '<img class="js-fallback-image" data-fallback-text="No launch image available" src="' + esc(img) + '" alt="' + esc(mission) + '">'
+            : '<div class="empty-state">No launch image available</div>') +
+          '</div>';
+
+        html += '<div class="next-body">' +
+          '<div class="next-mission">' + esc(mission) + '</div>' +
+          '<div class="next-status ' + statusClass(launch.status) + '">' + esc(statusLabel(launch.status)) + '</div>' +
+          (provider ? '<div class="next-meta">' + esc(provider) + '</div>' : '') +
+          (location ? '<div class="next-meta">' + esc(location) + '</div>' : '') +
+          '<div class="next-countdown" data-next-countdown="' + esc(launch.net) + '">' + esc(formatCountdown(launch.net)) + '</div>' +
+          '<div class="next-day">' + esc(formatDayET(launch.net)) + '</div>' +
+          '<div class="next-date">' + esc(formatDateET(launch.net) + ' • ' + formatTimeET(launch.net) + ' ET') + '</div>' +
+        '</div>';
+
+        return html;
+      }
+
+      function renderRTL(cmsContent) {
+        var rtlPanel = document.getElementById('rtl-panel');
+        var rtl = findNextRTL(cmsContent);
+
+        if (!rtl) {
+          rtlPanel.style.display = 'none';
+          return;
+        }
+
+        rtlPanel.style.display = 'flex';
+        rtlPanel.innerHTML =
+          '<div>' +
+            '<div class="rtl-title">Rocket Talk LIVE!</div>' +
+            '<div class="rtl-time">' + esc(formatDayET(rtl.datetime)) + '<br>' + esc(formatDateET(rtl.datetime)) + '<br>' + esc(formatTimeET(rtl.datetime) + ' ET') + '</div>' +
+            '<div class="rtl-location">' + esc(RTL_VENUE_LABEL) + '</div>' +
+          '</div>';
+      }
+
+      function wireImageFallbacks() {
+        var imgs = document.querySelectorAll('.js-fallback-image');
+        imgs.forEach(function (img) {
+          img.onerror = function () {
+            var parent = img.parentElement;
+            if (!parent) return;
+            parent.textContent = '';
+            var fallback = document.createElement('div');
+            fallback.className = 'empty-state';
+            fallback.textContent = img.getAttribute('data-fallback-text') || 'Image unavailable';
+            parent.appendChild(fallback);
+          };
+        });
+      }
+
+      function render(launches, cmsContent) {
+        var now = Date.now();
+        var upcoming = launches
+          .filter(function (launch) {
+            var net = new Date(launch.net).getTime();
+            return Number.isFinite(net) && net >= now;
+          })
+          .sort(function (a, b) { return new Date(a.net) - new Date(b.net); });
+
+        var leftCol = document.getElementById('left-column');
+        var nextPanel = document.getElementById('next-launch-panel');
+
+        if (!upcoming.length) {
+          leftCol.innerHTML = '<div class="panel empty-state">No upcoming launches scheduled.</div>';
+          nextPanel.innerHTML = '<div class="empty-state">No upcoming launch card available.</div>';
+        } else {
+          var leftHtml = '';
+          for (var i = 0; i < MAX_LEFT; i++) {
+            if (upcoming[i]) {
+              leftHtml += buildBubble(upcoming[i], cmsContent[upcoming[i].id] || {});
+            } else {
+              leftHtml += '<div class="launch-bubble panel empty-state">Awaiting additional launch data.</div>';
+            }
+          }
+          leftCol.innerHTML = leftHtml;
+
+          var next = upcoming[0];
+          nextPanel.innerHTML = buildNextCard(next, cmsContent[next.id] || {});
+        }
+
+        renderRTL(cmsContent);
+        wireImageFallbacks();
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('main').style.display = 'flex';
+        document.getElementById('status').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          minute: '2-digit'
+        }) + ' ET';
+      }
+
+      function refreshCountdown() {
+        var el = document.querySelector('[data-next-countdown]');
+        if (!el) return;
+        var net = el.getAttribute('data-next-countdown');
+        el.textContent = formatCountdown(net);
+      }
+
+      function fetchWithTimeout(url, timeoutMs) {
+        var ms = timeoutMs || 10000;
+        var controller = new AbortController();
+        var timer = setTimeout(function () { controller.abort(); }, ms);
+        return fetch(url, { signal: controller.signal })
+          .then(function (r) { clearTimeout(timer); return r; })
+          .catch(function (err) {
+            clearTimeout(timer);
+            if (err.name === 'AbortError') throw new Error('Timeout: ' + url);
+            throw err;
+          });
+      }
+
+      function fetchBackendLaunches() {
+        return fetchWithTimeout(API_BASE + '/api/launches')
+          .then(function (r) {
+            if (!r.ok) throw new Error('Launches HTTP ' + r.status);
+            return r.json();
+          });
+      }
+
+      function fetchLL2Direct() {
+        return fetchWithTimeout(LL2_BASE + '/launches/upcoming/?location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed')
+          .then(function (r) {
+            if (!r.ok) throw new Error('LL2 HTTP ' + r.status);
+            return r.json();
+          })
+          .then(function (data) {
+            return data.results || [];
+          });
+      }
+
+      function fetchLaunches() {
+        return fetchBackendLaunches().then(function (launches) {
+          if (Array.isArray(launches) && launches.length) return launches;
+          return fetchLL2Direct();
+        }).catch(function () {
+          return fetchLL2Direct();
+        });
+      }
+
+      function fetchContent() {
+        return fetchWithTimeout(API_BASE + '/api/content')
+          .then(function (r) {
+            if (!r.ok) throw new Error('Content HTTP ' + r.status);
+            return r.json();
+          })
+          .catch(function () { return {}; });
+      }
+
+      function fetchAndRender() {
+        Promise.all([fetchLaunches(), fetchContent()])
+          .then(function (res) {
+            render(res[0] || [], res[1] || {});
+          })
+          .catch(function (err) {
+            console.error('[tvroundup2] Failed:', err);
+            document.getElementById('loading').textContent = 'Unable to load launch data… retrying';
+          })
+          .finally(function () {
+            setTimeout(fetchAndRender, REFRESH_MS);
+          });
+      }
+
+      function applyTvScale() {
+        var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+        var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        if (!viewportWidth || !viewportHeight) {
+          if (!hasLoggedViewportWarning) {
+            console.warn('[tvroundup2] Unable to determine viewport dimensions for TV scaling');
+            hasLoggedViewportWarning = true;
+          }
+          return;
+        }
+        hasLoggedViewportWarning = false;
+        var scale = Math.min(viewportWidth / BASE_WIDTH, viewportHeight / BASE_HEIGHT);
+        var offsetX = (viewportWidth - BASE_WIDTH * scale) / 2;
+        var offsetY = (viewportHeight - BASE_HEIGHT * scale) / 2;
+        document.body.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px) scale(' + scale + ')';
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        window.addEventListener('resize', function () {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(applyTvScale, RESIZE_DEBOUNCE_MS);
+        });
+
+        applyTvScale();
+        fetchAndRender();
+        setInterval(refreshCountdown, 1000);
+      });
+    })();
+  </script>
+</body>
+</html>
