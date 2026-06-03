@@ -580,7 +580,7 @@
         empty: 22
       };
 
-      function getAdaptiveTitleScale() {
+      function calculateTitleScaleByLength() {
         var titleText = (titleEl.textContent || '').trim();
         var titleLength = titleText.length;
         if (!titleLength || titleLength <= 24) return 1;
@@ -589,7 +589,7 @@
       }
 
       function applySizes(scale) {
-        var adaptiveTitleScale = getAdaptiveTitleScale();
+        var adaptiveTitleScale = calculateTitleScaleByLength();
         statusLine1El.style.fontSize = Math.max(minSizes.status1, Math.round(baseSizes.status1 * scale)) + 'px';
         statusLine2El.style.fontSize = Math.max(minSizes.status2, Math.round(baseSizes.status2 * scale)) + 'px';
         titleEl.style.fontSize = Math.max(minSizes.title, Math.round(baseSizes.title * scale * adaptiveTitleScale)) + 'px';
@@ -601,12 +601,12 @@
       function fitSingleLineText(el, minFontSize) {
         if (!el || !el.textContent || el.style.display === 'none' || el.clientWidth <= 0) return;
         var targetWidth = el.clientWidth;
-        var guard = 0;
-        while (el.scrollWidth > targetWidth && guard < MAX_FONT_REDUCTION_ITERATIONS) {
+        var iterationCount = 0;
+        while (el.scrollWidth > targetWidth && iterationCount < MAX_FONT_REDUCTION_ITERATIONS) {
           var current = parseInt(el.style.fontSize, 10);
           if (isNaN(current) || current <= minFontSize) break;
           el.style.fontSize = (current - 1) + 'px';
-          guard += 1;
+          iterationCount += 1;
         }
       }
 
