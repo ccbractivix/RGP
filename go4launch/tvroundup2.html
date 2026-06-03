@@ -252,13 +252,22 @@
     .next-countdown {
       margin-top: 10px;
       width: 100%;
+      min-height: 92px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border-radius: 18px;
+      border: 2px solid rgba(255, 197, 66, 0.55);
+      background: rgba(255, 197, 66, 0.16);
       text-align: center;
-      font-size: 52px;
-      font-weight: 700;
+      font-size: 64px;
+      font-weight: 800;
       color: var(--accent);
       letter-spacing: 2px;
       line-height: 1;
       font-variant-numeric: tabular-nums;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     }
 
     .next-bottom {
@@ -465,28 +474,61 @@
 
       function buildLcCandidates(launch) {
         var rocket = normalizeForMatch(getRocketName(launch));
-        var mission = normalizeForMatch(getMissionName(launch));
-        var source = (rocket + ' ' + mission).trim();
-        if (!source) return [];
+        if (!rocket) return [];
 
-        var words = source.split(/\s+/).filter(function (w) { return w && w.length > 1; });
-        var variants = {};
+        var words = rocket.split(/\s+/).filter(Boolean);
         var exts = ['jpg', 'jpeg', 'png', 'webp'];
+        var variantScores = {};
+        var urlScores = {};
 
-        function addVariant(v) {
-          if (!v) return;
-          variants[v] = true;
+        function addVariant(variant, score) {
+          var normalized = normalizeForMatch(variant);
+          if (!normalized) return;
+          var parts = normalized.split(/\s+/).filter(Boolean);
+          if (!parts.length) return;
+
+          var shapes = [
+            parts.join(' '),
+            parts.join('-'),
+            parts.join('_'),
+            parts.join('')
+          ];
+
+          if (parts.length > 1) {
+            shapes.push(parts[0]);
+            shapes.push(parts.slice(0, 2).join('-'));
+            shapes.push(parts.slice(0, 2).join('_'));
+            shapes.push(parts.slice(0, 2).join(''));
+          }
+
+          shapes.forEach(function (shape) {
+            if (!shape) return;
+            if (!Object.prototype.hasOwnProperty.call(variantScores, shape) || score > variantScores[shape]) {
+              variantScores[shape] = score;
+            }
+          });
         }
 
-        if (words.length) {
-          addVariant(words.join(' '));
-          addVariant(words.join('-'));
-          addVariant(words.join('_'));
-          addVariant(words.join(''));
-          addVariant(words[0]);
-          if (words[1]) addVariant(words[0] + '-' + words[1]);
-          if (words[1]) addVariant(words[0] + '_' + words[1]);
+        addVariant(rocket, 120);
+
+        for (var start = 0; start < words.length; start++) {
+          for (var end = words.length - 1; end >= start; end--) {
+            if (start === 0 && end === words.length - 1) continue;
+            var tokenCount = end - start + 1;
+            if (tokenCount <= 0) continue;
+            addVariant(words.slice(start, end + 1).join(' '), 82 + tokenCount * 6 - start * 2);
+          }
         }
+
+        var stopWords = {
+          block: true, flight: true, mission: true, booster: true, stage: true,
+          first: true, second: true, rocket: true, vehicle: true, and: true
+        };
+
+        words.forEach(function (word, index) {
+          if (word.length < 3 || stopWords[word]) return;
+          addVariant(word, 58 - index);
+        });
 
         [
           ['falcon', ['falcon', 'falcon9', 'falcon-9', 'falcon_heavy', 'falcon-heavy']],
@@ -494,21 +536,33 @@
           ['vulcan', ['vulcan', 'vulcan-centaur', 'vulcan_centaur']],
           ['starship', ['starship', 'super-heavy', 'super_heavy']],
           ['sls', ['sls', 'space-launch-system']],
-          ['new', ['new-glenn', 'new_glenn']]
+          ['new glenn', ['new-glenn', 'new_glenn', 'newglenn']],
+          ['electron', ['electron', 'rocket-lab-electron']],
+          ['ariane', ['ariane6', 'ariane-6', 'ariane_6']]
         ].forEach(function (entry) {
-          if (source.indexOf(entry[0]) === -1) return;
-          entry[1].forEach(addVariant);
+          if (rocket.indexOf(entry[0]) === -1) return;
+          entry[1].forEach(function (alias) { addVariant(alias, 106); });
         });
 
-        var urls = [];
-        Object.keys(variants).forEach(function (variant) {
+        function addUrl(url, score) {
+          var encoded = encodeURI(url);
+          if (!Object.prototype.hasOwnProperty.call(urlScores, encoded) || score > urlScores[encoded]) {
+            urlScores[encoded] = score;
+          }
+        }
+
+        Object.keys(variantScores).forEach(function (variant) {
+          var score = variantScores[variant];
           exts.forEach(function (ext) {
-            urls.push('images/lc_' + variant + '.' + ext);
-            urls.push('images/lc_%22' + variant + '%22.' + ext);
+            addUrl('images/lc_' + variant + '.' + ext, score);
+            addUrl('images/lc_"' + variant + '".' + ext, score + 3);
+            addUrl('images/lc_%22' + variant + '%22.' + ext, score + 2);
           });
         });
 
-        return urls.map(function (url) { return encodeURI(url); });
+        return Object.keys(urlScores).sort(function (a, b) {
+          return urlScores[b] - urlScores[a];
+        });
       }
 
       function probeImage(url) {
