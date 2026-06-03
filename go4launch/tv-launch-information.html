@@ -334,6 +334,14 @@
       var countdownTimer = null;
       var currentLaunch = null;
       var refreshTimer = null;
+      var ROCKET_IMAGE_MAP = [
+        { match: 'falcon', image: 'images/LAUNCH-ALERT-FALCON.jpg' },
+        { match: 'atlas', image: 'images/LAUNCH-ALERT-ATLAS.jpg' },
+        { match: 'vulcan', image: 'images/LAUNCH-ALERT-VULCAN.jpg' },
+        { match: 'starship', image: 'images/LAUNCH-ALERT-STARSHIP.jpg' },
+        { match: 'sls', image: 'images/LAUNCH-ALERT-SLS.jpg' },
+        { match: 'nova', image: 'images/LAUNCH-ALERT-NOVA.jpg' }
+      ];
 
       function esc(str) {
         if (!str && str !== 0) return '';
@@ -376,12 +384,11 @@
         if (rocket && rocket.image_url) return rocket.image_url;
 
         var rocketName = ((rocket && rocket.full_name) || launch.name || '').toLowerCase();
-        if (rocketName.indexOf('falcon') !== -1) return 'images/LAUNCH-ALERT-FALCON.jpg';
-        if (rocketName.indexOf('atlas') !== -1) return 'images/LAUNCH-ALERT-ATLAS.jpg';
-        if (rocketName.indexOf('vulcan') !== -1) return 'images/LAUNCH-ALERT-VULCAN.jpg';
-        if (rocketName.indexOf('starship') !== -1) return 'images/LAUNCH-ALERT-STARSHIP.jpg';
-        if (rocketName.indexOf('sls') !== -1) return 'images/LAUNCH-ALERT-SLS.jpg';
-        if (rocketName.indexOf('nova') !== -1) return 'images/LAUNCH-ALERT-NOVA.jpg';
+        for (var i = 0; i < ROCKET_IMAGE_MAP.length; i++) {
+          if (rocketName.indexOf(ROCKET_IMAGE_MAP[i].match) !== -1) {
+            return ROCKET_IMAGE_MAP[i].image;
+          }
+        }
         return '';
       }
 
@@ -439,7 +446,7 @@
         return '<div class="bubble launch-bubble">' +
           '<div class="launch-image-wrap">' +
             (imageUrl
-              ? '<img src="' + esc(imageUrl) + '" alt="' + esc(rocketName) + '" onerror="this.style.display=\'none\';this.parentElement.style.background=\'#F2F1E8\';">'
+              ? '<img class="launch-image" src="' + esc(imageUrl) + '" alt="' + esc(rocketName) + '">'
               : '') +
           '</div>' +
           '<div class="launch-text">' +
@@ -467,6 +474,16 @@
           }
         }
         left.innerHTML = html;
+      }
+
+      function bindImageFallbacks() {
+        var images = document.querySelectorAll('.launch-image');
+        for (var i = 0; i < images.length; i++) {
+          images[i].addEventListener('error', function () {
+            this.style.display = 'none';
+            if (this.parentElement) this.parentElement.style.background = '#F2F1E8';
+          }, { once: true });
+        }
       }
 
       function renderCurrent(launch) {
@@ -506,8 +523,11 @@
       function applyTvScale() {
         var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
         var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-        if (!viewportWidth || !viewportHeight) return;
-        var scale = Math.min(viewportWidth / 1920, viewportHeight / 1080);
+        if (!viewportWidth || !viewportHeight) {
+          document.body.style.transform = 'translate(0px, 0px) scale(1)';
+          return;
+        }
+        var scale = Math.min(viewportWidth / BASE_WIDTH, viewportHeight / BASE_HEIGHT);
         var offsetX = (viewportWidth - BASE_WIDTH * scale) / 2;
         var offsetY = (viewportHeight - BASE_HEIGHT * scale) / 2;
         document.body.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px) scale(' + scale + ')';
@@ -523,13 +543,14 @@
         currentLaunch = sorted[0] || null;
         renderCurrent(currentLaunch);
         renderLeft(sorted.slice(1, 4));
+        bindImageFallbacks();
 
         if (countdownTimer) clearInterval(countdownTimer);
         countdownTimer = setInterval(updateCurrentCountdown, 1000);
         updateCurrentCountdown();
 
         document.getElementById('page').style.display = 'flex';
-        document.getElementById('status').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        document.getElementById('status').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }) + ' ET';
       }
 
       function fetchAndRender() {
