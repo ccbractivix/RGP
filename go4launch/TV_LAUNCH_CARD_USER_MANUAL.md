@@ -117,16 +117,42 @@ The system uses **fuzzy matching**: if the rocket's full name contains one of th
 
 ## 7. What appears on each TV launch card
 
-Each card displays the following information overlaid on the background image, in an area 10.896" wide × 11.469" high, positioned .972" from the left and 2.844" from the top:
+The card has two visual zones: a **left panel** containing mission text and a **right panel** showing the launch image and messaging.
 
-- **Headline** (at the top of the overlay area) — from the go4launch admin UI
+### Headline banner (full-width strip)
+
+When **Headline Banner** is set in the admin UI, a bold red banner is displayed across the top of the card above both panels. This is the most prominent thing on the card and is ideal for time-sensitive messaging like `LAUNCH TODAY 5:15 PM`.
+
+### Left info panel
+
+Overlaid on the frosted left area of the background image:
+
 - **Rocket name** — from the launch data
 - **Mission name** — from the launch data
 - **Launch Date & Time** — in Eastern Time
+- **Overnight note** — automatically shown if the launch is between midnight and 5 AM ET
+- **Trajectory** — if entered in the admin UI (e.g. `Northeast along the coast`)
+- **Viewing Guide** — if entered in the admin UI (e.g. `Look NE, visible for approx. 4 min`)
+- **D:H:M:S countdown** — shown for all upcoming launches (see Countdown section below)
+- **Rocket Talk LIVE!** or **photo gallery CTA** — if scheduled (see below)
+
+### Right panel
+
+The right side of the card shows:
+
+- **Launch image** (upper portion) — in priority order:
+  1. Custom image uploaded in the admin UI (**Launch Card Image**)
+  2. Official image from Launch Library 2
+  3. Thumbnail from Launch Library 2
+  4. Rocket configuration image from Launch Library 2
+
+  If none are available, the right image area is hidden.
+
+- **Chris Says** (lower portion) — if **Chris Says** is entered in the admin UI, it is shown as italicized text with a `CHRIS SAYS` label on a frosted white panel. This is the space for a personal note from the resort's launch expert.
 
 ### Countdown clock
 
-When the launch is within **12 hours**, a countdown timer is displayed showing `T-HH:MM:SS`.
+A **D : H : M : S** block countdown is displayed for **all upcoming launches** — not just those within a certain time threshold. The countdown updates every second. When the launch time has passed, it is replaced by a 🚀 **Liftoff!** indicator.
 
 ### Rocket Talk LIVE!
 
@@ -136,6 +162,8 @@ If a Rocket Talk LIVE! event is scheduled (via the admin UI), the card shows:
 - the phrase **"in the Movie Theater"**
 
 No descriptive text or notes from the admin UI are included on the TV launch card for Rocket Talk LIVE.
+
+After the event has been running for one hour, the Rocket Talk LIVE! bubble transitions to a **photo gallery CTA** with a QR code linking guests to the gallery sign-up page.
 
 ---
 
@@ -184,14 +212,38 @@ You can:
 #### Headline Banner
 
 - Field name: **Headline Banner**
-- Purpose: primary launch-card headline (displayed at the top of the info overlay)
+- Purpose: bold red banner displayed full-width at the top of the card above both panels
 - Example use: `LAUNCH TODAY 5:15 PM`
-- If blank, the card falls back to `Upcoming Launch`
+- If blank, no banner is shown
+
+#### Trajectory
+
+- Field name: **Trajectory**
+- Purpose: short description of the flight path shown on the left panel (e.g. `Northeast along the coast`)
+- If blank, this row is not shown on the card
+
+#### Viewing Guide
+
+- Field name: **Viewing Guide**
+- Purpose: guest-facing viewing tip shown on the left panel (e.g. `Look NE, visible for approx. 4 min`)
+- If blank, this row is not shown on the card
+
+#### Chris Says
+
+- Field name: **Chris Says**
+- Purpose: personal note from the resort's launch expert, displayed on the lower-right panel of the card in italics
+- If blank, the Chris Says panel is not shown
+
+#### Launch Card Image
+
+- Field name: **Launch Card Image** (upload)
+- Purpose: custom launch image shown in the upper-right panel; overrides any Launch Library 2 images
+- If not uploaded, the card falls back to official LL2 images in priority order
 
 #### Rocket Talk LIVE! Date & Time
 
 - Field name: **Rocket Talk LIVE! Date & Time (Eastern Time)**
-- Purpose: displays the event date/time with "in the Movie Theater" on the TV card
+- Purpose: displays the event date/time with "in the Movie Theater" on the TV card; transitions to a QR gallery CTA after 1 hour
 - Enter it in Eastern Time
 - Leave blank if there is no event
 
@@ -200,15 +252,10 @@ You can:
 - Field name: **Rocket Talk LIVE! Notes**
 - Note: the notes field is **not shown** on the TV launch card. It is stored for use in other go4launch displays.
 
-### Fields stored for the launch but not used by this TV card
+#### Photo Gallery URL
 
-These remain useful elsewhere in go4launch:
-
-- Viewing Guide URL
-- Chris Says
-- Trajectory
-- Photo Gallery URL
-- custom launch-card image upload
+- Field name: **Photo Gallery URL**
+- Note: this field is **not shown** directly on the TV launch card. The QR code for the photo CTA links to the guest sign-up page, not directly to the gallery URL. This field is stored for use in other go4launch displays.
 
 ### Save your changes
 
@@ -308,8 +355,12 @@ Recommended staff workflow:
 1. Open the go4launch admin dashboard each time an important launch is approaching.
 2. Select the launch.
 3. Enter or update:
-   - Headline Banner
-   - Rocket Talk LIVE! Date & Time (notes are not shown on TV)
+   - **Headline Banner** — e.g. `LAUNCH TODAY 5:15 PM` (shows as bold red strip across the top)
+   - **Trajectory** — brief flight path description (e.g. `Northeast along the coast`)
+   - **Viewing Guide** — guest-facing tip (e.g. `Look NE, visible for approx. 4 min`)
+   - **Chris Says** — personal note from the launch expert (shown on the right panel)
+   - **Launch Card Image** — upload a custom image for the right panel (optional; falls back to LL2 images)
+   - **Rocket Talk LIVE! Date & Time** — if an event is scheduled (notes are not shown on TV)
 4. Save the content.
 5. Wait for the next sync cycle if needed.
 6. Verify the slide in Channel Manager and on a building TV.
@@ -374,7 +425,7 @@ The go4launch TV Launch Card feature is an **automatic bridge** between go4launc
 Key behaviors:
 
 - **Normal mode:** 15-second rotation in building channel playlists, 15-minute sync
-- **Within 12 hours:** countdown clock displayed on the slide
+- **All upcoming launches:** D:H:M:S block countdown always visible on the card
 - **Within 2 hours:** breakthrough mode forces the slide onto all channels, 60-second refresh and sync
 
 If you do not see it in Channel Manager, the cause is usually one of four things:
