@@ -287,6 +287,18 @@ Possible page-level messages include:
 - `Launch card unavailable (launch not found).`
 - `Launch card unavailable (data error).`
 
+Current fallback behavior for unresolved launch IDs:
+
+- The card now attempts `GET /api/launches/:id` first, then falls back to `GET /api/archive/launch/:id`.
+- If launch payload data is still unavailable but CMS content exists (for example Rocket Talk LIVE! date/time), the page renders a branded fallback card instead of a black error screen.
+- If both launch and CMS data are unavailable, the page still shows an explicit unavailable message.
+
+Managed stale-card cleanup behavior:
+
+- During TV card sync, managed slide URLs are checked for unresolved `launchId` values.
+- Managed cards whose `launchId` cannot be resolved in current launch candidates or archive data are removed from the Channel Manager slide library during sync.
+- Sync logs include unresolved launch IDs so operators can identify stale URLs quickly.
+
 ---
 
 ## 12. Day-to-day operating procedure

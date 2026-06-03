@@ -1,6 +1,7 @@
 'use strict';
 
 const axios = require('axios');
+const db = require('../db/db');
 
 const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
 const DEFAULT_LOC_IDS = [12, 27];
@@ -47,6 +48,16 @@ function isManagedTvCardUrl(url, base) {
       console.warn('[go4launch-tv-sync] URL parse warning:', e.message);
     }
     return false;
+  }
+}
+
+function getManagedLaunchId(url, base) {
+  try {
+    if (!isManagedTvCardUrl(url, base)) return '';
+    const candidate = new URL(url);
+    return String(candidate.searchParams.get('launchId') || '').trim();
+  } catch (_e) {
+    return '';
   }
 }
 
@@ -176,9 +187,39 @@ async function syncAvailableSlides(channelApiUrl, channelAdminCode, desiredSlide
       });
     }
     const desiredUrls = new Set(desiredSlides.map(s => s.url));
+    const desiredLaunchIds = new Set(desiredSlides.map(s => String(s.launchId || '')).filter(Boolean));
+    const managedLaunchIds = Array.from(new Set(
+      existingSlides
+        .map(s => getManagedLaunchId(s && s.url, tvCardBaseUrl))
+        .filter(Boolean)
+    ));
+
+    let archivedLaunchIds = new Set();
+    if (managedLaunchIds.length) {
+      try {
+        const archiveResult = await db.query(
+          'SELECT launch_id FROM go4launch_archive WHERE launch_id = ANY($1::text[])',
+          [managedLaunchIds]
+        );
+        archivedLaunchIds = new Set((archiveResult.rows || []).map(r => String(r.launch_id || '')));
+      } catch (archiveErr) {
+        console.warn('[go4launch-tv-sync] archive lookup failed while pruning stale TV cards:', archiveErr && archiveErr.message ? archiveErr.message : String(archiveErr || 'unknown error'));
+      }
+    }
+
     for (const slide of existingSlides) {
       if (!slide || !slide.id || !isManagedTvCardUrl(slide.url, tvCardBaseUrl)) continue;
-      if (desiredUrls.has(slide.url)) continue;
+      const existingLaunchId = getManagedLaunchId(slide.url, tvCardBaseUrl);
+      // Resolved launch IDs are either currently managed by this sync cycle (desired)
+      // or already present in archive history. Any other managed launch ID is stale.
+      const unresolved = !!existingLaunchId &&
+        !desiredLaunchIds.has(existingLaunchId) &&
+        !archivedLaunchIds.has(existingLaunchId);
+      const shouldKeep = desiredUrls.has(slide.url) && !unresolved;
+      if (shouldKeep) continue;
+      if (unresolved) {
+        console.warn('[go4launch-tv-sync] Removing stale managed TV card with unresolved launchId:', existingLaunchId);
+      }
       await channelRequest(
         channelApiUrl,
         channelAdminCode,
