@@ -151,13 +151,13 @@
 
     /* Theater section (upper half) */
     #theater-section {
-      flex: 1;
+      flex: 1.2;
       background: rgba(7, 9, 26, 0.95);
       border-radius: 16px;
-      padding: 16px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 16px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       min-height: 0;
     }
@@ -166,21 +166,23 @@
       flex: 0 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 2px;
-      align-items: flex-start;
+      gap: 6px;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
     }
 
     #theater-content {
       flex: 1;
       display: flex;
       flex-direction: row;
-      gap: 16px;
-      align-items: center;
+      gap: 20px;
+      align-items: stretch;
       min-height: 0;
     }
 
     #theater-poster {
-      max-width: 220px;
+      max-width: 260px;
       max-height: 100%;
       border-radius: 8px;
       object-fit: contain;
@@ -192,62 +194,97 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 12px;
       justify-content: center;
+      align-items: center;
       min-width: 0;
+      text-align: center;
     }
 
     #theater-status-line1 {
-      font-size: 24px;
+      font-size: 48px;
       font-weight: 700;
       color: #F5C518;
       text-transform: uppercase;
-      text-align: left;
+      text-align: center;
       line-height: 1.1;
       letter-spacing: 0.02em;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      width: 100%;
+      text-wrap: balance;
     }
 
     #theater-status-line2 {
-      font-size: 18px;
+      font-size: 32px;
       font-weight: 600;
       color: #FFFFFF;
-      text-align: left;
+      text-align: center;
       line-height: 1.1;
+      width: 100%;
+      text-wrap: balance;
+    }
+
+    .headline-stars {
+      color: #F5C518;
+      font-size: 0.72em;
+      letter-spacing: 0.14em;
+      white-space: nowrap;
+    }
+
+    .headline-text {
+      text-wrap: balance;
     }
 
     #theater-title {
-      font-size: 22px;
+      font-size: 39px;
       font-weight: 600;
       color: #FFFFFF;
-      text-align: left; /* Changed from center */
-      line-height: 1.2;
+      text-align: center;
+      line-height: 1.15;
+      width: 100%;
+      text-wrap: balance;
+      overflow-wrap: anywhere;
     }
 
     #theater-meta {
-      font-size: 16px;
+      font-size: 28px;
       color: #9098C8;
       font-weight: 500;
-      text-align: left; /* Changed from center */
+      text-align: center;
+      line-height: 1.22;
+      width: 100%;
+      text-wrap: balance;
+      overflow-wrap: anywhere;
     }
 
     #theater-countdown {
-      font-size: 18px;
+      font-size: 32px;
       color: #F5C518;
       font-weight: 600;
-      text-align: left; /* Changed from center */
+      text-align: center;
       font-family: 'Montserrat', sans-serif;
+      line-height: 1.15;
+      width: 100%;
+      text-wrap: balance;
     }
 
     #theater-empty {
-      font-size: 16px;
+      font-size: 28px;
       color: #6A70A0;
       font-style: italic;
-      text-align: left; /* Changed from center */
+      text-align: center;
+      line-height: 1.2;
+      width: 100%;
+      text-wrap: balance;
     }
 
     /* Arcade section (lower half) */
     #arcade-section {
-      flex: 1;
+      flex: 0.8;
       background: rgba(242, 241, 232, 0.94);
       border-radius: 16px;
       border: 2px solid #D2CDC5;
@@ -263,7 +300,7 @@
 
     #arcade-image {
       max-width: 100%;
-      max-height: 280px; /* Doubled from 140px */
+      max-height: 224px;
       object-fit: contain;
       border-radius: 6px;
     }
@@ -331,7 +368,7 @@
         <!-- Arcade section -->
         <div id="arcade-section">
           <img id="arcade-image" src="../static/images/Atlas Arcade Logo c.png" alt="Atlas Arcade">
-          <div id="arcade-hours">Open 8 am to 11 pm daily!</div>
+          <div id="arcade-hours">Open 8 am to 11 pm daily</div>
         </div>
       </div>
     </div>
@@ -516,6 +553,49 @@
           countdownEl.style.display = 'none';
         }
       }
+
+      function fitTheaterText() {
+        var contentEl = document.getElementById('theater-content');
+        var infoEl = document.getElementById('theater-info');
+        var statusLine1El = document.getElementById('theater-status-line1');
+        var statusLine2El = document.getElementById('theater-status-line2');
+        var titleEl = document.getElementById('theater-title');
+        var metaEl = document.getElementById('theater-meta');
+        var countdownEl = document.getElementById('theater-countdown');
+        var emptyEl = document.getElementById('theater-empty');
+        var baseSizes = {
+          status1: 48,
+          status2: 32,
+          title: 39,
+          meta: 28,
+          countdown: 32,
+          empty: 28
+        };
+        var minSizes = {
+          status1: 34,
+          status2: 24,
+          title: 28,
+          meta: 20,
+          countdown: 24,
+          empty: 22
+        };
+
+        function applySizes(scale) {
+          statusLine1El.style.fontSize = Math.max(minSizes.status1, Math.round(baseSizes.status1 * scale)) + 'px';
+          statusLine2El.style.fontSize = Math.max(minSizes.status2, Math.round(baseSizes.status2 * scale)) + 'px';
+          titleEl.style.fontSize = Math.max(minSizes.title, Math.round(baseSizes.title * scale)) + 'px';
+          metaEl.style.fontSize = Math.max(minSizes.meta, Math.round(baseSizes.meta * scale)) + 'px';
+          countdownEl.style.fontSize = Math.max(minSizes.countdown, Math.round(baseSizes.countdown * scale)) + 'px';
+          emptyEl.style.fontSize = Math.max(minSizes.empty, Math.round(baseSizes.empty * scale)) + 'px';
+        }
+
+        var scale = 1;
+        applySizes(scale);
+        while (scale > 0.72 && (contentEl.scrollHeight > contentEl.clientHeight || infoEl.scrollHeight > infoEl.clientHeight)) {
+          scale -= 0.04;
+          applySizes(scale);
+        }
+      }
     }
 
     function renderTheater(days) {
@@ -574,7 +654,11 @@
         return;
       }
 
-      statusLine1El.textContent = theaterDisplayState.mode === 'now' ? 'NOW SHOWING' : 'COMING UP NEXT';
+      if (theaterDisplayState.mode === 'now') {
+        statusLine1El.innerHTML = '<span class="headline-stars" aria-hidden="true">★ ★ ★</span><span class="headline-text">NOW SHOWING</span><span class="headline-stars" aria-hidden="true">★ ★ ★</span>';
+      } else {
+        statusLine1El.textContent = 'COMING UP NEXT';
+      }
       statusLine1El.style.display = '';
       statusLine2El.style.display = '';
 
@@ -611,6 +695,7 @@
       // Countdown
       emptyEl.style.display = 'none';
       updateTheaterCountdown();
+      fitTheaterText();
 
       if (theaterCountdownInterval) clearInterval(theaterCountdownInterval);
       theaterCountdownInterval = setInterval(updateTheaterCountdown, 1000);
