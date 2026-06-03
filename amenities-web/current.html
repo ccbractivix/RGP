@@ -193,6 +193,24 @@
       min-width: 0;
     }
 
+    #theater-status-line1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #F5C518;
+      text-transform: uppercase;
+      text-align: left;
+      line-height: 1.1;
+      letter-spacing: 0.02em;
+    }
+
+    #theater-status-line2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #FFFFFF;
+      text-align: left;
+      line-height: 1.1;
+    }
+
     #theater-title {
       font-size: 22px;
       font-weight: 600;
@@ -293,6 +311,8 @@
         <div id="theater-section">
           <img id="theater-poster" src="" alt="" style="display:none;">
           <div id="theater-info">
+            <div id="theater-status-line1"></div>
+            <div id="theater-status-line2">in the Movie Theater</div>
             <div id="theater-title"></div>
             <div id="theater-meta"></div>
             <div id="theater-countdown"></div>
@@ -327,7 +347,7 @@
 
     var theaterApiBase = theaterApiUrl.replace(/\/api\/.*$/, '');
     var theaterCountdownInterval = null;
-    var nextShowEntry = null;
+    var theaterDisplayState = null;
 
     // ===== UTILITY FUNCTIONS =====
 
@@ -413,10 +433,9 @@
       return new Date(dp.year, dp.month, dp.day, tp.h, tp.m, 0, 0);
     }
 
-    function findNextShow(days) {
+    function collectTheaterEntries(days) {
       if (!days) return null;
-      var cutoff = new Date(Date.now() - 60 * 1000);
-      var best = null;
+      var entries = [];
 
       for (var i = 0; i < days.length; i++) {
         var dayObj = days[i];
@@ -424,17 +443,32 @@
         var shows = dayObj.shows || [];
         for (var j = 0; j < shows.length; j++) {
           var show = shows[j];
-          // Include live events now
           var startDate = toDate(dayObj.label, show.time);
+          var endDate = toDate(dayObj.label, show.endTime);
           if (!startDate) continue;
-          if (startDate < cutoff) continue;
-          if (!best || startDate < best.startDate) {
-            best = { show: show, startDate: startDate, dayLabel: dayObj.label };
+          if (!endDate && show.runtime) {
+            var runtimeMin = parseInt(show.runtime, 10);
+            if (!isNaN(runtimeMin) && runtimeMin > 0) {
+              endDate = new Date(startDate.getTime() + runtimeMin * 60000);
+            }
           }
+          if (endDate && endDate.getTime() <= startDate.getTime()) {
+            endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
+          }
+          entries.push({
+            show: show,
+            startDate: startDate,
+            endDate: endDate,
+            dayLabel: dayObj.label
+          });
         }
       }
 
-      return best;
+      entries.sort(function(a, b) {
+        return a.startDate.getTime() - b.startDate.getTime();
+      });
+
+      return entries;
     }
 
     function formatCountdown(totalSeconds) {
@@ -447,34 +481,79 @@
     }
 
     function updateTheaterCountdown() {
-      if (!nextShowEntry) return;
-      var diffSec = Math.round((nextShowEntry.startDate.getTime() - Date.now()) / 1000);
+      if (!theaterDisplayState || !theaterDisplayState.entry) return;
       var countdownEl = document.getElementById('theater-countdown');
-      
-      if (diffSec > 0) {
-        countdownEl.textContent = 'Coming up in ' + formatCountdown(diffSec);
-        countdownEl.style.display = '';
-      } else if (diffSec >= -60) {
-        countdownEl.textContent = 'Now Playing!';
-        countdownEl.style.display = '';
+
+      if (theaterDisplayState.mode === 'now') {
+        if (!theaterDisplayState.entry.endDate) {
+          countdownEl.style.display = 'none';
+          return;
+        }
+        var endDiffSec = Math.round((theaterDisplayState.entry.endDate.getTime() - Date.now()) / 1000);
+        if (endDiffSec > 0) {
+          countdownEl.textContent = 'Ends in ' + formatCountdown(endDiffSec);
+          countdownEl.style.display = '';
+        } else {
+          countdownEl.style.display = 'none';
+        }
       } else {
-        // Movie has started more than 1 minute ago
-        countdownEl.style.display = 'none';
+        var startDiffSec = Math.round((theaterDisplayState.entry.startDate.getTime() - Date.now()) / 1000);
+        if (startDiffSec > 0) {
+          countdownEl.textContent = 'Starts in ' + formatCountdown(startDiffSec);
+          countdownEl.style.display = '';
+        } else if (startDiffSec >= -60) {
+          countdownEl.textContent = 'Starting now!';
+          countdownEl.style.display = '';
+        } else {
+          countdownEl.style.display = 'none';
+        }
       }
     }
 
     function renderTheater(days) {
-      var entry = findNextShow(days);
-      nextShowEntry = entry;
+      var entries = collectTheaterEntries(days) || [];
+      var nowTs = Date.now();
+      var currentEntry = null;
+      var nextEntry = null;
+      for (var i = 0; i < entries.length; i++) {
+        var item = entries[i];
+        var startTs = item.startDate.getTime();
+        var endTs = item.endDate ? item.endDate.getTime() : (startTs + 60000);
+        if (startTs <= nowTs && nowTs < endTs) {
+          currentEntry = item;
+          if (i + 1 < entries.length) nextEntry = entries[i + 1];
+          break;
+        }
+        if (!nextEntry && startTs > nowTs) {
+          nextEntry = item;
+        }
+      }
+      var minsUntilCurrentEnd = currentEntry && currentEntry.endDate
+        ? (currentEntry.endDate.getTime() - nowTs) / 60000
+        : null;
+      var shouldShowNext = !currentEntry || (minsUntilCurrentEnd !== null && minsUntilCurrentEnd < 30);
+      var activeEntry = shouldShowNext ? nextEntry : currentEntry;
+      if (!activeEntry && currentEntry) {
+        shouldShowNext = false;
+        activeEntry = currentEntry;
+      }
+      theaterDisplayState = activeEntry ? {
+        mode: shouldShowNext ? 'next' : 'now',
+        entry: activeEntry
+      } : null;
 
       var posterEl = document.getElementById('theater-poster');
+      var statusLine1El = document.getElementById('theater-status-line1');
+      var statusLine2El = document.getElementById('theater-status-line2');
       var titleEl = document.getElementById('theater-title');
       var metaEl = document.getElementById('theater-meta');
       var countdownEl = document.getElementById('theater-countdown');
       var emptyEl = document.getElementById('theater-empty');
 
-      if (!entry) {
+      if (!theaterDisplayState) {
         posterEl.style.display = 'none';
+        statusLine1El.textContent = '';
+        statusLine2El.style.display = 'none';
         titleEl.textContent = '';
         metaEl.textContent = '';
         countdownEl.style.display = 'none';
@@ -486,7 +565,10 @@
         return;
       }
 
-      var show = entry.show;
+      statusLine1El.textContent = theaterDisplayState.mode === 'now' ? 'NOW SHOWING' : 'COMING UP NEXT';
+      statusLine2El.style.display = '';
+
+      var show = theaterDisplayState.entry.show;
 
       // Poster
       var posterSrc = show.poster || '';
@@ -507,11 +589,13 @@
       // Title
       titleEl.textContent = show.title || '';
 
-      // Meta: runtime · rating
+      // Meta: year · rating · runtime · start time
       var metaParts = [];
+      if (show.year) metaParts.push(show.year);
+      if (show.rating) metaParts.push(show.rating);
       var rt = formatRuntime(show.runtime);
       if (rt) metaParts.push(rt);
-      if (show.rating) metaParts.push(show.rating);
+      if (show.time) metaParts.push('Starts ' + show.time);
       metaEl.textContent = metaParts.join(' · ');
 
       // Countdown
