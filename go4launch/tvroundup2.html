@@ -608,18 +608,17 @@
         return (cfg && (cfg.full_name || cfg.name)) || 'Rocket TBA';
       }
 
+      function stripRocketPrefix(launchName, rocketName) {
+        if (!launchName || !rocketName || rocketName === 'Rocket TBA') return launchName;
+        if (launchName.toLowerCase().indexOf(rocketName.toLowerCase()) !== 0) return launchName;
+        var suffix = launchName.slice(rocketName.length).replace(/^[\s|:–—-]+/, '');
+        return suffix || launchName;
+      }
+
       function getMissionName(launch) {
         var mission = launch.mission && launch.mission.name;
         if (mission) return mission;
-        var launchName = launch.name;
-        var rocketName = getRocketName(launch);
-        if (launchName && rocketName && rocketName !== 'Rocket TBA') {
-          var escapedRocketName = rocketName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          launchName = launchName
-            .replace(new RegExp('^' + escapedRocketName + '\\s*[|:–—-]\\s*', 'i'), '')
-            .replace(new RegExp('^' + escapedRocketName + '\\s+', 'i'), '');
-        }
-        return launchName || 'Mission TBA';
+        return stripRocketPrefix(launch.name, getRocketName(launch)) || 'Mission TBA';
       }
 
       function formatDayET(dateStr) {
