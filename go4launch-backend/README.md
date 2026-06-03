@@ -20,9 +20,8 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 | `SENDGRID_API_KEY` | For emails | SendGrid API key (requires Mail Send permission) |
 | `SENDGRID_FROM` | For emails | Verified sender email address in your SendGrid account (required when `SENDGRID_API_KEY` is set) |
 | `GO4LAUNCH_ARCHIVE_URL` | No | Public frontend URL (default: `https://ccbractivix.github.io/RGP/go4launch`) |
-| `CHANNEL_API_URL` | For TV launch-card sync | Base URL for channel-backend admin API |
-| `CHANNEL_ADMIN_CODE` | For TV launch-card sync | Valid channel-backend admin auth code |
-| `GO4LAUNCH_TV_CARD_BASE_URL` | No | TV card URL base (default: `https://ccbractivix.github.io/RGP/go4launch/tv-launch-card.html`) |
+| `CHANNEL_API_URL` | No | (Reserved) |
+| `CHANNEL_ADMIN_CODE` | No | (Reserved) |
 | `GO4LAUNCH_LOCATION_IDS` | No | Comma-separated LL2 location IDs (default: `12,27`) |
 | `CORS_ORIGIN` | No | Additional allowed CORS origins (comma-separated) |
 | `PORT` | No | Server port (default: `3002`) |

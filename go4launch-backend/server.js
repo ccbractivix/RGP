@@ -8,7 +8,6 @@ const rateLimit = require('express-rate-limit');
 
 const apiRouter   = require('./routes/api');
 const adminRouter = require('./routes/admin');
-const { syncTvLaunchCards } = require('./services/tvLaunchCardSync');
 
 const app  = express();
 const PORT = process.env.PORT || 3002;
@@ -44,34 +43,6 @@ app.get('/', (_req, res) => res.redirect(302, '/admin-ui/index.html'));
 // Health check
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-const TV_SYNC_INTERVAL_MS = 15 * 60 * 1000;
-const TV_SYNC_URGENT_INTERVAL_MS = 60 * 1000; // 60s when a launch is within 2 hours
-let tvSyncInFlight = false;
-let tvSyncTimer = null;
-
-async function runTvLaunchCardSync() {
-  if (tvSyncInFlight) {
-    console.warn('[go4launch-tv-sync] Previous sync still running — skipping overlap');
-    return;
-  }
-  tvSyncInFlight = true;
-  let urgent = false;
-  try {
-    const result = await syncTvLaunchCards();
-    urgent = result?.urgent || false;
-  } catch (e) {
-    console.error('[go4launch-tv-sync] Sync failed:', e.message);
-  } finally {
-    tvSyncInFlight = false;
-    // Schedule next sync with adaptive interval (always runs, even on error)
-    if (tvSyncTimer) clearTimeout(tvSyncTimer);
-    const nextInterval = urgent ? TV_SYNC_URGENT_INTERVAL_MS : TV_SYNC_INTERVAL_MS;
-    tvSyncTimer = setTimeout(runTvLaunchCardSync, nextInterval);
-  }
-}
-
 app.listen(PORT, () => console.log(`go4launch backend running on port ${PORT}`));
-
-runTvLaunchCardSync();
 
 module.exports = app;
