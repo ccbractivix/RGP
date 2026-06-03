@@ -407,6 +407,7 @@
       };
       var FUZZY_KEYWORDS = Object.keys(SLIDE_IMAGES);
       var DEFAULT_SLIDE = SLIDE_IMAGES.falcon;
+      var DEFAULT_UNAVAILABLE_HEADLINE = 'Launch information temporarily unavailable';
       var GUEST_PAGE_BASE = 'https://ccbractivix.github.io/RGP/go4launch/';
       var RTL_EXPIRED_MS = 60 * 60 * 1000; // 1 hour after RTL start
 
@@ -506,7 +507,11 @@
        */
       function getImageUrl(launch, cms) {
         if (cms && cms.card_image_path) {
-          return IMAGE_BASE + 'launches/' + cms.card_image_path;
+          var p = String(cms.card_image_path);
+          // Guard against path traversal: reject paths containing '..' or starting with '/'
+          if (p.indexOf('..') === -1 && p.charAt(0) !== '/') {
+            return IMAGE_BASE + 'launches/' + p;
+          }
         }
         var img = (launch && launch.image) || {};
         if (img.image_url) return img.image_url;
@@ -663,7 +668,7 @@
         var showRTL = hasRTL && !rtlExpired;
         var showCTA = hasRTL && rtlExpired;
         var signupUrl = GUEST_PAGE_BASE + '?launch=' + encodeURIComponent(activeLaunchId || '') + '#saw-it';
-        var headline = (cms && cms.headline) ? cms.headline : 'Launch information temporarily unavailable';
+        var headline = (cms && cms.headline) ? cms.headline : DEFAULT_UNAVAILABLE_HEADLINE;
         var statusText = reason === 'missing'
           ? 'Launch data is no longer available for this mission.<br>Please check the app for current launches.'
           : 'Mission data is temporarily unavailable.<br>Please check back shortly.';
@@ -701,7 +706,7 @@
          *   - rtlDatetime + 1 hour past → switch to light-blue gallery CTA
          *   - no rtlDatetime → neither bubble shown
          */
-        var rtlDatetime = cms.rtl_datetime || '';
+        var rtlDatetime = (cms && cms.rtl_datetime) || '';
         var rtlMs = rtlDatetime ? new Date(rtlDatetime).getTime() : 0;
         var hasRTL = !!rtlDatetime && Number.isFinite(rtlMs);
         var rtlExpired = hasRTL && (now >= rtlMs + RTL_EXPIRED_MS);
@@ -711,10 +716,10 @@
         var signupUrl = GUEST_PAGE_BASE + '?launch=' + encodeURIComponent(launch.id) + '#saw-it';
         var bottomHtml = buildBottomHtml(showRTL, showCTA, rtlDatetime, signupUrl);
 
-        var headline = cms.headline || '';
-        var trajectory = cms.trajectory || '';
-        var viewingGuide = cms.viewing_guide || '';
-        var chrisSays = cms.chris_says || '';
+        var headline = (cms && cms.headline) || '';
+        var trajectory = (cms && cms.trajectory) || '';
+        var viewingGuide = (cms && cms.viewing_guide) || '';
+        var chrisSays = (cms && cms.chris_says) || '';
 
         // Detail row HTML helper
         function detailRowHtml(label, value) {
