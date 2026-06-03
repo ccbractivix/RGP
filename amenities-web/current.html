@@ -383,6 +383,7 @@
     var TITLE_ADAPTIVE_SCALE_FACTOR = 0.009;
     var MIN_TITLE_ADAPTIVE_SCALE = 0.64;
     var MAX_FONT_REDUCTION_ITERATIONS = 20;
+    var META_FONT_REDUCTION_STEP = 2;
     var resizeTimer = null;
     var hasLoggedViewportWarning = false;
 
@@ -585,7 +586,8 @@
         var titleLength = titleText.length;
         if (!titleLength || titleLength <= 24) return 1;
         if (titleLength >= 64) return MIN_TITLE_ADAPTIVE_SCALE;
-        return 1 - ((titleLength - 24) * TITLE_ADAPTIVE_SCALE_FACTOR);
+        var scale = 1 - ((titleLength - 24) * TITLE_ADAPTIVE_SCALE_FACTOR);
+        return Math.max(MIN_TITLE_ADAPTIVE_SCALE, scale);
       }
 
       function applySizes(scale) {
@@ -599,13 +601,13 @@
       }
 
       function fitSingleLineText(el, minFontSize) {
-        if (!el || !el.textContent || el.style.display === 'none' || el.clientWidth <= 0) return;
+        if (!el || !el.textContent || getComputedStyle(el).display === 'none' || el.clientWidth <= 0) return;
         var targetWidth = el.clientWidth;
         var iterationCount = 0;
         while (el.scrollWidth > targetWidth && iterationCount < MAX_FONT_REDUCTION_ITERATIONS) {
           var current = parseInt(el.style.fontSize, 10);
           if (isNaN(current) || current <= minFontSize) break;
-          el.style.fontSize = (current - 1) + 'px';
+          el.style.fontSize = Math.max(minFontSize, current - META_FONT_REDUCTION_STEP) + 'px';
           iterationCount += 1;
         }
       }
