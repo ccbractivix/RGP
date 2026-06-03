@@ -12,7 +12,14 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html, body {
+    html {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #F2F1E8;
+    }
+
+    body {
       width: 1920px;
       height: 1080px;
       background: #F2F1E8;
@@ -20,6 +27,10 @@
       font-family: 'Montserrat', sans-serif;
       font-weight: 600; /* SemiBold */
       overflow: hidden;
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
     }
 
     /* Background image */
@@ -306,6 +317,8 @@
     var amenitiesApiUrl = document.querySelector('meta[name="amenities-api-url"]').getAttribute('content') || '/api/status';
     var theaterApiUrl = document.querySelector('meta[name="theater-api-url"]').getAttribute('content') || 'https://theater-backend-qf1b.onrender.com/api/schedule/tv';
     var REFRESH_MS = 60000; // 1 minute
+    var BASE_WIDTH = 1920;
+    var BASE_HEIGHT = 1080;
 
     // Target amenities in order
     var TARGET_AMENITIES = ['Pools', 'Lazy River', 'Water Slide', 'Sports Courts', 'Mini Golf', 'Guest Tram'];
@@ -611,7 +624,20 @@
       });
     }
 
-    document.addEventListener('DOMContentLoaded', fetchAndRender);
+    function applyTvScale() {
+      var viewportWidth = window.innerWidth || document.documentElement.clientWidth || BASE_WIDTH;
+      var viewportHeight = window.innerHeight || document.documentElement.clientHeight || BASE_HEIGHT;
+      var scale = Math.min(viewportWidth / BASE_WIDTH, viewportHeight / BASE_HEIGHT);
+      var offsetX = (viewportWidth - BASE_WIDTH * scale) / 2;
+      var offsetY = (viewportHeight - BASE_HEIGHT * scale) / 2;
+      document.body.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px) scale(' + scale + ')';
+    }
+
+    window.addEventListener('resize', applyTvScale);
+    document.addEventListener('DOMContentLoaded', function () {
+      applyTvScale();
+      fetchAndRender();
+    });
   })();
   </script>
 </body>
