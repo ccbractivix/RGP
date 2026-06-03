@@ -382,6 +382,8 @@
     var THEATER_TEXT_SCALE_STEP = 0.04;
     var TITLE_ADAPTIVE_SCALE_FACTOR = 0.009;
     var MIN_TITLE_ADAPTIVE_SCALE = 0.64;
+    var TITLE_SCALE_START_LENGTH = 24;
+    var TITLE_SCALE_MIN_LENGTH = 64;
     var MAX_FONT_REDUCTION_ITERATIONS = 20;
     var META_FONT_REDUCTION_STEP = 2;
     var resizeTimer = null;
@@ -584,9 +586,9 @@
       function calculateTitleScaleByLength() {
         var titleText = (titleEl.textContent || '').trim();
         var titleLength = titleText.length;
-        if (!titleLength || titleLength <= 24) return 1;
-        if (titleLength >= 64) return MIN_TITLE_ADAPTIVE_SCALE;
-        var scale = 1 - ((titleLength - 24) * TITLE_ADAPTIVE_SCALE_FACTOR);
+        if (!titleLength || titleLength <= TITLE_SCALE_START_LENGTH) return 1;
+        if (titleLength >= TITLE_SCALE_MIN_LENGTH) return MIN_TITLE_ADAPTIVE_SCALE;
+        var scale = 1 - ((titleLength - TITLE_SCALE_START_LENGTH) * TITLE_ADAPTIVE_SCALE_FACTOR);
         return Math.max(MIN_TITLE_ADAPTIVE_SCALE, scale);
       }
 
