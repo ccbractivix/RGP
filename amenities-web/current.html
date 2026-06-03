@@ -16,13 +16,13 @@
       width: 100vw;
       height: 100vh;
       overflow: hidden;
-      background: #F2F1E8;
+      background: #EDEEE1;
     }
 
     body {
       width: 1920px;
       height: 1080px;
-      background: #F2F1E8;
+      background: #EDEEE1;
       color: #454040;
       font-family: 'Montserrat', sans-serif;
       font-weight: 600; /* SemiBold */
@@ -31,17 +31,6 @@
       top: 0;
       left: 0;
       transform-origin: top left;
-    }
-
-    /* Background image */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url('../channel-web/HICV_BASE.jpg');
-      background-size: cover;
-      background-position: center;
-      z-index: 0;
     }
 
     #page {
@@ -167,16 +156,31 @@
       border-radius: 16px;
       padding: 16px;
       display: flex;
-      flex-direction: row; /* Changed from column to row */
-      gap: 16px; /* Increased gap for horizontal layout */
-      align-items: center;
-      justify-content: flex-start; /* Changed from center */
+      flex-direction: column;
+      gap: 12px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       min-height: 0;
     }
 
+    #theater-header {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      align-items: flex-start;
+    }
+
+    #theater-content {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      gap: 16px;
+      align-items: center;
+      min-height: 0;
+    }
+
     #theater-poster {
-      max-width: 180px; /* Fixed width for poster on left */
+      max-width: 220px;
       max-height: 100%;
       border-radius: 8px;
       object-fit: contain;
@@ -188,7 +192,7 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       justify-content: center;
       min-width: 0;
     }
@@ -309,14 +313,18 @@
       <div id="right-section">
         <!-- Theater section -->
         <div id="theater-section">
-          <img id="theater-poster" src="" alt="" style="display:none;">
-          <div id="theater-info">
+          <div id="theater-header">
             <div id="theater-status-line1"></div>
             <div id="theater-status-line2">in the Movie Theater</div>
-            <div id="theater-title"></div>
-            <div id="theater-meta"></div>
-            <div id="theater-countdown"></div>
-            <div id="theater-empty" style="display:none;">No shows scheduled</div>
+          </div>
+          <div id="theater-content">
+            <img id="theater-poster" src="" alt="" style="display:none;">
+            <div id="theater-info">
+              <div id="theater-title"></div>
+              <div id="theater-meta"></div>
+              <div id="theater-countdown"></div>
+              <div id="theater-empty" style="display:none;">No shows scheduled</div>
+            </div>
           </div>
         </div>
 
@@ -553,6 +561,7 @@
       if (!theaterDisplayState) {
         posterEl.style.display = 'none';
         statusLine1El.textContent = '';
+        statusLine1El.style.display = 'none';
         statusLine2El.style.display = 'none';
         titleEl.textContent = '';
         metaEl.textContent = '';
@@ -566,6 +575,7 @@
       }
 
       statusLine1El.textContent = theaterDisplayState.mode === 'now' ? 'NOW SHOWING' : 'COMING UP NEXT';
+      statusLine1El.style.display = '';
       statusLine2El.style.display = '';
 
       var show = theaterDisplayState.entry.show;
