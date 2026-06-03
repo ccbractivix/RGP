@@ -180,7 +180,6 @@
     }
 
     #theater-poster {
-      width: 100%;
       max-width: 220px;
       max-height: 100%;
       border-radius: 8px;
@@ -562,8 +561,8 @@
       if (!theaterDisplayState) {
         posterEl.style.display = 'none';
         statusLine1El.textContent = '';
-        statusLine1El.hidden = true;
-        statusLine2El.hidden = true;
+        statusLine1El.style.display = 'none';
+        statusLine2El.style.display = 'none';
         titleEl.textContent = '';
         metaEl.textContent = '';
         countdownEl.style.display = 'none';
@@ -576,8 +575,8 @@
       }
 
       statusLine1El.textContent = theaterDisplayState.mode === 'now' ? 'NOW SHOWING' : 'COMING UP NEXT';
-      statusLine1El.hidden = false;
-      statusLine2El.hidden = false;
+      statusLine1El.style.display = '';
+      statusLine2El.style.display = '';
 
       var show = theaterDisplayState.entry.show;
 
