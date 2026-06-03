@@ -304,11 +304,12 @@
     }
 
     .next-day, .next-date {
-      font-size: 25px;
+      font-size: 38px;
       color: var(--text);
       line-height: 1.15;
       text-transform: uppercase;
       letter-spacing: 1px;
+      text-align: center;
     }
 
     #rtl-panel {
@@ -607,8 +608,17 @@
         return (cfg && (cfg.full_name || cfg.name)) || 'Rocket TBA';
       }
 
+      function stripRocketPrefix(launchName, rocketName) {
+        if (!launchName || !rocketName || rocketName === 'Rocket TBA') return launchName;
+        if (launchName.toLowerCase().indexOf(rocketName.toLowerCase()) !== 0) return launchName;
+        var suffix = launchName.slice(rocketName.length).replace(/^[\s|:–—-]+/, '');
+        return suffix || launchName;
+      }
+
       function getMissionName(launch) {
-        return launch.name || (launch.mission && launch.mission.name) || 'Mission TBA';
+        var mission = launch.mission && launch.mission.name;
+        if (mission) return mission;
+        return stripRocketPrefix(launch.name, getRocketName(launch)) || 'Mission TBA';
       }
 
       function formatDayET(dateStr) {
@@ -682,7 +692,7 @@
           '<div class="bubble-info">' +
             '<div class="bubble-rocket">' + esc(getRocketName(launch)) + '</div>' +
             '<div class="bubble-mission">' + esc(mission) + '</div>' +
-            '<div class="bubble-datetime">' + esc(day + ' • ' + formattedDate + ' • ' + time + ' ET') + '</div>' +
+            '<div class="bubble-datetime">' + esc(day + ' • ' + formattedDate + ' • ' + time) + '</div>' +
           '</div>' +
           '<div class="bubble-status ' + statusClass(launch.status) + '">' + esc(statusLabel(launch.status)) + '</div>' +
         '</div>';
@@ -693,7 +703,7 @@
         var provider = getProvider(launch);
         var location = getLocation(launch);
         var mission = getMissionName(launch);
-        var appUrl = window.location.origin + '/go4launch/index.html';
+        var appUrl = 'https://ccbractivix.github.io/RGP/go4launch/index.html#/';
         var qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(appUrl);
 
         var html = '';
@@ -716,7 +726,7 @@
           (location ? '<div class="next-meta">' + esc(location) + '</div>' : '') +
           '<div class="next-countdown" data-next-countdown="' + esc(launch.net) + '">' + esc(formatCountdown(launch.net)) + '</div>' +
           '<div class="next-day">' + esc(formatDayET(launch.net)) + '</div>' +
-          '<div class="next-date">' + esc(formatDateET(launch.net) + ' • ' + formatTimeET(launch.net) + ' ET') + '</div>' +
+          '<div class="next-date">' + esc(formatDateET(launch.net) + ' • ' + formatTimeET(launch.net)) + '</div>' +
           '<div class="next-bottom">' +
             '<div class="next-cta-text">Check out the Go4Launch app for viewing guides, launch photos, and more!</div>' +
             '<div class="next-qr"><img src="' + esc(qrSrc) + '" alt="QR Code to Go4Launch app"></div>' +
