@@ -250,12 +250,57 @@
     }
 
     .next-countdown {
-      margin-top: 6px;
-      font-size: 31px;
+      margin-top: 10px;
+      width: 100%;
+      min-height: 92px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border-radius: 18px;
+      border: 2px solid rgba(255, 197, 66, 0.55);
+      background: rgba(255, 197, 66, 0.16);
+      text-align: center;
+      font-size: 64px;
+      font-weight: 800;
       color: var(--accent);
-      letter-spacing: 1px;
+      letter-spacing: 2px;
       line-height: 1;
       font-variant-numeric: tabular-nums;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    .next-bottom {
+      margin-top: auto;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .next-cta-text {
+      flex: 1;
+      font-size: 21px;
+      line-height: 1.2;
+      color: var(--text);
+      text-align: left;
+    }
+
+    .next-qr {
+      flex: 0 0 auto;
+      width: 116px;
+      height: 116px;
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+      padding: 6px;
+    }
+
+    .next-qr img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
     }
 
     .next-day, .next-date {
@@ -341,7 +386,7 @@
 </head>
 <body>
   <div id="page">
-    <div id="header">GO4LAUNCH ROUNDUP</div>
+    <div id="header">Rocket Launch Information</div>
 
     <div id="loading">Loading launch roundup…</div>
 
@@ -370,6 +415,8 @@
       var RESIZE_DEBOUNCE_MS = 250;
       var resizeTimer = null;
       var hasLoggedViewportWarning = false;
+      var imageProbeCache = {};
+      var leftImageMatchCache = {};
 
       var API_BASE = (function () {
         var meta = document.querySelector('meta[name="api-base"]');
@@ -415,6 +462,144 @@
         var cfg = launch.rocket && launch.rocket.configuration;
         if (cfg && cfg.image_url) return cfg.image_url;
         return null;
+      }
+
+      function normalizeForMatch(text) {
+        return String(text || '')
+          .toLowerCase()
+          .replace(/&/g, ' and ')
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim();
+      }
+
+      function buildLcCandidates(launch) {
+        var rocket = normalizeForMatch(getRocketName(launch));
+        if (!rocket) return [];
+
+        var words = rocket.split(/\s+/).filter(Boolean);
+        var exts = ['jpg', 'jpeg', 'png', 'webp'];
+        var variantScores = {};
+        var urlScores = {};
+
+        function addVariant(variant, score) {
+          var normalized = normalizeForMatch(variant);
+          if (!normalized) return;
+          var parts = normalized.split(/\s+/).filter(Boolean);
+          if (!parts.length) return;
+
+          var shapes = [
+            parts.join(' '),
+            parts.join('-'),
+            parts.join('_'),
+            parts.join('')
+          ];
+
+          if (parts.length > 1) {
+            shapes.push(parts[0]);
+            shapes.push(parts.slice(0, 2).join('-'));
+            shapes.push(parts.slice(0, 2).join('_'));
+            shapes.push(parts.slice(0, 2).join(''));
+          }
+
+          shapes.forEach(function (shape) {
+            if (!shape) return;
+            if (!Object.prototype.hasOwnProperty.call(variantScores, shape) || score > variantScores[shape]) {
+              variantScores[shape] = score;
+            }
+          });
+        }
+
+        addVariant(rocket, 120);
+
+        for (var start = 0; start < words.length; start++) {
+          for (var end = words.length - 1; end >= start; end--) {
+            if (start === 0 && end === words.length - 1) continue;
+            var tokenCount = end - start + 1;
+            if (tokenCount <= 0) continue;
+            addVariant(words.slice(start, end + 1).join(' '), 82 + tokenCount * 6 - start * 2);
+          }
+        }
+
+        var stopWords = {
+          block: true, flight: true, mission: true, booster: true, stage: true,
+          first: true, second: true, rocket: true, vehicle: true, and: true
+        };
+
+        words.forEach(function (word, index) {
+          if (word.length < 3 || stopWords[word]) return;
+          addVariant(word, 58 - index);
+        });
+
+        [
+          ['falcon', ['falcon', 'falcon9', 'falcon-9', 'falcon_heavy', 'falcon-heavy']],
+          ['atlas', ['atlas', 'atlasv', 'atlas-v']],
+          ['vulcan', ['vulcan', 'vulcan-centaur', 'vulcan_centaur']],
+          ['starship', ['starship', 'super-heavy', 'super_heavy']],
+          ['sls', ['sls', 'space-launch-system']],
+          ['new glenn', ['new-glenn', 'new_glenn', 'newglenn']],
+          ['electron', ['electron', 'rocket-lab-electron']],
+          ['ariane', ['ariane6', 'ariane-6', 'ariane_6']]
+        ].forEach(function (entry) {
+          if (rocket.indexOf(entry[0]) === -1) return;
+          entry[1].forEach(function (alias) { addVariant(alias, 106); });
+        });
+
+        function addUrl(url, score) {
+          var encoded = encodeURI(url);
+          if (!Object.prototype.hasOwnProperty.call(urlScores, encoded) || score > urlScores[encoded]) {
+            urlScores[encoded] = score;
+          }
+        }
+
+        Object.keys(variantScores).forEach(function (variant) {
+          var score = variantScores[variant];
+          exts.forEach(function (ext) {
+            addUrl('images/lc_' + variant + '.' + ext, score);
+            addUrl('images/lc_"' + variant + '".' + ext, score + 3);
+            addUrl('images/lc_%22' + variant + '%22.' + ext, score + 2);
+          });
+        });
+
+        return Object.keys(urlScores).sort(function (a, b) {
+          return urlScores[b] - urlScores[a];
+        });
+      }
+
+      function probeImage(url) {
+        if (!url) return Promise.resolve(false);
+        if (!imageProbeCache[url]) {
+          imageProbeCache[url] = new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () { resolve(true); };
+            img.onerror = function () { resolve(false); };
+            img.src = url;
+          });
+        }
+        return imageProbeCache[url];
+      }
+
+      function findLeftBubbleImage(launch, cms) {
+        if (cms && cms.card_image_path) return Promise.resolve('images/launches/' + cms.card_image_path);
+
+        var key = normalizeForMatch(getRocketName(launch));
+        if (Object.prototype.hasOwnProperty.call(leftImageMatchCache, key)) {
+          return Promise.resolve(leftImageMatchCache[key]);
+        }
+
+        var candidates = buildLcCandidates(launch);
+        function check(index) {
+          if (index >= candidates.length) return Promise.resolve(null);
+          var candidate = candidates[index];
+          return probeImage(candidate).then(function (ok) {
+            if (ok) return candidate;
+            return check(index + 1);
+          });
+        }
+
+        return check(0).then(function (match) {
+          leftImageMatchCache[key] = match;
+          return match;
+        });
       }
 
       function getRocketName(launch) {
@@ -483,8 +668,8 @@
         return next;
       }
 
-      function buildBubble(launch, cms) {
-        var img = getImageUrl(launch, cms);
+      function buildBubble(launch, cms, forcedImage) {
+        var img = forcedImage || getImageUrl(launch, cms);
         var mission = getMissionName(launch);
         var day = formatDayET(launch.net);
         var formattedDate = formatDateET(launch.net);
@@ -508,6 +693,8 @@
         var provider = getProvider(launch);
         var location = getLocation(launch);
         var mission = getMissionName(launch);
+        var appUrl = window.location.origin + '/go4launch/index.html';
+        var qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(appUrl);
 
         var html = '';
         if (cms && cms.headline) {
@@ -530,6 +717,10 @@
           '<div class="next-countdown" data-next-countdown="' + esc(launch.net) + '">' + esc(formatCountdown(launch.net)) + '</div>' +
           '<div class="next-day">' + esc(formatDayET(launch.net)) + '</div>' +
           '<div class="next-date">' + esc(formatDateET(launch.net) + ' • ' + formatTimeET(launch.net) + ' ET') + '</div>' +
+          '<div class="next-bottom">' +
+            '<div class="next-cta-text">Check out the Go4Launch app for viewing guides, launch photos, and more!</div>' +
+            '<div class="next-qr"><img src="' + esc(qrSrc) + '" alt="QR Code to Go4Launch app"></div>' +
+          '</div>' +
         '</div>';
 
         return html;
@@ -568,7 +759,7 @@
         });
       }
 
-      function render(launches, cmsContent) {
+      async function render(launches, cmsContent) {
         var now = Date.now();
         var upcoming = launches
           .filter(function (launch) {
@@ -584,10 +775,15 @@
           leftCol.innerHTML = '<div class="panel empty-state">No upcoming launches scheduled.</div>';
           nextPanel.innerHTML = '<div class="empty-state">No upcoming launch card available.</div>';
         } else {
+          var leftMatches = await Promise.all(
+            upcoming.slice(0, MAX_LEFT).map(function (launch) {
+              return findLeftBubbleImage(launch, cmsContent[launch.id] || {});
+            })
+          );
           var leftHtml = '';
           for (var i = 0; i < MAX_LEFT; i++) {
             if (upcoming[i]) {
-              leftHtml += buildBubble(upcoming[i], cmsContent[upcoming[i].id] || {});
+              leftHtml += buildBubble(upcoming[i], cmsContent[upcoming[i].id] || {}, leftMatches[i]);
             } else {
               leftHtml += '<div class="launch-bubble panel empty-state">Awaiting additional launch data.</div>';
             }
@@ -670,7 +866,7 @@
       function fetchAndRender() {
         Promise.all([fetchLaunches(), fetchContent()])
           .then(function (res) {
-            render(res[0] || [], res[1] || {});
+            return render(res[0] || [], res[1] || {});
           })
           .catch(function (err) {
             console.error('[tvroundup2] Failed:', err);
