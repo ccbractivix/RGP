@@ -197,6 +197,13 @@ html, body {
   margin-bottom: 4px;
 }
 
+.act-rescheduled-note {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orange);
+  margin-bottom: 4px;
+}
+
 .act-time {
   font-size: 13px;
   color: var(--muted);

@@ -41,6 +41,10 @@
           html += '<div class="today-name">' + escapeHtml(a.name) + '</div>';
           html += '<div class="today-relocated-venue">📍 ' + escapeHtml(a.relocatedVenue || '') + '</div>';
           html += '<div class="today-relocated-note">Change of plans, meet up at ' + escapeHtml(a.relocatedVenue || '') + '.</div>';
+        } else if (a.status === 'rescheduled') {
+          html += '<div class="today-name">' + escapeHtml(a.name) + '</div>';
+          html += '<div class="today-venue">' + escapeHtml(a.venue) + '</div>';
+          html += '<div class="today-rescheduled-note">🕐 New start time' + (a.originalTime ? ' (was ' + escapeHtml(a.originalTime) + ')' : '') + '</div>';
         } else {
           html += '<div class="today-name">' + escapeHtml(a.name) + '</div>';
           html += '<div class="today-venue">' + escapeHtml(a.venue) + '</div>';

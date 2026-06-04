@@ -56,6 +56,7 @@
     .act-row:active { background: #253045; }
     .act-row.canceled { background: var(--red-dim); border-color: var(--red); opacity: 0.85; }
     .act-row.relocated { background: var(--orange-dim); border-color: var(--orange); }
+    .act-row.rescheduled { background: var(--blue-dim); border-color: var(--blue); }
 
     .act-row-time { font-size: 22px; font-weight: 700; color: var(--orange); white-space: nowrap; min-width: 72px; }
     .act-row-info { flex: 1; min-width: 0; }
@@ -65,6 +66,7 @@
     .act-row-status { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
     .act-row-status.canceled { color: var(--red); }
     .act-row-status.relocated { color: var(--orange); }
+    .act-row-status.rescheduled { color: var(--blue); }
     .act-row-arrow { color: var(--text-muted); font-size: 18px; }
 
     .empty-today { text-align: center; color: var(--text-muted); font-size: 14px; padding: 40px 20px; }
@@ -101,6 +103,7 @@
     .popup-btn:active { opacity: 0.75; }
     .popup-btn-cancel-act { background: var(--red); color: #fff; }
     .popup-btn-relocate   { background: var(--orange); color: #fff; }
+    .popup-btn-reschedule { background: var(--blue); color: #fff; }
     .popup-btn-restore    { background: var(--green); color: #fff; }
     .popup-btn-dismiss    { background: var(--card); color: var(--text-muted); border: 1px solid var(--card-border); }
 
@@ -126,6 +129,21 @@
       font-size: 17px; font-weight: 700; cursor: pointer;
     }
     .confirm-relocate-btn:active { opacity: 0.75; }
+
+    /* ── Reschedule step ── */
+    #reschedule-step { display: none; }
+    #reschedule-time-input {
+      width: 100%; padding: 14px 16px; font-size: 22px; text-align: center;
+      background: #253045; border: 2px solid var(--card-border); border-radius: 10px;
+      color: var(--text); font-family: 'Inter', sans-serif; outline: none; margin-bottom: 16px;
+    }
+    #reschedule-time-input:focus { border-color: var(--blue); }
+    .confirm-reschedule-btn {
+      width: 100%; padding: 15px; border: none; border-radius: 12px;
+      background: var(--blue); color: #fff; font-family: 'Inter', sans-serif;
+      font-size: 17px; font-weight: 700; cursor: pointer;
+    }
+    .confirm-reschedule-btn:active { opacity: 0.75; }
 
     /* ── Toast ── */
     .toast {
@@ -177,6 +195,7 @@
         <div class="popup-actions">
           <button class="popup-btn popup-btn-cancel-act" id="btn-do-cancel">⛔ Cancel Activity</button>
           <button class="popup-btn popup-btn-relocate" id="btn-do-relocate">📍 Relocate Activity</button>
+          <button class="popup-btn popup-btn-reschedule" id="btn-do-reschedule">🕐 Change Start Time</button>
           <button class="popup-btn popup-btn-restore" id="btn-do-restore" style="display:none">↩ Restore Activity</button>
           <button class="popup-btn popup-btn-dismiss" onclick="closePopup()">Dismiss</button>
         </div>
@@ -190,8 +209,14 @@
         <button class="confirm-relocate-btn" id="btn-confirm-relocate">Confirm Relocation</button>
         <button class="popup-btn popup-btn-dismiss" style="margin-top:8px" onclick="showActionStep()">← Back</button>
       </div>
-    </div>
-  </div>
+
+      <!-- Reschedule step -->
+      <div id="reschedule-step">
+        <p style="font-size:14px;color:var(--text-muted);margin-bottom:12px;">Enter the new start time for this activity.</p>
+        <input type="time" id="reschedule-time-input" />
+        <button class="confirm-reschedule-btn" id="btn-confirm-reschedule">Confirm New Time</button>
+        <button class="popup-btn popup-btn-dismiss" style="margin-top:8px" onclick="showActionStep()">← Back</button>
+      </div>
 
   <div class="toast" id="toast"></div>
 
@@ -294,6 +319,9 @@
         } else if (a.status==='relocated') {
           html += '<div class="act-row-venue">'+escapeHtml(a.relocatedVenue||a.venue)+'</div>';
           html += '<div class="act-row-status relocated">Relocated</div>';
+        } else if (a.status==='rescheduled') {
+          html += '<div class="act-row-venue">'+escapeHtml(a.venue)+'</div>';
+          html += '<div class="act-row-status rescheduled">Rescheduled'+(a.originalTime?' · was '+escapeHtml(a.originalTime):'')+'</div>';
         } else {
           html += '<div class="act-row-venue">'+escapeHtml(a.venue)+'</div>';
         }
@@ -315,14 +343,18 @@
       var btnRestore = document.getElementById('btn-do-restore');
       var btnCancel  = document.getElementById('btn-do-cancel');
       var btnRelocate= document.getElementById('btn-do-relocate');
+      var btnReschedule = document.getElementById('btn-do-reschedule');
       if (entry.status !== 'scheduled') {
         btnRestore.style.display = '';
         btnCancel.style.display  = 'none';
         btnRelocate.style.display= 'none';
+        btnReschedule.style.display = 'none';
       } else {
         btnRestore.style.display = 'none';
         btnCancel.style.display  = '';
         btnRelocate.style.display= '';
+        // Changing the start time only applies to timed (non all-day) activities
+        btnReschedule.style.display = entry.isAllDay ? 'none' : '';
       }
 
       showActionStep();
@@ -343,6 +375,7 @@
     function showActionStep() {
       document.getElementById('action-step').style.display = '';
       document.getElementById('relocate-step').style.display = 'none';
+      document.getElementById('reschedule-step').style.display = 'none';
     }
     window.showActionStep = showActionStep;
 
@@ -417,6 +450,31 @@
           loadToday();
         })
         .catch(function(){ showToast('Failed to relocate.','error'); });
+    });
+
+    /* ── Reschedule (change start time) ── */
+    document.getElementById('btn-do-reschedule').addEventListener('click', function() {
+      if (!activeEntry) return;
+      document.getElementById('reschedule-time-input').value = activeEntry.rawTime || '';
+      document.getElementById('action-step').style.display = 'none';
+      document.getElementById('relocate-step').style.display = 'none';
+      document.getElementById('reschedule-step').style.display = 'block';
+    });
+
+    document.getElementById('btn-confirm-reschedule').addEventListener('click', function() {
+      var time = document.getElementById('reschedule-time-input').value;
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) { showToast('Please enter a valid time.','error'); return; }
+      if (!activeEntry) return;
+      apiPatch('/admin/schedule/entry/' + encodeURIComponent(activeEntry.id) + '/reschedule', { time })
+        .then(function(r) {
+          if (!r.ok) {
+            return r.json().then(function(d){ throw new Error((d && d.error) || ''); });
+          }
+          closePopup();
+          showToast('Start time updated.', 'success');
+          loadToday();
+        })
+        .catch(function(err){ showToast(err && err.message ? err.message : 'Failed to change start time.','error'); });
     });
 
     /* ── API helper ── */

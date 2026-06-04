@@ -19,8 +19,9 @@ CREATE TABLE IF NOT EXISTS activities_schedule (
   start_time       TIME,
   library_id       TEXT NOT NULL REFERENCES activities_library(id) ON DELETE CASCADE,
   status           TEXT NOT NULL DEFAULT 'scheduled'
-                     CHECK (status IN ('scheduled', 'canceled', 'relocated')),
+                     CHECK (status IN ('scheduled', 'canceled', 'relocated', 'rescheduled')),
   relocated_venue  TEXT,
+  original_start_time TIME,
   is_all_day       BOOLEAN NOT NULL DEFAULT false
 );
 
