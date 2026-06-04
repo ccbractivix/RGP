@@ -3,6 +3,7 @@
 const express = require('express');
 const axios   = require('axios');
 const db      = require('../db/db');
+const { getLastStatus } = require('../services/ll2VersionCheck');
 
 const router = express.Router();
 
@@ -236,6 +237,11 @@ const ARCHIVE_BASE_URL = process.env.GO4LAUNCH_ARCHIVE_URL || 'https://ccbractiv
 // ============================================================
 // PUBLIC ROUTES
 // ============================================================
+
+// GET /api/ll2-status — latest result of the scheduled LL2 version monitor
+router.get('/ll2-status', (_req, res) => {
+  return res.json(getLastStatus());
+});
 
 // GET /api/content — all CMS content (keyed by launch_id)
 router.get('/content', async (_req, res) => {
@@ -507,6 +513,7 @@ async function sendGalleryEmail(email, launchName, archiveUrl, galleryUrl) {
 module.exports = router;
 module.exports.sendGalleryEmail = sendGalleryEmail;
 module.exports.ARCHIVE_BASE_URL = ARCHIVE_BASE_URL;
+module.exports.LL2_BASE = LL2_BASE;
 
 // ============================================================
 // BLOG — PUBLIC ROUTES
