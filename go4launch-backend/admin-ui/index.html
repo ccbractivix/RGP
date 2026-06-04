@@ -388,7 +388,7 @@
     (function() {
       const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
       const LL2_KEY  = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
-      const LOC_IDS  = [12, 27];
+      const LOC_IDS  = [12, 27]; // Cape Canaveral SFS (12), Kennedy Space Center (27) — Florida only
       const WINDOW   = 14;
 
       let authCode = sessionStorage.getItem('go4launch_code') || '';
@@ -508,8 +508,8 @@
 
         const headers = LL2_KEY ? { Authorization: `Token ${LL2_KEY}` } : {};
         const [upResp, prevResp] = await Promise.allSettled([
-          fetch(`${LL2_BASE}/launches/upcoming/?pad__location__ids=${locIds}&limit=50&mode=detailed&net__lte=${cutoff}`, { headers }),
-          fetch(`${LL2_BASE}/launches/previous/?pad__location__ids=${locIds}&limit=5&mode=detailed`, { headers }),
+          fetch(`${LL2_BASE}/launches/upcoming/?location__ids=${locIds}&limit=50&mode=detailed&net__lte=${cutoff}`, { headers }),
+          fetch(`${LL2_BASE}/launches/previous/?location__ids=${locIds}&limit=5&mode=detailed`, { headers }),
         ]);
 
         if (upResp.status === 'fulfilled' && upResp.value.ok) {
