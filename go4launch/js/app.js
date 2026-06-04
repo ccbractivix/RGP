@@ -9,7 +9,7 @@ const CONFIG = {
         const meta = document.querySelector('meta[name="api-base"]');
         return (meta && meta.getAttribute('content')) || '';
     })(),
-    LOCATION_IDS: [12, 27], // Kennedy Space Center, Cape Canaveral SFS
+    LOCATION_IDS: [12, 27], // Cape Canaveral SFS (12), Kennedy Space Center (27) — Florida only
     CACHE_KEY: 'go4launch_v1',
     CACHE_TTL: 6 * 60 * 60 * 1000,
     DATA_REFRESH_MS: 5 * 60 * 1000,
@@ -172,8 +172,8 @@ async function fetchLL2Direct() {
     const cutoff = new Date(Date.now() + CONFIG.MAX_DAYS * 86400000).toISOString();
 
     const [upResp, prevResp] = await Promise.allSettled([
-        fetch(`${CONFIG.LL2_BASE}/launches/upcoming/?pad__location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`),
-        fetch(`${CONFIG.LL2_BASE}/launches/previous/?pad__location__ids=${locIds}&limit=5&mode=detailed`),
+        fetch(`${CONFIG.LL2_BASE}/launches/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`),
+        fetch(`${CONFIG.LL2_BASE}/launches/previous/?location__ids=${locIds}&limit=5&mode=detailed`),
     ]);
 
     let upResults = [];
