@@ -193,7 +193,7 @@ async function sendEmailAlert(text) {
   const to = ALERT_EMAIL.split(',').map(s => s.trim()).filter(Boolean).map(email => ({ email }));
   if (!to.length) return;
 
-  const safe = String(text).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  const safe = String(text).replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[c]));
   const htmlContent = `
     <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#0a0a14;color:#e8e8f0;border-radius:12px;">
       <h2 style="color:#fff;margin-bottom:8px;">🚀 go4launch — LL2 API upkeep alert</h2>
