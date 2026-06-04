@@ -886,12 +886,12 @@
 
       function fetchLL2Direct() {
         var thirtyDaysAgo = new Date(Date.now() - PREVIOUS_LAUNCHES_LOOKBACK_DAYS * MS_PER_DAY).toISOString();
-        var upcomingReq = fetchWithTimeout(LL2_BASE + '/launches/upcoming/?pad__location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed')
+        var upcomingReq = fetchWithTimeout(LL2_BASE + '/launches/upcoming/?location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed')
           .then(function (r) {
             if (!r.ok) throw new Error('LL2 upcoming HTTP ' + r.status);
             return r.json();
           });
-        var previousReq = fetchWithTimeout(LL2_BASE + '/launches/previous/?pad__location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed&net__gte=' + encodeURIComponent(thirtyDaysAgo))
+        var previousReq = fetchWithTimeout(LL2_BASE + '/launches/previous/?location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed&net__gte=' + encodeURIComponent(thirtyDaysAgo))
           .then(function (r) {
             if (!r.ok) throw new Error('LL2 previous HTTP ' + r.status);
             return r.json();
