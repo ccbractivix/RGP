@@ -11,7 +11,13 @@ const router = express.Router();
 // ============================================================
 const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
 const LL2_KEY  = process.env.LL2_API_KEY || '';
-const LOC_IDS  = [12, 27];
+// Location IDs to filter launches by (LL2 location IDs). Defaults to
+// Kennedy Space Center (12) + Cape Canaveral SFS (27); override via env.
+const PARSED_LOC_IDS = (process.env.GO4LAUNCH_LOCATION_IDS || '')
+  .split(',')
+  .map(s => parseInt(s.trim(), 10))
+  .filter(Number.isFinite);
+const LOC_IDS  = PARSED_LOC_IDS.length ? PARSED_LOC_IDS : [12, 27];
 const PREV_LIMIT = 50; // max previous launches to fetch from LL2
 
 // In-memory cache for LL2 launches (avoids hitting LL2 on every request)
@@ -41,13 +47,13 @@ router.get('/launches', async (_req, res) => {
 
     const [upRes, prevRes] = await Promise.allSettled([
       fetchLL2('/launch/upcoming/', {
-        location__ids: locIds,
+        pad__location__ids: locIds,
         limit: 50,
         mode: 'detailed',
         net__lte: cutoff,
       }),
       fetchLL2('/launch/previous/', {
-        location__ids: locIds,
+        pad__location__ids: locIds,
         limit: PREV_LIMIT,
         mode: 'detailed',
         net__gte: thirtyDaysAgo,
@@ -314,7 +320,7 @@ async function syncRecentLaunches() {
     try {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
       const data = await fetchLL2('/launch/previous/', {
-        location__ids: LOC_IDS.join(','),
+        pad__location__ids: LOC_IDS.join(','),
         limit: PREV_LIMIT,
         mode: 'detailed',
         net__gte: thirtyDaysAgo,

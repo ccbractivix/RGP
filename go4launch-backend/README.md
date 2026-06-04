@@ -13,6 +13,7 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `LL2_API_KEY` | Recommended | Launch Library 2 API key (The Space Devs). Sent as `Authorization: Token …`. Strongly recommended in production — unauthenticated LL2 access is rate-limited to ~25 requests/hour per IP, which can cause launches to stop appearing. |
 | `GO4LAUNCH_CODES` | Yes | Comma-separated admin auth codes (e.g. `1234,5678`) |
 | `GITHUB_TOKEN` | For image uploads | GitHub personal access token |
 | `GITHUB_REPO` | For image uploads | GitHub repo (e.g. `ccbractivix/RGP`) |
