@@ -4,11 +4,7 @@
 // CONFIGURATION
 // ============================================================
 const CONFIG = {
-    // The production host (ll.thespacedevs.com) only allows 15 requests/hour for
-    // anonymous browser clients, which causes the direct fallback to be rate-limited
-    // (HTTP 429) and launches to stop loading. Use the dev host, which has generous
-    // anonymous limits, for this keyless browser-side fallback.
-    LL2_BASE: 'https://lldev.thespacedevs.com/2.3.0',
+    LL2_BASE: 'https://ll.thespacedevs.com/2.3.0',
     BACKEND: (() => {
         const meta = document.querySelector('meta[name="api-base"]');
         return (meta && meta.getAttribute('content')) || '';
@@ -176,8 +172,8 @@ async function fetchLL2Direct() {
     const cutoff = new Date(Date.now() + CONFIG.MAX_DAYS * 86400000).toISOString();
 
     const [upResp, prevResp] = await Promise.allSettled([
-        fetch(`${CONFIG.LL2_BASE}/launch/upcoming/?pad__location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`),
-        fetch(`${CONFIG.LL2_BASE}/launch/previous/?pad__location__ids=${locIds}&limit=5&mode=detailed`),
+        fetch(`${CONFIG.LL2_BASE}/launches/upcoming/?pad__location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`),
+        fetch(`${CONFIG.LL2_BASE}/launches/previous/?pad__location__ids=${locIds}&limit=5&mode=detailed`),
     ]);
 
     let upResults = [];

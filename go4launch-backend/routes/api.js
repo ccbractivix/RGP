@@ -9,16 +9,8 @@ const router = express.Router();
 // ============================================================
 // LL2 API PROXY — avoids browser CORS / rate-limit issues
 // ============================================================
+const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
 const LL2_KEY  = process.env.LL2_API_KEY || '';
-// The production host (ll.thespacedevs.com) only allows 15 requests/hour for
-// anonymous (unauthenticated) clients. This service makes more calls than that
-// per hour, so without an API key those requests get rate-limited (HTTP 429)
-// and launches stop loading. Use the dev host (lldev.thespacedevs.com), which
-// has generous anonymous limits, unless an API key is configured. The host can
-// still be overridden explicitly via LL2_HOST.
-const LL2_HOST = process.env.LL2_HOST
-  || (LL2_KEY ? 'https://ll.thespacedevs.com' : 'https://lldev.thespacedevs.com');
-const LL2_BASE = `${LL2_HOST}/2.3.0`;
 // Location IDs to filter launches by (LL2 location IDs). Defaults to
 // Kennedy Space Center (12) + Cape Canaveral SFS (27); override via env.
 const PARSED_LOC_IDS = (process.env.GO4LAUNCH_LOCATION_IDS || '')
@@ -54,13 +46,13 @@ router.get('/launches', async (_req, res) => {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
 
     const [upRes, prevRes] = await Promise.allSettled([
-      fetchLL2('/launch/upcoming/', {
+      fetchLL2('/launches/upcoming/', {
         pad__location__ids: locIds,
         limit: 50,
         mode: 'detailed',
         net__lte: cutoff,
       }),
-      fetchLL2('/launch/previous/', {
+      fetchLL2('/launches/previous/', {
         pad__location__ids: locIds,
         limit: PREV_LIMIT,
         mode: 'detailed',
@@ -79,7 +71,7 @@ router.get('/launches', async (_req, res) => {
     }
 
     // Combine, deduplicate, sort — prevResults first so that authoritative
-    // post-launch data from /launch/previous/ wins over stale /launch/upcoming/
+    // post-launch data from /launches/previous/ wins over stale /launches/upcoming/
     // entries for the same launch ID during the transition period after liftoff.
     const combined = [...prevResults, ...upResults];
     const seen = new Set();
@@ -121,7 +113,7 @@ router.get('/launches/:id', async (req, res) => {
     }
 
     // 2. Direct LL2 lookup
-    const data = await fetchLL2(`/launch/${encodeURIComponent(id)}/`, { mode: 'detailed' });
+    const data = await fetchLL2(`/launches/${encodeURIComponent(id)}/`, { mode: 'detailed' });
     if (data && data.id) return res.json(data);
 
     return res.status(404).json({ error: 'Launch not found' });
@@ -327,7 +319,7 @@ async function syncRecentLaunches() {
   recentSyncPromise = (async () => {
     try {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
-      const data = await fetchLL2('/launch/previous/', {
+      const data = await fetchLL2('/launches/previous/', {
         pad__location__ids: LOC_IDS.join(','),
         limit: PREV_LIMIT,
         mode: 'detailed',
