@@ -12,6 +12,7 @@ const CONFIG = {
     LOCATION_IDS: [12, 27], // Kennedy Space Center, Cape Canaveral SFS
     CACHE_KEY: 'go4launch_v1',
     CACHE_TTL: 6 * 60 * 60 * 1000,
+    DATA_REFRESH_MS: 5 * 60 * 1000,
     MAX_LAUNCHES: 15,
     MAX_DAYS: 14,
     GALLERIES_JSON: 'data/galleries.json',
@@ -25,6 +26,9 @@ let cmsContent = {};
 let blogPosts = [];    // published posts (metadata, no body) sorted newest-first
 let galleryData = [];  // all galleries from static JSON sorted newest-first
 let countdownTimer = null;
+let launchRefreshTimer = null;
+let queuedLaunchRefreshTimer = null;
+let launchRefreshInFlight = false;
 let currentSawItLaunchId = null;
 
 // ============================================================
@@ -58,12 +62,26 @@ function statusLabel(status) {
 }
 
 function isCompleted(launch) {
-    const id = launch.status?.id;
+    const id = launch?.status?.id;
     return [3, 4, 7].includes(id);
 }
 
 function isInFlight(launch) {
-    return launch.status?.id === 6;
+    return launch?.status?.id === 6;
+}
+
+function isPendingLaunch(launch) {
+    return !!launch && !isCompleted(launch) && !isInFlight(launch);
+}
+
+function findLaunchById(launchId) {
+    return allLaunches.find(launch => launch.id === launchId) || null;
+}
+
+function getPostNetLabel(launch) {
+    if (isCompleted(launch) || isInFlight(launch)) return '🚀 Launched!';
+    if (launch?.status?.id === 5) return '⏳ On Hold';
+    return '⏳ Awaiting updated launch time';
 }
 
 function formatDateET(dateStr) {
@@ -233,18 +251,40 @@ async function fetchAndCache() {
     return data;
 }
 
-async function refreshInBackground() {
+async function refreshLaunchData() {
+    if (launchRefreshInFlight) return;
+    launchRefreshInFlight = true;
     try {
         const fresh = await fetchLaunches();
-        if (fresh.length) {
-            localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
-            // Update the live page with fresh data
-            allLaunches = fresh;
-            handleRoute();
-        }
+        if (!fresh.length) return;
+        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
+        allLaunches = fresh;
+        await loadCMS();
+        handleRoute();
     } catch (e) {
-        console.warn('Background refresh failed:', e);
+        console.warn('Launch refresh failed:', e);
+    } finally {
+        launchRefreshInFlight = false;
     }
+}
+
+function queueLaunchRefresh(delayMs = 0) {
+    if (launchRefreshInFlight || queuedLaunchRefreshTimer) return;
+    queuedLaunchRefreshTimer = setTimeout(async () => {
+        queuedLaunchRefreshTimer = null;
+        await refreshLaunchData();
+    }, delayMs);
+}
+
+function startLaunchRefreshLoop() {
+    if (launchRefreshTimer) clearInterval(launchRefreshTimer);
+    launchRefreshTimer = setInterval(() => {
+        queueLaunchRefresh();
+    }, CONFIG.DATA_REFRESH_MS);
+}
+
+async function refreshInBackground() {
+    await refreshLaunchData();
 }
 
 // ============================================================
@@ -399,7 +439,7 @@ function buildCard(launch) {
     if (launched) {
         html += `<div class="countdown-launched">🚀 Launched!</div>`;
     } else {
-        html += `<div class="countdown-row" data-net="${net.toISOString()}">
+        html += `<div class="countdown-row" data-net="${net.toISOString()}" data-launch-id="${esc(launch.id)}">
             <span class="cd-prefix">T-</span>
             <div class="cd-group"><span class="cd-value" data-unit="d">--</span><span class="cd-label">Days</span></div>
             <span class="cd-sep">:</span>
@@ -497,7 +537,7 @@ function renderDetailContent(launch, cms, backHash) {
     if (launched) {
         html += `<div class="countdown-launched">🚀 Launched!</div>`;
     } else {
-        html += `<div class="countdown-row" data-net="${net.toISOString()}">
+        html += `<div class="countdown-row" data-net="${net.toISOString()}" data-launch-id="${esc(launch.id)}">
             <span class="cd-prefix">T-</span>
             <div class="cd-group"><span class="cd-value" data-unit="d">--</span><span class="cd-label">Days</span></div>
             <span class="cd-sep">:</span>
@@ -775,6 +815,7 @@ function updateCountdowns() {
     const rows = document.querySelectorAll('.countdown-row[data-net]');
     const now = Date.now();
     const toReplace = [];
+    let shouldRefreshLaunches = false;
 
     rows.forEach(row => {
         const net = new Date(row.dataset.net).getTime();
@@ -789,7 +830,9 @@ function updateCountdowns() {
 
         if (diff <= 0) {
             // Mark for replacement after the loop to avoid DOM mutation issues
-            toReplace.push(row);
+            const launch = findLaunchById(row.dataset.launchId);
+            toReplace.push({ row, launch });
+            shouldRefreshLaunches = true;
             return;
         }
 
@@ -805,25 +848,16 @@ function updateCountdowns() {
     });
 
     // Replace completed countdowns after iteration
-    toReplace.forEach(row => {
+    toReplace.forEach(({ row, launch }) => {
         const replacement = document.createElement('div');
         replacement.className = 'countdown-launched';
-        replacement.textContent = '🚀 Liftoff!';
+        if (isPendingLaunch(launch)) replacement.classList.add('countdown-pending');
+        replacement.textContent = getPostNetLabel(launch);
         row.replaceWith(replacement);
     });
 
-    // Auto-refresh data when a countdown reaches zero
-    if (toReplace.length > 0) {
-        setTimeout(async () => {
-            try {
-                const fresh = await fetchAndCache();
-                allLaunches = fresh;
-                await loadCMS();
-                handleRoute();
-            } catch (e) {
-                console.warn('Post-liftoff refresh failed:', e);
-            }
-        }, 60000); // Refresh 1 minute after liftoff
+    if (shouldRefreshLaunches) {
+        queueLaunchRefresh(60000);
     }
 }
 
@@ -988,6 +1022,7 @@ async function init() {
         ]);
 
         allLaunches = launches;
+        startLaunchRefreshLoop();
         renderNavBar();
         handleRoute();
         checkAndShowRTLPopup();

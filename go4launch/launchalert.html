@@ -295,10 +295,22 @@
       var metaTag = document.querySelector('meta[name="api-base"]');
       var API_BASE = (metaTag && metaTag.getAttribute('content')) || '';
       var countdownTimer = null;
+      var REFRESH_MS = 60000;
 
       function isCompleted(launch) {
         var id = launch && launch.status && launch.status.id;
         return id === 3 || id === 4 || id === 7;
+      }
+
+      function isInFlight(launch) {
+        var id = launch && launch.status && launch.status.id;
+        return id === 6;
+      }
+
+      function statusLabel(launch) {
+        var status = launch && launch.status;
+        if (!status) return 'Awaiting update';
+        return status.abbrev || status.name || 'Awaiting update';
       }
 
       function formatDateTimeET(dateStr) {
@@ -366,11 +378,10 @@
       }
 
       function findNextLaunch(launches) {
-        var now = Date.now();
         var candidates = (launches || []).filter(function (launch) {
           if (!launch || !launch.net) return false;
           if (isCompleted(launch)) return false;
-          return new Date(launch.net).getTime() > now;
+          return true;
         });
         if (!candidates.length) return null;
         candidates.sort(function (a, b) { return new Date(a.net) - new Date(b.net); });
@@ -402,7 +413,7 @@
         if (el) el.textContent = value == null ? '' : String(value);
       }
 
-      function startCountdown(launchNet) {
+      function startCountdown(launch) {
         var wrap = document.getElementById('countdownWrap');
         var valueEl = document.getElementById('countdownValue');
         if (!wrap || !valueEl) return;
@@ -412,20 +423,26 @@
           countdownTimer = null;
         }
 
-        var launchTs = new Date(launchNet).getTime();
+        var launchTs = new Date(launch.net).getTime();
         var now = Date.now();
         var diff = launchTs - now;
-        if (diff <= 0 || diff > 24 * 60 * 60 * 1000) {
+        if (diff > 24 * 60 * 60 * 1000) {
           wrap.classList.add('hidden');
           return;
         }
 
         wrap.classList.remove('hidden');
 
+        function getElapsedLabel() {
+          if (isInFlight(launch) || isCompleted(launch)) return 'Liftoff!';
+          if (launch && launch.status && launch.status.id === 5) return 'On Hold';
+          return statusLabel(launch);
+        }
+
         function update() {
           var delta = launchTs - Date.now();
           if (delta <= 0) {
-            valueEl.textContent = 'Liftoff!';
+            valueEl.textContent = getElapsedLabel();
             clearInterval(countdownTimer);
             countdownTimer = null;
             return;
@@ -462,7 +479,7 @@
         setText('missionName', missionName);
         setRocketImage(rocketName);
         setText('launchDateTime', formatDateTimeET(next.net));
-        startCountdown(next.net);
+        startCountdown(next);
 
         var nextRTL = findNextRTL(content);
         var rtlBox = document.getElementById('rtlBox');
@@ -479,22 +496,27 @@
         });
       }
 
-      Promise.all([
-        fetchJson(API_BASE + '/api/launches'),
-        fetchJson(API_BASE + '/api/content').catch(function () { return {}; })
-      ])
-      .then(function (results) {
-        render(results[0] || [], results[1] || {});
-      })
-      .catch(function (err) {
-        setText('rocketName', 'Launch data unavailable');
-        setText('missionName', 'Please retry shortly.');
-        setRocketImage('');
-        setText('launchDateTime', '—');
-        document.getElementById('countdownWrap').classList.add('hidden');
-        document.getElementById('rtlBox').classList.add('hidden');
-        document.getElementById('status').textContent = 'Error: ' + err.message;
-      });
+      function fetchAndRender() {
+        Promise.all([
+          fetchJson(API_BASE + '/api/launches'),
+          fetchJson(API_BASE + '/api/content').catch(function () { return {}; })
+        ])
+        .then(function (results) {
+          render(results[0] || [], results[1] || {});
+        })
+        .catch(function (err) {
+          setText('rocketName', 'Launch data unavailable');
+          setText('missionName', 'Please retry shortly.');
+          setRocketImage('');
+          setText('launchDateTime', '—');
+          document.getElementById('countdownWrap').classList.add('hidden');
+          document.getElementById('rtlBox').classList.add('hidden');
+          document.getElementById('status').textContent = 'Error: ' + err.message;
+        });
+      }
+
+      fetchAndRender();
+      setInterval(fetchAndRender, REFRESH_MS);
     })();
   </script>
 </body>
