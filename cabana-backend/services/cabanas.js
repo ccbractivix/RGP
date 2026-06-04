@@ -770,80 +770,72 @@ async function updateBooking(id, updates) {
     'infogenesis_check_number', 'booking_agent_name', 'comp_authorized_by',
   ];
 
-  const fields = [];
-  const params = [];
-  let idx = 1;
+  // Accumulate column assignments in a map so that each column is written at
+  // most once. When the same column is derived from multiple form fields
+  // (e.g. payment_status + payment_date both touch payment_date/is_paid/paid_at),
+  // the later assignment overwrites the earlier one. This prevents the Postgres
+  // "multiple assignments to same column" error and matches the expectation that
+  // edited fields overwrite previous entries.
+  const setColumns = new Map();
+  const setColumn = (col, val) => setColumns.set(col, val);
 
   for (const key of allowed) {
     if (updates[key] !== undefined) {
       if (key === 'payment_status') {
-        fields.push(`payment_status = $${idx++}`);
-        params.push(updates[key]);
+        setColumn('payment_status', updates[key]);
         if (updates[key] === 'paid_in_full') {
           const effectivePaymentDate = updates.payment_date || booking.payment_date || new Date().toISOString().slice(0, 10);
-          fields.push(`payment_date = $${idx++}`);
-          params.push(effectivePaymentDate);
-          fields.push(`is_paid = $${idx++}`);
-          params.push(true);
-          fields.push(`paid_at = $${idx++}`);
-          params.push(new Date(effectivePaymentDate));
+          setColumn('payment_date', effectivePaymentDate);
+          setColumn('is_paid', true);
+          setColumn('paid_at', new Date(effectivePaymentDate));
         } else {
-          fields.push(`payment_date = $${idx++}`);
-          params.push(null);
-          fields.push(`is_paid = $${idx++}`);
-          params.push(false);
-          fields.push(`paid_at = $${idx++}`);
-          params.push(null);
+          setColumn('payment_date', null);
+          setColumn('is_paid', false);
+          setColumn('paid_at', null);
         }
       } else if (key === 'payment_date') {
-        fields.push(`payment_date = $${idx++}`);
-        params.push(updates[key] || null);
+        setColumn('payment_date', updates[key] || null);
         const nextStatus = updates.payment_status || booking.payment_status;
         if (nextStatus === 'paid_in_full') {
-          fields.push(`is_paid = $${idx++}`);
-          params.push(true);
-          fields.push(`paid_at = $${idx++}`);
-          params.push(updates[key] ? new Date(updates[key]) : new Date());
+          setColumn('is_paid', true);
+          setColumn('paid_at', updates[key] ? new Date(updates[key]) : new Date());
         }
       } else if (key === 'is_paid' && updates[key] && !booking.is_paid) {
-        fields.push(`is_paid = $${idx++}`);
-        params.push(true);
-        fields.push(`paid_at = $${idx++}`);
-        params.push(new Date());
-        fields.push(`payment_status = $${idx++}`);
-        params.push('paid_in_full');
+        setColumn('is_paid', true);
+        setColumn('paid_at', new Date());
+        setColumn('payment_status', 'paid_in_full');
         if (!booking.payment_date) {
-          fields.push(`payment_date = $${idx++}`);
-          params.push(new Date().toISOString().slice(0, 10));
+          setColumn('payment_date', new Date().toISOString().slice(0, 10));
         }
       } else if (key === 'is_paid' && !updates[key]) {
-        fields.push(`is_paid = $${idx++}`);
-        params.push(false);
-        fields.push(`paid_at = $${idx++}`);
-        params.push(null);
-        fields.push(`payment_status = $${idx++}`);
-        params.push('pending_payment');
-        fields.push(`payment_date = $${idx++}`);
-        params.push(null);
+        setColumn('is_paid', false);
+        setColumn('paid_at', null);
+        setColumn('payment_status', 'pending_payment');
+        setColumn('payment_date', null);
       } else if (key === 'slot') {
         // Check if new slot is available
         const available = await checkSlotAvailable(
           booking.cabana_id, booking.booking_date, updates[key], id
         );
         if (!available) throw new Error('New slot conflicts with an existing booking');
-        fields.push(`slot = $${idx++}`);
-        params.push(updates[key]);
+        setColumn('slot', updates[key]);
       } else {
-        fields.push(`${key} = $${idx++}`);
-        params.push(typeof updates[key] === 'string' ? updates[key].trim() : updates[key]);
+        setColumn(key, typeof updates[key] === 'string' ? updates[key].trim() : updates[key]);
       }
     }
   }
 
-  if (fields.length === 0) return booking;
+  if (setColumns.size === 0) return booking;
 
-  fields.push(`updated_at = $${idx++}`);
-  params.push(new Date());
+  setColumn('updated_at', new Date());
+
+  const fields = [];
+  const params = [];
+  let idx = 1;
+  for (const [col, val] of setColumns) {
+    fields.push(`${col} = $${idx++}`);
+    params.push(val);
+  }
   fields.push(`version = version + 1`);
 
   params.push(id);
