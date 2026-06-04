@@ -274,9 +274,9 @@ function filterActiveLaunches(launches) {
     return launches.filter(launch => {
         const net = new Date(launch.net).getTime();
 
-        // Completed launches: keep for 36 hours after NET
+        // Completed launches: keep for 48 hours after NET
         if (isCompleted(launch)) {
-            const cutoff = net + 36 * 3600000;
+            const cutoff = net + 48 * 3600000;
             return now <= cutoff;
         }
 
