@@ -4,7 +4,7 @@
 // CONFIGURATION
 // ============================================================
 const CONFIG = {
-    LL2_BASE: 'https://lldev.thespacedevs.com/2.3.0',
+    LL2_BASE: 'https://ll.thespacedevs.com/2.3.0',
     BACKEND: (() => {
         const meta = document.querySelector('meta[name="api-base"]');
         return (meta && meta.getAttribute('content')) || '';
