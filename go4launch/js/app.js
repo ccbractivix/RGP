@@ -164,22 +164,27 @@ async function fetchLaunchesFromProxy() {
     return data;
 }
 
-// Fallback: fetch directly from LL2 dev API (browser-side, CORS-friendly)
+// Fallback: fetch directly from LL2 dev API (browser-side, CORS-friendly).
+// Throws if BOTH requests fail so callers can distinguish a genuine empty
+// schedule (HTTP 200 with no results) from a fetch/rate-limit failure.
 async function fetchLL2Direct() {
     const locIds = CONFIG.LOCATION_IDS.join(',');
     const cutoff = new Date(Date.now() + CONFIG.MAX_DAYS * 86400000).toISOString();
 
     const [upResp, prevResp] = await Promise.allSettled([
-        fetch(`${CONFIG.LL2_BASE}/launch/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`),
-        fetch(`${CONFIG.LL2_BASE}/launch/previous/?location__ids=${locIds}&limit=5&mode=detailed`),
+        fetch(`${CONFIG.LL2_BASE}/launch/upcoming/?pad__location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`),
+        fetch(`${CONFIG.LL2_BASE}/launch/previous/?pad__location__ids=${locIds}&limit=5&mode=detailed`),
     ]);
 
     let upResults = [];
     let prevResults = [];
+    let upOk = false;
+    let prevOk = false;
 
     if (upResp.status === 'fulfilled' && upResp.value.ok) {
         const d = await upResp.value.json();
         upResults = d.results || [];
+        upOk = true;
     } else {
         console.warn('LL2 upcoming failed:', upResp.status === 'rejected' ? upResp.reason : `HTTP ${upResp.value?.status}`);
     }
@@ -187,8 +192,15 @@ async function fetchLL2Direct() {
     if (prevResp.status === 'fulfilled' && prevResp.value.ok) {
         const d = await prevResp.value.json();
         prevResults = d.results || [];
+        prevOk = true;
     } else {
         console.warn('LL2 previous failed:', prevResp.status === 'rejected' ? prevResp.reason : `HTTP ${prevResp.value?.status}`);
+    }
+
+    // If neither request succeeded, this is a fetch/rate-limit failure, not an
+    // empty schedule. Surface it so the UI doesn't claim "no launches".
+    if (!upOk && !prevOk) {
+        throw new Error('LL2 direct fallback failed (both requests errored)');
     }
 
     // prevResults first so that authoritative post-launch data wins over stale
@@ -236,13 +248,7 @@ async function loadLaunches() {
     return await fetchAndCache();
 }
 
-async function fetchAndCache() {
-    const data = await fetchLaunches();
-    if (data.length) {
-        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
-        return data;
-    }
-    // API returned nothing — fall back to stale cache if available
+function readStaleCache() {
     const stale = localStorage.getItem(CONFIG.CACHE_KEY);
     if (stale) {
         try {
@@ -250,6 +256,29 @@ async function fetchAndCache() {
             if (parsed && Array.isArray(parsed.data) && parsed.data.length) return parsed.data;
         } catch (_) { /* ignore parse errors */ }
     }
+    return null;
+}
+
+async function fetchAndCache() {
+    let data;
+    try {
+        data = await fetchLaunches();
+    } catch (e) {
+        // Hard fetch failure (proxy down + LL2 fallback errored). Prefer stale
+        // cache so the page keeps showing the last-known launches; otherwise
+        // re-throw so the UI can show an honest "unable to load" state rather
+        // than falsely claiming there are no launches scheduled.
+        const stale = readStaleCache();
+        if (stale) return stale;
+        throw e;
+    }
+    if (data.length) {
+        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+        return data;
+    }
+    // API returned nothing — fall back to stale cache if available
+    const stale = readStaleCache();
+    if (stale) return stale;
     return data;
 }
 
