@@ -260,12 +260,51 @@ router.patch('/schedule/entry/:id/relocate', async (req, res) => {
   } catch (e) { return res.status(500).json({ error: 'Failed to relocate' }); }
 });
 
+// ── Schedule: reschedule entry (change start time) ───────────────────────────
+// PATCH /admin/schedule/entry/:id/reschedule  { time: "HH:MM" }
+router.patch('/schedule/entry/:id/reschedule', async (req, res) => {
+  const time = (req.body.time || '').trim();
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) {
+    return res.status(400).json({ error: 'A valid time (HH:MM) is required' });
+  }
+  try {
+    // Look up the entry first so we can preserve the true original start time
+    const cur = await db.query(
+      `SELECT start_time, original_start_time, is_all_day FROM activities_schedule WHERE id = $1`,
+      [req.params.id]
+    );
+    if (cur.rowCount === 0) return res.status(404).json({ error: 'Entry not found' });
+    if (cur.rows[0].is_all_day) return res.status(400).json({ error: 'Cannot reschedule an all-day activity' });
+
+    // Keep the earliest known start time as the original (don't overwrite on repeat reschedules)
+    const original = cur.rows[0].original_start_time || cur.rows[0].start_time;
+
+    const r = await db.query(
+      `UPDATE activities_schedule
+         SET status = 'rescheduled', original_start_time = $1, start_time = $2, relocated_venue = NULL
+       WHERE id = $3 RETURNING id`,
+      [original, time, req.params.id]
+    );
+    if (r.rowCount === 0) return res.status(404).json({ error: 'Entry not found' });
+    return res.json({ ok: true });
+  } catch (e) {
+    if (e && e.code === '23505') {
+      return res.status(409).json({ error: 'Another activity is already scheduled at that time' });
+    }
+    return res.status(500).json({ error: 'Failed to reschedule' });
+  }
+});
+
 // ── Schedule: restore entry ──────────────────────────────────────────────────
 // PATCH /admin/schedule/entry/:id/restore
 router.patch('/schedule/entry/:id/restore', async (req, res) => {
   try {
     const r = await db.query(
-      `UPDATE activities_schedule SET status = 'scheduled', relocated_venue = NULL
+      `UPDATE activities_schedule
+         SET status = 'scheduled',
+             relocated_venue = NULL,
+             start_time = COALESCE(original_start_time, start_time),
+             original_start_time = NULL
        WHERE id = $1 RETURNING id`,
       [req.params.id]
     );

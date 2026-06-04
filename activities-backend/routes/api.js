@@ -40,6 +40,7 @@ function buildDays(rows, startDate, endDate) {
       name:          row.name,
       time:          row.is_all_day ? '' : formatTime(row.start_time),
       rawTime:       row.is_all_day ? '' : String(row.start_time || '').slice(0, 5),
+      originalTime:  row.original_start_time ? formatTime(row.original_start_time) : null,
       isAllDay:      !!row.is_all_day,
       durationMin:   row.duration_min,
       venue:         row.venue,
@@ -59,7 +60,7 @@ function buildDays(rows, startDate, endDate) {
 
 async function getRange(startDate, endDate) {
   const r = await db.query(
-    `SELECT s.id, s.date, s.start_time, s.is_all_day, s.status, s.relocated_venue,
+    `SELECT s.id, s.date, s.start_time, s.original_start_time, s.is_all_day, s.status, s.relocated_venue,
             l.id AS library_id, l.name, l.price, l.duration_min, l.venue,
             l.info_line1, l.info_line2, l.image, l.is_featured
      FROM activities_schedule s

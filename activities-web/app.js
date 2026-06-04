@@ -172,6 +172,9 @@
             html += '<div class="act-name">' + escapeHtml(a.name) + '</div>';
             html += '<div class="act-relocated-venue">📍 ' + escapeHtml(a.relocatedVenue || a.relocated_venue || '') + '</div>';
             html += '<div class="act-relocated-note">Change of plans, meet up at ' + escapeHtml(a.relocatedVenue || a.relocated_venue || '') + '.</div>';
+          } else if (a.status === 'rescheduled') {
+            html += '<div class="act-name">' + escapeHtml(a.name) + '</div>';
+            html += '<div class="act-rescheduled-note">🕐 New start time' + (a.originalTime ? ' (was ' + escapeHtml(a.originalTime) + ')' : '') + '</div>';
           } else {
             html += '<div class="act-name">' + escapeHtml(a.name) + '</div>';
           }
