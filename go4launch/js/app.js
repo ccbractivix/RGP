@@ -191,7 +191,9 @@ async function fetchLL2Direct() {
         console.warn('LL2 previous failed:', prevResp.status === 'rejected' ? prevResp.reason : `HTTP ${prevResp.value?.status}`);
     }
 
-    const combined = [...upResults, ...prevResults];
+    // prevResults first so that authoritative post-launch data wins over stale
+    // upcoming entries for the same launch ID during the transition after liftoff.
+    const combined = [...prevResults, ...upResults];
     const seen = new Set();
     const unique = combined.filter(l => {
         if (seen.has(l.id)) return false;

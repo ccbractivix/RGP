@@ -64,8 +64,10 @@ router.get('/launches', async (_req, res) => {
       console.warn('[go4launch] LL2 previous fetch failed:', prevRes.reason?.message);
     }
 
-    // Combine, deduplicate, sort
-    const combined = [...upResults, ...prevResults];
+    // Combine, deduplicate, sort — prevResults first so that authoritative
+    // post-launch data from /launch/previous/ wins over stale /launch/upcoming/
+    // entries for the same launch ID during the transition period after liftoff.
+    const combined = [...prevResults, ...upResults];
     const seen = new Set();
     const unique = combined.filter(l => {
       if (seen.has(l.id)) return false;
