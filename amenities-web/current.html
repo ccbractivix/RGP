@@ -394,7 +394,6 @@
     var TARGET_AMENITIES = ['Pools', 'Lazy River', 'Water Slide', 'Sports Courts', 'Mini Golf', 'Guest Tram'];
 
     var theaterApiBase = theaterApiUrl.replace(/\/api\/.*$/, '');
-    var theaterCountdownInterval = null;
     var theaterDisplayState = null;
 
     // ===== UTILITY FUNCTIONS =====
@@ -517,45 +516,6 @@
       });
 
       return entries;
-    }
-
-    function formatCountdown(totalSeconds) {
-      if (totalSeconds < 0) totalSeconds = 0;
-      var h = Math.floor(totalSeconds / 3600);
-      var m = Math.floor((totalSeconds % 3600) / 60);
-      if (h > 0) return h + 'h ' + m + 'm';
-      if (m > 0) return m + ' minutes';
-      return 'Starting now!';
-    }
-
-    function updateTheaterCountdown() {
-      if (!theaterDisplayState || !theaterDisplayState.entry) return;
-      var countdownEl = document.getElementById('theater-countdown');
-
-      if (theaterDisplayState.mode === 'now') {
-        if (!theaterDisplayState.entry.endDate) {
-          countdownEl.style.display = 'none';
-          return;
-        }
-        var endDiffSec = Math.round((theaterDisplayState.entry.endDate.getTime() - Date.now()) / 1000);
-        if (endDiffSec > 0) {
-          countdownEl.textContent = 'Ends in ' + formatCountdown(endDiffSec);
-          countdownEl.style.display = '';
-        } else {
-          countdownEl.style.display = 'none';
-        }
-      } else {
-        var startDiffSec = Math.round((theaterDisplayState.entry.startDate.getTime() - Date.now()) / 1000);
-        if (startDiffSec > 0) {
-          countdownEl.textContent = 'Starts in ' + formatCountdown(startDiffSec);
-          countdownEl.style.display = '';
-        } else if (startDiffSec >= -60) {
-          countdownEl.textContent = 'Starting now!';
-          countdownEl.style.display = '';
-        } else {
-          countdownEl.style.display = 'none';
-        }
-      }
     }
 
     function fitTheaterText() {
@@ -687,10 +647,6 @@
         metaEl.textContent = '';
         countdownEl.style.display = 'none';
         emptyEl.style.display = '';
-        if (theaterCountdownInterval) {
-          clearInterval(theaterCountdownInterval);
-          theaterCountdownInterval = null;
-        }
         return;
       }
 
@@ -719,22 +675,23 @@
       // Title
       titleEl.textContent = show.title || '';
 
-      // Meta: year · rating · runtime (+ start time for upcoming shows only)
+      // Meta: year · rating · runtime
       var metaParts = [];
       if (show.year) metaParts.push(show.year);
       if (show.rating) metaParts.push(show.rating);
       var rt = formatRuntime(show.runtime);
       if (rt) metaParts.push(rt);
-      if (theaterDisplayState.mode === 'next' && show.time) metaParts.push('Starts ' + show.time);
       metaEl.textContent = metaParts.join(' · ');
 
-      // Countdown
+      // Gold line below metadata
       emptyEl.style.display = 'none';
-      updateTheaterCountdown();
+      if (show.time) {
+        countdownEl.textContent = 'Starts at ' + show.time;
+        countdownEl.style.display = '';
+      } else {
+        countdownEl.style.display = 'none';
+      }
       fitTheaterText();
-
-      if (theaterCountdownInterval) clearInterval(theaterCountdownInterval);
-      theaterCountdownInterval = setInterval(updateTheaterCountdown, 1000);
     }
 
     // ===== AMENITIES FUNCTIONS =====
