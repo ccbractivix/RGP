@@ -61,7 +61,8 @@
       flex: 0 0 auto;
       text-align: center;
       color: var(--accent);
-      font-family: 'Playfair Display', serif;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
       font-size: 54px;
       letter-spacing: 3px;
       text-transform: uppercase;
@@ -414,6 +415,9 @@
       // Keep Rocket Talk LIVE visible for 30 minutes after scheduled time.
       var RTL_GRACE_MS = 30 * 60 * 1000;
       var MAX_LEFT = 3;
+      // After a launch has posted a 'success' status, keep it as the primary launch
+      // card for 6 hours, then promote the next launch to the primary card.
+      var SUCCESS_PRIMARY_GRACE_MS = 6 * MS_PER_HOUR;
       var MAX_FETCH_LAUNCHES = 12;
       var PREVIOUS_LAUNCHES_LOOKBACK_DAYS = 30;
       var RTL_VENUE_LABEL = 'In the Movie Theater';
@@ -472,6 +476,24 @@
       function isInFlight(launch) {
         var id = getStatusId(launch);
         return id === 6;
+      }
+
+      function isSuccess(launch) {
+        return getStatusId(launch) === 3;
+      }
+
+      // Choose the primary launch card. Once the most recent successful launch has held
+      // 'success' status for more than 6 hours, skip it so the next launch is promoted.
+      function pickPrimaryLaunch(upcoming, now) {
+        for (var i = 0; i < upcoming.length; i++) {
+          var launch = upcoming[i];
+          var net = new Date(launch.net).getTime();
+          if (isSuccess(launch) && Number.isFinite(net) && now > net + SUCCESS_PRIMARY_GRACE_MS) {
+            continue;
+          }
+          return launch;
+        }
+        return upcoming[0];
       }
 
       function shouldShowLaunch(launch, now) {
@@ -832,7 +854,7 @@
           }
           leftCol.innerHTML = leftHtml;
 
-          var next = upcoming[0];
+          var next = pickPrimaryLaunch(upcoming, now);
           nextPanel.innerHTML = buildNextCard(next, cmsContent[next.id] || {});
         }
 
