@@ -92,7 +92,7 @@ function splitName(name) {
 function deriveGalleryUrl(dateStr, mission) {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-');
-  const compact = `${y}${m}${d}`;
+  const compact = `${y}${String(m).padStart(2, '0')}${String(d).padStart(2, '0')}`;
   const slug = slugify(mission) || 'launch';
   return `${GALLERY_BASE_URL}/${y}/${compact}_${slug}`;
 }
