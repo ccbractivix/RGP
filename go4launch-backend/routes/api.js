@@ -4,6 +4,7 @@ const express = require('express');
 const axios   = require('axios');
 const db      = require('../db/db');
 const { getLastStatus } = require('../services/ll2VersionCheck');
+const { buildHall } = require('../services/galleryHall');
 
 const router = express.Router();
 
@@ -242,6 +243,19 @@ const ARCHIVE_BASE_URL = process.env.GO4LAUNCH_ARCHIVE_URL || 'https://ccbractiv
 // GET /api/ll2-status — latest result of the scheduled LL2 version monitor
 router.get('/ll2-status', (_req, res) => {
   return res.json(getLastStatus());
+});
+
+// GET /api/galleries — auto-built gallery hall (LL2 previous Florida
+// launches + curated seed + CMS overrides). Assumes a gallery exists for
+// every completed launch; see services/galleryHall.js.
+router.get('/galleries', async (_req, res) => {
+  try {
+    const hall = await buildHall();
+    return res.json(hall);
+  } catch (err) {
+    console.error('[go4launch] GET /galleries error:', err.message);
+    return res.status(500).json({ error: 'Failed to build gallery hall' });
+  }
 });
 
 // GET /api/content — all CMS content (keyed by launch_id)

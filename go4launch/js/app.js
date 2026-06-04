@@ -1087,6 +1087,22 @@ async function loadBlog() {
 }
 
 async function loadGalleries() {
+    // Prefer the backend-built hall (auto-updates for every launch). Fall
+    // back to the static seed when the backend is unavailable or empty.
+    if (CONFIG.BACKEND) {
+        try {
+            const res = await fetch(`${CONFIG.BACKEND}/api/galleries`);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length) {
+                    galleryData = data.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('Galleries backend load failed, falling back to static:', e);
+        }
+    }
     try {
         const res = await fetch(CONFIG.GALLERIES_JSON);
         if (res.ok) {
