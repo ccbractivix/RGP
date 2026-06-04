@@ -24,6 +24,10 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 | `CHANNEL_API_URL` | No | (Reserved) |
 | `CHANNEL_ADMIN_CODE` | No | (Reserved) |
 | `GO4LAUNCH_LOCATION_IDS` | No | Comma-separated LL2 location IDs (default: `12,27`) |
+| `LL2_BASE_URL` | No | Override the LL2 base URL/version (default: `https://ll.thespacedevs.com/2.3.0`) |
+| `LL2_VERSION_CHECK_CRON` | No | Cron expression for the scheduled LL2 version monitor (default: `0 7 * * *`, i.e. daily 7:00 AM Eastern) |
+| `LL2_ALERT_WEBHOOK_URL` | No | Incoming webhook (Slack/Discord/Teams) to actively notify when LL2 looks deprecated or a newer version appears. If unset, alerts go to the logs only |
+| `LL2_ALERT_EMAIL` | No | Email address(es) to notify of LL2 upkeep alerts (comma-separated for multiple). Reuses `SENDGRID_API_KEY` + `SENDGRID_FROM`; both must be set for email to send |
 | `CORS_ORIGIN` | No | Additional allowed CORS origins (comma-separated) |
 | `PORT` | No | Server port (default: `3002`) |
 | `NODE_ENV` | No | Set to `production` for SSL database connections |
@@ -34,6 +38,7 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 - `GET /api/content` — All CMS content
 - `GET /api/content/:launchId` — Single launch content
 - `GET /api/launches` — Upcoming/recent LL2 launches (proxy + cache)
+- `GET /api/ll2-status` — Latest result of the scheduled LL2 API version/deprecation monitor
 - `POST /api/archive` — Archive a completed launch
 - `GET /api/archive` — Archive index
 - `GET /api/archive/:year/:month` — Launches for a month
@@ -55,3 +60,26 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 
 Uses simple auth codes (like amenities-backend) via `X-Auth-Code` header.
 No sessions, no CSRF tokens, no cross-origin cookie issues.
+
+## LL2 API version monitor
+
+The backend talks to a **pinned** Launch Library 2 (TheSpaceDevs) API version
+(`https://ll.thespacedevs.com/2.3.0` by default). A scheduled monitor runs
+automatically — **no interaction required** — to catch the case where that
+version is deprecated/removed or a newer version is published.
+
+- **Schedule:** daily at 7:00 AM Eastern (`LL2_VERSION_CHECK_CRON` to override),
+  plus once at startup.
+- **What it checks:** that the pinned version's `/launches/upcoming/` endpoint
+  still returns `2xx`, any `Sunset`/`Deprecation`/`Warning` headers, and whether
+  the API host advertises a newer version than the one we're pinned to.
+- **How you find out:** results are written to the server logs. If
+  `LL2_ALERT_WEBHOOK_URL` is set (Slack/Discord/Teams incoming webhook) and/or
+  `LL2_ALERT_EMAIL` is set, problems are also pushed there so you get an active
+  notification. Email reuses the existing `SENDGRID_API_KEY` + `SENDGRID_FROM`.
+  You can also check the latest result on demand at any time via
+  `GET /api/ll2-status`.
+
+When the monitor flags a newer version or a deprecation, the fix is a code
+change: bump the version in `routes/api.js` (`LL2_BASE`) and the frontend
+fallbacks, then redeploy.

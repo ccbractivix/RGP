@@ -3,6 +3,7 @@
 const express = require('express');
 const axios   = require('axios');
 const db      = require('../db/db');
+const { getLastStatus } = require('../services/ll2VersionCheck');
 
 const router = express.Router();
 
@@ -46,13 +47,13 @@ router.get('/launches', async (_req, res) => {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
 
     const [upRes, prevRes] = await Promise.allSettled([
-      fetchLL2('/launch/upcoming/', {
+      fetchLL2('/launches/upcoming/', {
         pad__location__ids: locIds,
         limit: 50,
         mode: 'detailed',
         net__lte: cutoff,
       }),
-      fetchLL2('/launch/previous/', {
+      fetchLL2('/launches/previous/', {
         pad__location__ids: locIds,
         limit: PREV_LIMIT,
         mode: 'detailed',
@@ -71,7 +72,7 @@ router.get('/launches', async (_req, res) => {
     }
 
     // Combine, deduplicate, sort — prevResults first so that authoritative
-    // post-launch data from /launch/previous/ wins over stale /launch/upcoming/
+    // post-launch data from /launches/previous/ wins over stale /launches/upcoming/
     // entries for the same launch ID during the transition period after liftoff.
     const combined = [...prevResults, ...upResults];
     const seen = new Set();
@@ -113,7 +114,7 @@ router.get('/launches/:id', async (req, res) => {
     }
 
     // 2. Direct LL2 lookup
-    const data = await fetchLL2(`/launch/${encodeURIComponent(id)}/`, { mode: 'detailed' });
+    const data = await fetchLL2(`/launches/${encodeURIComponent(id)}/`, { mode: 'detailed' });
     if (data && data.id) return res.json(data);
 
     return res.status(404).json({ error: 'Launch not found' });
@@ -237,6 +238,11 @@ const ARCHIVE_BASE_URL = process.env.GO4LAUNCH_ARCHIVE_URL || 'https://ccbractiv
 // PUBLIC ROUTES
 // ============================================================
 
+// GET /api/ll2-status — latest result of the scheduled LL2 version monitor
+router.get('/ll2-status', (_req, res) => {
+  return res.json(getLastStatus());
+});
+
 // GET /api/content — all CMS content (keyed by launch_id)
 router.get('/content', async (_req, res) => {
   try {
@@ -319,7 +325,7 @@ async function syncRecentLaunches() {
   recentSyncPromise = (async () => {
     try {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
-      const data = await fetchLL2('/launch/previous/', {
+      const data = await fetchLL2('/launches/previous/', {
         pad__location__ids: LOC_IDS.join(','),
         limit: PREV_LIMIT,
         mode: 'detailed',
@@ -507,6 +513,7 @@ async function sendGalleryEmail(email, launchName, archiveUrl, galleryUrl) {
 module.exports = router;
 module.exports.sendGalleryEmail = sendGalleryEmail;
 module.exports.ARCHIVE_BASE_URL = ARCHIVE_BASE_URL;
+module.exports.LL2_BASE = LL2_BASE;
 
 // ============================================================
 // BLOG — PUBLIC ROUTES

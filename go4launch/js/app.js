@@ -172,8 +172,8 @@ async function fetchLL2Direct() {
     const cutoff = new Date(Date.now() + CONFIG.MAX_DAYS * 86400000).toISOString();
 
     const [upResp, prevResp] = await Promise.allSettled([
-        fetch(`${CONFIG.LL2_BASE}/launch/upcoming/?pad__location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`),
-        fetch(`${CONFIG.LL2_BASE}/launch/previous/?pad__location__ids=${locIds}&limit=5&mode=detailed`),
+        fetch(`${CONFIG.LL2_BASE}/launches/upcoming/?pad__location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`),
+        fetch(`${CONFIG.LL2_BASE}/launches/previous/?pad__location__ids=${locIds}&limit=5&mode=detailed`),
     ]);
 
     let upResults = [];

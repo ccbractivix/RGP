@@ -18,12 +18,12 @@ Non-Negotiable Product Rules
    - If NET has passed and status is still pending/hold/TBD/TBC/GO, show an "awaiting update" or hold message instead.
 5) Keep Launch Library endpoint usage consistent:
    - Use LL2 base host: https://ll.thespacedevs.com/2.3.0
-   - List endpoints must be singular:
-     - /launch/upcoming/
-     - /launch/previous/
-   - Single-launch lookups must be singular:
-     - /launch/{id}/
-   - Never use deprecated/mismatched forms such as lldev.thespacedevs.com or /launches/{id}/.
+   - List endpoints must be plural (LL2 2.3.0 renamed all endpoint URLs to plural):
+     - /launches/upcoming/
+     - /launches/previous/
+   - Single-launch lookups must be plural:
+     - /launches/{id}/
+   - Never use the dev host lldev.thespacedevs.com in production (stale, limited data), and never use the deprecated 2.2.0 singular forms such as /launch/{id}/.
    - Merge and deduplicate by launch id.
 6) Fallback behavior must mirror backend behavior, not a reduced dataset.
 7) Open products must refresh launch data on a short loop so delays are picked up while the screen stays open.
@@ -40,8 +40,8 @@ Cards must display for:
 - all in-flight launches (status id 6),
 - completed launches (status ids 3/4/7) for exactly 48 hours after NET.
 Do not filter using only NET >= now, do not equate passed NET with liftoff, and do not remove completed launches immediately.
-If using LL2 fallback, use https://ll.thespacedevs.com/2.3.0 and fetch both /launch/upcoming/ and /launch/previous/, merge, dedupe by id, then apply lifecycle filtering.
-If a detail page performs direct LL2 lookup, use /launch/{id}/ (never /launches/{id}/).
+If using LL2 fallback, use https://ll.thespacedevs.com/2.3.0 and fetch both /launches/upcoming/ and /launches/previous/, merge, dedupe by id, then apply lifecycle filtering.
+If a detail page performs direct LL2 lookup, use /launches/{id}/ (never the deprecated singular /launch/{id}/).
 If the screen remains open, refresh launch data on a recurring timer so delay updates can replace stale NET values."
 
 Required Acceptance Checks
