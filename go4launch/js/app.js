@@ -4,7 +4,11 @@
 // CONFIGURATION
 // ============================================================
 const CONFIG = {
-    LL2_BASE: 'https://ll.thespacedevs.com/2.3.0',
+    // The production host (ll.thespacedevs.com) only allows 15 requests/hour for
+    // anonymous browser clients, which causes the direct fallback to be rate-limited
+    // (HTTP 429) and launches to stop loading. Use the dev host, which has generous
+    // anonymous limits, for this keyless browser-side fallback.
+    LL2_BASE: 'https://lldev.thespacedevs.com/2.3.0',
     BACKEND: (() => {
         const meta = document.querySelector('meta[name="api-base"]');
         return (meta && meta.getAttribute('content')) || '';

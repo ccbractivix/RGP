@@ -9,8 +9,16 @@ const router = express.Router();
 // ============================================================
 // LL2 API PROXY — avoids browser CORS / rate-limit issues
 // ============================================================
-const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
 const LL2_KEY  = process.env.LL2_API_KEY || '';
+// The production host (ll.thespacedevs.com) only allows 15 requests/hour for
+// anonymous (unauthenticated) clients. This service makes more calls than that
+// per hour, so without an API key those requests get rate-limited (HTTP 429)
+// and launches stop loading. Use the dev host (lldev.thespacedevs.com), which
+// has generous anonymous limits, unless an API key is configured. The host can
+// still be overridden explicitly via LL2_HOST.
+const LL2_HOST = process.env.LL2_HOST
+  || (LL2_KEY ? 'https://ll.thespacedevs.com' : 'https://lldev.thespacedevs.com');
+const LL2_BASE = `${LL2_HOST}/2.3.0`;
 // Location IDs to filter launches by (LL2 location IDs). Defaults to
 // Kennedy Space Center (12) + Cape Canaveral SFS (27); override via env.
 const PARSED_LOC_IDS = (process.env.GO4LAUNCH_LOCATION_IDS || '')
