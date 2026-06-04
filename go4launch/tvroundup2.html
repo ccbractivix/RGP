@@ -410,6 +410,7 @@
       var REFRESH_MS = 60000;
       var MS_PER_HOUR = 3600000;
       var MS_PER_DAY = 24 * MS_PER_HOUR;
+      var MAX_FUTURE_DAYS = 14;
       // Keep Rocket Talk LIVE visible for 30 minutes after scheduled time.
       var RTL_GRACE_MS = 30 * 60 * 1000;
       var MAX_LEFT = 3;
@@ -421,6 +422,7 @@
       var hasLoggedViewportWarning = false;
       var imageProbeCache = {};
       var leftImageMatchCache = {};
+      var currentLaunches = [];
 
       var API_BASE = (function () {
         var meta = document.querySelector('meta[name="api-base"]');
@@ -474,10 +476,11 @@
 
       function shouldShowLaunch(launch, now) {
         var net = new Date(launch.net).getTime();
+        var maxFuture = now + MAX_FUTURE_DAYS * MS_PER_DAY;
         if (!Number.isFinite(net)) return false;
         if (isInFlight(launch)) return true;
         if (isCompleted(launch)) return now <= net + 48 * MS_PER_HOUR;
-        return net >= now;
+        return net <= maxFuture;
       }
 
       function getImageUrl(launch, cms) {
@@ -670,9 +673,13 @@
         });
       }
 
-      function formatCountdown(dateStr) {
-        var diff = new Date(dateStr).getTime() - Date.now();
-        if (diff <= 0) return 'LIFTOFF';
+      function formatCountdown(launch) {
+        var diff = new Date(launch.net).getTime() - Date.now();
+        if (diff <= 0) {
+          if (isInFlight(launch) || isCompleted(launch)) return 'LIFTOFF';
+          if (getStatusId(launch) === 5) return 'ON HOLD';
+          return 'AWAITING UPDATE';
+        }
         var total = Math.floor(diff / 1000);
         var hours = Math.floor(total / 3600);
         var mins = Math.floor((total % 3600) / 60);
@@ -749,7 +756,7 @@
           '<div class="next-status ' + statusClass(launch.status) + '">' + esc(statusLabel(launch.status)) + '</div>' +
           (provider ? '<div class="next-meta">' + esc(provider) + '</div>' : '') +
           (location ? '<div class="next-meta">' + esc(location) + '</div>' : '') +
-          '<div class="next-countdown" data-next-countdown="' + esc(launch.net) + '">' + esc(formatCountdown(launch.net)) + '</div>' +
+          '<div class="next-countdown" data-next-countdown="' + esc(launch.net) + '" data-launch-id="' + esc(launch.id) + '">' + esc(formatCountdown(launch)) + '</div>' +
           '<div class="next-day">' + esc(formatDayET(launch.net)) + '</div>' +
           '<div class="next-date">' + esc(formatDateET(launch.net) + ' • ' + formatTimeET(launch.net)) + '</div>' +
           '<div class="next-bottom">' +
@@ -796,6 +803,7 @@
 
       async function render(launches, cmsContent) {
         var now = Date.now();
+        currentLaunches = launches.slice();
         var upcoming = launches
           .filter(function (launch) {
             return shouldShowLaunch(launch, now);
@@ -844,7 +852,15 @@
         var el = document.querySelector('[data-next-countdown]');
         if (!el) return;
         var net = el.getAttribute('data-next-countdown');
-        el.textContent = formatCountdown(net);
+        var launchId = el.getAttribute('data-launch-id');
+        var launch = null;
+        for (var i = 0; i < currentLaunches.length; i++) {
+          if (currentLaunches[i] && currentLaunches[i].id === launchId) {
+            launch = currentLaunches[i];
+            break;
+          }
+        }
+        el.textContent = formatCountdown(launch || { net: net, status: null });
       }
 
       function fetchWithTimeout(url, timeoutMs) {

@@ -240,6 +240,12 @@ body {
     margin: 1rem 0 0.25rem;
 }
 
+.countdown-pending {
+    color: var(--accent-orange);
+    font-size: 1.05rem;
+    line-height: 1.35;
+}
+
 /* --- Launch Date --- */
 .card-day-of-week {
     font-size: 0.85rem;
@@ -1394,4 +1400,3 @@ body {
     .gallery-card-img { height: 80px; }
     .blog-post-title { font-size: 1.2rem; }
 }
-

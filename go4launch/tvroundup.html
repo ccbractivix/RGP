@@ -610,11 +610,16 @@
       var API_BASE = (metaTag && metaTag.getAttribute('content')) || '';
       var LL2_BASE = 'https://lldev.thespacedevs.com/2.3.0';
       var LOCATION_IDS = '12,27';
-      var REFRESH_MS = 3600000; // 1 hour
+      var REFRESH_MS = 300000; // 5 minutes
       var RETRY_MS   = 60000;  // 1 minute on error
       var RTL_GRACE_MS = 120 * 60 * 1000; // 120 minutes after RTL time
       var MAX_UPCOMING_LAUNCHES = 4; // featured + 3 compact cards
       var MAX_CENTER_LAUNCHES = 3;
+      var MAX_FUTURE_DAYS = 14;
+      var MS_PER_HOUR = 3600000;
+      var MS_PER_DAY = 24 * MS_PER_HOUR;
+      var PREVIOUS_LAUNCHES_LOOKBACK_DAYS = 30;
+      var MAX_FETCH_LAUNCHES = 10;
       var FOOTER_SCROLL_SECONDS_PER_IMAGE = 6;
       var FOOTER_SLIDE_IMAGES = [
         { src: 'images/tv_10237339136830208_738048345749025240_n.jpg', alt: 'Launch viewing area at the resort' },
@@ -627,7 +632,7 @@
       ];
 
       var TV_CACHE_KEY = 'go4launch_tv_v1';
-      var TV_CACHE_TTL = 3600000; // 1 hour
+      var TV_CACHE_TTL = REFRESH_MS;
 
       var countdownTimer = null;
       var refreshTimer = null;
@@ -673,10 +678,11 @@
 
       function shouldShowLaunch(launch, now) {
         var net = new Date(launch.net).getTime();
+        var maxFuture = now + MAX_FUTURE_DAYS * MS_PER_DAY;
         if (!Number.isFinite(net)) return false;
         if (isInFlight(launch)) return true;
-        if (isCompleted(launch)) return now <= net + 48 * 3600000;
-        return net >= now;
+        if (isCompleted(launch)) return now <= net + 48 * MS_PER_HOUR;
+        return net <= maxFuture;
       }
 
       function getImageUrl(launch, cms) {
@@ -989,13 +995,32 @@
       }
 
       function fetchLL2Direct() {
-        return fetchWithTimeout(LL2_BASE + '/launch/upcoming/?location__ids=' + LOCATION_IDS + '&limit=10&mode=detailed')
-          .then(function (r) {
-            if (!r.ok) throw new Error('LL2 HTTP ' + r.status);
-            return r.json();
-          })
-          .then(function (data) {
-            return data.results || [];
+        var thirtyDaysAgo = new Date(Date.now() - PREVIOUS_LAUNCHES_LOOKBACK_DAYS * MS_PER_DAY).toISOString();
+        var cutoff = new Date(Date.now() + MAX_FUTURE_DAYS * MS_PER_DAY).toISOString();
+        return Promise.allSettled([
+          fetchWithTimeout(LL2_BASE + '/launch/upcoming/?location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed&net__lte=' + encodeURIComponent(cutoff))
+            .then(function (r) {
+              if (!r.ok) throw new Error('LL2 upcoming HTTP ' + r.status);
+              return r.json();
+            }),
+          fetchWithTimeout(LL2_BASE + '/launch/previous/?location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed&net__gte=' + encodeURIComponent(thirtyDaysAgo))
+            .then(function (r) {
+              if (!r.ok) throw new Error('LL2 previous HTTP ' + r.status);
+              return r.json();
+            })
+        ]).then(function (responses) {
+          var upcomingRes = responses[0];
+          var previousRes = responses[1];
+          var byId = {};
+          var previous = previousRes.status === 'fulfilled' ? (previousRes.value.results || []) : [];
+          var upcoming = upcomingRes.status === 'fulfilled' ? (upcomingRes.value.results || []) : [];
+          previous.forEach(function (launch) {
+            if (launch && launch.id) byId[launch.id] = launch;
+          });
+          upcoming.forEach(function (launch) {
+            if (launch && launch.id) byId[launch.id] = launch;
+          });
+          return Object.keys(byId).map(function (id) { return byId[id]; });
           });
       }
 
