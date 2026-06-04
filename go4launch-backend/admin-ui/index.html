@@ -198,6 +198,21 @@
     .badge-sent { color: var(--green); font-weight: 600; }
     .badge-pending { color: var(--gold); font-weight: 600; }
 
+    .ll2-pill {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .ll2-pill.healthy { color: var(--green); background: rgba(76,175,80,0.12); border: 1px solid rgba(76,175,80,0.4); }
+    .ll2-pill.attention { color: var(--gold); background: rgba(240,192,64,0.12); border: 1px solid rgba(240,192,64,0.4); }
+    .ll2-pill.down { color: var(--red); background: rgba(229,57,53,0.12); border: 1px solid rgba(229,57,53,0.4); }
+    .ll2-pill.unknown { color: var(--muted); background: rgba(136,136,160,0.12); border: 1px solid rgba(136,136,160,0.4); }
+    .ll2-detail { margin-top: 0.5rem; font-size: 0.82rem; color: var(--text); }
+    .ll2-meta { margin-top: 0.35rem; font-size: 0.75rem; color: var(--muted); }
+
     /* --- Loading --- */
     .loading { color: var(--muted); text-align: center; padding: 2rem; }
 
@@ -271,6 +286,18 @@
         </div>
       </div>
       <p class="subtitle">Manage launch content for the public go4launch page</p>
+
+      <!-- LL2 API Monitor Status -->
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
+          <div class="panel-title" style="margin-bottom:0;">🛰️ LL2 API Status</div>
+          <button class="btn btn-secondary" id="btn-refresh-ll2" style="padding:0.3rem 0.7rem;font-size:0.75rem;flex:0 0 auto;">Refresh</button>
+        </div>
+        <div id="ll2-status" style="margin-top:0.75rem;">
+          <div class="loading">Loading LL2 status…</div>
+        </div>
+        <div class="field-hint">Automated monitor of the Launch Library 2 API version this backend depends on.</div>
+      </div>
 
       <!-- Launch Selector -->
       <div class="panel">
@@ -448,6 +475,7 @@
       async function showDashboard() {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
+        loadLL2Status();
         await populateDropdown();
       }
 
@@ -786,6 +814,54 @@
         }
       }
 
+      // ── LL2 API monitor status ──
+      async function loadLL2Status() {
+        const el = document.getElementById('ll2-status');
+        if (!el) return;
+        el.innerHTML = '<div class="loading">Loading LL2 status…</div>';
+        try {
+          const r = await fetch('/api/ll2-status');
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const s = await r.json();
+          renderLL2Status(s);
+        } catch (e) {
+          el.innerHTML = '<span class="ll2-pill unknown">Unknown</span>'
+            + '<div class="ll2-detail">Could not load LL2 status: ' + escHtml(e.message) + '</div>';
+        }
+      }
+
+      function renderLL2Status(s) {
+        const el = document.getElementById('ll2-status');
+        if (!el) return;
+
+        let pillClass, pillText;
+        if (s.checkedAt === null || s.checkedAt === undefined || s.ok === null || s.ok === undefined) {
+          pillClass = 'unknown'; pillText = 'Unknown';
+        } else if (s.ok === false) {
+          pillClass = 'down'; pillText = 'Needs Attention';
+        } else if (s.newerVersion || s.deprecationHeader) {
+          pillClass = 'attention'; pillText = 'Needs Attention';
+        } else {
+          pillClass = 'healthy'; pillText = 'Healthy';
+        }
+
+        let html = '<span class="ll2-pill ' + pillClass + '">' + pillText + '</span>';
+        if (s.message) html += '<div class="ll2-detail">' + escHtml(s.message) + '</div>';
+
+        const meta = [];
+        if (s.currentVersion) meta.push('Pinned version: ' + escHtml(s.currentVersion));
+        if (s.newerVersion) meta.push('Newer available: ' + escHtml(s.newerVersion));
+        if (s.httpStatus !== null && s.httpStatus !== undefined) meta.push('HTTP ' + escHtml(String(s.httpStatus)));
+        if (s.checkedAt) {
+          const when = new Date(s.checkedAt).toLocaleString('en-US', { timeZone: 'America/New_York' });
+          meta.push('Last checked: ' + escHtml(when) + ' ET');
+        } else {
+          meta.push('No check has run yet');
+        }
+        html += '<div class="ll2-meta">' + meta.join(' &middot; ') + '</div>';
+        el.innerHTML = html;
+      }
+
       // ── Utility ──
       function escHtml(str) {
         const d = document.createElement('div');
@@ -799,6 +875,7 @@
         if (e.key === 'Enter') { e.preventDefault(); doLogin(); }
       });
       document.getElementById('btn-logout').addEventListener('click', doLogout);
+      document.getElementById('btn-refresh-ll2').addEventListener('click', loadLL2Status);
 
       document.getElementById('launch-select').addEventListener('change', function() {
         loadContent(this.value);
