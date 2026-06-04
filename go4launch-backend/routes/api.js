@@ -107,7 +107,7 @@ router.get('/launches/:id', async (req, res) => {
     }
 
     // 2. Direct LL2 lookup
-    const data = await fetchLL2(`/launches/${encodeURIComponent(id)}/`, { mode: 'detailed' });
+    const data = await fetchLL2(`/launch/${encodeURIComponent(id)}/`, { mode: 'detailed' });
     if (data && data.id) return res.json(data);
 
     return res.status(404).json({ error: 'Launch not found' });
