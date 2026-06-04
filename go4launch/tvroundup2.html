@@ -408,10 +408,13 @@
       var BASE_WIDTH = 1920;
       var BASE_HEIGHT = 1080;
       var REFRESH_MS = 60000;
+      var MS_PER_HOUR = 3600000;
+      var MS_PER_DAY = 24 * MS_PER_HOUR;
       // Keep Rocket Talk LIVE visible for 30 minutes after scheduled time.
       var RTL_GRACE_MS = 30 * 60 * 1000;
       var MAX_LEFT = 3;
       var MAX_FETCH_LAUNCHES = 12;
+      var PREVIOUS_LAUNCHES_LOOKBACK_DAYS = 30;
       var RTL_VENUE_LABEL = 'In the Movie Theater';
       var RESIZE_DEBOUNCE_MS = 250;
       var resizeTimer = null;
@@ -455,13 +458,17 @@
         return status.abbrev || status.name || 'TBD';
       }
 
+      function getStatusId(launch) {
+        return launch && launch.status && launch.status.id;
+      }
+
       function isCompleted(launch) {
-        var id = launch && launch.status && launch.status.id;
+        var id = getStatusId(launch);
         return id === 3 || id === 4 || id === 7;
       }
 
       function isInFlight(launch) {
-        var id = launch && launch.status && launch.status.id;
+        var id = getStatusId(launch);
         return id === 6;
       }
 
@@ -469,7 +476,7 @@
         var net = new Date(launch.net).getTime();
         if (!Number.isFinite(net)) return false;
         if (isInFlight(launch)) return true;
-        if (isCompleted(launch)) return now <= net + 48 * 3600000;
+        if (isCompleted(launch)) return now <= net + 48 * MS_PER_HOUR;
         return net >= now;
       }
 
@@ -862,7 +869,7 @@
       }
 
       function fetchLL2Direct() {
-        var thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+        var thirtyDaysAgo = new Date(Date.now() - PREVIOUS_LAUNCHES_LOOKBACK_DAYS * MS_PER_DAY).toISOString();
         var upcomingReq = fetchWithTimeout(LL2_BASE + '/launch/upcoming/?location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed')
           .then(function (r) {
             if (!r.ok) throw new Error('LL2 upcoming HTTP ' + r.status);
@@ -879,14 +886,15 @@
             var previousRes = responses[1];
             var upcomingData = upcomingRes.status === 'fulfilled' ? (upcomingRes.value || {}) : {};
             var previousData = previousRes.status === 'fulfilled' ? (previousRes.value || {}) : {};
-            var combined = (upcomingData.results || []).concat(previousData.results || []);
-            var seen = {};
-            return combined.filter(function (launch) {
-              if (!launch || !launch.id) return false;
-              if (seen[launch.id]) return false;
-              seen[launch.id] = true;
-              return true;
+            var byId = {};
+            (previousData.results || []).forEach(function (launch) {
+              if (launch && launch.id) byId[launch.id] = launch;
             });
+            // Prefer upcoming payload fields when the same launch appears in both datasets.
+            (upcomingData.results || []).forEach(function (launch) {
+              if (launch && launch.id) byId[launch.id] = launch;
+            });
+            return Object.keys(byId).map(function (id) { return byId[id]; });
           });
       }
 
