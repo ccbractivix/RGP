@@ -40,13 +40,13 @@ router.get('/launches', async (_req, res) => {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
 
     const [upRes, prevRes] = await Promise.allSettled([
-      fetchLL2('/launches/upcoming/', {
+      fetchLL2('/launch/upcoming/', {
         location__ids: locIds,
         limit: 50,
         mode: 'detailed',
         net__lte: cutoff,
       }),
-      fetchLL2('/launches/previous/', {
+      fetchLL2('/launch/previous/', {
         location__ids: locIds,
         limit: PREV_LIMIT,
         mode: 'detailed',
@@ -311,7 +311,7 @@ async function syncRecentLaunches() {
   recentSyncPromise = (async () => {
     try {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
-      const data = await fetchLL2('/launches/previous/', {
+      const data = await fetchLL2('/launch/previous/', {
         location__ids: LOC_IDS.join(','),
         limit: PREV_LIMIT,
         mode: 'detailed',
