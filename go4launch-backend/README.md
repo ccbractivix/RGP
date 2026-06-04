@@ -27,6 +27,7 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 | `LL2_BASE_URL` | No | Override the LL2 base URL/version (default: `https://ll.thespacedevs.com/2.3.0`) |
 | `LL2_VERSION_CHECK_CRON` | No | Cron expression for the scheduled LL2 version monitor (default: `0 7 * * *`, i.e. daily 7:00 AM Eastern) |
 | `LL2_ALERT_WEBHOOK_URL` | No | Incoming webhook (Slack/Discord/Teams) to actively notify when LL2 looks deprecated or a newer version appears. If unset, alerts go to the logs only |
+| `LL2_ALERT_EMAIL` | No | Email address(es) to notify of LL2 upkeep alerts (comma-separated for multiple). Reuses `SENDGRID_API_KEY` + `SENDGRID_FROM`; both must be set for email to send |
 | `CORS_ORIGIN` | No | Additional allowed CORS origins (comma-separated) |
 | `PORT` | No | Server port (default: `3002`) |
 | `NODE_ENV` | No | Set to `production` for SSL database connections |
@@ -73,9 +74,11 @@ version is deprecated/removed or a newer version is published.
   still returns `2xx`, any `Sunset`/`Deprecation`/`Warning` headers, and whether
   the API host advertises a newer version than the one we're pinned to.
 - **How you find out:** results are written to the server logs. If
-  `LL2_ALERT_WEBHOOK_URL` is set (Slack/Discord/Teams incoming webhook), problems
-  are also pushed there so you get an active notification. You can also check the
-  latest result on demand at any time via `GET /api/ll2-status`.
+  `LL2_ALERT_WEBHOOK_URL` is set (Slack/Discord/Teams incoming webhook) and/or
+  `LL2_ALERT_EMAIL` is set, problems are also pushed there so you get an active
+  notification. Email reuses the existing `SENDGRID_API_KEY` + `SENDGRID_FROM`.
+  You can also check the latest result on demand at any time via
+  `GET /api/ll2-status`.
 
 When the monitor flags a newer version or a deprecation, the fix is a code
 change: bump the version in `routes/api.js` (`LL2_BASE`) and the frontend

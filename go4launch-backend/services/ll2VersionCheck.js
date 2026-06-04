@@ -23,6 +23,14 @@ const LL2_KEY  = process.env.LL2_API_KEY || '';
 // notification instead of only a log line. When unset, alerts go to the logs.
 const ALERT_WEBHOOK = process.env.LL2_ALERT_WEBHOOK_URL || '';
 
+// Optional email alerts via SendGrid (reuses the same SENDGRID_API_KEY /
+// SENDGRID_FROM that already power go4launch's "I saw it" gallery emails).
+// Set LL2_ALERT_EMAIL to the address(es) that should receive upkeep alerts
+// (comma-separated for multiple recipients).
+const ALERT_EMAIL    = process.env.LL2_ALERT_EMAIL || '';
+const SENDGRID_KEY   = process.env.SENDGRID_API_KEY || '';
+const SENDGRID_FROM  = process.env.SENDGRID_FROM || '';
+
 // Parse "2.3.0" out of the base URL so we can compare against versions
 // advertised by the API root.
 function parseVersion(base) {
@@ -61,7 +69,7 @@ function getLastStatus() {
 }
 
 function authHeaders() {
-  return LL2_KEY ? { Authorization: `Token ${LL2_KEY}` } : {};
+  return LL2_KEY ? { Authorization: 'Token ' + LL2_KEY } : {};
 }
 
 // Best-effort discovery of the API versions the host advertises at its root.
@@ -156,13 +164,61 @@ async function checkLL2Version() {
   return result;
 }
 
-// Fire-and-forget alert to an optional webhook. Never throws.
+// Fire-and-forget alert. Sends to the optional webhook and/or SendGrid email.
+// Never throws — alerting must never break the check itself.
 async function sendAlert(text) {
+  await Promise.allSettled([
+    sendWebhookAlert(text),
+    sendEmailAlert(text),
+  ]);
+}
+
+async function sendWebhookAlert(text) {
   if (!ALERT_WEBHOOK) return;
   try {
     await axios.post(ALERT_WEBHOOK, { text: `🚀 go4launch LL2 monitor: ${text}` }, { timeout: 10000 });
   } catch (e) {
     console.warn('[ll2-version-check] alert webhook failed:', e.message);
+  }
+}
+
+// Email the alert using the existing SendGrid configuration. Requires
+// SENDGRID_API_KEY, SENDGRID_FROM (a verified sender), and LL2_ALERT_EMAIL.
+async function sendEmailAlert(text) {
+  if (!ALERT_EMAIL) return;
+  if (!SENDGRID_KEY || !SENDGRID_FROM) {
+    console.warn('[ll2-version-check] LL2_ALERT_EMAIL set but SENDGRID_API_KEY/SENDGRID_FROM missing — skipping email alert');
+    return;
+  }
+  const to = ALERT_EMAIL.split(',').map(s => s.trim()).filter(Boolean).map(email => ({ email }));
+  if (!to.length) return;
+
+  const safe = String(text).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  const htmlContent = `
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#0a0a14;color:#e8e8f0;border-radius:12px;">
+      <h2 style="color:#fff;margin-bottom:8px;">🚀 go4launch — LL2 API upkeep alert</h2>
+      <p style="color:#ffb4b4;margin-bottom:16px;">${safe}</p>
+      <p style="color:#8888a0;font-size:14px;">The go4launch backend talks to a pinned Launch Library 2 API version. This automated monitor flagged something that may need attention. See the go4launch section of the User Manual for next steps.</p>
+      <hr style="border:none;border-top:1px solid #1e1e3a;margin:24px 0;">
+      <p style="font-size:12px;color:#555570;">Automated message from the go4launch backend LL2 version monitor.</p>
+    </div>
+  `;
+
+  try {
+    await axios.post('https://api.sendgrid.com/v3/mail/send', {
+      personalizations: [{ to }],
+      from: { email: SENDGRID_FROM, name: 'go4launch monitor' },
+      subject: '🚀 go4launch: LL2 API needs attention',
+      content: [{ type: 'text/html', value: htmlContent }],
+    }, {
+      headers: {
+        Authorization: 'Bearer ' + SENDGRID_KEY,
+        'Content-Type': 'application/json',
+      },
+      timeout: 10000,
+    });
+  } catch (e) {
+    console.warn('[ll2-version-check] email alert failed:', e.response?.data || e.message);
   }
 }
 
