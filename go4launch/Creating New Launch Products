@@ -1,0 +1,46 @@
+Creating New Launch Products
+
+Purpose
+- This guide defines how to prompt and build future launch products that rely on go4launch/index.html logic without causing expiration conflicts.
+- Core mission rule: launch cards must remain visible for 48 hours after a launch transitions from GO/IN FLIGHT into a completed state.
+
+Non-Negotiable Product Rules
+1) Preserve lifecycle visibility:
+   - Future launch (NET >= now): show card.
+   - In-flight (status id 6): always show card.
+   - Completed (status id 3, 4, or 7): keep card for 48 hours after NET.
+2) Never use a pure NET cutoff such as "net >= now" as the only filter.
+3) Never use "exclude completed" logic by itself.
+4) Keep Launch Library endpoint usage consistent:
+   - /launch/upcoming/
+   - /launch/previous/
+   - Merge and deduplicate by launch id.
+5) Fallback behavior must mirror backend behavior, not a reduced dataset.
+
+Prompting Template for New Launch Products
+When requesting a new launch display, include this exact intent:
+
+"Build this product using the same launch lifecycle logic as go4launch/index.html.
+Cards must display for:
+- all future launches,
+- all in-flight launches (status id 6),
+- completed launches (status ids 3/4/7) for exactly 48 hours after NET.
+Do not filter using only NET >= now and do not remove completed launches immediately.
+If using LL2 fallback, fetch both /launch/upcoming/ and /launch/previous/, merge, dedupe by id, then apply lifecycle filtering."
+
+Required Acceptance Checks
+- A launch at T+1 minute with status 6 is still visible.
+- A launch at T+2 hours with status 3 is still visible.
+- A launch at T+47 hours with status 4 is still visible.
+- A launch at T+49 hours with status 3 is no longer visible.
+- If backend data fails, fallback still shows in-flight and recent completed launches.
+
+Conflict Prevention for Future Products
+- Any new go4launch-derived product must implement lifecycle filtering first, then visual sorting.
+- Filtering logic should be centralized in a dedicated helper (for example: shouldShowLaunch).
+- Do not create separate ad hoc filters for different panels/cards that can drift from mission rules.
+- Re-check any periodic refresh logic to ensure status transitions do not immediately drop cards.
+
+Operational Note
+- Channel playlist expiration logic is separate from go4launch card lifecycle filtering.
+- Product card visibility must be controlled by lifecycle/status logic in the launch product itself.

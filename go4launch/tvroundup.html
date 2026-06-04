@@ -666,6 +666,19 @@
         return id === 3 || id === 4 || id === 7;
       }
 
+      function isInFlight(launch) {
+        var id = launch.status && launch.status.id;
+        return id === 6;
+      }
+
+      function shouldShowLaunch(launch, now) {
+        var net = new Date(launch.net).getTime();
+        if (!Number.isFinite(net)) return false;
+        if (isInFlight(launch)) return true;
+        if (isCompleted(launch)) return now <= net + 48 * 3600000;
+        return net >= now;
+      }
+
       function getImageUrl(launch, cms) {
         if (cms && cms.card_image_path) {
           return 'images/launches/' + cms.card_image_path;
@@ -884,9 +897,10 @@
           countdownTimer = null;
         }
 
-        // Sort all launches by NET and filter to upcoming (non-completed) only
+        // Sort launches by NET and keep upcoming + in-flight + recently completed (48h)
         var sorted = launches.slice().sort(function (a, b) { return new Date(a.net) - new Date(b.net); });
-        var upcoming = sorted.filter(function (l) { return !isCompleted(l); }).slice(0, MAX_UPCOMING_LAUNCHES);
+        var now = Date.now();
+        var upcoming = sorted.filter(function (l) { return shouldShowLaunch(l, now); }).slice(0, MAX_UPCOMING_LAUNCHES);
 
         // === LEFT CELL: Featured next upcoming launch ===
         if (upcoming.length > 0) {
