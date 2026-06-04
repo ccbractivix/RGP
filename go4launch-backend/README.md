@@ -24,6 +24,8 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 | `CHANNEL_API_URL` | No | (Reserved) |
 | `CHANNEL_ADMIN_CODE` | No | (Reserved) |
 | `GO4LAUNCH_LOCATION_IDS` | No | Comma-separated LL2 location IDs (default: `12,27`) |
+| `GO4LAUNCH_GALLERY_BASE_URL` | No | Base URL of the Google Sites gallery hall used to auto-derive per-launch gallery links (default: `https://sites.google.com/view/holidayinnclubcape/home/rocket-talk/galleries`) |
+| `GO4LAUNCH_GALLERY_WINDOW_DAYS` | No | How many days back to pull completed launches when building the gallery hall (default: `120`) |
 | `LL2_BASE_URL` | No | Override the LL2 base URL/version (default: `https://ll.thespacedevs.com/2.3.0`) |
 | `LL2_VERSION_CHECK_CRON` | No | Cron expression for the scheduled LL2 version monitor (default: `0 7 * * *`, i.e. daily 7:00 AM Eastern) |
 | `LL2_ALERT_WEBHOOK_URL` | No | Incoming webhook (Slack/Discord/Teams) to actively notify when LL2 looks deprecated or a newer version appears. If unset, alerts go to the logs only |
@@ -38,6 +40,7 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 - `GET /api/content` — All CMS content
 - `GET /api/content/:launchId` — Single launch content
 - `GET /api/launches` — Upcoming/recent LL2 launches (proxy + cache)
+- `GET /api/galleries` — Auto-built gallery hall (see **Gallery hall automation** below)
 - `GET /api/ll2-status` — Latest result of the scheduled LL2 API version/deprecation monitor
 - `POST /api/archive` — Archive a completed launch
 - `GET /api/archive` — Archive index
@@ -55,6 +58,37 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 
 ### Admin UI
 - `/admin-ui/` — Self-contained admin dashboard (served same-origin)
+
+## Gallery hall automation
+
+The public **Galleries** page is built automatically — operators no longer
+hand-edit `go4launch/data/galleries.json`. `GET /api/galleries`
+(`services/galleryHall.js`) assumes a photo gallery exists for **every
+completed Florida launch** and returns the hall by combining three sources:
+
+1. **LL2 previous launches** (Florida only, last `GO4LAUNCH_GALLERY_WINDOW_DAYS`
+   days) — each completed launch is mapped to a Google Sites gallery page.
+2. **CMS overrides** — a launch's `gallery_url` in `go4launch_content` always
+   wins, for pages that don't follow the naming convention.
+3. **Curated static seed** (`go4launch/data/galleries.json`) — supplies
+   historical entries and curated metadata (cover image, `featured` flag,
+   description). A curated entry overrides the derived one for the same day.
+
+Results are cached for 10 minutes. The frontend loads this endpoint and falls
+back to the static seed when the backend is unavailable.
+
+### Gallery page naming convention
+
+Derived links follow:
+
+```
+{GO4LAUNCH_GALLERY_BASE_URL}/{YYYY}/{YYYYMMDD}_{mission-slug}
+```
+
+where the date is the **US Eastern** launch day and `mission-slug` is the
+lowercased, dash-separated mission name (the part after `|` in the LL2 launch
+name). Name new Google Sites gallery pages to match, or set the per-launch
+`gallery_url` override in the admin CMS for exceptions.
 
 ## Auth
 
