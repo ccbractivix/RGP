@@ -29,17 +29,24 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 20px;
       margin-bottom: 24px;
     }
     .logo-header img {
       max-width: 150px;
       height: auto;
     }
+    .header-text {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
     h1 {
-      margin: 0 0 6px;
+      margin: 0;
       font-size: clamp(1.7rem, 2vw + 1rem, 2.3rem);
       letter-spacing: 0.02em;
       font-family: "Copperplate Light", Copperplate, serif;
+      line-height: 1.2;
     }
     .sub {
       margin: 0 0 24px;
@@ -48,7 +55,7 @@
     .tier { margin-bottom: 26px; }
     .tier h2 {
       margin: 0 0 10px;
-      font-size: 1.2rem;
+      font-size: 2.4rem;
       color: var(--muted);
       font-family: "Copperplate Light", Copperplate, serif;
     }
@@ -117,8 +124,10 @@
   <main class="wrap">
     <div class="logo-header">
       <img src="ihgor-primary-logo.png" alt="IHG One Rewards logo" />
+      <div class="header-text">
+        <h1>Member<br>Discounts</h1>
+      </div>
     </div>
-    <h1>Member Discounts</h1>
     <p class="sub">Not an IHG One Rewards member yet? <a href="https://www.ihg.com/rewardsclub/us/en/enrollment/join">Join now!</a></p>
 
     <section class="tier">
