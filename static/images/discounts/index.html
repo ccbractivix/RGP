@@ -6,18 +6,18 @@
   <title>IHG One Rewards Member Discounts</title>
   <style>
     :root {
-      --bg: #0c1220;
-      --panel: #111a2d;
-      --text: #eff3ff;
-      --muted: #a8b3cc;
-      --accent: #2f81f7;
-      --border: #243250;
+      --bg: #224654;
+      --panel: #1a2f3f;
+      --text: silver;
+      --muted: #708998;
+      --accent: #708998;
+      --border: #2f4858;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      font-family: Inter, Arial, sans-serif;
-      background: radial-gradient(circle at top, #162340 0%, var(--bg) 55%);
+      font-family: Arial, sans-serif;
+      background: radial-gradient(circle at top, #2d5568 0%, var(--bg) 55%);
       color: var(--text);
     }
     .wrap {
@@ -25,10 +25,21 @@
       margin: 0 auto;
       padding: 32px 16px 40px;
     }
+    .logo-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    .logo-header img {
+      max-width: 150px;
+      height: auto;
+    }
     h1 {
       margin: 0 0 6px;
       font-size: clamp(1.7rem, 2vw + 1rem, 2.3rem);
       letter-spacing: 0.02em;
+      font-family: "Copperplate Light", Copperplate, serif;
     }
     .sub {
       margin: 0 0 24px;
@@ -38,7 +49,8 @@
     .tier h2 {
       margin: 0 0 10px;
       font-size: 1.2rem;
-      color: #d3ddf8;
+      color: var(--muted);
+      font-family: "Copperplate Light", Copperplate, serif;
     }
     .grid {
       display: grid;
@@ -76,7 +88,11 @@
       max-height: 100%;
       object-fit: contain;
     }
-    .name { font-size: 1.02rem; margin: 0 0 8px; }
+    .name { 
+      font-size: 1.02rem; 
+      margin: 0 0 8px;
+      font-family: "Copperplate Light", Copperplate, serif;
+    }
     .offer {
       margin: 0;
       color: var(--muted);
@@ -86,12 +102,12 @@
     .hint {
       margin-top: auto;
       font-size: .82rem;
-      color: #8ec1ff;
+      color: var(--accent);
       padding-top: 10px;
     }
     footer {
       margin-top: 14px;
-      color: #8f9dbb;
+      color: var(--muted);
       font-size: .85rem;
       line-height: 1.4;
     }
@@ -99,7 +115,9 @@
 </head>
 <body>
   <main class="wrap">
-    <img src="ihgor-primary-logo.png" alt="IHG One Rewards logo" />
+    <div class="logo-header">
+      <img src="ihgor-primary-logo.png" alt="IHG One Rewards logo" />
+    </div>
     <h1>Member Discounts</h1>
     <p class="sub">Not an IHG One Rewards member yet? <a href="https://www.ihg.com/rewardsclub/us/en/enrollment/join">Join now!</a></p>
 
