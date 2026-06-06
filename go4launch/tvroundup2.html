@@ -170,6 +170,7 @@
     .bubble-status {
       flex: 0 0 auto;
       align-self: center;
+      margin-left: auto;
       min-width: 132px;
       text-align: center;
       border-radius: 999px;
@@ -178,16 +179,16 @@
       letter-spacing: 1px;
       text-transform: uppercase;
       color: #fff;
-      background: var(--secondary);
+      background: var(--red);
     }
 
     .status-go, .status-success { 
       background: var(--active);
       animation: status-glow 2s ease-in-out infinite;
     }
-    .status-tbd, .status-tbc { background: #C68231; }
-    .status-hold, .status-failure { background: #B04040; }
-    .status-inflight { background: #545DC2; }
+    .status-tbd, .status-tbc { background: var(--red); }
+    .status-hold, .status-failure { background: var(--red); }
+    .status-inflight { background: var(--red); }
 
     #next-launch-panel {
       flex: 1;
@@ -247,7 +248,21 @@
       letter-spacing: 1px;
       text-transform: uppercase;
       color: #fff;
-      background: var(--secondary);
+      background: var(--red);
+    }
+
+    .next-status.status-go, 
+    .next-status.status-success {
+      background: var(--active);
+      animation: status-glow 2s ease-in-out infinite;
+    }
+    
+    .next-status.status-tbd,
+    .next-status.status-tbc,
+    .next-status.status-hold,
+    .next-status.status-failure,
+    .next-status.status-inflight {
+      background: var(--red);
     }
 
     .next-meta {
@@ -257,12 +272,10 @@
     }
 
     .next-countdown {
+      display: none !important;
       margin-top: 10px;
       width: 100%;
       min-height: 92px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       padding: 10px 16px;
       border-radius: 18px;
       border: 2px solid rgba(255, 197, 66, 0.55);
