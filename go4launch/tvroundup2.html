@@ -60,7 +60,7 @@
     #header {
       flex: 0 0 auto;
       text-align: center;
-      color: var(--accent);
+      color: #E63946;
       font-family: 'Montserrat', sans-serif;
       font-weight: 600;
       font-size: 54px;
@@ -178,7 +178,10 @@
       background: var(--secondary);
     }
 
-    .status-go, .status-success { background: var(--active); }
+    .status-go, .status-success { 
+      background: var(--active);
+      animation: status-glow 2s ease-in-out infinite;
+    }
     .status-tbd, .status-tbc { background: #C68231; }
     .status-hold, .status-failure { background: #B04040; }
     .status-inflight { background: #545DC2; }
@@ -192,7 +195,7 @@
     }
 
     .next-headline {
-      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      background: linear-gradient(135deg, #E63946, #d42e3a);
       color: #fff;
       text-align: center;
       padding: 12px 16px;
@@ -317,38 +320,73 @@
       flex: 0 0 235px;
       display: flex;
       align-items: center;
-      justify-content: center;
-      text-align: center;
+      justify-content: space-between;
       padding: 22px;
-      border-color: #E4B49E;
-      background: #FFF5F0;
+      border-color: #E63946;
+      background: linear-gradient(135deg, rgba(230, 57, 70, 0.08), rgba(230, 57, 70, 0.04));
       color: var(--text);
+      box-shadow: 0 0 20px rgba(230, 57, 70, 0.3);
+      animation: rtl-glow 2s ease-in-out infinite;
+    }
+
+    @keyframes rtl-glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(230, 57, 70, 0.3); }
+      50% { box-shadow: 0 0 30px rgba(230, 57, 70, 0.5); }
+    }
+
+    @keyframes status-glow {
+      0%, 100% { box-shadow: 0 0 10px rgba(45, 138, 62, 0.4); }
+      50% { box-shadow: 0 0 20px rgba(45, 138, 62, 0.7); }
+    }
+
+    .rtl-content {
+      flex: 1;
+      text-align: center;
     }
 
     .rtl-title {
-      font-family: 'Playfair Display', serif;
+      font-family: 'Montserrat', sans-serif;
       letter-spacing: 3px;
       text-transform: uppercase;
-      color: var(--accent);
+      color: #E63946;
       font-size: 38px;
       line-height: 1;
       margin-bottom: 10px;
+      font-weight: 700;
     }
 
     .rtl-time {
+      font-family: 'Montserrat', sans-serif;
       font-size: 25px;
       line-height: 1.2;
       color: var(--text);
       text-transform: uppercase;
       margin-bottom: 8px;
+      font-weight: 600;
     }
 
     .rtl-location {
+      font-family: 'Montserrat', sans-serif;
       font-size: 25px;
       line-height: 1.2;
       color: var(--active);
       text-transform: uppercase;
       letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    .rtl-status {
+      flex: 0 0 auto;
+      align-self: center;
+      min-width: 132px;
+      text-align: center;
+      border-radius: 999px;
+      padding: 14px 18px;
+      font-size: 22px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #fff;
+      background: var(--secondary);
     }
 
     .empty-state {
@@ -800,12 +838,18 @@
         }
 
         rtlPanel.style.display = 'flex';
+        var now = Date.now();
+        var isLive = rtl.time <= now && rtl.time + RTL_GRACE_MS >= now;
+        var statusLabel = isLive ? 'LIVE' : 'SCHEDULED';
+        var statusClass = isLive ? 'status-go' : 'status-tbd';
+
         rtlPanel.innerHTML =
-          '<div>' +
+          '<div class="rtl-content">' +
             '<div class="rtl-title">Rocket Talk LIVE!</div>' +
             '<div class="rtl-time">' + esc(formatDayET(rtl.datetime)) + '<br>' + esc(formatDateET(rtl.datetime)) + '<br>' + esc(formatTimeET(rtl.datetime) + ' ET') + '</div>' +
             '<div class="rtl-location">' + esc(RTL_VENUE_LABEL) + '</div>' +
-          '</div>';
+          '</div>' +
+          '<div class="rtl-status ' + statusClass + '">' + esc(statusLabel) + '</div>';
       }
 
       function wireImageFallbacks() {
