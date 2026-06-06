@@ -839,8 +839,6 @@
         var provider = getProvider(launch);
         var location = getLocation(launch);
         var mission = getMissionName(launch);
-        var appUrl = 'https://ccbractivix.github.io/RGP/go4launch/index.html#/';
-        var qrSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=116x116&data=' + encodeURIComponent(appUrl);
 
         var html = '';
         if (cms && cms.headline) {
@@ -853,7 +851,7 @@
           (img
             ? '<img class="js-fallback-image" data-fallback-text="No launch image available" src="' + esc(img) + '" alt="' + esc(mission) + '">'
             : '<div class="empty-state">No launch image available</div>') +
-          '<div class="next-qr"><div class="next-qr-image"><img src="' + esc(qrSrc) + '" alt="QR Code to Go4Launch app"></div><div class="next-qr-label">Scan Me</div></div>' +
+          '<div class="next-qr js-qr-container"><div class="next-qr-image"><img src="./images/go4launch-app-qr.png" alt="QR Code to Go4Launch app"></div><div class="next-qr-label">Scan Me</div></div>' +
           '</div>';
 
         html += '<div class="next-body">' +
@@ -864,7 +862,7 @@
           '<div class="next-countdown" data-next-countdown="' + esc(launch.net) + '" data-launch-id="' + esc(launch.id) + '">' + esc(formatCountdown(launch)) + '</div>' +
           '<div class="next-day">' + esc(formatDayET(launch.net)) + '</div>' +
           '<div class="next-date">' + esc(formatDateET(launch.net) + ' • ' + formatTimeET(launch.net)) + '</div>' +
-          '<div class="next-bottom">' +
+          '<div class="next-bottom js-app-cta">' +
             '<div class="next-cta-text">Check out the Go4Launch app for viewing guides, launch photos, and more!</div>' +
           '</div>' +
         '</div>';
@@ -875,6 +873,8 @@
       function renderRTL(cmsContent) {
         var rtlPanel = document.getElementById('rtl-panel');
         var countdownEl = document.querySelector('[data-next-countdown]');
+        var qrContainer = document.querySelector('.js-qr-container');
+        var appCta = document.querySelector('.js-app-cta');
         var rtl = findNextRTL(cmsContent);
 
         if (!rtl) {
@@ -883,13 +883,25 @@
           if (countdownEl) {
             countdownEl.style.display = 'flex';
           }
+          if (qrContainer) {
+            qrContainer.style.display = 'flex';
+          }
+          if (appCta) {
+            appCta.style.display = 'flex';
+          }
           return;
         }
 
-        // RTL is upcoming, so show RTL panel and hide countdown
+        // RTL is upcoming, so show RTL panel and hide countdown, QR, and app CTA
         rtlPanel.style.display = 'flex';
         if (countdownEl) {
           countdownEl.style.display = 'none';
+        }
+        if (qrContainer) {
+          qrContainer.style.display = 'none';
+        }
+        if (appCta) {
+          appCta.style.display = 'none';
         }
          
         var now = Date.now();
