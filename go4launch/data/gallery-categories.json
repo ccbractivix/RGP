@@ -1,0 +1,49 @@
+[
+  {
+    "id": "launch-provider-official-galleries",
+    "name": "Launch Provider Official Galleries",
+    "description": "Official photo galleries from space launch providers",
+    "galleries": [
+      {
+        "id": "spacex",
+        "name": "SpaceX",
+        "url": "https://www.flickr.com/photos/spacex/"
+      },
+      {
+        "id": "ula",
+        "name": "ULA",
+        "url": "https://www.flickr.com/people/ulalaunch/"
+      },
+      {
+        "id": "blue-origin",
+        "name": "Blue Origin",
+        "url": "https://www.blueorigin.com/gallery"
+      },
+      {
+        "id": "nasa",
+        "name": "NASA",
+        "url": "https://www.flickr.com/photos/nasahqphoto/albums/"
+      },
+      {
+        "id": "stoke",
+        "name": "Stoke",
+        "url": "https://www.flickr.com/photos/stokespace/"
+      },
+      {
+        "id": "relativity",
+        "name": "Relativity",
+        "url": "https://www.relativityspace.com/first-launch-gallery"
+      },
+      {
+        "id": "rocket-lab",
+        "name": "Rocket Lab",
+        "url": "https://www.flickr.com/photos/rocketlab/"
+      },
+      {
+        "id": "astra",
+        "name": "Astra",
+        "url": "https://www.flickr.com/photos/astraphotos/"
+      }
+    ]
+  }
+]
