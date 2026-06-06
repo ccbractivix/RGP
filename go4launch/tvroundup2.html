@@ -849,7 +849,7 @@
         rtlPanel.innerHTML =
           '<div class="rtl-content">' +
             '<div class="rtl-title">Rocket Talk LIVE!</div>' +
-            '<div class="rtl-time">' + esc(formatDayET(rtl.datetime)) + '<br>' + esc(formatDateET(rtl.datetime)) + '<br>' + esc(formatTimeET(rtl.datetime)) + ' ET</div>' +
+            '<div class="rtl-time">' + esc(formatDayET(rtl.datetime)) + '<br>' + esc(formatDateET(rtl.datetime)) + '<br>' + esc(formatTimeET(rtl.datetime)) + esc(' ET') + '</div>' +
             '<div class="rtl-location">' + esc(RTL_VENUE_LABEL) + '</div>' +
           '</div>' +
           '<div class="rtl-status ' + statusClass + '">' + esc(statusLabel) + '</div>';
