@@ -841,6 +841,7 @@
         var now = Date.now();
         var isLive = rtl.time <= now && rtl.time + RTL_GRACE_MS >= now;
         var statusLabel = isLive ? 'LIVE' : 'SCHEDULED';
+        // Hardcoded valid status classes to prevent future injection risks
         var statusClass = isLive ? 'status-go' : 'status-tbd';
 
         rtlPanel.innerHTML =
