@@ -533,7 +533,7 @@ function openDayModal(date) {
       html += `<div class="info-row"><span class="info-label">⚠️ Alert</span><span class="info-value" style="color:var(--orange);">Booked under No-Payment hold — payment review required</span></div>`;
     }
     html += `<div class="btn-group">`;
-    html += `<button class="btn btn-primary btn-sm" onclick="openEditModal(${b.id}, '${(b.payment_status || '').replace(/'/g, "\\'")}', ${!!b.is_paid})">✏️ Edit</button>`;
+    html += `<button class="btn btn-primary btn-sm edit-booking-btn" data-booking-id="${b.id}" data-payment-status="${esc(b.payment_status || '')}" data-is-paid="${!!b.is_paid}">✏️ Edit</button>`;
     html += `<button class="btn btn-danger btn-sm" onclick="openCancelModal(${b.id})">Cancel Booking</button>`;
     html += `</div></div>`;
   }
@@ -624,6 +624,16 @@ function openDayModal(date) {
     if (!paymentDate.required) paymentDate.value = '';
     $('#bk-comp-auth-group').style.display = status === 'comped' ? '' : 'none';
     $('#bk-comp-authorized-by').required = status === 'comped';
+  });
+
+  // Bind edit buttons
+  sheet.querySelectorAll('.edit-booking-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const bookingId = parseInt(btn.dataset.bookingId, 10);
+      const paymentStatus = btn.dataset.paymentStatus;
+      const isPaid = btn.dataset.isPaid === 'true';
+      openEditModal(bookingId, paymentStatus, isPaid);
+    });
   });
 }
 
@@ -730,14 +740,14 @@ async function submitBooking() {
 }
 
 // ── Edit Booking (Operator) ───────────────────────────────────────────────────
-window.openEditModal = function(bookingId, paymentStatus, isPaid) {
+function openEditModal(bookingId, paymentStatus, isPaid) {
   const isPaidInFull = paymentStatus === 'paid_in_full' || isPaid;
   if (isPaidInFull) {
     openPaidConfirmModal(bookingId);
   } else {
     loadEditForm(bookingId);
   }
-};
+}
 
 function openPaidConfirmModal(bookingId) {
   const sheet = $('#booking-sheet');
