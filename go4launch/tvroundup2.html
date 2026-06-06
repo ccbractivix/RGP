@@ -272,10 +272,12 @@
     }
 
     .next-countdown {
-      display: none !important;
       margin-top: 10px;
       width: 100%;
       min-height: 92px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       padding: 10px 16px;
       border-radius: 18px;
       border: 2px solid rgba(255, 197, 66, 0.55);
@@ -779,7 +781,8 @@
           var cms = cmsContent[launchId];
           if (!cms || !cms.rtl_datetime) continue;
           var rtlTime = new Date(cms.rtl_datetime).getTime();
-          if (rtlTime >= now - RTL_GRACE_MS && (!next || rtlTime < next.time)) {
+          // Only show RTL if it's in the future (hasn't started yet)
+          if (rtlTime > now && (!next || rtlTime < next.time)) {
             next = { launchId: launchId, datetime: cms.rtl_datetime, time: rtlTime };
           }
         }
@@ -846,14 +849,24 @@
 
       function renderRTL(cmsContent) {
         var rtlPanel = document.getElementById('rtl-panel');
+        var countdownEl = document.querySelector('[data-next-countdown]');
         var rtl = findNextRTL(cmsContent);
 
         if (!rtl) {
+          // No upcoming RTL, so hide RTL panel and show countdown
           rtlPanel.style.display = 'none';
+          if (countdownEl) {
+            countdownEl.style.display = 'flex';
+          }
           return;
         }
 
+        // RTL is upcoming, so show RTL panel and hide countdown
         rtlPanel.style.display = 'flex';
+        if (countdownEl) {
+          countdownEl.style.display = 'none';
+        }
+         
         var now = Date.now();
         var isLive = rtl.time <= now && rtl.time + RTL_GRACE_MS >= now;
         var statusLabel = isLive ? 'LIVE' : 'SCHEDULED';
