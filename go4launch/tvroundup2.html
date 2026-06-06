@@ -17,6 +17,7 @@
       --accent: #E5754A;
       --accent-dark: #cf6843;
       --active: #2D8A3E;
+      --active-rgb: 45, 138, 62;
       --secondary: #6B6460;
       --border: #D2CDC5;
       --base-w: 1920;
@@ -335,8 +336,8 @@
     }
 
     @keyframes status-glow {
-      0%, 100% { box-shadow: 0 0 10px rgba(45, 138, 62, 0.4); }
-      50% { box-shadow: 0 0 20px rgba(45, 138, 62, 0.7); }
+      0%, 100% { box-shadow: 0 0 10px rgba(var(--active-rgb), 0.4); }
+      50% { box-shadow: 0 0 20px rgba(var(--active-rgb), 0.7); }
     }
 
     .rtl-content {
@@ -841,8 +842,9 @@
         var now = Date.now();
         var isLive = rtl.time <= now && rtl.time + RTL_GRACE_MS >= now;
         var statusLabel = isLive ? 'LIVE' : 'SCHEDULED';
-        // Hardcoded valid status classes to prevent future injection risks
-        var statusClass = isLive ? 'status-go' : 'status-tbd';
+        // Use a map to safely assign status class from hardcoded valid values
+        var statusClassMap = { true: 'status-go', false: 'status-tbd' };
+        var statusClass = statusClassMap[String(isLive)];
 
         rtlPanel.innerHTML =
           '<div class="rtl-content">' +
