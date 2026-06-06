@@ -9,6 +9,7 @@ const {
   releaseLock,
   createBooking,
   getBooking,
+  updateBooking,
   cancelBooking,
   createBlock,
   findConflictingBookings,
@@ -207,6 +208,19 @@ router.get('/booking/:id', async (req, res) => {
     return res.json({ booking });
   } catch (e) {
     return res.status(500).json({ error: e.message });
+  }
+});
+
+// ── PUT /operator/booking/:id ──────────────────────────────────────────────────
+router.put('/booking/:id', async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid booking id' });
+  try {
+    const booking = await updateBooking(id, req.body || {});
+    return res.json({ ok: true, booking });
+  } catch (e) {
+    const status = e.message.includes('modified by another') ? 409 : 400;
+    return res.status(status).json({ error: e.message });
   }
 });
 

@@ -533,6 +533,7 @@ function openDayModal(date) {
       html += `<div class="info-row"><span class="info-label">⚠️ Alert</span><span class="info-value" style="color:var(--orange);">Booked under No-Payment hold — payment review required</span></div>`;
     }
     html += `<div class="btn-group">`;
+    html += `<button class="btn btn-primary btn-sm edit-booking-btn" data-booking-id="${b.id}" data-payment-status="${esc(b.payment_status || '')}" data-is-paid="${!!b.is_paid}">✏️ Edit</button>`;
     html += `<button class="btn btn-danger btn-sm" onclick="openCancelModal(${b.id})">Cancel Booking</button>`;
     html += `</div></div>`;
   }
@@ -623,6 +624,16 @@ function openDayModal(date) {
     if (!paymentDate.required) paymentDate.value = '';
     $('#bk-comp-auth-group').style.display = status === 'comped' ? '' : 'none';
     $('#bk-comp-authorized-by').required = status === 'comped';
+  });
+
+  // Bind edit buttons
+  sheet.querySelectorAll('.edit-booking-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const bookingId = parseInt(btn.dataset.bookingId, 10);
+      const paymentStatus = btn.dataset.paymentStatus;
+      const isPaid = btn.dataset.isPaid === 'true';
+      openEditModal(bookingId, paymentStatus, isPaid);
+    });
   });
 }
 
@@ -726,6 +737,172 @@ async function submitBooking() {
   } catch (e) {
     showToast(e.message, 'error');
   }
+}
+
+// ── Edit Booking (Operator) ───────────────────────────────────────────────────
+function openEditModal(bookingId, paymentStatus, isPaid) {
+  const isPaidInFull = paymentStatus === 'paid_in_full' || isPaid;
+  if (isPaidInFull) {
+    openPaidConfirmModal(bookingId);
+  } else {
+    loadEditForm(bookingId);
+  }
+}
+
+function openPaidConfirmModal(bookingId) {
+  const sheet = $('#booking-sheet');
+  let html = `<button class="popup-close" onclick="closePopup()">✕</button>`;
+  html += `<div class="popup-title">⚠️ Paid Reservation</div>`;
+  html += `<p style="color:var(--orange);margin-bottom:16px;font-size:14px;font-weight:600;">This reservation is marked as <span class="status-pill paid">Paid In Full</span>.</p>`;
+  html += `<p style="color:var(--text-muted);margin-bottom:20px;font-size:13px;">Editing a paid reservation may affect billing records. Are you sure you want to proceed?</p>`;
+  html += `<div class="btn-group">
+    <button class="btn btn-warning btn-block" id="paid-confirm-edit" data-id="${bookingId}">Yes, Edit This Reservation</button>
+    <button class="btn btn-ghost btn-block" onclick="closePopup()">Go Back</button>
+  </div>`;
+  sheet.innerHTML = html;
+  $('#booking-popup').classList.add('open');
+
+  $('#paid-confirm-edit').addEventListener('click', () => {
+    loadEditForm(bookingId);
+  });
+}
+
+async function loadEditForm(bookingId) {
+  let booking;
+  try {
+    const data = await api(`/operator/booking/${bookingId}`);
+    booking = data.booking;
+  } catch (e) {
+    showToast(e.message, 'error'); return;
+  }
+
+  const sheet = $('#booking-sheet');
+  let html = `<button class="popup-close" onclick="closePopup()">✕</button>`;
+  html += `<div class="popup-title">Edit Booking</div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Last Name</label>
+      <input class="form-input" id="ed-last-name" value="${esc(booking.last_name || getLastName(booking.renter_name) || '')}"></div>
+    <div class="form-group"><label class="form-label">First Name</label>
+      <input class="form-input" id="ed-first-name" value="${esc(booking.first_name || '')}"></div>
+  </div>`;
+  html += `<div class="form-group"><label class="form-label">Phone</label>
+    <input class="form-input" id="ed-phone" value="${esc(booking.phone)}" type="tel"></div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Villa/Room #</label>
+      <input class="form-input" id="ed-room" value="${esc(booking.room_number)}"></div>
+    <div class="form-group"><label class="form-label">Property</label>
+      <select class="form-select" id="ed-property">
+        <option value="HICV" ${booking.property==='HICV'?'selected':''}>HICV</option>
+        <option value="HIE" ${booking.property==='HIE'?'selected':''}>HIE</option>
+        <option value="Day Guest" ${booking.property==='Day Guest'?'selected':''}>Day Guest</option>
+        <option value="Splash Pass Member" ${booking.property==='Splash Pass Member'?'selected':''}>Splash Pass Member</option>
+        <option value="Day Pass Guest" ${booking.property==='Day Pass Guest'?'selected':''}>Day Pass Guest</option>
+      </select></div></div>`;
+  html += `<div class="form-group"><label class="form-label">Reservation Number</label>
+    <input class="form-input" id="ed-reservation-number" value="${esc(booking.reservation_number || '')}"></div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Check-In Date</label>
+      <input class="form-input" id="ed-check-in-date" type="date" value="${booking.check_in_date || ''}"></div>
+    <div class="form-group"><label class="form-label">Date Reserved</label>
+      <input class="form-input" id="ed-date-reserved" type="date" value="${booking.date_reserved || ''}"></div>
+  </div>`;
+  html += `<div class="form-row">
+    <div class="form-group"><label class="form-label">Price Paid</label>
+      <input class="form-input" id="ed-price-paid" type="number" min="0" step="0.01" value="${booking.price_paid ?? ''}"></div>
+    <div class="form-group"><label class="form-label">Payment Status</label>
+      <select class="form-select" id="ed-payment-status">
+        <option value="pending_payment" ${booking.payment_status==='pending_payment'?'selected':''}>Pending Payment</option>
+        <option value="paid_in_full" ${(booking.payment_status==='paid_in_full' || booking.is_paid)?'selected':''}>Paid In Full</option>
+        <option value="comped" ${booking.payment_status==='comped'?'selected':''}>Comped</option>
+      </select></div>
+  </div>`;
+  html += `<div class="form-group" id="ed-comp-auth-group" style="display:${booking.payment_status==='comped'?'':'none'};"><label class="form-label">Comp Authorized By</label>
+    <input class="form-input" id="ed-comp-authorized-by" value="${esc(booking.comp_authorized_by || '')}" placeholder="Name of authorizing manager"></div>`;
+  html += `<div class="form-group"><label class="form-label">Payment Date</label>
+    <input class="form-input" id="ed-payment-date" type="date" value="${booking.payment_date || ''}"></div>`;
+  html += `<div class="form-group"><label class="form-label">Slot</label>
+    <select class="form-select" id="ed-slot">
+      <option value="full" ${booking.slot==='full'?'selected':''}>Full Day</option>
+      <option value="am" ${booking.slot==='am'?'selected':''}>AM (until 1:00 PM)</option>
+      <option value="pm" ${booking.slot==='pm'?'selected':''}>PM (from 2:00 PM)</option>
+    </select></div>`;
+  html += `<div class="form-group"><label class="form-label">Special Instructions</label>
+    <textarea class="form-textarea" id="ed-instructions">${esc(booking.special_instructions||'')}</textarea></div>`;
+  html += `<div class="form-group"><label class="form-label">Infogenesis Check Number</label>
+    <input class="form-input" id="ed-check-number" value="${esc(booking.infogenesis_check_number || booking.infogenesis_receipt_number || '')}" placeholder="Check number" required></div>`;
+  html += `<div class="form-group"><label class="form-label">Booking Agent Name</label>
+    <input class="form-input" id="ed-agent-name" value="${esc(booking.booking_agent_name || '')}" placeholder="Booking agent"></div>`;
+  html += `<input type="hidden" id="ed-version" value="${booking.version}">`;
+  html += `<button class="btn btn-primary btn-block" id="ed-save" data-id="${booking.id}">Save Changes</button>`;
+
+  sheet.innerHTML = html;
+  $('#booking-popup').classList.add('open');
+
+  $('#ed-payment-status').addEventListener('change', () => {
+    const status = $('#ed-payment-status').value;
+    const paymentDate = $('#ed-payment-date');
+    paymentDate.required = status === 'paid_in_full';
+    if (!paymentDate.required) paymentDate.value = '';
+    $('#ed-comp-auth-group').style.display = status === 'comped' ? '' : 'none';
+    $('#ed-comp-authorized-by').required = status === 'comped';
+  });
+
+  $('#ed-save').addEventListener('click', async () => {
+    const checkNumber = $('#ed-check-number').value.trim();
+    const phoneDigits = $('#ed-phone').value.trim().replace(/\D/g, '');
+    const paymentStatus = $('#ed-payment-status').value;
+    const paymentDate = $('#ed-payment-date').value;
+    const isComped = paymentStatus === 'comped';
+    const compAuthorizedBy = ($('#ed-comp-authorized-by') || {value:''}).value?.trim() || '';
+    if (!checkNumber) {
+      showToast('Infogenesis check number is required', 'error');
+      return;
+    }
+    if (phoneDigits.length !== 10) {
+      showToast('Phone number must have 10 digits', 'error');
+      return;
+    }
+    if (paymentStatus === 'paid_in_full' && !paymentDate) {
+      showToast('Payment date is required when paid in full', 'error');
+      return;
+    }
+    if (isComped && !compAuthorizedBy) {
+      showToast('Comp Authorized By is required for Comped bookings', 'error');
+      return;
+    }
+    const lastName = $('#ed-last-name').value.trim();
+    const firstName = $('#ed-first-name').value.trim();
+    try {
+      await api(`/operator/booking/${booking.id}`, {
+        method: 'PUT',
+        body: {
+          renter_name: `${lastName}${firstName ? `, ${firstName}` : ''}`,
+          last_name: lastName,
+          first_name: firstName,
+          phone: $('#ed-phone').value.trim(),
+          room_number: $('#ed-room').value.trim(),
+          reservation_number: $('#ed-reservation-number').value.trim(),
+          check_in_date: $('#ed-check-in-date').value,
+          date_reserved: $('#ed-date-reserved').value,
+          price_paid: $('#ed-price-paid').value.trim() || null,
+          property: $('#ed-property').value,
+          slot: $('#ed-slot').value,
+          payment_status: paymentStatus,
+          payment_date: paymentDate || null,
+          special_instructions: $('#ed-instructions').value.trim() || null,
+          infogenesis_check_number: checkNumber,
+          booking_agent_name: $('#ed-agent-name').value.trim(),
+          comp_authorized_by: isComped ? compAuthorizedBy : null,
+          version: parseInt($('#ed-version').value, 10),
+        },
+      });
+      showToast('Booking updated!', 'success');
+      closePopup();
+      renderCalendar();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  });
 }
 
 // ── Cancel Booking Modal ──────────────────────────────────────────────────────
