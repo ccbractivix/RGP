@@ -16,6 +16,7 @@ const CONFIG = {
     MAX_LAUNCHES: 15,
     MAX_DAYS: 14,
     GALLERIES_JSON: 'data/galleries.json',
+    GALLERY_CATEGORIES_JSON: 'data/gallery-categories.json',
 };
 
 // ============================================================
@@ -25,6 +26,7 @@ let allLaunches = [];
 let cmsContent = {};
 let blogPosts = [];    // published posts (metadata, no body) sorted newest-first
 let galleryData = [];  // all galleries from static JSON sorted newest-first
+let galleryCategories = [];  // gallery categories with links to external galleries
 let countdownTimer = null;
 let launchRefreshTimer = null;
 let queuedLaunchRefreshTimer = null;
@@ -1050,6 +1052,7 @@ async function init() {
             loadCMS(),
             loadBlog(),
             loadGalleries(),
+            loadGalleryCategories(),
         ]);
 
         allLaunches = launches;
@@ -1114,6 +1117,20 @@ async function loadGalleries() {
         }
     } catch (e) {
         console.warn('Galleries load failed:', e);
+    }
+}
+
+async function loadGalleryCategories() {
+    try {
+        const res = await fetch(CONFIG.GALLERY_CATEGORIES_JSON);
+        if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                galleryCategories = data;
+            }
+        }
+    } catch (e) {
+        console.warn('Gallery categories load failed:', e);
     }
 }
 
@@ -1221,6 +1238,13 @@ function renderGalleriesPage() {
         <div class="subtitle">Launch Photo Galleries</div>
     </div>`;
 
+    // Display gallery categories first
+    if (galleryCategories.length > 0) {
+        galleryCategories.forEach(category => {
+            html += buildGalleryCategorySection(category);
+        });
+    }
+
     if (!galleryData.length) {
         html += `<div class="galleries-empty">📷 No galleries yet — check back after the next launch!</div>`;
         html += buildStandardFooter();
@@ -1289,6 +1313,29 @@ function buildGalleryCard(g) {
 function formatGalleryDate(dateStr) {
     const d = new Date(dateStr + 'T12:00:00Z');
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function buildGalleryCategorySection(category) {
+    let html = `<div class="gallery-category-section">
+        <div class="gallery-category-header">${esc(category.name)}</div>`;
+    
+    if (category.description) {
+        html += `<div class="gallery-category-description">${esc(category.description)}</div>`;
+    }
+    
+    html += `<div class="gallery-category-links">`;
+    
+    if (category.galleries && Array.isArray(category.galleries)) {
+        category.galleries.forEach(gallery => {
+            html += `<a href="${esc(gallery.url)}" target="_blank" rel="noopener noreferrer" class="gallery-category-link">
+                ${esc(gallery.name)} →
+            </a>`;
+        });
+    }
+    
+    html += `</div></div>`;
+    
+    return html;
 }
 
 // ============================================================
