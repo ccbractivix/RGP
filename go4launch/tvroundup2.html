@@ -170,6 +170,7 @@
     .bubble-status {
       flex: 0 0 auto;
       align-self: center;
+      margin-left: auto;
       min-width: 132px;
       text-align: center;
       border-radius: 999px;
@@ -178,16 +179,16 @@
       letter-spacing: 1px;
       text-transform: uppercase;
       color: #fff;
-      background: var(--secondary);
+      background: var(--red);
     }
 
     .status-go, .status-success { 
       background: var(--active);
       animation: status-glow 2s ease-in-out infinite;
     }
-    .status-tbd, .status-tbc { background: #C68231; }
-    .status-hold, .status-failure { background: #B04040; }
-    .status-inflight { background: #545DC2; }
+    .status-tbd, .status-tbc { background: var(--red); }
+    .status-hold, .status-failure { background: var(--red); }
+    .status-inflight { background: var(--red); }
 
     #next-launch-panel {
       flex: 1;
@@ -247,7 +248,21 @@
       letter-spacing: 1px;
       text-transform: uppercase;
       color: #fff;
-      background: var(--secondary);
+      background: var(--red);
+    }
+
+    .next-status.status-go, 
+    .next-status.status-success {
+      background: var(--active);
+      animation: status-glow 2s ease-in-out infinite;
+    }
+    
+    .next-status.status-tbd,
+    .next-status.status-tbc,
+    .next-status.status-hold,
+    .next-status.status-failure,
+    .next-status.status-inflight {
+      background: var(--red);
     }
 
     .next-meta {
@@ -766,7 +781,8 @@
           var cms = cmsContent[launchId];
           if (!cms || !cms.rtl_datetime) continue;
           var rtlTime = new Date(cms.rtl_datetime).getTime();
-          if (rtlTime >= now - RTL_GRACE_MS && (!next || rtlTime < next.time)) {
+          // Only show RTL if it's in the future (hasn't started yet)
+          if (rtlTime > now && (!next || rtlTime < next.time)) {
             next = { launchId: launchId, datetime: cms.rtl_datetime, time: rtlTime };
           }
         }
@@ -833,14 +849,24 @@
 
       function renderRTL(cmsContent) {
         var rtlPanel = document.getElementById('rtl-panel');
+        var countdownEl = document.querySelector('[data-next-countdown]');
         var rtl = findNextRTL(cmsContent);
 
         if (!rtl) {
+          // No upcoming RTL, so hide RTL panel and show countdown
           rtlPanel.style.display = 'none';
+          if (countdownEl) {
+            countdownEl.style.display = 'flex';
+          }
           return;
         }
 
+        // RTL is upcoming, so show RTL panel and hide countdown
         rtlPanel.style.display = 'flex';
+        if (countdownEl) {
+          countdownEl.style.display = 'none';
+        }
+         
         var now = Date.now();
         var isLive = rtl.time <= now && rtl.time + RTL_GRACE_MS >= now;
         var statusLabel = isLive ? 'LIVE' : 'SCHEDULED';
