@@ -18,6 +18,8 @@
       --accent-dark: #cf6843;
       --active: #2D8A3E;
       --active-rgb: 45, 138, 62;
+      --red: #E63946;
+      --red-rgb: 230, 57, 70;
       --secondary: #6B6460;
       --border: #D2CDC5;
       --base-w: 1920;
@@ -61,7 +63,7 @@
     #header {
       flex: 0 0 auto;
       text-align: center;
-      color: #E63946;
+      color: var(--red);
       font-family: 'Montserrat', sans-serif;
       font-weight: 600;
       font-size: 54px;
@@ -196,7 +198,7 @@
     }
 
     .next-headline {
-      background: linear-gradient(135deg, #E63946, #d42e3a);
+      background: linear-gradient(135deg, var(--red), #d42e3a);
       color: #fff;
       text-align: center;
       padding: 12px 16px;
@@ -323,16 +325,16 @@
       align-items: center;
       justify-content: space-between;
       padding: 22px;
-      border-color: #E63946;
-      background: linear-gradient(135deg, rgba(230, 57, 70, 0.08), rgba(230, 57, 70, 0.04));
+      border-color: var(--red);
+      background: linear-gradient(135deg, rgba(var(--red-rgb), 0.08), rgba(var(--red-rgb), 0.04));
       color: var(--text);
-      box-shadow: 0 0 20px rgba(230, 57, 70, 0.3);
+      box-shadow: 0 0 20px rgba(var(--red-rgb), 0.3);
       animation: rtl-glow 2s ease-in-out infinite;
     }
 
     @keyframes rtl-glow {
-      0%, 100% { box-shadow: 0 0 20px rgba(230, 57, 70, 0.3); }
-      50% { box-shadow: 0 0 30px rgba(230, 57, 70, 0.5); }
+      0%, 100% { box-shadow: 0 0 20px rgba(var(--red-rgb), 0.3); }
+      50% { box-shadow: 0 0 30px rgba(var(--red-rgb), 0.5); }
     }
 
     @keyframes status-glow {
@@ -349,7 +351,7 @@
       font-family: 'Montserrat', sans-serif;
       letter-spacing: 3px;
       text-transform: uppercase;
-      color: #E63946;
+      color: var(--red);
       font-size: 38px;
       line-height: 1;
       margin-bottom: 10px;
@@ -842,9 +844,7 @@
         var now = Date.now();
         var isLive = rtl.time <= now && rtl.time + RTL_GRACE_MS >= now;
         var statusLabel = isLive ? 'LIVE' : 'SCHEDULED';
-        // Use a map to safely assign status class from hardcoded valid values
-        var statusClassMap = { true: 'status-go', false: 'status-tbd' };
-        var statusClass = statusClassMap[String(isLive)];
+        var statusClass = isLive ? 'status-go' : 'status-tbd';
 
         rtlPanel.innerHTML =
           '<div class="rtl-content">' +
