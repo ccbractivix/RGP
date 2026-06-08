@@ -779,6 +779,8 @@ async function loadEditForm(bookingId) {
   const sheet = $('#booking-sheet');
   let html = `<button class="popup-close" onclick="closePopup()">✕</button>`;
   html += `<div class="popup-title">Edit Booking</div>`;
+  html += `<div class="form-group"><label class="form-label">Cabana</label>
+    <select class="form-select" id="ed-cabana">${cabanas.map(c => `<option value="${c.id}" ${c.id === booking.cabana_id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>`;
   html += `<div class="form-row">
     <div class="form-group"><label class="form-label">Last Name</label>
       <input class="form-input" id="ed-last-name" value="${esc(booking.last_name || getLastName(booking.renter_name) || '')}"></div>
@@ -876,6 +878,7 @@ async function loadEditForm(bookingId) {
       await api(`/operator/booking/${booking.id}`, {
         method: 'PUT',
         body: {
+          cabana_id: parseInt($('#ed-cabana').value, 10),
           renter_name: `${lastName}${firstName ? `, ${firstName}` : ''}`,
           last_name: lastName,
           first_name: firstName,
