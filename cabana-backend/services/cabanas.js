@@ -764,7 +764,7 @@ async function updateBooking(id, updates) {
   }
 
   const allowed = [
-    'renter_name', 'last_name', 'first_name', 'phone', 'room_number', 'reservation_number',
+    'cabana_id', 'renter_name', 'last_name', 'first_name', 'phone', 'room_number', 'reservation_number',
     'check_in_date', 'date_reserved', 'price_paid', 'property', 'payment_status', 'payment_date',
     'is_paid', 'special_instructions', 'slot', 'infogenesis_receipt_number',
     'infogenesis_check_number', 'booking_agent_name', 'comp_authorized_by',
@@ -812,12 +812,26 @@ async function updateBooking(id, updates) {
         setColumn('paid_at', null);
         setColumn('payment_status', 'pending_payment');
         setColumn('payment_date', null);
+      } else if (key === 'cabana_id') {
+        const newCabanaId = parseInt(updates[key], 10);
+        if (!Number.isInteger(newCabanaId)) throw new Error('Invalid cabana');
+        const { rows: cab } = await db.query('SELECT id FROM cabanas WHERE id = $1', [newCabanaId]);
+        if (cab.length === 0) throw new Error('Cabana not found');
+        // Intentionally NOT checking availability — operators may move a booking
+        // to any cabana, even if that cabana is already reserved for the date/slot.
+        setColumn('cabana_id', newCabanaId);
       } else if (key === 'slot') {
-        // Check if new slot is available
-        const available = await checkSlotAvailable(
-          booking.cabana_id, booking.booking_date, updates[key], id
-        );
-        if (!available) throw new Error('New slot conflicts with an existing booking');
+        // Check if new slot is available. When the booking is being moved to a
+        // different cabana, allow the change unconditionally (the target cabana
+        // may already be reserved).
+        const changingCabana = updates.cabana_id !== undefined
+          && parseInt(updates.cabana_id, 10) !== booking.cabana_id;
+        if (!changingCabana) {
+          const available = await checkSlotAvailable(
+            booking.cabana_id, booking.booking_date, updates[key], id
+          );
+          if (!available) throw new Error('New slot conflicts with an existing booking');
+        }
         setColumn('slot', updates[key]);
       } else {
         setColumn(key, typeof updates[key] === 'string' ? updates[key].trim() : updates[key]);
