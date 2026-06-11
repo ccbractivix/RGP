@@ -142,28 +142,31 @@
 
     // ── Fetch with retry (handles Render cold-start 502/503) ──
     async function fetchWithRetry(url, retries = 3, delay = 3000) {
+      let lastError;
       for (let attempt = 1; attempt <= retries; attempt++) {
         try {
           const response = await fetch(url);
           if (response.ok) return response;
           // Retry on 502/503 (Render cold-start), fail immediately on other errors
           if (attempt < retries && (response.status === 502 || response.status === 503)) {
-            showLoading(attempt);
+            showLoading(attempt, retries);
             await new Promise(r => setTimeout(r, delay * attempt));
             continue;
           }
           throw new Error(`HTTP ${response.status}`);
         } catch (e) {
+          lastError = e;
           if (attempt >= retries) throw e;
-          showLoading(attempt);
+          showLoading(attempt, retries);
           await new Promise(r => setTimeout(r, delay * attempt));
         }
       }
+      throw lastError || new Error('Max retries reached');
     }
 
-    function showLoading(attempt) {
+    function showLoading(attempt, total) {
       document.getElementById('cabanas-container').innerHTML =
-        `<div class="loading"><div class="spinner"></div><p style="margin-top:12px;">Server waking up… attempt ${attempt + 1}</p></div>`;
+        `<div class="loading"><div class="spinner"></div><p style="margin-top:12px;">Server waking up… attempt ${attempt} of ${total}</p></div>`;
     }
 
     // ── Fetch and Display ──
