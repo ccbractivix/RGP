@@ -139,11 +139,10 @@
     async function updateDashboard() {
       updateDateDisplay();
 
-      // Fetch data for the selected date (we could fetch a range, but for simplicity, just the day)
       const dateStr = toDateString(currentDate);
       try {
         const response = await fetch(
-          `${API_BASE_URL}/operator/calendar?start=${dateStr}&end=${dateStr}`
+          `${API_BASE_URL}/api/daily-view?date=${dateStr}`
         );
 
         if (!response.ok) {
@@ -151,24 +150,14 @@
         }
 
         const data = await response.json();
-        renderCabanas(data.bookings, data.blocks);
+        renderCabanas(data.cabanas, data.bookings, data.blocks);
       } catch (e) {
-        console.error('Error fetching bookings:', e);
+        console.error('Error fetching dashboard data:', e);
         document.getElementById('cabanas-container').innerHTML = '<div class="no-rentals">Error loading data. Please try again.</div>';
       }
     }
 
-    async function renderCabanas(bookings, blocks) {
-      // Fetch cabanas list
-      let cabanas = [];
-      try {
-        const response = await fetch(`${API_BASE_URL}/operator/cabanas`);
-        const data = await response.json();
-        cabanas = data.cabanas;
-      } catch (e) {
-        console.error('Error fetching cabanas:', e);
-      }
-
+    async function renderCabanas(cabanas, bookings, blocks) {
       if (cabanas.length === 0) {
         document.getElementById('cabanas-container').innerHTML = '<div class="no-rentals">No cabanas configured.</div>';
         return;
