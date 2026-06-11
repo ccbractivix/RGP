@@ -30,7 +30,7 @@ router.get('/cabana-slide', async (req, res) => {
 /**
  * GET /api/daily-view?date=YYYY-MM-DD
  *
- * Public endpoint used by the obscured-URL daily dashboard (7n4k9q2m.html).
+ * Public endpoint used by the cabana daily dashboard (dashboard.html).
  * Returns { cabanas, bookings, blocks } for the requested date (defaults to today Eastern).
  * Only active bookings (non-cancelled) and blocks are included.
  */
