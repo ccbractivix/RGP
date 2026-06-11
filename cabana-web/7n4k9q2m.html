@@ -24,24 +24,11 @@
 
     html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; }
 
-    /* ── Login Screen ── */
-    #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-    #login-screen h1 { font-family: 'Fredoka', sans-serif; font-size: 26px; font-weight: 700; margin-bottom: 6px; }
-    #login-screen p { color: var(--text-muted); margin-bottom: 24px; font-size: 13px; }
-    .code-input { width: 200px; padding: 14px; font-size: 24px; font-family: 'Inter', sans-serif; text-align: center; letter-spacing: 8px; background: var(--card); color: var(--text); border: 2px solid var(--card-border); border-radius: 10px; outline: none; }
-    .code-input:focus { border-color: var(--blue); }
-    .login-btn { margin-top: 16px; padding: 12px 40px; font-size: 15px; font-weight: 600; background: var(--blue); color: #fff; border: none; border-radius: 8px; cursor: pointer; }
-    .login-btn:active { opacity: 0.8; }
-    .login-error { color: var(--red); margin-top: 12px; font-size: 13px; min-height: 20px; }
-
     /* ── Dashboard ── */
-    #dashboard { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
-    #dashboard.show { display: block; }
+    #dashboard { padding: 20px; max-width: 1200px; margin: 0 auto; }
 
     .dashboard-header { background: var(--card); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
     .dashboard-header h1 { font-family: 'Fredoka', sans-serif; font-size: 24px; font-weight: 700; }
-    .logout-btn { font-size: 12px; color: var(--text-muted); background: none; border: 1px solid var(--card-border); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
-    .logout-btn:active { background: var(--card-border); }
 
     /* ── Date Navigation ── */
     .date-nav { display: flex; align-items: center; justify-content: center; gap: 16px; background: var(--card); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
@@ -92,20 +79,10 @@
   </style>
 </head>
 <body>
-  <!-- Login Screen -->
-  <div id="login-screen">
-    <h1>Cabana Dashboard</h1>
-    <p>Enter your operator code to continue</p>
-    <input type="password" id="code-input" class="code-input" placeholder="••••••" maxlength="6">
-    <button class="login-btn" onclick="handleLogin()">Login</button>
-    <div class="login-error" id="login-error"></div>
-  </div>
-
   <!-- Dashboard -->
   <div id="dashboard">
     <div class="dashboard-header">
       <h1>Cabana Daily Dashboard</h1>
-      <button class="logout-btn" onclick="handleLogout()">Logout</button>
     </div>
 
     <div class="date-nav">
@@ -124,7 +101,6 @@
 
   <script>
     const API_BASE_URL = document.querySelector('meta[name="api-url"]').content;
-    let authCode = null;
     let currentDate = new Date();
 
     // ── Date Formatting ──
@@ -142,56 +118,6 @@
       const easternDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
       easternDate.setHours(0, 0, 0, 0);
       return easternDate;
-    }
-
-    // ── Authentication ──
-    async function handleLogin() {
-      const code = document.getElementById('code-input').value.trim();
-      if (!code) {
-        showLoginError('Please enter a code');
-        return;
-      }
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/operator/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code }),
-        });
-
-        const data = await response.json();
-        if (data.valid) {
-          authCode = code;
-          showDashboard();
-          currentDate = getTodayEastern();
-          updateDashboard();
-        } else {
-          showLoginError('Invalid code');
-        }
-      } catch (e) {
-        console.error('Login error:', e);
-        showLoginError('Connection error. Please try again.');
-      }
-    }
-
-    function handleLogout() {
-      authCode = null;
-      document.getElementById('code-input').value = '';
-      showLoginScreen();
-    }
-
-    function showLoginError(msg) {
-      document.getElementById('login-error').textContent = msg;
-    }
-
-    function showLoginScreen() {
-      document.getElementById('login-screen').style.display = 'flex';
-      document.getElementById('dashboard').classList.remove('show');
-    }
-
-    function showDashboard() {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('dashboard').classList.add('show');
     }
 
     // ── Date Navigation ──
@@ -217,8 +143,7 @@
       const dateStr = toDateString(currentDate);
       try {
         const response = await fetch(
-          `${API_BASE_URL}/operator/calendar?start=${dateStr}&end=${dateStr}`,
-          { headers: { 'x-auth-code': authCode } }
+          `${API_BASE_URL}/operator/calendar?start=${dateStr}&end=${dateStr}`
         );
 
         if (!response.ok) {
@@ -237,9 +162,7 @@
       // Fetch cabanas list
       let cabanas = [];
       try {
-        const response = await fetch(`${API_BASE_URL}/operator/cabanas`, {
-          headers: { 'x-auth-code': authCode }
-        });
+        const response = await fetch(`${API_BASE_URL}/operator/cabanas`);
         const data = await response.json();
         cabanas = data.cabanas;
       } catch (e) {
@@ -320,10 +243,8 @@
 
     // ── Initialize ──
     window.onload = function() {
-      showLoginScreen();
-      document.getElementById('code-input').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') handleLogin();
-      });
+      currentDate = getTodayEastern();
+      updateDashboard();
     };
   </script>
 </body>
