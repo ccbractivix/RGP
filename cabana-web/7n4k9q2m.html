@@ -69,6 +69,11 @@
     .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--card-border); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.6s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── Error / Retry ── */
+    .error-box { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+    .retry-btn { margin-top: 12px; background: var(--blue); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .retry-btn:hover { opacity: 0.9; }
+
     /* ── Responsive ── */
     @media (max-width: 768px) {
       .dashboard-header { flex-direction: column; align-items: flex-start; }
@@ -135,29 +140,53 @@
       document.getElementById('date-display').textContent = toDisplayDate(currentDate);
     }
 
-    // ── Fetch and Display ──
-    async function updateDashboard() {
-      updateDateDisplay();
-
-      const dateStr = toDateString(currentDate);
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/daily-view?date=${dateStr}`
-        );
-
-        if (!response.ok) {
+    // ── Fetch with retry (handles Render cold-start 502/503) ──
+    async function fetchWithRetry(url, retries = 3, delay = 3000) {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          const response = await fetch(url);
+          if (response.ok) return response;
+          // Retry on 502/503 (Render cold-start), fail immediately on other errors
+          if (attempt < retries && (response.status === 502 || response.status === 503)) {
+            showLoading(attempt);
+            await new Promise(r => setTimeout(r, delay * attempt));
+            continue;
+          }
           throw new Error(`HTTP ${response.status}`);
+        } catch (e) {
+          if (attempt >= retries) throw e;
+          showLoading(attempt);
+          await new Promise(r => setTimeout(r, delay * attempt));
         }
-
-        const data = await response.json();
-        renderCabanas(data.cabanas, data.bookings, data.blocks);
-      } catch (e) {
-        console.error('Error fetching dashboard data:', e);
-        document.getElementById('cabanas-container').innerHTML = '<div class="no-rentals">Error loading data. Please try again.</div>';
       }
     }
 
-    async function renderCabanas(cabanas, bookings, blocks) {
+    function showLoading(attempt) {
+      document.getElementById('cabanas-container').innerHTML =
+        `<div class="loading"><div class="spinner"></div><p style="margin-top:12px;">Server waking up… attempt ${attempt + 1}</p></div>`;
+    }
+
+    // ── Fetch and Display ──
+    async function updateDashboard() {
+      updateDateDisplay();
+      document.getElementById('cabanas-container').innerHTML =
+        '<div class="loading"><div class="spinner"></div><p style="margin-top:12px;">Loading rentals...</p></div>';
+
+      const dateStr = toDateString(currentDate);
+      try {
+        const response = await fetchWithRetry(
+          `${API_BASE_URL}/api/daily-view?date=${dateStr}`
+        );
+        const data = await response.json();
+        renderCabanas(data.cabanas || [], data.bookings || [], data.blocks || []);
+      } catch (e) {
+        console.error('Error fetching dashboard data:', e);
+        document.getElementById('cabanas-container').innerHTML =
+          '<div class="error-box">Error loading data.<br><button class="retry-btn" onclick="updateDashboard()">Retry</button></div>';
+      }
+    }
+
+    function renderCabanas(cabanas, bookings, blocks) {
       if (cabanas.length === 0) {
         document.getElementById('cabanas-container').innerHTML = '<div class="no-rentals">No cabanas configured.</div>';
         return;
@@ -181,30 +210,42 @@
 
         if (cabanaBlocks.length > 0) {
           statusClass = 'hold';
-          statusText = 'Hold';
           const block = cabanaBlocks[0];
-          content = `<div class="status-text">${block.hold_type || 'Hold'}</div>`;
+          const holdLabels = {
+            'maintenance': 'Maintenance',
+            'manager_total_block': 'Total Block',
+            'manager_blocked_for_guest': 'Blocked for Guest',
+            'manager_no_payment': 'No Payment'
+          };
+          statusText = holdLabels[block.block_type] || 'Hold';
+          content = `<div class="status-text">${statusText}${block.guest_name ? ` — ${block.guest_name}` : ''}</div>`;
         } else if (cabanaBookings.length > 0) {
           const booking = cabanaBookings[0];
-          const statusMap = {
-            'paid': 'booked-paid',
-            'unpaid': 'booked-unpaid',
+          // Map backend payment_status to CSS class
+          const paymentMap = {
+            'paid_in_full': 'booked-paid',
             'comped': 'booked-comped',
-            'tentative': 'booked-unpaid'
+            'pending_payment': 'booked-unpaid'
           };
-          statusClass = statusMap[booking.status] || 'booked-unpaid';
-          statusText = booking.status.charAt(0).toUpperCase() + booking.status.slice(1);
+          statusClass = paymentMap[booking.payment_status] || 'booked-unpaid';
 
-          const slots = [];
-          if (booking.slot === 'full-day') slots.push('Full Day');
-          else if (booking.slot === 'morning') slots.push('Morning');
-          else if (booking.slot === 'afternoon') slots.push('Afternoon');
+          // Status label from booking status
+          const statusLabels = {
+            'confirmed': 'Confirmed',
+            'tentative': 'Tentative',
+            'needs_review': 'Needs Review'
+          };
+          statusText = statusLabels[booking.status] || (booking.status ? booking.status.charAt(0).toUpperCase() + booking.status.slice(1) : 'Booked');
+
+          // Map backend slot values
+          const slotLabels = { 'full': 'Full Day', 'am': 'Morning', 'pm': 'Afternoon' };
+          const slotLabel = slotLabels[booking.slot] || booking.slot;
 
           content = `
             <div class="guest-info">
-              <div class="guest-name">${booking.first_name} ${booking.last_name}</div>
-              ${booking.guest_phone ? `<div class="guest-phone">${booking.guest_phone}</div>` : ''}
-              <div class="guest-slots">${slots.map(s => `<span class="slot-badge">${s}</span>`).join('')}</div>
+              <div class="guest-name">${booking.first_name || ''} ${booking.last_name || ''}</div>
+              ${booking.phone ? `<div class="guest-phone">${booking.phone}</div>` : ''}
+              <div class="guest-slots"><span class="slot-badge">${slotLabel}</span></div>
             </div>
             <div class="status-text">${statusText}</div>
           `;
