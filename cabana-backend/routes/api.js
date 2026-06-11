@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { getTodaySlideInfo } = require('../services/cabanas');
+const { getTodaySlideInfo, getCabanas, getCalendarData } = require('../services/cabanas');
 
 const router = express.Router();
 
@@ -24,6 +24,31 @@ router.get('/cabana-slide', async (req, res) => {
   } catch (e) {
     console.error('[api] cabana-slide error:', e);
     return res.status(500).json({ error: 'Failed to retrieve reservation' });
+  }
+});
+
+/**
+ * GET /api/daily-view?date=YYYY-MM-DD
+ *
+ * Public endpoint used by the obscured-URL daily dashboard (7n4k9q2m.html).
+ * Returns { cabanas, bookings, blocks } for the requested date (defaults to today Eastern).
+ * Only active bookings (non-cancelled) and blocks are included.
+ */
+router.get('/daily-view', async (req, res) => {
+  let date = req.query.date;
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    // Default to today in Eastern time
+    date = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  }
+  try {
+    const [cabanas, calendarData] = await Promise.all([
+      getCabanas(),
+      getCalendarData(date, date),
+    ]);
+    return res.json({ cabanas, bookings: calendarData.bookings, blocks: calendarData.blocks });
+  } catch (e) {
+    console.error('[api] daily-view error:', e);
+    return res.status(500).json({ error: 'Failed to load dashboard data' });
   }
 });
 
