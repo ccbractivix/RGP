@@ -53,7 +53,7 @@ router.get('/schedule/:weekStart', async (req, res) => {
     const endStr = end.toISOString().split('T')[0];
     const rows = await db.query(
       `SELECT s.id, s.date, s.start_time, s.notes, s.is_inherited,
-              l.id AS library_id, l.title, l.type, l.mpaa_rating, l.runtime_min, l.genres, l.imdb_rating, l.poster_url, l.ticket_url
+              l.id AS library_id, l.title, l.type, l.mpaa_rating, l.runtime_min, l.genres, l.imdb_rating, l.poster_url, l.ticket_url, l.version_label
        FROM schedule s JOIN library l ON l.id = s.library_id
        WHERE s.date >= $1 AND s.date <= $2 ORDER BY s.date, s.start_time`,
       [weekStart, endStr]

@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS library (
   poster_url     TEXT,
   ticket_url     TEXT,
   custom_art     TEXT,
+  version_label  TEXT,
+  parent_id      TEXT REFERENCES library(id) ON DELETE SET NULL,
   last_updated   TIMESTAMPTZ DEFAULT NOW()
 );
 
