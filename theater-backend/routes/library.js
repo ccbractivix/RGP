@@ -55,7 +55,7 @@ router.put('/:id', async (req, res) => {
     if (existing.rows.length === 0) return res.status(404).json({ error: 'Item not found' });
 
     const item = existing.rows[0];
-    const newTitle = (title !== undefined ? title : item.title) || item.title;
+    const newTitle = title !== undefined ? title : item.title;
     if (!newTitle || !newTitle.trim()) return res.status(400).json({ error: 'Title is required' });
 
     const parsedRuntime = runtime_min !== undefined
