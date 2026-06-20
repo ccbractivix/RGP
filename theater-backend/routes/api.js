@@ -34,7 +34,8 @@ async function getRange(startDate, endDate) {
             l.id AS library_id, l.title, l.title_line2, l.title_line3,
             l.type, l.mpaa_rating,
             l.runtime_min, l.genres, l.imdb_rating, l.poster_url,
-            l.ticket_url, l.custom_art, l.release_year
+            l.ticket_url, l.custom_art, l.release_year,
+            l.version_label
      FROM schedule s JOIN library l ON l.id = s.library_id
      WHERE s.date >= $1 AND s.date <= $2
      ORDER BY s.date, s.start_time`,
@@ -87,6 +88,7 @@ function buildDays(rows, closures, startDate, endDate) {
       notes: row.notes || '',
       ticketUrl: row.ticket_url || '',
       libraryId: row.library_id,
+      versionLabel: row.version_label || '',
     });
   });
 
