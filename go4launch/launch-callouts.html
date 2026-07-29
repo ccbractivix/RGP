@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="api-base" content="https://go4launch-backend.onrender.com">
+  <title>Go4Launch Callouts</title>
+  <style>
+    :root {
+      --bg: #000000;
+      --fg: #d61f1f;
+      --panel: #120000;
+      --muted: #8b3a3a;
+      --accent: #ff2a2a;
+    }
+
+    body.day {
+      --bg: #F5F2E8;
+      --fg: #111111;
+      --panel: #ffffff;
+      --muted: #5f5f5f;
+      --accent: #C62828;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: "SF Pro Display", "Segoe UI", Arial, sans-serif;
+      display: grid;
+      grid-template-rows: 1fr auto;
+    }
+
+    .display {
+      padding: 2.2vh 2.2vw;
+      display: grid;
+      grid-template-rows: auto 1fr auto auto;
+      gap: 1.2vh;
+      min-height: 0;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .badge {
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      border-radius: 999px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      font-size: clamp(20px, 2.2vw, 38px);
+      padding: 0.28em 0.8em;
+      text-transform: uppercase;
+    }
+
+    .status {
+      text-align: right;
+      color: var(--muted);
+      font-size: clamp(15px, 1.2vw, 22px);
+      font-weight: 650;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 70vw;
+    }
+
+    .timer {
+      align-self: center;
+      justify-self: center;
+      font-weight: 900;
+      letter-spacing: 0.03em;
+      line-height: 0.95;
+      font-size: clamp(90px, 20vw, 340px);
+      text-align: center;
+    }
+
+    .next-title {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: clamp(16px, 1.2vw, 24px);
+      font-weight: 700;
+    }
+
+    .next-callout {
+      font-size: clamp(30px, 3.2vw, 68px);
+      font-weight: 800;
+      line-height: 1.15;
+      min-height: 1.2em;
+      overflow-wrap: anywhere;
+    }
+
+    .controls {
+      background: var(--panel);
+      border-top: 1px solid color-mix(in srgb, var(--fg) 22%, transparent);
+      padding: 10px 14px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(140px, 1fr));
+      gap: 8px 10px;
+      align-items: end;
+    }
+
+    .controls.hidden { display: none; }
+
+    label {
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+
+    input, select, button {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid color-mix(in srgb, var(--fg) 30%, transparent);
+      background: var(--bg);
+      color: var(--fg);
+      padding: 10px 10px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    button {
+      cursor: pointer;
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    button:hover { filter: brightness(1.1); }
+
+    .checklist-modal {
+      position: fixed;
+      inset: 0;
+      background: color-mix(in srgb, #000 72%, transparent);
+      display: grid;
+      place-items: center;
+      z-index: 20;
+      padding: 20px;
+    }
+
+    .checklist-card {
+      width: min(920px, 100%);
+      background: var(--panel);
+      color: var(--fg);
+      border: 2px solid color-mix(in srgb, var(--fg) 25%, transparent);
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .checklist-card h1 {
+      margin: 0 0 10px;
+      font-size: clamp(26px, 2.8vw, 46px);
+      color: var(--accent);
+    }
+
+    .checklist-card ul {
+      margin: 0 0 16px 0;
+      padding-left: 20px;
+      font-size: clamp(18px, 1.5vw, 28px);
+      line-height: 1.5;
+    }
+
+    .checklist-actions {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(130px, 1fr));
+      gap: 10px;
+    }
+
+    @media (max-width: 900px) {
+      .controls { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+      .checklist-actions { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+      .status { max-width: 48vw; }
+    }
+  </style>
+</head>
+<body>
+  <main class="display">
+    <div class="top-row">
+      <div id="modeBadge" class="badge">LIVE</div>
+      <div id="statusText" class="status">Manual start ready.</div>
+    </div>
+    <div id="timerText" class="timer">T-00:00:00</div>
+    <div class="next-title">Next callout</div>
+    <div id="nextCalloutText" class="next-callout">Set T-0 and press Start.</div>
+  </main>
+
+  <section id="controls" class="controls">
+    <div>
+      <label for="t0Input">Manual T-0 (local)</label>
+      <input id="t0Input" type="datetime-local">
+    </div>
+    <div>
+      <label for="rehearsalSpeed">Rehearsal speed</label>
+      <select id="rehearsalSpeed">
+        <option value="2">2x</option>
+        <option value="5" selected>5x</option>
+        <option value="10">10x</option>
+      </select>
+    </div>
+    <div>
+      <label for="quickStart">Rehearsal start</label>
+      <select id="quickStart">
+        <option value="-120" selected>Start at T-2:00</option>
+        <option value="-600">Start at T-10:00</option>
+        <option value="-30">Start at T-0:30</option>
+      </select>
+    </div>
+    <div>
+      <label for="syncToggle">API T-0 sync</label>
+      <select id="syncToggle">
+        <option value="off" selected>Off</option>
+        <option value="on">On</option>
+      </select>
+    </div>
+    <div>
+      <label for="voiceOnly">Voice-only display</label>
+      <select id="voiceOnly">
+        <option value="off" selected>Off</option>
+        <option value="on">Hide controls</option>
+      </select>
+    </div>
+    <button id="startBtn" type="button">Start Live</button>
+    <button id="rehearsalBtn" type="button">Start Rehearsal</button>
+    <button id="pauseBtn" type="button">Pause Rehearsal</button>
+    <button id="fullscreenBtn" type="button">Toggle Fullscreen (F)</button>
+    <button id="themeBtn" type="button">Toggle Night/Day (N)</button>
+  </section>
+
+  <div id="checklistModal" class="checklist-modal">
+    <div class="checklist-card">
+      <h1>Pre-Launch Checklist</h1>
+      <ul>
+        <li>Run audio test before launch window.</li>
+        <li>Set display brightness for conditions.</li>
+        <li>Verify hotspot and API status if syncing T-0.</li>
+      </ul>
+      <div class="checklist-actions">
+        <button id="audioTestBtn" type="button">Audio Test</button>
+        <button id="apiCheckBtn" type="button">API Check</button>
+        <button id="checklistLiveBtn" type="button">Start Live</button>
+        <button id="checklistRehearsalBtn" type="button">Start Rehearsal</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var API_BASE = (document.querySelector('meta[name="api-base"]') || {}).content || '';
+      var milestones = [
+        { second: 131, say: 'MECO' },
+        { second: 135, say: 'Stage Sep, 10 seconds to kickback' },
+        { second: 148, say: 'Go kickback' },
+        { second: 202, say: 'Kickback shut down' },
+        { second: 373, say: '30 seconds to return burn' },
+        { second: 393, say: '10 seconds to return burn' },
+        { second: 403, say: 'Go return burn' },
+        { second: 424, say: 'Return burn shut down' },
+        { second: 470, say: 'Landing burn in 10 seconds' },
+        { second: 480, say: 'Go landing burn' }
+      ];
+
+      var state = {
+        mode: 'live',
+        theme: 'night',
+        running: false,
+        paused: false,
+        syncEnabled: false,
+        t0Ms: null,
+        simSeconds: -120,
+        previousSimSeconds: null,
+        rehearsalSpeed: 5,
+        tickHandle: null,
+        syncHandle: null,
+        fired: new Set(),
+        latestApiNetMs: null
+      };
+
+      var dom = {
+        modeBadge: document.getElementById('modeBadge'),
+        statusText: document.getElementById('statusText'),
+        timerText: document.getElementById('timerText'),
+        nextCalloutText: document.getElementById('nextCalloutText'),
+        t0Input: document.getElementById('t0Input'),
+        rehearsalSpeed: document.getElementById('rehearsalSpeed'),
+        quickStart: document.getElementById('quickStart'),
+        syncToggle: document.getElementById('syncToggle'),
+        voiceOnly: document.getElementById('voiceOnly'),
+        controls: document.getElementById('controls'),
+        checklistModal: document.getElementById('checklistModal')
+      };
+
+      function nowMs() { return Date.now(); }
+
+      function setStatus(text) { dom.statusText.textContent = text; }
+
+      function formatT(seconds) {
+        var sign = seconds < 0 ? '-' : '+';
+        var abs = Math.abs(Math.trunc(seconds));
+        var hh = String(Math.floor(abs / 3600)).padStart(2, '0');
+        var mm = String(Math.floor((abs % 3600) / 60)).padStart(2, '0');
+        var ss = String(abs % 60).padStart(2, '0');
+        return 'T' + sign + hh + ':' + mm + ':' + ss;
+      }
+
+      function speak(text) {
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel();
+        var utter = new SpeechSynthesisUtterance(text);
+        utter.rate = 1.0;
+        utter.pitch = 1.0;
+        window.speechSynthesis.speak(utter);
+      }
+
+      function buildEvents() {
+        var events = [];
+        [
+          [-600, 'T minus 10 minutes'],
+          [-300, 'T minus 5 minutes'],
+          [-120, 'T minus 2 minutes'],
+          [-60, 'T minus 1 minute'],
+          [-30, 'T minus 30 seconds'],
+          [-10, 'T minus 10']
+        ].forEach(function (e) {
+          events.push({ second: e[0], say: e[1], label: e[1] });
+        });
+
+        for (var i = 9; i >= 1; i--) {
+          events.push({ second: -i, say: String(i), label: 'Countdown ' + i });
+        }
+        events.push({ second: 0, say: 'Liftoff', label: 'Liftoff' });
+
+        for (var t = 15; t <= 900; t += 15) {
+          events.push({ second: t, say: 'T plus ' + t + ' seconds', label: 'T+' + t + ' cadence' });
+        }
+
+        milestones.forEach(function (m) {
+          events.push({ second: m.second, say: m.say, label: m.say });
+        });
+
+        events.sort(function (a, b) { return a.second - b.second; });
+        return events;
+      }
+
+      var events = buildEvents();
+
+      function nextEventAfter(second) {
+        for (var i = 0; i < events.length; i++) {
+          if (events[i].second > second && !state.fired.has(events[i].second + '|' + events[i].say)) return events[i];
+        }
+        return null;
+      }
+
+      function updateMainDisplay(simSeconds) {
+        dom.timerText.textContent = formatT(simSeconds);
+        var next = nextEventAfter(simSeconds);
+        dom.nextCalloutText.textContent = next ? formatT(next.second) + ' — ' + next.say : 'No pending callouts in profile';
+      }
+
+      function fireCrossedEvents(prev, current) {
+        if (current <= prev) return;
+        events.forEach(function (e) {
+          if (e.second > prev && e.second <= current) {
+            var key = e.second + '|' + e.say;
+            if (state.fired.has(key)) return;
+            state.fired.add(key);
+            speak(e.say);
+            dom.nextCalloutText.textContent = formatT(e.second) + ' — ' + e.say;
+          }
+        });
+      }
+
+      function currentLiveSeconds() {
+        if (!state.t0Ms) return 0;
+        return (nowMs() - state.t0Ms) / 1000;
+      }
+
+      function tick() {
+        var current = state.mode === 'live' ? currentLiveSeconds() : state.simSeconds;
+        if (state.mode === 'rehearsal' && state.running && !state.paused) {
+          var elapsed = (nowMs() - state._lastTickMs) / 1000;
+          state.simSeconds += elapsed * state.rehearsalSpeed;
+          state._lastTickMs = nowMs();
+          current = state.simSeconds;
+        }
+
+        if (state.running && state.previousSimSeconds != null) {
+          fireCrossedEvents(state.previousSimSeconds, current);
+        }
+        state.previousSimSeconds = current;
+        updateMainDisplay(current);
+      }
+
+      function startTicker() {
+        if (state.tickHandle) clearInterval(state.tickHandle);
+        state.tickHandle = setInterval(tick, 150);
+        tick();
+      }
+
+      function setMode(mode) {
+        state.mode = mode;
+        dom.modeBadge.textContent = mode === 'live' ? 'LIVE' : 'REHEARSAL';
+      }
+
+      function resetForRun() {
+        state.fired.clear();
+        state.previousSimSeconds = null;
+      }
+
+      function parseManualT0() {
+        if (!dom.t0Input.value) return null;
+        var ts = new Date(dom.t0Input.value).getTime();
+        return Number.isFinite(ts) ? ts : null;
+      }
+
+      function startLive() {
+        var manual = parseManualT0() || nowMs();
+        state.t0Ms = manual;
+        state.running = true;
+        state.paused = false;
+        setMode('live');
+        resetForRun();
+        setStatus(state.syncEnabled ? 'Live mode running. API sync on.' : 'Live mode running. Manual T-0.');
+        dom.checklistModal.style.display = 'none';
+        if (dom.voiceOnly.value === 'on') dom.controls.classList.add('hidden');
+        startTicker();
+      }
+
+      function startRehearsal() {
+        state.rehearsalSpeed = Number(dom.rehearsalSpeed.value) || 5;
+        state.simSeconds = Number(dom.quickStart.value) || -120;
+        state._lastTickMs = nowMs();
+        state.running = true;
+        state.paused = false;
+        setMode('rehearsal');
+        resetForRun();
+        setStatus('Rehearsal running at ' + state.rehearsalSpeed + 'x.');
+        dom.checklistModal.style.display = 'none';
+        if (dom.voiceOnly.value === 'on') dom.controls.classList.add('hidden');
+        startTicker();
+      }
+
+      function togglePauseRehearsal() {
+        if (state.mode !== 'rehearsal' || !state.running) return;
+        state.paused = !state.paused;
+        if (!state.paused) state._lastTickMs = nowMs();
+        setStatus(state.paused ? 'Rehearsal paused.' : 'Rehearsal resumed at ' + state.rehearsalSpeed + 'x.');
+      }
+
+      function toggleTheme() {
+        if (state.theme === 'night') {
+          state.theme = 'day';
+          document.body.classList.add('day');
+          setStatus('Day mode enabled.');
+        } else {
+          state.theme = 'night';
+          document.body.classList.remove('day');
+          setStatus('Night mode enabled.');
+        }
+      }
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(function () {});
+        } else {
+          document.exitFullscreen().catch(function () {});
+        }
+      }
+
+      function isCompleted(launch) {
+        var id = launch && launch.status && launch.status.id;
+        return id === 3 || id === 4 || id === 7;
+      }
+
+      function findNextLaunch(launches) {
+        var candidates = (launches || []).filter(function (launch) {
+          if (!launch || !launch.net || isCompleted(launch)) return false;
+          return true;
+        }).sort(function (a, b) {
+          return new Date(a.net).getTime() - new Date(b.net).getTime();
+        });
+        return candidates[0] || null;
+      }
+
+      function fetchApiLaunch() {
+        if (!API_BASE) return Promise.reject(new Error('API base is not set'));
+        return fetch(API_BASE + '/api/launches')
+          .then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+          })
+          .then(function (launches) {
+            var next = findNextLaunch(launches);
+            if (!next) throw new Error('No upcoming launch');
+            return next;
+          });
+      }
+
+      function runApiCheck() {
+        fetchApiLaunch()
+          .then(function (next) {
+            var netMs = new Date(next.net).getTime();
+            state.latestApiNetMs = netMs;
+            setStatus('API OK. Next NET: ' + new Date(netMs).toLocaleString());
+            if (state.syncEnabled && state.mode === 'live' && state.running) {
+              var changed = state.t0Ms == null || Math.abs(netMs - state.t0Ms) >= 1000;
+              state.t0Ms = netMs;
+              if (changed) {
+                var deltaSec = Math.max(0, Math.round((netMs - nowMs()) / 1000));
+                var mins = Math.floor(deltaSec / 60);
+                var secs = deltaSec % 60;
+                speak('New T zero in ' + mins + ' minutes and ' + secs + ' seconds');
+              }
+            }
+          })
+          .catch(function (err) {
+            setStatus('API check failed: ' + err.message);
+          });
+      }
+
+      function setDefaultT0Input() {
+        var d = new Date(nowMs() + 5 * 60000);
+        var pad = function (n) { return String(n).padStart(2, '0'); };
+        var local = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        dom.t0Input.value = local;
+      }
+
+      function setupEvents() {
+        document.getElementById('startBtn').addEventListener('click', startLive);
+        document.getElementById('rehearsalBtn').addEventListener('click', startRehearsal);
+        document.getElementById('pauseBtn').addEventListener('click', togglePauseRehearsal);
+        document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+        document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+        document.getElementById('audioTestBtn').addEventListener('click', function () { speak('T minus 10 seconds test'); });
+        document.getElementById('apiCheckBtn').addEventListener('click', runApiCheck);
+        document.getElementById('checklistLiveBtn').addEventListener('click', startLive);
+        document.getElementById('checklistRehearsalBtn').addEventListener('click', startRehearsal);
+        dom.syncToggle.addEventListener('change', function () {
+          state.syncEnabled = dom.syncToggle.value === 'on';
+          setStatus(state.syncEnabled ? 'API sync enabled.' : 'API sync disabled.');
+        });
+        dom.voiceOnly.addEventListener('change', function () {
+          if (dom.voiceOnly.value === 'on') {
+            dom.controls.classList.add('hidden');
+          } else {
+            dom.controls.classList.remove('hidden');
+          }
+        });
+        dom.rehearsalSpeed.addEventListener('change', function () {
+          state.rehearsalSpeed = Number(dom.rehearsalSpeed.value) || 5;
+        });
+        document.addEventListener('keydown', function (event) {
+          if (event.target && /input|select|textarea/i.test(event.target.tagName)) return;
+          var key = event.key.toLowerCase();
+          if (key === 'f') {
+            toggleFullscreen();
+          } else if (key === 'n') {
+            toggleTheme();
+          } else if (key === 'r') {
+            if (!state.running) {
+              setMode(state.mode === 'live' ? 'rehearsal' : 'live');
+              setStatus('Mode set to ' + (state.mode === 'live' ? 'live' : 'rehearsal') + '.');
+            }
+          } else if (event.code === 'Space') {
+            event.preventDefault();
+            if (state.mode === 'rehearsal') {
+              if (!state.running) startRehearsal();
+              else togglePauseRehearsal();
+            }
+          }
+        });
+      }
+
+      function init() {
+        setDefaultT0Input();
+        setMode('live');
+        setStatus('Manual start ready. Use checklist, then start.');
+        updateMainDisplay(-120);
+        setupEvents();
+        startTicker();
+        state.syncHandle = setInterval(function () {
+          if (state.syncEnabled) runApiCheck();
+        }, 15000);
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
