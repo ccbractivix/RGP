@@ -77,6 +77,43 @@ Copy the output into the `AMENITY_CODES` environment variable.
 - `clear_lightning_mode`
 - `reload_schedule`
 
+## Draft Mac Mini Python polling client
+
+A draft polling client is included at:
+
+- `amenities-backend/mac_mini_player_client.py`
+
+### What it does
+
+- Registers with `POST /player/register`
+- Polls `GET /player/commands`
+- Acknowledges each command via `POST /player/commands/:id/ack`
+- Supports all current command types, including `reload_schedule`
+- Caches schedule JSON locally for offline fallback
+
+### Required environment variables
+
+- `AUDIO_PLAYER_TOKEN` — must match backend `AUDIO_PLAYER_TOKEN`
+
+### Common optional environment variables
+
+- `AUDIO_PLAYER_API_BASE_URL` (default `http://localhost:3001`)
+- `AUDIO_PLAYER_ID` (default `mac-mini`)
+- `AUDIO_PLAYER_NAME` (default `Mac Mini Audio Player`)
+- `AUDIO_PLAYER_VERSION` (default `draft-1`)
+- `AUDIO_PLAYER_POLL_SECONDS` (default `5`)
+- `AUDIO_PLAYER_TIMEOUT_SECONDS` (default `10`)
+- `AUDIO_PLAYER_COMMAND_LIMIT` (default `20`)
+- `AUDIO_PLAYER_AUDIO_DIR` (default current directory)
+- `AUDIO_PLAYER_SCHEDULE_CACHE` (default `~/.rgp/schedule-{playerId}.json`)
+- `AUDIO_PLAYER_PLAY_COMMAND_TEMPLATE` (optional shell template with `{audio_file}` and `{audio_path}`)
+
+### Run
+
+```bash
+python3 amenities-backend/mac_mini_player_client.py
+```
+
 ### Example schedule payload
 
 ```json
