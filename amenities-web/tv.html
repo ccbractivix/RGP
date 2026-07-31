@@ -56,22 +56,13 @@
       border-radius: 5px;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 6px 4px;
-      text-align: center;
+      align-items: stretch;
+      justify-content: flex-end;
+      padding: 0;
+      text-align: left;
       overflow: hidden;
       background-size: cover;
       background-position: center;
-      isolation: isolate;
-    }
-
-    .tv-amenity::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: rgba(242, 241, 232, 0.82);
-      z-index: -1;
     }
 
     .tv-amenity.is-open {
@@ -86,35 +77,43 @@
       border-color: #CFC7BD;
     }
 
+    .tv-amenity-chyron {
+      width: 100%;
+      background: rgba(16, 28, 40, 0.88);
+      color: #F2F5F8;
+      padding: 6px 8px 7px;
+      border-top: 1px solid rgba(255, 255, 255, 0.22);
+    }
+
     .tv-amenity-name {
-      font-size: clamp(14px, 1.6vw, 24px);
-      font-weight: 600;
+      font-size: clamp(12px, 1.25vw, 20px);
+      font-weight: 700;
       line-height: 1.3;
-      margin-bottom: 3px;
-      color: #454040;
+      color: #F8C85A;
     }
 
     .tv-amenity-status {
-      font-size: clamp(12px, 1.3vw, 20px);
+      font-size: clamp(10px, 1.05vw, 16px);
       font-weight: 600;
       line-height: 1.3;
-      color: #454040;
+      color: #DDE6EE;
+      margin-top: 1px;
     }
 
-    .tv-amenity-status.open { color: #454040; }
-    .tv-amenity-status.closed { color: #E5754A; }
-    .tv-amenity-status.outside { color: #454040; }
+    .tv-amenity-status.open { color: #A9E2A4; }
+    .tv-amenity-status.closed { color: #FFB19A; }
+    .tv-amenity-status.outside { color: #A8D6FF; }
 
     .tv-amenity-detail {
-      font-size: clamp(10px, 0.9vw, 14px);
-      color: #454040;
-      margin-top: 2px;
+      font-size: clamp(9px, 0.86vw, 13px);
+      color: #E5EDF5;
+      margin-top: 1px;
     }
 
     .tv-amenity-hours {
-      font-size: clamp(9px, 0.8vw, 12px);
-      color: #454040;
-      margin-top: 2px;
+      font-size: clamp(8px, 0.78vw, 12px);
+      color: #CFDBE7;
+      margin-top: 1px;
     }
 
     /* ===== LIGHTNING BANNER ===== */
@@ -418,10 +417,12 @@
         }
 
         html += '<div class="tv-amenity ' + cardClass + '"' + (bg ? ' style="background-image:url(\'' + bg + '\');"' : '') + '>';
+        html += '<div class="tv-amenity-chyron">';
         html += '<div class="tv-amenity-name">' + escapeHtml(a.name) + '</div>';
         html += '<div class="tv-amenity-status ' + statusClass + '">' + escapeHtml(statusText) + '</div>';
         if (detail) html += '<div class="tv-amenity-detail">' + escapeHtml(detail) + '</div>';
         html += '<div class="tv-amenity-hours">' + formatTime12(a.openTime) + ' – ' + formatTime12(a.closeTime) + '</div>';
+        html += '</div>';
         html += '</div>';
       });
 

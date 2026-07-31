@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="api-base" content="https://go4launch-backend.onrender.com">
+  <title>Go4Launch Launch Alert</title>
+  <style>
+    :root {
+      color-scheme: only light;
+      --accent: #E63946;
+      --slide-radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: #EDEEE1;
+      color: #101820;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 1.4vh 1.2vw;
+    }
+
+    .slide {
+      width: 100%;
+      max-width: 1800px;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+      background: rgba(255, 255, 255, 0.76);
+      border: 2px solid rgba(16, 24, 32, 0.12);
+      border-radius: var(--slide-radius);
+      padding: 1.6vh 1.6vw;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1vh;
+    }
+
+    .slide::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent) 0%, #1A3A4E 100%);
+      border-radius: var(--slide-radius) var(--slide-radius) 0 0;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 1.6vw;
+      flex-shrink: 0;
+      padding-left: 0.6vw;
+      border-left: 5px solid var(--accent);
+    }
+
+    .top h1 {
+      margin: 0;
+      font-size: clamp(26px, 2.5vw, 46px);
+      letter-spacing: 0.03em;
+      color: var(--accent);
+    }
+
+    .side-logo {
+      height: clamp(50px, 5.5vh, 90px);
+      width: auto;
+      object-fit: contain;
+      align-self: center;
+    }
+
+    .main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      gap: 1vw;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.96);
+      border: 1.5px solid rgba(16, 24, 32, 0.11);
+      border-radius: 14px;
+      padding: 1.4vh 1.3vw;
+      overflow: hidden;
+    }
+
+    .main-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .launch-content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 1.1vw;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .launch-text {
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .launch-image-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1.5px solid rgba(16, 24, 32, 0.13);
+      background: #f0f1eb;
+      min-height: 0;
+    }
+
+    .launch-image-panel img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .label {
+      font-size: clamp(13px, 1vw, 20px);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: #4A5A67;
+      margin-bottom: 0.3vh;
+      font-weight: 700;
+    }
+
+    .value {
+      margin: 0 0 0.9vh 0;
+      font-size: clamp(22px, 1.85vw, 38px);
+      line-height: 1.1;
+      font-weight: 800;
+      color: #142836;
+    }
+
+    .subvalue {
+      margin: 0 0 1.2vh 0;
+      font-size: clamp(18px, 1.4vw, 28px);
+      line-height: 1.2;
+      font-weight: 650;
+    }
+
+    .datetime {
+      font-size: clamp(18px, 1.5vw, 30px);
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .countdown {
+      margin-top: 1vh;
+      padding: 0.7vh 0.8vw;
+      border-radius: 10px;
+      background: #1A3A4E;
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5vw;
+      font-size: clamp(17px, 1.35vw, 26px);
+      font-weight: 700;
+    }
+
+    @media (max-width: 1100px) {
+      .launch-content {
+        grid-template-columns: 1fr;
+      }
+
+      .launch-image-panel {
+        min-height: clamp(160px, 28vh, 280px);
+      }
+    }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 1vh;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .rtl-box img {
+      width: 100%;
+      max-height: 16vh;
+      object-fit: contain;
+      margin-bottom: 0.6vh;
+    }
+
+    .rtl-time {
+      margin: 0;
+      font-size: clamp(16px, 1.3vw, 26px);
+      line-height: 1.25;
+      font-weight: 700;
+    }
+
+    .qr {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.8vw;
+      align-items: center;
+    }
+
+    .qr img {
+      width: clamp(72px, 8vw, 140px);
+      height: auto;
+      border-radius: 8px;
+      border: 1.5px solid rgba(16, 24, 32, 0.13);
+      background: #fff;
+    }
+
+    .qr p {
+      margin: 0;
+      font-size: clamp(14px, 1vw, 22px);
+      line-height: 1.3;
+      font-weight: 600;
+    }
+
+    .status {
+      text-align: right;
+      font-size: clamp(11px, 0.75vw, 15px);
+      color: #3B4E5C;
+      flex-shrink: 0;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="slide">
+    <div class="top">
+      <h1>LAUNCH ALERT</h1>
+    </div>
+
+    <div class="main">
+      <section class="panel main-panel">
+        <div class="launch-content">
+          <div class="launch-text">
+            <div class="label">Rocket</div>
+            <h2 id="rocketName" class="value">Loading…</h2>
+
+            <div class="label">Mission</div>
+            <p id="missionName" class="subvalue">Loading…</p>
+
+            <div class="label">Launch Date &amp; Time (ET)</div>
+            <p id="launchDateTime" class="datetime">Loading…</p>
+
+            <div id="countdownWrap" class="countdown hidden">
+              <span>Countdown:</span>
+              <span id="countdownValue">--:--:--</span>
+            </div>
+          </div>
+
+          <div id="rocketImageWrap" class="launch-image-panel hidden">
+            <img id="rocketImage" src="" alt="Rocket image">
+          </div>
+        </div>
+      </section>
+
+      <aside class="side">
+        <img class="side-logo" src="images/go4launch_main_t.png" alt="Go4Launch logo">
+
+        <section id="rtlBox" class="panel rtl-box hidden">
+          <img src="../theater-web/static/RTL.png" alt="Rocket Talk Live">
+          <div class="label">Rocket Talk Live</div>
+          <p id="rtlDateTime" class="rtl-time"></p>
+        </section>
+
+        <section class="panel qr">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&amp;data=https%3A%2F%2Fccbractivix.github.io%2FRGP%2Fgo4launch%2Findex.html" alt="QR Code to Go4Launch app">
+          <p>Scan for the full launch schedule, timing updates, and resort launch-view details.</p>
+        </section>
+      </aside>
+    </div>
+
+    <div id="status" class="status">Waiting for launch data…</div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      var metaTag = document.querySelector('meta[name="api-base"]');
+      var API_BASE = (metaTag && metaTag.getAttribute('content')) || '';
+      var countdownTimer = null;
+      var REFRESH_MS = 60000;
+
+      function isCompleted(launch) {
+        var id = launch && launch.status && launch.status.id;
+        return id === 3 || id === 4 || id === 7;
+      }
+
+      function isInFlight(launch) {
+        var id = launch && launch.status && launch.status.id;
+        return id === 6;
+      }
+
+      function statusLabel(launch) {
+        var status = launch && launch.status;
+        if (!status) return 'Awaiting update';
+        return status.abbrev || status.name || 'Awaiting update';
+      }
+
+      function formatDateTimeET(dateStr) {
+        var d = new Date(dateStr);
+        var date = d.toLocaleDateString('en-US', {
+          timeZone: 'America/New_York',
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        });
+        var time = d.toLocaleTimeString('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          minute: '2-digit'
+        });
+        return date + ' — ' + time;
+      }
+
+      function formatRTLDateTime(dateStr) {
+        var formatted = formatDateTimeET(dateStr);
+        if (isSevenPmET(dateStr)) {
+          return formatted + ' — Movie Theater';
+        }
+        return formatted;
+      }
+
+      function isSevenPmET(dateStr) {
+        var parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).formatToParts(new Date(dateStr));
+        var hour = null;
+        var minute = null;
+        parts.forEach(function (part) {
+          if (part.type === 'hour') hour = parseInt(part.value, 10);
+          if (part.type === 'minute') minute = parseInt(part.value, 10);
+        });
+        return hour === 19 && minute === 0;
+      }
+
+      function getRocketImageSrc(rocketName) {
+        var name = String(rocketName || '').toLowerCase();
+        if (name.indexOf('falcon 9') !== -1) return '../static/images/falcon.jpg';
+        if (name.indexOf('atlas') !== -1) return '../static/images/atlas.jpg';
+        if (name.indexOf('vulcan') !== -1) return '../static/images/vulcan.jpg';
+        return '';
+      }
+
+      function setRocketImage(rocketName) {
+        var wrap = document.getElementById('rocketImageWrap');
+        var img = document.getElementById('rocketImage');
+        if (!wrap || !img) return;
+        var src = getRocketImageSrc(rocketName);
+        if (!src) {
+          img.removeAttribute('src');
+          wrap.classList.add('hidden');
+          return;
+        }
+        img.src = src;
+        img.alt = rocketName + ' rocket image';
+        wrap.classList.remove('hidden');
+      }
+
+      function findNextLaunch(launches) {
+        var candidates = (launches || []).filter(function (launch) {
+          if (!launch || !launch.net) return false;
+          if (isCompleted(launch)) return false;
+          return true;
+        });
+        if (!candidates.length) return null;
+        candidates.sort(function (a, b) { return new Date(a.net) - new Date(b.net); });
+        return candidates[0];
+      }
+
+      function findNextRTL(content) {
+        var now = Date.now();
+        var next = null;
+        Object.keys(content || {}).forEach(function (key) {
+          var entry = content[key];
+          if (!entry || !entry.rtl_datetime) return;
+          var ts = new Date(entry.rtl_datetime).getTime();
+          if (isNaN(ts) || ts < now) return;
+          if (!next || ts < next.ts) next = { ts: ts, datetime: entry.rtl_datetime };
+        });
+        return next;
+      }
+
+      function fetchJson(url) {
+        return fetch(url).then(function (res) {
+          if (!res.ok) throw new Error('HTTP ' + res.status + ' for ' + url);
+          return res.json();
+        });
+      }
+
+      function setText(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = value == null ? '' : String(value);
+      }
+
+      function startCountdown(launch) {
+        var wrap = document.getElementById('countdownWrap');
+        var valueEl = document.getElementById('countdownValue');
+        if (!wrap || !valueEl) return;
+
+        if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
+
+        var launchTs = new Date(launch.net).getTime();
+        var now = Date.now();
+        var diff = launchTs - now;
+        if (diff > 24 * 60 * 60 * 1000) {
+          wrap.classList.add('hidden');
+          return;
+        }
+
+        wrap.classList.remove('hidden');
+
+        function getElapsedLabel() {
+          if (isInFlight(launch) || isCompleted(launch)) return 'Liftoff!';
+          if (launch && launch.status && launch.status.id === 5) return 'On Hold';
+          return statusLabel(launch);
+        }
+
+        function update() {
+          var delta = launchTs - Date.now();
+          if (delta <= 0) {
+            valueEl.textContent = getElapsedLabel();
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+            return;
+          }
+          var hours = Math.floor(delta / 3600000);
+          var mins = Math.floor((delta % 3600000) / 60000);
+          var secs = Math.floor((delta % 60000) / 1000);
+          valueEl.textContent =
+            String(hours).padStart(2, '0') + ':' +
+            String(mins).padStart(2, '0') + ':' +
+            String(secs).padStart(2, '0');
+        }
+
+        update();
+        countdownTimer = setInterval(update, 1000);
+      }
+
+      function render(launches, content) {
+        var next = findNextLaunch(launches);
+        if (!next) {
+          setText('rocketName', 'No upcoming launch available');
+          setText('missionName', 'Please check again soon.');
+          setRocketImage('');
+          setText('launchDateTime', '—');
+          document.getElementById('countdownWrap').classList.add('hidden');
+          document.getElementById('status').textContent = 'No upcoming launch data available.';
+          return;
+        }
+
+        var rocketName = (next.rocket && next.rocket.configuration && next.rocket.configuration.full_name) || 'Unknown Rocket';
+        var missionName = (next.mission && next.mission.name) || next.name || 'Unknown Mission';
+
+        setText('rocketName', rocketName);
+        setText('missionName', missionName);
+        setRocketImage(rocketName);
+        setText('launchDateTime', formatDateTimeET(next.net));
+        startCountdown(next);
+
+        var nextRTL = findNextRTL(content);
+        var rtlBox = document.getElementById('rtlBox');
+        if (nextRTL) {
+          setText('rtlDateTime', formatRTLDateTime(nextRTL.datetime));
+          rtlBox.classList.remove('hidden');
+        } else {
+          rtlBox.classList.add('hidden');
+        }
+
+        document.getElementById('status').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit'
+        });
+      }
+
+      function fetchAndRender() {
+        Promise.all([
+          fetchJson(API_BASE + '/api/launches'),
+          fetchJson(API_BASE + '/api/content').catch(function () { return {}; })
+        ])
+        .then(function (results) {
+          render(results[0] || [], results[1] || {});
+        })
+        .catch(function (err) {
+          setText('rocketName', 'Launch data unavailable');
+          setText('missionName', 'Please retry shortly.');
+          setRocketImage('');
+          setText('launchDateTime', '—');
+          document.getElementById('countdownWrap').classList.add('hidden');
+          document.getElementById('rtlBox').classList.add('hidden');
+          document.getElementById('status').textContent = 'Error: ' + err.message;
+        });
+      }
+
+      fetchAndRender();
+      setInterval(fetchAndRender, REFRESH_MS);
+    })();
+  </script>
+</body>
+</html>

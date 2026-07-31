@@ -55,7 +55,7 @@
       width: min(100vw, calc(100vh * 16 / 9));
       height: min(100vh, calc(100vw * 9 / 16));
       aspect-ratio: 16 / 9;
-      background: url('../static/images/HICV_ACTIVIX_newslide2.jpg') center center / cover no-repeat;
+      background: url('../static/images/HICV_ACTIVIX_blank.jpg') center center / cover no-repeat;
       overflow: hidden;
     }
 
@@ -75,21 +75,114 @@
 
     #today-box {
       left: 2.083%;
-      top: 10.833%;
+      top: 6.5%;
       width: 32.188%;
-      height: 85.648%;
+      height: 89.981%;
     }
 
-    #upcoming-box {
+    #promo-bubbles {
       position: absolute;
       left: 37.2%;
-      top: 55.4%;
+      top: 47.5%;
       width: 59.1%;
-      height: 39.7%;
-      padding: 0.75% 0.9%;
+      height: 47.6%;
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 1.8%;
+    }
+
+    .promo-bubble {
+      flex: 1 1 0;
+      min-width: 0;
+      border-radius: 30px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
       display: flex;
       flex-direction: column;
-      gap: 2.5%;
+      align-items: stretch;
+      justify-content: flex-start;
+      text-align: center;
+      padding: 5.5% 5%;
+      gap: 4%;
+    }
+
+    .promo-bubble-text {
+      font-size: clamp(11px, 1.4vw, 28px);
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      text-transform: uppercase;
+      overflow-wrap: break-word;
+    }
+
+    .promo-bubble-title {
+      font-size: clamp(11px, 1.4vw, 28px);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .promo-bubble-title.accent {
+      color: var(--accent);
+    }
+
+    .promo-bubble-image {
+      width: 100%;
+      flex: 1 1 auto;
+      min-height: 0;
+      object-fit: cover;
+      border-radius: 16px;
+    }
+
+    .promo-bubble-detail {
+      font-size: clamp(9px, 1vw, 18px);
+      font-weight: 700;
+      line-height: 1.15;
+      color: var(--text);
+    }
+
+    .promo-bubble-footer {
+      font-size: clamp(7px, 0.74vw, 14px);
+      font-weight: 700;
+      line-height: 1.15;
+      color: var(--muted);
+      margin-top: auto;
+    }
+
+    .promo-bubble-qr-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 6%;
+      width: 100%;
+      height: 100%;
+    }
+
+    .promo-bubble-qr {
+      width: clamp(70px, 9vw, 170px);
+      height: clamp(70px, 9vw, 170px);
+      flex: 0 0 auto;
+      padding: 4px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid rgba(230, 116, 74, 0.3);
+      object-fit: contain;
+    }
+
+    .promo-bubble-qr-detail {
+      font-size: clamp(8px, 0.82vw, 15px);
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--text);
+      max-width: 92%;
     }
 
     .box-header {
@@ -395,7 +488,7 @@
     <div class="slide-canvas">
       <section id="today-box" class="schedule-box">
         <div class="box-header">
-          <h1 class="box-title">Today</h1>
+          <h1 class="box-title">TODAY'S ACTIVITIES</h1>
           <div id="today-label" class="box-subtitle"></div>
         </div>
         <div id="today-list">
@@ -403,16 +496,30 @@
         </div>
       </section>
 
-      <section id="upcoming-box">
-        <div id="upcoming-grid"></div>
-        <div id="upcoming-footer">
-          <img
-            id="upcoming-qr"
-            src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fsites.google.com%2Fview%2Fholidayinnclubcape%2Fhome"
-            alt="QR code to Resort Guest Portal website"
-          >
-          <div id="upcoming-portal-text">Scan to visit our website for activities schedule,<br>movie theater listings, rocket launch info,<br>things to do in the area, and a whole lot more!</div>
-        </div>
+      <section id="promo-bubbles" aria-label="Upcoming activities highlights">
+        <article class="promo-bubble">
+          <div class="promo-bubble-title accent">Pool Party</div>
+          <img class="promo-bubble-image" src="../static/images/ACT-pool.jpg" alt="Pool Party">
+          <div class="promo-bubble-detail">Thursday 3 PM</div>
+          <div class="promo-bubble-footer">Weather permitting</div>
+        </article>
+        <article class="promo-bubble">
+          <div class="promo-bubble-title accent">Cash Bingo</div>
+          <img class="promo-bubble-image" src="../static/images/ACT-bingo.jpg" alt="Cash Bingo">
+          <div class="promo-bubble-detail">Wednesday and Sunday<br><span style="white-space: nowrap;">Main Pool 3 PM</span></div>
+          <div class="promo-bubble-footer">Weather permitting</div>
+        </article>
+        <article class="promo-bubble">
+          <div class="promo-bubble-qr-wrap">
+            <div class="promo-bubble-title accent">Activities Schedule</div>
+            <img
+              class="promo-bubble-qr"
+              src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=https%3A%2F%2Fsites.google.com%2Fview%2Fholidayinnclubcape%2Fhome%2Finfo-director"
+              alt="QR code – weekly activities schedule"
+            >
+            <div class="promo-bubble-qr-detail">Activities, Amenities, Movies, Rockets and more on our app</div>
+          </div>
+        </article>
       </section>
 
       <div id="status"></div>

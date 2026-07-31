@@ -313,7 +313,7 @@
               <button class="btn btn-ghost btn-sm" type="button">👁 Preview</button>
             </a>
             <span style="font-size:12px;color:var(--text-muted);align-self:center;margin-left:4px;">
-              Slide is auto-registered in Channel Manager — add to a channel playlist there.
+              Slide is automatically registered and auto-routed to channel playlists.
             </span>
           </div>
         </div>
@@ -365,6 +365,7 @@
   const CHANNEL_API = 'https://channel-backend-uu2s.onrender.com';
   const SLIDE_BASE  = 'https://ccbractivix.github.io/RGP/celebrations-web/slide.html';
   const AUTH_KEY    = 'celebrations_auth_code';
+  const API_TIMEOUT_MS = 12000;
 
   /* ── Ordinal / anniversary helpers ─────────────────────────────────────── */
   function ordinal(n) {
@@ -524,7 +525,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Auth-Code': authCode },
         body: JSON.stringify({ url: slideUrl, label, description, expires_at: expiresAt, source: 'celebration' }),
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(API_TIMEOUT_MS),
       });
       if (res.status === 409) return 'duplicate';
       if (!res.ok) return 'error';
@@ -532,6 +533,102 @@
     } catch {
       return 'error';
     }
+  }
+
+  function parseBuildingChannelId(rawBuilding) {
+    const input = String(rawBuilding || '').toLowerCase().trim();
+    const direct = input.match(/\b([123])\b/);
+    if (direct) return `building-${direct[1]}`;
+    if (/\bone\b/.test(input)) return 'building-1';
+    if (/\btwo\b/.test(input)) return 'building-2';
+    if (/\bthree\b/.test(input)) return 'building-3';
+    return null;
+  }
+
+  async function ensureChannelExists(channelId) {
+    try {
+      const listRes = await fetch(`${CHANNEL_API}/admin/channels`, {
+        headers: { 'X-Auth-Code': authCode },
+        signal: AbortSignal.timeout(API_TIMEOUT_MS),
+      });
+      if (!listRes.ok) return false;
+      const listData = await listRes.json();
+      const exists = (listData.channels || []).some(c => c.id === channelId);
+      if (exists) return true;
+
+      const displayNames = {
+        celebrations: 'Celebrations',
+        'building-1': 'Building One',
+        'building-2': 'Building Two',
+        'building-3': 'Building Three',
+      };
+
+      const createRes = await fetch(`${CHANNEL_API}/admin/channels`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Auth-Code': authCode },
+        body: JSON.stringify({ id: channelId, name: displayNames[channelId] || channelId }),
+        signal: AbortSignal.timeout(API_TIMEOUT_MS),
+      });
+
+      return createRes.ok || createRes.status === 409;
+    } catch {
+      return false;
+    }
+  }
+
+  async function addSlideToChannelPlaylist(channelId, slideUrl, label, durationSec) {
+    try {
+      const slideRes = await fetch(`${CHANNEL_API}/admin/channels/${encodeURIComponent(channelId)}/slides`, {
+        headers: { 'X-Auth-Code': authCode },
+        signal: AbortSignal.timeout(API_TIMEOUT_MS),
+      });
+      if (!slideRes.ok) return false;
+      const slideData = await slideRes.json();
+      const existing = (slideData.slides || []).map(s => ({
+        url: s.slide_url,
+        label: s.label || s.slide_url,
+        duration: s.duration_sec || 30,
+      }));
+
+      const already = existing.some(s => s.url === slideUrl);
+      const nextSlides = already
+        ? existing.map(s => (s.url === slideUrl ? { ...s, label, duration: durationSec } : s))
+        : [...existing, { url: slideUrl, label, duration: durationSec }];
+
+      const saveRes = await fetch(`${CHANNEL_API}/admin/channels/${encodeURIComponent(channelId)}/slides`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Auth-Code': authCode },
+        body: JSON.stringify({ slides: nextSlides }),
+        signal: AbortSignal.timeout(API_TIMEOUT_MS),
+      });
+      return saveRes.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async function routeCelebrationSlideToChannels(slideUrl, celData) {
+    const typeLabel = TYPE_LABELS[celData.type] || celData.type;
+    const displayName = celData.name2 ? `${celData.name1} & ${celData.name2}` : celData.name1;
+    const label = `${typeLabel} — ${displayName}`;
+
+    const targetSet = new Set(['celebrations']);
+    const buildingChannel = parseBuildingChannelId(celData.building_number);
+    if (buildingChannel) targetSet.add(buildingChannel);
+    const targets = [...targetSet];
+
+    const results = await Promise.all(targets.map(async (channelId) => {
+      const ensured = await ensureChannelExists(channelId);
+      if (!ensured) return { channelId, ok: false };
+      const added = await addSlideToChannelPlaylist(channelId, slideUrl, label, 30);
+      return { channelId, ok: added };
+    }));
+
+    return {
+      targets,
+      success: results.filter(r => r.ok).map(r => r.channelId),
+      failed: results.filter(r => !r.ok).map(r => r.channelId),
+    };
   }
 
   /* ── Build slide URL ────────────────────────────────────────────────────── */
@@ -600,14 +697,17 @@
       urlResult.classList.add('show');
       urlResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-      // Auto-register in Channel Manager slide library
+      // Auto-register in Channel Manager slide library and playlists
       const regStatus = await registerSlideInChannelLibrary(slideUrl, { ...data.celebration, checkout_date: checkout });
-      if (regStatus === 'ok') {
-        toast('Celebration created and registered in Channel Manager!', 'success');
-      } else if (regStatus === 'duplicate') {
-        toast('Celebration created! (Slide already in Channel Manager library)', 'success');
+      const routed = await routeCelebrationSlideToChannels(slideUrl, data.celebration);
+      if (routed.failed.length === 0 && (regStatus === 'ok' || regStatus === 'duplicate')) {
+        toast(`Celebration created and routed to: ${routed.success.join(', ')}`, 'success');
+      } else if (routed.success.length > 0) {
+        toast(`Celebration created. Routed to ${routed.success.join(', ')}; failed: ${routed.failed.join(', ')}`, 'info');
+      } else if (regStatus === 'error') {
+        toast('Celebration created, but slide library registration failed.', 'info');
       } else {
-        toast('Celebration created! (Could not auto-register in Channel Manager — add manually)', 'info');
+        toast('Celebration created, but auto-routing failed for all channels.', 'info');
       }
 
     } catch (e) {

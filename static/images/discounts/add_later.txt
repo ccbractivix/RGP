@@ -1,0 +1,13 @@
+        <a class="card link" href="https://brevardzoo.org/" target="_blank" rel="noopener noreferrer">
+          <div class="logo-wrap"><img src="Brevard%20Zoo.png" alt="Brevard Zoo logo" /></div>
+          <h3 class="name">Brevard Zoo</h3>
+          <p class="offer">Offer coming soon!</p>
+            <p class="hint">Open partner site ↗</p>
+        </a>
+
+        <a class="card link" href="https://www.airboatridesatmidway.com/" target="_blank" rel="noopener noreferrer">
+          <div class="logo-wrap"><img src="Midway%20Airboats%20logo.png" alt="Midway Airboats logo" /></div>
+          <h3 class="name">Midway Airboats</h3>
+          <p class="offer">$48 adult / $45 child (up to 4 people).</p>
+          <p class="hint">Open partner site ↗</p>
+        </a>

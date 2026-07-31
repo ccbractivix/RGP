@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="https://cabana-backend.onrender.com">
+  <title>Cabana Staff View</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f172a; --card: #1e293b; --card-border: #334155;
+      --text: #e2e8f0; --text-muted: #94a3b8;
+      --green: #22c55e; --green-dim: rgba(34,197,94,0.15);
+      --red: #ef4444; --red-dim: rgba(239,68,68,0.15);
+      --yellow: #eab308; --yellow-dim: rgba(234,179,8,0.15);
+      --orange: #f59e0b; --orange-dim: rgba(245,158,11,0.15);
+      --blue: #3b82f6; --blue-dim: rgba(59,130,246,0.15);
+      --purple: #a855f7; --purple-dim: rgba(168,85,247,0.15);
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Login ── */
+    #login-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      gap: 0;
+    }
+    #login-screen h1 {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 30px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    #login-screen p {
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      font-size: 14px;
+      text-align: center;
+    }
+    .code-input {
+      width: 220px;
+      padding: 16px;
+      font-size: 28px;
+      font-family: 'Inter', sans-serif;
+      text-align: center;
+      letter-spacing: 8px;
+      background: var(--card);
+      color: var(--text);
+      border: 2px solid var(--card-border);
+      border-radius: 12px;
+      outline: none;
+    }
+    .code-input:focus { border-color: var(--blue); }
+    .login-btn {
+      margin-top: 18px;
+      width: 220px;
+      padding: 16px;
+      font-size: 17px;
+      font-weight: 700;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .login-btn:active { opacity: 0.8; }
+    .login-error {
+      color: var(--red);
+      margin-top: 14px;
+      font-size: 14px;
+      min-height: 20px;
+      text-align: center;
+    }
+
+    /* ── App shell ── */
+    #app { display: none; flex-direction: column; min-height: 100vh; }
+
+    /* ── Top bar ── */
+    .top-bar {
+      background: var(--card);
+      border-bottom: 1px solid var(--card-border);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .top-bar h1 {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .logout-btn {
+      font-size: 13px;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+    .logout-btn:active { background: var(--card-border); }
+
+    /* ── Date nav ── */
+    .date-nav {
+      display: flex;
+      align-items: center;
+      background: var(--card);
+      border-bottom: 1px solid var(--card-border);
+      padding: 0;
+    }
+    .day-btn {
+      flex: 0 0 64px;
+      height: 64px;
+      font-size: 22px;
+      background: none;
+      border: none;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .day-btn:active { background: var(--card-border); }
+    .date-label {
+      flex: 1;
+      text-align: center;
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 1.25;
+      padding: 8px 4px;
+    }
+    .date-label .weekday { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    .date-label.is-today .weekday { color: var(--blue); }
+
+    /* ── Cabana list ── */
+    #cabana-list {
+      flex: 1;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ── Cabana card ── */
+    .cabana-card {
+      background: var(--card);
+      border: 2px solid var(--card-border);
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    .cabana-card.status-booked-paid    { border-color: var(--red); }
+    .cabana-card.status-booked-unpaid  { border-color: var(--yellow); }
+    .cabana-card.status-booked-comped  { border-color: var(--blue); }
+    .cabana-card.status-needs-review   { border-color: var(--purple); }
+    .cabana-card.status-hold           { border-color: var(--orange); }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .cabana-name {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .status-pill {
+      flex-shrink: 0;
+      padding: 5px 12px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .pill-available    { background: var(--green-dim);  color: var(--green);  }
+    .pill-paid         { background: var(--red-dim);    color: var(--red);    }
+    .pill-unpaid       { background: var(--yellow-dim); color: var(--yellow); }
+    .pill-comped       { background: var(--blue-dim);   color: var(--blue);   }
+    .pill-review       { background: var(--purple-dim); color: var(--purple); }
+    .pill-hold         { background: var(--orange-dim); color: var(--orange); }
+
+    .guest-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 2px;
+    }
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+      align-items: center;
+    }
+    .meta-chip {
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-muted);
+    }
+    .half-day-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* half-day split layout */
+    .half-day-split {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 2px;
+    }
+    .half-slot {
+      background: rgba(255,255,255,0.04);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    .room-number { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .pill-half-days { background: rgba(255,255,255,0.07); color: var(--text-muted); }
+    .half-slot-pill { padding: 2px 8px; font-size: 10px; }
+    .half-slot-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+    .half-guest { font-size: 16px; font-weight: 700; }
+    .half-guest-available { color: var(--green); }
+
+    /* ── Loading / Error ── */
+    .state-msg {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 24px; height: 24px;
+      border: 3px solid var(--card-border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .retry-btn {
+      display: inline-block;
+      margin-top: 14px;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .retry-btn:active { opacity: 0.8; }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      padding: 10px 12px;
+      background: var(--card);
+      border-bottom: 1px solid var(--card-border);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login -->
+  <div id="login-screen">
+    <h1>🏖️ Cabana Staff View</h1>
+    <p>Enter your operator code to continue</p>
+    <input class="code-input" type="password" id="code-input" maxlength="8" inputmode="numeric" autocomplete="off" placeholder="••••" aria-label="Operator code">
+    <button class="login-btn" id="login-btn">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+
+  <!-- App -->
+  <div id="app">
+    <div class="top-bar">
+      <h1>🏖️ Cabana Staff View</h1>
+      <button class="logout-btn" id="logout-btn">Sign Out</button>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Available</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Paid</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> Pending Payment</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div> Comped</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> Hold/Maintenance</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> Needs Review</div>
+    </div>
+
+    <div class="date-nav">
+      <button class="day-btn" id="prev-btn" aria-label="Previous day">&#8592;</button>
+      <div class="date-label" id="date-label">
+        <div class="weekday" id="weekday-label"></div>
+        <div id="date-full-label"></div>
+      </div>
+      <button class="day-btn" id="next-btn" aria-label="Next day">&#8594;</button>
+    </div>
+
+    <div id="cabana-list">
+      <div class="state-msg"><div class="spinner"></div><br>Loading…</div>
+    </div>
+  </div>
+
+  <script>
+    const API = document.querySelector('meta[name="api-url"]').content;
+    let authCode = '';
+    let cabanas = [];
+    let currentDate = getTodayEastern();
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    function getTodayEastern() {
+      const s = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const [y, m, d] = s.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    function toDateString(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dd}`;
+    }
+
+    function isToday(d) {
+      return toDateString(d) === toDateString(getTodayEastern());
+    }
+
+    function updateDateLabel() {
+      const lbl = document.getElementById('date-label');
+      const wkd = document.getElementById('weekday-label');
+      const full = document.getElementById('date-full-label');
+      const opts = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+      const parts = currentDate.toLocaleDateString('en-US', opts).split(', ');
+      wkd.textContent = isToday(currentDate) ? 'Today' : parts[0];
+      full.textContent = parts.slice(1).join(', ');
+      lbl.classList.toggle('is-today', isToday(currentDate));
+    }
+
+    function escape(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ── Auth ─────────────────────────────────────────────────────────────────
+
+    async function doLogin() {
+      const input = document.getElementById('code-input');
+      const errEl = document.getElementById('login-error');
+      const code = input.value.trim();
+      if (!code) return;
+      errEl.textContent = '';
+      document.getElementById('login-btn').disabled = true;
+
+      try {
+        const res = await fetch(`${API}/operator/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        const data = await res.json();
+        if (data.valid) {
+          authCode = code;
+          input.value = '';
+          document.getElementById('login-screen').style.display = 'none';
+          document.getElementById('app').style.display = 'flex';
+          await loadDay();
+        } else {
+          errEl.textContent = 'Invalid code. Please try again.';
+          input.select();
+        }
+      } catch (e) {
+        errEl.textContent = 'Could not reach server. Try again.';
+      } finally {
+        document.getElementById('login-btn').disabled = false;
+      }
+    }
+
+    function doLogout() {
+      authCode = '';
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('code-input').value = '';
+      document.getElementById('login-error').textContent = '';
+    }
+
+    // ── Fetch ─────────────────────────────────────────────────────────────────
+
+    async function apiFetch(url, retries = 3, delay = 3000) {
+      let lastErr;
+      for (let i = 1; i <= retries; i++) {
+        try {
+          const res = await fetch(url, { headers: { 'x-auth-code': authCode } });
+          if (res.status === 401) {
+        document.getElementById('cabana-list').innerHTML =
+          '<div class="state-msg">Session expired. Please sign in again.</div>';
+        setTimeout(doLogout, 2000);
+        return null;
+      }
+          if (res.ok) return res;
+          if (i < retries && (res.status === 502 || res.status === 503)) {
+            document.getElementById('cabana-list').innerHTML =
+              `<div class="state-msg"><div class="spinner"></div><br>Server waking up… (${i}/${retries})</div>`;
+            await new Promise(r => setTimeout(r, delay * i));
+            continue;
+          }
+          throw new Error(`HTTP ${res.status}`);
+        } catch (e) {
+          lastErr = e;
+          if (i >= retries) throw e;
+          await new Promise(r => setTimeout(r, delay * i));
+        }
+      }
+      throw lastErr || new Error('Max retries');
+    }
+
+    // ── Load & Render ─────────────────────────────────────────────────────────
+
+    async function loadDay() {
+      updateDateLabel();
+      document.getElementById('cabana-list').innerHTML =
+        '<div class="state-msg"><div class="spinner"></div><br>Loading…</div>';
+
+      const dateStr = toDateString(currentDate);
+      try {
+        // Fetch cabana list once then cache it
+        if (cabanas.length === 0) {
+          const r = await apiFetch(`${API}/operator/cabanas`);
+          if (!r) return;
+          cabanas = (await r.json()).cabanas || [];
+        }
+
+        const r = await apiFetch(`${API}/operator/calendar?start=${dateStr}&end=${dateStr}`);
+        if (!r) return;
+        const { bookings = [], blocks = [] } = await r.json();
+        renderDay(dateStr, bookings, blocks);
+      } catch (e) {
+        console.error(e);
+        document.getElementById('cabana-list').innerHTML =
+          `<div class="state-msg">Failed to load data.<br>
+           <button class="retry-btn" onclick="loadDay()">Retry</button></div>`;
+      }
+    }
+
+    function pillClass(payStatus, bookingStatus) {
+      if (bookingStatus === 'needs_review') return 'pill-review';
+      if (payStatus === 'paid_in_full') return 'pill-paid';
+      if (payStatus === 'comped')        return 'pill-comped';
+      return 'pill-unpaid';
+    }
+
+    function pillLabel(payStatus, bookingStatus) {
+      if (bookingStatus === 'needs_review') return 'Review';
+      if (payStatus === 'paid_in_full') return 'Paid';
+      if (payStatus === 'comped')        return 'Comped';
+      return 'Pending';
+    }
+
+    function cardBorderClass(payStatus, bookingStatus) {
+      if (bookingStatus === 'needs_review') return 'status-needs-review';
+      if (payStatus === 'paid_in_full') return 'status-booked-paid';
+      if (payStatus === 'comped')        return 'status-booked-comped';
+      return 'status-booked-unpaid';
+    }
+
+    function guestFullName(b) {
+      const fn = (b.first_name || '').trim();
+      const ln = (b.last_name || '').trim();
+      if (fn && ln) return `${fn} ${ln}`;
+      return fn || ln || b.renter_name || '—';
+    }
+
+    function renderDay(dateStr, bookings, blocks) {
+      if (cabanas.length === 0) {
+        document.getElementById('cabana-list').innerHTML =
+          '<div class="state-msg">No cabanas configured.</div>';
+        return;
+      }
+
+      const html = cabanas.map(cabana => {
+        const cb = bookings.filter(b => b.cabana_id === cabana.id);
+        const cblocks = blocks.filter(b =>
+          b.cabana_id === cabana.id &&
+          b.start_date <= dateStr &&
+          (!b.end_date || b.end_date >= dateStr)
+        );
+
+        // ── Manager hold / maintenance ──
+        if (cblocks.length > 0) {
+          const bl = cblocks[0];
+          const holdLabels = {
+            maintenance:              '🚧 Maintenance',
+            manager_total_block:      '✋ Total Block',
+            manager_blocked_for_guest:'✋ Blocked for Guest',
+            manager_no_payment:       '✋ No Payment',
+          };
+          const hlabel = holdLabels[bl.block_type] || '✋ Hold';
+          return `
+            <div class="cabana-card status-hold">
+              <div class="card-top">
+                <div class="cabana-name">${escape(cabana.name)}</div>
+                <div class="status-pill pill-hold">${hlabel.replace(/^[^\s]+ /, '')}</div>
+              </div>
+              ${bl.guest_name ? `<div class="guest-name">${escape(bl.guest_name)}</div>` : ''}
+              ${bl.notes ? `<div class="half-day-note">${escape(bl.notes)}</div>` : ''}
+            </div>`;
+        }
+
+        // ── Full-day booking ──
+        const full = cb.find(b => b.slot === 'full');
+        if (full) {
+          const border = cardBorderClass(full.payment_status, full.status);
+          const pc = pillClass(full.payment_status, full.status);
+          const pl = pillLabel(full.payment_status, full.status);
+          const name = guestFullName(full);
+          return `
+            <div class="cabana-card ${border}">
+              <div class="card-top">
+                <div class="cabana-name">${escape(cabana.name)}</div>
+                <div class="status-pill ${pc}">${pl}</div>
+              </div>
+              <div class="guest-name">${escape(name)}</div>
+              ${full.room_number ? `<div class="card-meta"><span class="meta-chip">Room ${escape(full.room_number)}</span></div>` : ''}
+            </div>`;
+        }
+
+        // ── Half-day bookings ──
+        const am = cb.find(b => b.slot === 'am');
+        const pm = cb.find(b => b.slot === 'pm');
+        if (am || pm) {
+          const slotHtml = (slot, label) => {
+            if (!slot) {
+              return `<div class="half-slot">
+                <div class="half-slot-label">${label}</div>
+                <div class="half-guest half-guest-available">Available</div>
+              </div>`;
+            }
+            const pc = pillClass(slot.payment_status, slot.status);
+            const pl = pillLabel(slot.payment_status, slot.status);
+            const name = guestFullName(slot);
+            return `<div class="half-slot">
+              <div class="half-slot-label">${label} <span class="status-pill ${pc} half-slot-pill">${pl}</span></div>
+              <div class="half-guest">${escape(name)}</div>
+              ${slot.room_number ? `<div class="room-number">Room ${escape(slot.room_number)}</div>` : ''}
+            </div>`;
+          };
+
+          // Border based on worst status
+          const bookings2 = [am, pm].filter(Boolean);
+          const hasUnpaid = bookings2.some(b => b.payment_status === 'pending_payment');
+          const hasPaid   = bookings2.some(b => b.payment_status === 'paid_in_full');
+          const hasComped = bookings2.some(b => b.payment_status === 'comped');
+          const hasReview = bookings2.some(b => b.status === 'needs_review');
+          const border = hasReview ? 'status-needs-review'
+            : hasUnpaid ? 'status-booked-unpaid'
+            : hasPaid   ? 'status-booked-paid'
+            : hasComped ? 'status-booked-comped'
+            : '';
+
+          return `
+            <div class="cabana-card ${border}">
+              <div class="card-top">
+                <div class="cabana-name">${escape(cabana.name)}</div>
+                <div class="status-pill pill-half-days">Half Days</div>
+              </div>
+              <div class="half-day-split">
+                ${slotHtml(am, 'Morning')}
+                ${slotHtml(pm, 'Afternoon')}
+              </div>
+            </div>`;
+        }
+
+        // ── Available ──
+        return `
+          <div class="cabana-card">
+            <div class="card-top">
+              <div class="cabana-name">${escape(cabana.name)}</div>
+              <div class="status-pill pill-available">Available</div>
+            </div>
+          </div>`;
+      }).join('');
+
+      document.getElementById('cabana-list').innerHTML = html;
+    }
+
+    // ── Event Listeners ───────────────────────────────────────────────────────
+
+    document.getElementById('login-btn').addEventListener('click', doLogin);
+    document.getElementById('code-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+    document.getElementById('logout-btn').addEventListener('click', doLogout);
+
+    document.getElementById('prev-btn').addEventListener('click', () => {
+      currentDate.setDate(currentDate.getDate() - 1);
+      loadDay();
+    });
+    document.getElementById('next-btn').addEventListener('click', () => {
+      currentDate.setDate(currentDate.getDate() + 1);
+      loadDay();
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    updateDateLabel();
+  </script>
+</body>
+</html>

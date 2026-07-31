@@ -3,6 +3,8 @@
 const express = require('express');
 const axios   = require('axios');
 const db      = require('../db/db');
+const { getLastStatus } = require('../services/ll2VersionCheck');
+const { buildHall } = require('../services/galleryHall');
 
 const router = express.Router();
 
@@ -11,7 +13,14 @@ const router = express.Router();
 // ============================================================
 const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
 const LL2_KEY  = process.env.LL2_API_KEY || '';
-const LOC_IDS  = [12, 27];
+// Location IDs to filter launches by (LL2 location IDs). Defaults to
+// Cape Canaveral SFS (12) + Kennedy Space Center (27) — i.e. Florida only;
+// override via env.
+const PARSED_LOC_IDS = (process.env.GO4LAUNCH_LOCATION_IDS || '')
+  .split(',')
+  .map(s => parseInt(s.trim(), 10))
+  .filter(Number.isFinite);
+const LOC_IDS  = PARSED_LOC_IDS.length ? PARSED_LOC_IDS : [12, 27];
 const PREV_LIMIT = 50; // max previous launches to fetch from LL2
 
 // In-memory cache for LL2 launches (avoids hitting LL2 on every request)
@@ -64,8 +73,10 @@ router.get('/launches', async (_req, res) => {
       console.warn('[go4launch] LL2 previous fetch failed:', prevRes.reason?.message);
     }
 
-    // Combine, deduplicate, sort
-    const combined = [...upResults, ...prevResults];
+    // Combine, deduplicate, sort — prevResults first so that authoritative
+    // post-launch data from /launches/previous/ wins over stale /launches/upcoming/
+    // entries for the same launch ID during the transition period after liftoff.
+    const combined = [...prevResults, ...upResults];
     const seen = new Set();
     const unique = combined.filter(l => {
       if (seen.has(l.id)) return false;
@@ -91,6 +102,31 @@ router.get('/launches', async (_req, res) => {
       return res.json(launchCache.data);
     }
     return res.status(502).json({ error: 'Failed to fetch launches from LL2 API' });
+  }
+});
+
+// GET /api/launches/:id — single launch by ID (cache-first, then LL2 fallback)
+router.get('/launches/:id', async (req, res) => {
+  const id = req.params.id;
+  try {
+    // 1. Check in-memory cache first
+    if (launchCache.data && Date.now() - launchCache.ts < CACHE_TTL) {
+      const cached = launchCache.data.find(l => l.id === id);
+      if (cached) return res.json(cached);
+    }
+
+    // 2. Direct LL2 lookup
+    const data = await fetchLL2(`/launches/${encodeURIComponent(id)}/`, { mode: 'detailed' });
+    if (data && data.id) return res.json(data);
+
+    return res.status(404).json({ error: 'Launch not found' });
+  } catch (err) {
+    // LL2 may 404 for old/unknown IDs — return 404 cleanly
+    if (err.response && err.response.status === 404) {
+      return res.status(404).json({ error: 'Launch not found' });
+    }
+    console.error('[go4launch] /api/launches/:id error:', err.message);
+    return res.status(502).json({ error: 'Failed to fetch launch' });
   }
 });
 
@@ -203,6 +239,24 @@ const ARCHIVE_BASE_URL = process.env.GO4LAUNCH_ARCHIVE_URL || 'https://ccbractiv
 // ============================================================
 // PUBLIC ROUTES
 // ============================================================
+
+// GET /api/ll2-status — latest result of the scheduled LL2 version monitor
+router.get('/ll2-status', (_req, res) => {
+  return res.json(getLastStatus());
+});
+
+// GET /api/galleries — auto-built gallery hall (LL2 previous Florida
+// launches + curated seed + CMS overrides). Assumes a gallery exists for
+// every completed launch; see services/galleryHall.js.
+router.get('/galleries', async (_req, res) => {
+  try {
+    const hall = await buildHall();
+    return res.json(hall);
+  } catch (err) {
+    console.error('[go4launch] GET /galleries error:', err.message);
+    return res.status(500).json({ error: 'Failed to build gallery hall' });
+  }
+});
 
 // GET /api/content — all CMS content (keyed by launch_id)
 router.get('/content', async (_req, res) => {
@@ -474,6 +528,7 @@ async function sendGalleryEmail(email, launchName, archiveUrl, galleryUrl) {
 module.exports = router;
 module.exports.sendGalleryEmail = sendGalleryEmail;
 module.exports.ARCHIVE_BASE_URL = ARCHIVE_BASE_URL;
+module.exports.LL2_BASE = LL2_BASE;
 
 // ============================================================
 // BLOG — PUBLIC ROUTES

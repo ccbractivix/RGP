@@ -450,6 +450,7 @@
         <tr>
           <th style="width:52px">Poster</th>
           <th class="sortable" data-field="title" onclick="sortBy('title')">Title <span class="sort-arrow" id="sort-title">↕</span></th>
+          <th>Version</th>
           <th>ID</th>
           <th class="sortable" data-field="type" onclick="sortBy('type')">Type <span class="sort-arrow" id="sort-type">↕</span></th>
           <th>MPAA</th>
@@ -461,7 +462,7 @@
         </tr>
       </thead>
       <tbody id="lib-tbody">
-        <tr class="state-row"><td colspan="10"><span class="spinner-inline"></span> Loading library…</td></tr>
+        <tr class="state-row"><td colspan="11"><span class="spinner-inline"></span> Loading library…</td></tr>
       </tbody>
     </table>
   </div>
@@ -496,11 +497,11 @@
   <div class="modal-overlay" id="modal-event">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">Add Live Event</div>
+        <div class="modal-title" id="event-modal-title">Add Live Event</div>
         <button class="modal-close" onclick="closeModal('modal-event')">✕</button>
       </div>
       <div class="modal-body">
-        <div class="form-row">
+        <div class="form-row" id="event-id-row">
           <label>Event ID</label>
           <input type="text" class="form-control" id="event-id" placeholder="EVT-XXX" spellcheck="false" />
           <div class="form-hint">Must match pattern EVT-[A-Z0-9]+</div>
@@ -535,6 +536,96 @@
       <div class="modal-footer">
         <button class="btn" onclick="closeModal('modal-event')">Cancel</button>
         <button class="btn btn-gold" onclick="addEvent()">Add Event</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Item Modal -->
+  <div class="modal-overlay" id="modal-edit">
+    <div class="modal-card" style="max-width:520px">
+      <div class="modal-header">
+        <div class="modal-title" id="edit-modal-title">Edit Item</div>
+        <button class="modal-close" onclick="closeModal('modal-edit')">✕</button>
+      </div>
+      <div class="modal-body" style="max-height:65vh;overflow-y:auto">
+        <input type="hidden" id="edit-id" />
+        <div class="form-row">
+          <label>Title</label>
+          <input type="text" class="form-control" id="edit-title" placeholder="Title (required)" />
+        </div>
+        <div class="form-row" id="edit-title-line2-row">
+          <label>Title Line 2 <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="edit-title-line2" placeholder="Second line" />
+        </div>
+        <div class="form-row" id="edit-title-line3-row">
+          <label>Title Line 3 <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="edit-title-line3" placeholder="Third line" />
+        </div>
+        <div class="form-row">
+          <label>Version Label <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="edit-version-label" placeholder='e.g. Director&#39;s Cut, Extended Edition' />
+          <div class="form-hint">Identifies this version/cut of the title</div>
+        </div>
+        <div class="form-row">
+          <label>MPAA Rating <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="edit-mpaa" placeholder="e.g. PG-13" />
+        </div>
+        <div class="form-row">
+          <label>Runtime (minutes) <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="number" class="form-control" id="edit-runtime" placeholder="e.g. 120" min="1" />
+        </div>
+        <div class="form-row" id="edit-genres-row">
+          <label>Genres <span style="color:var(--text-dim);font-weight:400">(comma-separated)</span></label>
+          <input type="text" class="form-control" id="edit-genres" placeholder="Action, Drama" />
+        </div>
+        <div class="form-row" id="edit-imdb-row">
+          <label>IMDB Rating <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="number" class="form-control" id="edit-imdb-rating" placeholder="e.g. 7.5" min="0" max="10" step="0.1" />
+        </div>
+        <div class="form-row" id="edit-year-row">
+          <label>Release Year <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="edit-year" placeholder="e.g. 2024" />
+        </div>
+        <div class="form-row">
+          <label>Poster URL <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="url" class="form-control" id="edit-poster" placeholder="https://…" />
+        </div>
+        <div class="form-row" id="edit-ticket-row">
+          <label>Ticket URL <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="url" class="form-control" id="edit-ticket" placeholder="https://…" />
+        </div>
+        <div class="form-row" id="edit-art-row">
+          <label>Custom Art Filename <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="edit-art" placeholder="MVN.png" />
+        </div>
+        <div class="modal-error" id="edit-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('modal-edit')">Cancel</button>
+        <button class="btn btn-gold" id="btn-save-edit" onclick="saveEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Version Modal -->
+  <div class="modal-overlay" id="modal-version">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">Create Version</div>
+        <button class="modal-close" onclick="closeModal('modal-version')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="preview-box visible" id="version-source-info" style="margin-bottom:0.75rem"></div>
+        <div class="form-row">
+          <label>Version Label <span style="color:var(--red);font-weight:400">*</span></label>
+          <input type="text" class="form-control" id="version-label" placeholder='e.g. Director&#39;s Cut, Extended Edition' />
+          <div class="form-hint">A label to distinguish this version from the original</div>
+        </div>
+        <div class="modal-error" id="version-error"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal('modal-version')">Cancel</button>
+        <button class="btn btn-gold" id="btn-create-version" onclick="createVersion()">Create Version</button>
       </div>
     </div>
   </div>
@@ -650,7 +741,7 @@
     /* ── Load library ── */
     function loadLibrary() {
       document.getElementById('lib-tbody').innerHTML =
-        `<tr class="state-row"><td colspan="10"><span class="spinner-inline"></span> Loading library…</td></tr>`;
+        `<tr class="state-row"><td colspan="11"><span class="spinner-inline"></span> Loading library…</td></tr>`;
       apiFetch('/admin/library')
         .then(r => r.ok ? r.json() : Promise.reject(new Error('Server error')))
         .then(data => {
@@ -660,7 +751,7 @@
         .catch(err => {
           if (err.message === 'Unauthorized') return;
           document.getElementById('lib-tbody').innerHTML =
-            `<tr class="state-row"><td colspan="10" style="color:var(--red)">⚠ Failed to load library</td></tr>`;
+            `<tr class="state-row"><td colspan="11" style="color:var(--red)">⚠ Failed to load library</td></tr>`;
           showToast('Load error: ' + err.message, 'error');
         });
     }
@@ -692,12 +783,13 @@
 
       if (sorted.length === 0) {
         document.getElementById('lib-tbody').innerHTML =
-          `<tr class="state-row"><td colspan="10">No items in library yet.</td></tr>`;
+          `<tr class="state-row"><td colspan="11">No items in library yet.</td></tr>`;
         return;
       }
 
       const rows = sorted.map(item => {
         const isMovie = item.type === 'movie';
+        const isVersion = !!item.parent_id;
         const posterHtml = item.poster_url
           ? `<img src="${esc(item.poster_url)}" alt="" loading="lazy" />`
           : `<div class="poster-placeholder">${isMovie ? '🎬' : '📡'}</div>`;
@@ -726,13 +818,20 @@
           ? formatDate(item.last_updated)
           : `<span style="color:var(--text-dim)">—</span>`;
 
-        const refreshBtn = isMovie
-          ? `<button class="btn btn-xs js-refresh" data-id="${esc(item.id)}" title="Refresh metadata">↻ Refresh</button>`
+        const versionLabel = item.version_label
+          ? `<span style="color:var(--gold);font-size:0.75rem;font-weight:600">${esc(item.version_label)}</span>`
+          : (isVersion ? `<span style="color:var(--text-dim);font-size:0.75rem">—</span>` : `<span style="color:var(--text-dim);font-size:0.75rem">Original</span>`);
+
+        const refreshBtn = isMovie && !isVersion
+          ? `<button class="btn btn-xs js-refresh" data-id="${esc(item.id)}" title="Refresh metadata from OMDB">↻</button>`
           : '';
 
-        return `<tr>
+        const titleStyle = isVersion ? 'padding-left:1.2rem;' : '';
+
+        return `<tr${isVersion ? ' style="opacity:0.85"' : ''}>
           <td class="poster-cell">${posterHtml}</td>
-          <td class="title-cell">${esc(item.title || item.id || '—')}</td>
+          <td class="title-cell" style="${titleStyle}">${isVersion ? '↳ ' : ''}${esc(item.title || item.id || '—')}</td>
+          <td>${versionLabel}</td>
           <td class="id-cell">${esc(item.id || '—')}</td>
           <td>${typeBadge}</td>
           <td>${mpaa}</td>
@@ -742,11 +841,13 @@
           <td class="date-cell">${lastUpd}</td>
           <td>
             <div class="actions-cell">
+              <button class="btn btn-xs js-edit" data-id="${esc(item.id)}" title="Edit metadata">✎</button>
+              <button class="btn btn-xs js-version" data-id="${esc(item.id)}" data-title="${esc(item.title || item.id || '')}" title="Create a new version/cut">⊕</button>
               ${refreshBtn}
               <button class="btn btn-xs btn-danger js-delete"
                 data-id="${esc(item.id)}"
                 data-title="${esc(item.title || item.id || '')}"
-                title="Delete">✕ Delete</button>
+                title="Delete">✕</button>
             </div>
           </td>
         </tr>`;
@@ -761,7 +862,13 @@
       if (refreshBtn) { refreshItem(refreshBtn.dataset.id); return; }
 
       const deleteBtn = e.target.closest('.js-delete');
-      if (deleteBtn) { deleteItem(deleteBtn.dataset.id, deleteBtn.dataset.title); }
+      if (deleteBtn) { deleteItem(deleteBtn.dataset.id, deleteBtn.dataset.title); return; }
+
+      const editBtn = e.target.closest('.js-edit');
+      if (editBtn) { openEditModal(editBtn.dataset.id); return; }
+
+      const versionBtn = e.target.closest('.js-version');
+      if (versionBtn) { openVersionModal(versionBtn.dataset.id, versionBtn.dataset.title); return; }
     });
 
     /* ── Sort ── */
@@ -972,6 +1079,185 @@
         if (err.message !== 'Unauthorized') {
           errEl.textContent = 'Network error';
           errEl.className = 'modal-error visible';
+        }
+      });
+    }
+
+    /* ── Edit modal ── */
+    let _editItem = null;
+
+    function openEditModal(id) {
+      _editItem = libraryItems.find(i => i.id === id);
+      if (!_editItem) { showToast('Item not found', 'error'); return; }
+
+      const isMovie = _editItem.type === 'movie';
+      document.getElementById('edit-modal-title').textContent = 'Edit: ' + (_editItem.title || _editItem.id);
+      document.getElementById('edit-id').value = _editItem.id;
+      document.getElementById('edit-title').value = _editItem.title || '';
+      document.getElementById('edit-title-line2').value = _editItem.title_line2 || '';
+      document.getElementById('edit-title-line3').value = _editItem.title_line3 || '';
+      document.getElementById('edit-version-label').value = _editItem.version_label || '';
+      document.getElementById('edit-mpaa').value = _editItem.mpaa_rating || '';
+      document.getElementById('edit-runtime').value = _editItem.runtime_min || '';
+      document.getElementById('edit-genres').value = Array.isArray(_editItem.genres) ? _editItem.genres.join(', ') : (_editItem.genres || '');
+      document.getElementById('edit-imdb-rating').value = _editItem.imdb_rating || '';
+      document.getElementById('edit-year').value = _editItem.release_year || '';
+      document.getElementById('edit-poster').value = _editItem.poster_url || '';
+      document.getElementById('edit-ticket').value = _editItem.ticket_url || '';
+      document.getElementById('edit-art').value = _editItem.custom_art || '';
+
+      // Show/hide fields based on type
+      document.getElementById('edit-title-line2-row').style.display = isMovie ? 'none' : '';
+      document.getElementById('edit-title-line3-row').style.display = isMovie ? 'none' : '';
+      document.getElementById('edit-genres-row').style.display = isMovie ? '' : 'none';
+      document.getElementById('edit-imdb-row').style.display = isMovie ? '' : 'none';
+      document.getElementById('edit-year-row').style.display = isMovie ? '' : 'none';
+      document.getElementById('edit-ticket-row').style.display = !isMovie ? '' : 'none';
+      document.getElementById('edit-art-row').style.display = !isMovie ? '' : 'none';
+
+      document.getElementById('edit-error').className = 'modal-error';
+      document.getElementById('btn-save-edit').disabled = false;
+      document.getElementById('btn-save-edit').textContent = 'Save Changes';
+      openModal('modal-edit');
+      setTimeout(() => document.getElementById('edit-title').focus(), 100);
+    }
+
+    function saveEdit() {
+      const id = document.getElementById('edit-id').value;
+      const title = document.getElementById('edit-title').value.trim();
+      const errEl = document.getElementById('edit-error');
+      errEl.className = 'modal-error';
+
+      if (!title) {
+        errEl.textContent = 'Title is required.';
+        errEl.className = 'modal-error visible';
+        document.getElementById('edit-title').focus();
+        return;
+      }
+
+      const isMovie = _editItem && _editItem.type === 'movie';
+      const payload = {
+        title,
+        version_label: document.getElementById('edit-version-label').value.trim(),
+        mpaa_rating: document.getElementById('edit-mpaa').value.trim(),
+        runtime_min: document.getElementById('edit-runtime').value.trim() || null,
+        poster_url: document.getElementById('edit-poster').value.trim(),
+      };
+
+      if (isMovie) {
+        payload.genres = document.getElementById('edit-genres').value.trim();
+        payload.imdb_rating = document.getElementById('edit-imdb-rating').value.trim() || null;
+        payload.release_year = document.getElementById('edit-year').value.trim();
+      } else {
+        payload.title_line2 = document.getElementById('edit-title-line2').value.trim();
+        payload.title_line3 = document.getElementById('edit-title-line3').value.trim();
+        payload.ticket_url = document.getElementById('edit-ticket').value.trim();
+        payload.custom_art = document.getElementById('edit-art').value.trim();
+      }
+
+      const btn = document.getElementById('btn-save-edit');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-inline"></span> Saving…';
+
+      apiFetch('/admin/library/' + encodeURIComponent(id), {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      })
+      .then(r => {
+        if (r.ok) {
+          closeModal('modal-edit');
+          showToast('Saved changes', 'success');
+          loadLibrary();
+        } else {
+          return r.json().then(d => {
+            errEl.textContent = d.error || 'Failed to save';
+            errEl.className = 'modal-error visible';
+            btn.disabled = false;
+            btn.textContent = 'Save Changes';
+          });
+        }
+      })
+      .catch(err => {
+        if (err.message !== 'Unauthorized') {
+          errEl.textContent = 'Network error';
+          errEl.className = 'modal-error visible';
+          btn.disabled = false;
+          btn.textContent = 'Save Changes';
+        }
+      });
+    }
+
+    /* ── Version modal ── */
+    let _versionSourceId = null;
+
+    function openVersionModal(id, title) {
+      _versionSourceId = id;
+      document.getElementById('version-source-info').innerHTML =
+        `Creating a new version of:<br/><strong>${esc(title)}</strong> <span style="color:var(--text-dim);font-family:monospace;font-size:0.75rem">(${esc(id)})</span><br/>
+         <span style="color:var(--text-dim);font-size:0.75rem">All metadata will be copied. You can edit it afterward.</span>`;
+      document.getElementById('version-label').value = '';
+      document.getElementById('version-error').className = 'modal-error';
+      document.getElementById('btn-create-version').disabled = false;
+      document.getElementById('btn-create-version').textContent = 'Create Version';
+      openModal('modal-version');
+      setTimeout(() => document.getElementById('version-label').focus(), 100);
+    }
+
+    function createVersion() {
+      const label = document.getElementById('version-label').value.trim();
+      const errEl = document.getElementById('version-error');
+      errEl.className = 'modal-error';
+
+      if (!label) {
+        errEl.textContent = 'Version label is required (e.g. "Director\'s Cut").';
+        errEl.className = 'modal-error visible';
+        document.getElementById('version-label').focus();
+        return;
+      }
+
+      const btn = document.getElementById('btn-create-version');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-inline"></span> Creating…';
+
+      apiFetch('/admin/library/' + encodeURIComponent(_versionSourceId) + '/version', {
+        method: 'POST',
+        body: JSON.stringify({ version_label: label })
+      })
+      .then(r => {
+        if (r.ok) {
+          return r.json().then(d => {
+            closeModal('modal-version');
+            showToast('Version created: ' + label, 'success');
+            loadLibrary();
+            // Offer to open edit modal for the new version
+            setTimeout(() => {
+              if (confirm('Open editor for the new version "' + label + '"?')) {
+                // Reload library items first, then open edit
+                apiFetch('/admin/library')
+                  .then(r2 => r2.ok ? r2.json() : Promise.reject(new Error('Failed')))
+                  .then(data => {
+                    libraryItems = Array.isArray(data) ? data : (data.items || []);
+                    renderTable();
+                    openEditModal(d.id);
+                  });
+              }
+            }, 300);
+          });
+        } else {
+          return r.json().then(d => {
+            errEl.textContent = d.error || 'Failed to create version';
+            errEl.className = 'modal-error visible';
+            btn.disabled = false;
+            btn.textContent = 'Create Version';
+          });
+        }
+      })
+      .catch(err => {
+        if (err.message !== 'Unauthorized') {
+          errEl.textContent = 'Network error';
+          errEl.className = 'modal-error visible';
+          btn.disabled = false;
+          btn.textContent = 'Create Version';
         }
       });
     }
@@ -1197,6 +1483,10 @@
     window.refreshAll      = refreshAll;
     window.triggerCsvImport = triggerCsvImport;
     window.runCsvImport    = runCsvImport;
+    window.openEditModal   = openEditModal;
+    window.saveEdit        = saveEdit;
+    window.openVersionModal = openVersionModal;
+    window.createVersion   = createVersion;
 
     /* ── Boot ── */
     document.addEventListener('DOMContentLoaded', loadLibrary);

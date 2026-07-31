@@ -34,14 +34,19 @@ const pool = new Pool({
         start_time       TIME,
         library_id       TEXT NOT NULL REFERENCES activities_library(id) ON DELETE CASCADE,
         status           TEXT NOT NULL DEFAULT 'scheduled'
-                           CHECK (status IN ('scheduled', 'canceled', 'relocated')),
+                           CHECK (status IN ('scheduled', 'canceled', 'relocated', 'rescheduled')),
         relocated_venue  TEXT,
+        original_start_time TIME,
         is_all_day       BOOLEAN NOT NULL DEFAULT false
       )
     `);
     // Migrations for existing deployments
     await pool.query(`ALTER TABLE activities_schedule ALTER COLUMN start_time DROP NOT NULL`).catch(() => {});
     await pool.query(`ALTER TABLE activities_schedule ADD COLUMN IF NOT EXISTS is_all_day BOOLEAN NOT NULL DEFAULT false`);
+    await pool.query(`ALTER TABLE activities_schedule ADD COLUMN IF NOT EXISTS original_start_time TIME`);
+    // Allow the 'rescheduled' status on databases created before it existed
+    await pool.query(`ALTER TABLE activities_schedule DROP CONSTRAINT IF EXISTS activities_schedule_status_check`).catch(() => {});
+    await pool.query(`ALTER TABLE activities_schedule ADD CONSTRAINT activities_schedule_status_check CHECK (status IN ('scheduled', 'canceled', 'relocated', 'rescheduled'))`).catch(() => {});
     await pool.query(`ALTER TABLE activities_schedule DROP CONSTRAINT IF EXISTS activities_schedule_date_start_time_key`).catch(() => {});
     // Prevent duplicate scheduling: same activity can't appear at the same time on the same day
     await pool.query(`

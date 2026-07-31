@@ -4,17 +4,19 @@
 // CONFIGURATION
 // ============================================================
 const CONFIG = {
-    LL2_BASE: 'https://lldev.thespacedevs.com/2.3.0',
+    LL2_BASE: 'https://ll.thespacedevs.com/2.3.0',
     BACKEND: (() => {
         const meta = document.querySelector('meta[name="api-base"]');
         return (meta && meta.getAttribute('content')) || '';
     })(),
-    LOCATION_IDS: [12, 27], // Kennedy Space Center, Cape Canaveral SFS
+    LOCATION_IDS: [12, 27], // Cape Canaveral SFS (12), Kennedy Space Center (27) — Florida only
     CACHE_KEY: 'go4launch_v1',
     CACHE_TTL: 6 * 60 * 60 * 1000,
+    DATA_REFRESH_MS: 5 * 60 * 1000,
     MAX_LAUNCHES: 15,
     MAX_DAYS: 14,
     GALLERIES_JSON: 'data/galleries.json',
+    GALLERY_CATEGORIES_JSON: 'data/gallery-categories.json',
 };
 
 // ============================================================
@@ -24,7 +26,11 @@ let allLaunches = [];
 let cmsContent = {};
 let blogPosts = [];    // published posts (metadata, no body) sorted newest-first
 let galleryData = [];  // all galleries from static JSON sorted newest-first
+let galleryCategories = [];  // gallery categories with links to external galleries
 let countdownTimer = null;
+let launchRefreshTimer = null;
+let queuedLaunchRefreshTimer = null;
+let launchRefreshInFlight = false;
 let currentSawItLaunchId = null;
 
 // ============================================================
@@ -58,12 +64,26 @@ function statusLabel(status) {
 }
 
 function isCompleted(launch) {
-    const id = launch.status?.id;
+    const id = launch?.status?.id;
     return [3, 4, 7].includes(id);
 }
 
 function isInFlight(launch) {
-    return launch.status?.id === 6;
+    return launch?.status?.id === 6;
+}
+
+function isPendingLaunch(launch) {
+    return !!launch && !isCompleted(launch) && !isInFlight(launch);
+}
+
+function findLaunchById(launchId) {
+    return allLaunches.find(launch => launch.id === launchId) || null;
+}
+
+function getPostNetLabel(launch) {
+    if (isCompleted(launch) || isInFlight(launch)) return '🚀 Launched!';
+    if (launch?.status?.id === 5) return '⏳ On Hold';
+    return '⏳ Awaiting updated launch time';
 }
 
 function formatDateET(dateStr) {
@@ -146,7 +166,9 @@ async function fetchLaunchesFromProxy() {
     return data;
 }
 
-// Fallback: fetch directly from LL2 dev API (browser-side, CORS-friendly)
+// Fallback: fetch directly from LL2 dev API (browser-side, CORS-friendly).
+// Throws if BOTH requests fail so callers can distinguish a genuine empty
+// schedule (HTTP 200 with no results) from a fetch/rate-limit failure.
 async function fetchLL2Direct() {
     const locIds = CONFIG.LOCATION_IDS.join(',');
     const cutoff = new Date(Date.now() + CONFIG.MAX_DAYS * 86400000).toISOString();
@@ -158,10 +180,13 @@ async function fetchLL2Direct() {
 
     let upResults = [];
     let prevResults = [];
+    let upOk = false;
+    let prevOk = false;
 
     if (upResp.status === 'fulfilled' && upResp.value.ok) {
         const d = await upResp.value.json();
         upResults = d.results || [];
+        upOk = true;
     } else {
         console.warn('LL2 upcoming failed:', upResp.status === 'rejected' ? upResp.reason : `HTTP ${upResp.value?.status}`);
     }
@@ -169,11 +194,20 @@ async function fetchLL2Direct() {
     if (prevResp.status === 'fulfilled' && prevResp.value.ok) {
         const d = await prevResp.value.json();
         prevResults = d.results || [];
+        prevOk = true;
     } else {
         console.warn('LL2 previous failed:', prevResp.status === 'rejected' ? prevResp.reason : `HTTP ${prevResp.value?.status}`);
     }
 
-    const combined = [...upResults, ...prevResults];
+    // If neither request succeeded, this is a fetch/rate-limit failure, not an
+    // empty schedule. Surface it so the UI doesn't claim "no launches".
+    if (!upOk && !prevOk) {
+        throw new Error('LL2 direct fallback failed (both requests errored)');
+    }
+
+    // prevResults first so that authoritative post-launch data wins over stale
+    // upcoming entries for the same launch ID during the transition after liftoff.
+    const combined = [...prevResults, ...upResults];
     const seen = new Set();
     const unique = combined.filter(l => {
         if (seen.has(l.id)) return false;
@@ -216,13 +250,7 @@ async function loadLaunches() {
     return await fetchAndCache();
 }
 
-async function fetchAndCache() {
-    const data = await fetchLaunches();
-    if (data.length) {
-        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
-        return data;
-    }
-    // API returned nothing — fall back to stale cache if available
+function readStaleCache() {
     const stale = localStorage.getItem(CONFIG.CACHE_KEY);
     if (stale) {
         try {
@@ -230,21 +258,66 @@ async function fetchAndCache() {
             if (parsed && Array.isArray(parsed.data) && parsed.data.length) return parsed.data;
         } catch (_) { /* ignore parse errors */ }
     }
+    return null;
+}
+
+async function fetchAndCache() {
+    let data;
+    try {
+        data = await fetchLaunches();
+    } catch (e) {
+        // Hard fetch failure (proxy down + LL2 fallback errored). Prefer stale
+        // cache so the page keeps showing the last-known launches; otherwise
+        // re-throw so the UI can show an honest "unable to load" state rather
+        // than falsely claiming there are no launches scheduled.
+        const stale = readStaleCache();
+        if (stale) return stale;
+        throw e;
+    }
+    if (data.length) {
+        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+        return data;
+    }
+    // API returned nothing — fall back to stale cache if available
+    const stale = readStaleCache();
+    if (stale) return stale;
     return data;
 }
 
-async function refreshInBackground() {
+async function refreshLaunchData() {
+    if (launchRefreshInFlight) return;
+    launchRefreshInFlight = true;
     try {
         const fresh = await fetchLaunches();
-        if (fresh.length) {
-            localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
-            // Update the live page with fresh data
-            allLaunches = fresh;
-            handleRoute();
-        }
+        if (!fresh.length) return;
+        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
+        allLaunches = fresh;
+        await loadCMS();
+        handleRoute();
     } catch (e) {
-        console.warn('Background refresh failed:', e);
+        console.warn('Launch refresh failed:', e);
+    } finally {
+        launchRefreshInFlight = false;
     }
+}
+
+function queueLaunchRefresh(delayMs = 0) {
+    if (launchRefreshInFlight || queuedLaunchRefreshTimer) return;
+    queuedLaunchRefreshTimer = setTimeout(async () => {
+        queuedLaunchRefreshTimer = null;
+        await refreshLaunchData();
+    }, delayMs);
+}
+
+function startLaunchRefreshLoop() {
+    if (launchRefreshTimer) clearInterval(launchRefreshTimer);
+    launchRefreshTimer = setInterval(() => {
+        queueLaunchRefresh();
+    }, CONFIG.DATA_REFRESH_MS);
+}
+
+async function refreshInBackground() {
+    await refreshLaunchData();
 }
 
 // ============================================================
@@ -274,9 +347,9 @@ function filterActiveLaunches(launches) {
     return launches.filter(launch => {
         const net = new Date(launch.net).getTime();
 
-        // Completed launches: keep for 36 hours after NET
+        // Completed launches: keep for 48 hours after NET
         if (isCompleted(launch)) {
-            const cutoff = net + 36 * 3600000;
+            const cutoff = net + 48 * 3600000;
             return now <= cutoff;
         }
 
@@ -399,7 +472,7 @@ function buildCard(launch) {
     if (launched) {
         html += `<div class="countdown-launched">🚀 Launched!</div>`;
     } else {
-        html += `<div class="countdown-row" data-net="${net.toISOString()}">
+        html += `<div class="countdown-row" data-net="${net.toISOString()}" data-launch-id="${esc(launch.id)}">
             <span class="cd-prefix">T-</span>
             <div class="cd-group"><span class="cd-value" data-unit="d">--</span><span class="cd-label">Days</span></div>
             <span class="cd-sep">:</span>
@@ -497,7 +570,7 @@ function renderDetailContent(launch, cms, backHash) {
     if (launched) {
         html += `<div class="countdown-launched">🚀 Launched!</div>`;
     } else {
-        html += `<div class="countdown-row" data-net="${net.toISOString()}">
+        html += `<div class="countdown-row" data-net="${net.toISOString()}" data-launch-id="${esc(launch.id)}">
             <span class="cd-prefix">T-</span>
             <div class="cd-group"><span class="cd-value" data-unit="d">--</span><span class="cd-label">Days</span></div>
             <span class="cd-sep">:</span>
@@ -775,6 +848,7 @@ function updateCountdowns() {
     const rows = document.querySelectorAll('.countdown-row[data-net]');
     const now = Date.now();
     const toReplace = [];
+    let shouldRefreshLaunches = false;
 
     rows.forEach(row => {
         const net = new Date(row.dataset.net).getTime();
@@ -789,7 +863,9 @@ function updateCountdowns() {
 
         if (diff <= 0) {
             // Mark for replacement after the loop to avoid DOM mutation issues
-            toReplace.push(row);
+            const launch = findLaunchById(row.dataset.launchId);
+            toReplace.push({ row, launch });
+            shouldRefreshLaunches = true;
             return;
         }
 
@@ -805,25 +881,16 @@ function updateCountdowns() {
     });
 
     // Replace completed countdowns after iteration
-    toReplace.forEach(row => {
+    toReplace.forEach(({ row, launch }) => {
         const replacement = document.createElement('div');
         replacement.className = 'countdown-launched';
-        replacement.textContent = '🚀 Liftoff!';
+        if (isPendingLaunch(launch)) replacement.classList.add('countdown-pending');
+        replacement.textContent = getPostNetLabel(launch);
         row.replaceWith(replacement);
     });
 
-    // Auto-refresh data when a countdown reaches zero
-    if (toReplace.length > 0) {
-        setTimeout(async () => {
-            try {
-                const fresh = await fetchAndCache();
-                allLaunches = fresh;
-                await loadCMS();
-                handleRoute();
-            } catch (e) {
-                console.warn('Post-liftoff refresh failed:', e);
-            }
-        }, 60000); // Refresh 1 minute after liftoff
+    if (shouldRefreshLaunches) {
+        queueLaunchRefresh(60000);
     }
 }
 
@@ -985,9 +1052,11 @@ async function init() {
             loadCMS(),
             loadBlog(),
             loadGalleries(),
+            loadGalleryCategories(),
         ]);
 
         allLaunches = launches;
+        startLaunchRefreshLoop();
         renderNavBar();
         handleRoute();
         checkAndShowRTLPopup();
@@ -1021,6 +1090,22 @@ async function loadBlog() {
 }
 
 async function loadGalleries() {
+    // Prefer the backend-built hall (auto-updates for every launch). Fall
+    // back to the static seed when the backend is unavailable or empty.
+    if (CONFIG.BACKEND) {
+        try {
+            const res = await fetch(`${CONFIG.BACKEND}/api/galleries`);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length) {
+                    galleryData = data.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('Galleries backend load failed, falling back to static:', e);
+        }
+    }
     try {
         const res = await fetch(CONFIG.GALLERIES_JSON);
         if (res.ok) {
@@ -1032,6 +1117,20 @@ async function loadGalleries() {
         }
     } catch (e) {
         console.warn('Galleries load failed:', e);
+    }
+}
+
+async function loadGalleryCategories() {
+    try {
+        const res = await fetch(CONFIG.GALLERY_CATEGORIES_JSON);
+        if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                galleryCategories = data;
+            }
+        }
+    } catch (e) {
+        console.warn('Gallery categories load failed:', e);
     }
 }
 
@@ -1139,6 +1238,13 @@ function renderGalleriesPage() {
         <div class="subtitle">Launch Photo Galleries</div>
     </div>`;
 
+    // Display gallery categories first
+    if (galleryCategories.length > 0) {
+        galleryCategories.forEach(category => {
+            html += buildGalleryCategorySection(category);
+        });
+    }
+
     if (!galleryData.length) {
         html += `<div class="galleries-empty">📷 No galleries yet — check back after the next launch!</div>`;
         html += buildStandardFooter();
@@ -1207,6 +1313,29 @@ function buildGalleryCard(g) {
 function formatGalleryDate(dateStr) {
     const d = new Date(dateStr + 'T12:00:00Z');
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function buildGalleryCategorySection(category) {
+    let html = `<div class="gallery-category-section">
+        <div class="gallery-category-header">${esc(category.name)}</div>`;
+    
+    if (category.description) {
+        html += `<div class="gallery-category-description">${esc(category.description)}</div>`;
+    }
+    
+    html += `<div class="gallery-category-links">`;
+    
+    if (category.galleries && Array.isArray(category.galleries)) {
+        category.galleries.forEach(gallery => {
+            html += `<a href="${esc(gallery.url)}" target="_blank" rel="noopener noreferrer" class="gallery-category-link">
+                ${esc(gallery.name)} →
+            </a>`;
+        });
+    }
+    
+    html += `</div></div>`;
+    
+    return html;
 }
 
 // ============================================================

@@ -19,6 +19,8 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process
       type             TEXT NOT NULL CHECK (type IN ('maintenance', 'private_meeting')),
       expected_reopen  TEXT
     )`);
+    await pool.query('ALTER TABLE library ADD COLUMN IF NOT EXISTS version_label TEXT');
+    await pool.query('ALTER TABLE library ADD COLUMN IF NOT EXISTS parent_id TEXT REFERENCES library(id) ON DELETE SET NULL');
   } catch (_) { /* ignore — older Postgres or table doesn't exist yet */ }
 })();
 

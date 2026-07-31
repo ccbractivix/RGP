@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/', async (_req, res) => {
   try {
-    const r = await db.query('SELECT * FROM library ORDER BY title');
+    const r = await db.query('SELECT * FROM library ORDER BY COALESCE(parent_id, id), parent_id NULLS FIRST, title');
     return res.json(r.rows);
   } catch (e) { return res.status(500).json({ error: 'Failed to load library' }); }
 });
@@ -44,6 +44,102 @@ router.put('/:id/refresh', async (req, res) => {
   } catch (e) { return res.status(500).json({ error: e.message }); }
 });
 
+// ── Edit any library item ──
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, title_line2, title_line3, mpaa_rating, runtime_min, genres,
+          imdb_rating, release_year, poster_url, ticket_url, custom_art,
+          version_label } = req.body;
+  try {
+    const existing = await db.query('SELECT * FROM library WHERE id = $1', [id]);
+    if (existing.rows.length === 0) return res.status(404).json({ error: 'Item not found' });
+
+    const item = existing.rows[0];
+    const newTitle = title !== undefined ? title : item.title;
+    if (!newTitle || !newTitle.trim()) return res.status(400).json({ error: 'Title is required' });
+
+    const parsedRuntime = runtime_min !== undefined
+      ? (runtime_min ? parseInt(runtime_min, 10) : null)
+      : item.runtime_min;
+    if (parsedRuntime !== null && (isNaN(parsedRuntime) || parsedRuntime <= 0)) {
+      return res.status(400).json({ error: 'Runtime must be a positive number (minutes)' });
+    }
+
+    const parsedRating = imdb_rating !== undefined
+      ? (imdb_rating ? parseFloat(imdb_rating) : null)
+      : item.imdb_rating;
+
+    const parsedGenres = genres !== undefined
+      ? (Array.isArray(genres) ? genres : (genres ? String(genres).split(',').map(g => g.trim()).filter(Boolean) : null))
+      : item.genres;
+
+    await db.query(
+      `UPDATE library SET title=$2, title_line2=$3, title_line3=$4, mpaa_rating=$5,
+       runtime_min=$6, genres=$7, imdb_rating=$8, release_year=$9, poster_url=$10,
+       ticket_url=$11, custom_art=$12, version_label=$13, last_updated=NOW()
+       WHERE id=$1`,
+      [id, newTitle.trim(),
+       title_line2 !== undefined ? (title_line2 || null) : item.title_line2,
+       title_line3 !== undefined ? (title_line3 || null) : item.title_line3,
+       mpaa_rating !== undefined ? (mpaa_rating || null) : item.mpaa_rating,
+       parsedRuntime, parsedGenres, parsedRating,
+       release_year !== undefined ? (release_year || null) : item.release_year,
+       poster_url !== undefined ? (poster_url || null) : item.poster_url,
+       ticket_url !== undefined ? (ticket_url || null) : item.ticket_url,
+       custom_art !== undefined ? (custom_art || null) : item.custom_art,
+       version_label !== undefined ? (version_label || null) : item.version_label]
+    );
+    const r = await db.query('SELECT * FROM library WHERE id = $1', [id]);
+    return res.json(r.rows[0]);
+  } catch (e) { return res.status(500).json({ error: e.message }); }
+});
+
+// ── Create a new version (copy) of a library item ──
+router.post('/:id/version', async (req, res) => {
+  const { id } = req.params;
+  const { version_label } = req.body;
+  if (!version_label || !version_label.trim()) {
+    return res.status(400).json({ error: 'version_label is required (e.g. "Director\'s Cut")' });
+  }
+  try {
+    const existing = await db.query('SELECT * FROM library WHERE id = $1', [id]);
+    if (existing.rows.length === 0) return res.status(404).json({ error: 'Item not found' });
+
+    const item = existing.rows[0];
+    // Determine the root parent (if this item is already a version, use its parent)
+    const rootId = item.parent_id || item.id;
+
+    // Find next version number (max existing + 1, handles gaps from deletions)
+    const versions = await db.query(
+      "SELECT id FROM library WHERE parent_id = $1 ORDER BY id",
+      [rootId]
+    );
+    let maxVer = 0;
+    for (const row of versions.rows) {
+      const m = row.id.match(/:v(\d+)$/);
+      if (m) maxVer = Math.max(maxVer, parseInt(m[1], 10));
+    }
+    const newId = rootId + ':v' + (maxVer + 1);
+
+    // Check uniqueness
+    const dup = await db.query('SELECT id FROM library WHERE id = $1', [newId]);
+    if (dup.rows.length > 0) return res.status(409).json({ error: 'Version ID already exists: ' + newId });
+
+    await db.query(
+      `INSERT INTO library (id, title, title_line2, title_line3, type, mpaa_rating,
+       runtime_min, genres, imdb_rating, release_year, poster_url, ticket_url,
+       custom_art, version_label, parent_id, last_updated)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW())`,
+      [newId, item.title, item.title_line2, item.title_line3, item.type,
+       item.mpaa_rating, item.runtime_min, item.genres, item.imdb_rating,
+       item.release_year, item.poster_url, item.ticket_url, item.custom_art,
+       version_label.trim(), rootId]
+    );
+    const r = await db.query('SELECT * FROM library WHERE id = $1', [newId]);
+    return res.status(201).json(r.rows[0]);
+  } catch (e) { return res.status(500).json({ error: e.message }); }
+});
+
 router.post('/event', async (req, res) => {
   const { id, title, title_line2, title_line3, ticket_url, custom_art, runtime_min } = req.body;
   if (!id || !title) return res.status(400).json({ error: 'id and title are required' });
@@ -76,7 +172,7 @@ router.delete('/:id', async (req, res) => {
 
 router.post('/refresh-all', async (_req, res) => {
   try {
-    const movies = await db.query("SELECT id FROM library WHERE type = 'movie'");
+    const movies = await db.query("SELECT id FROM library WHERE type = 'movie' AND parent_id IS NULL");
     let updated = 0, errors = 0;
     for (const row of movies.rows) {
       await new Promise(r => setTimeout(r, 500));

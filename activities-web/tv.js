@@ -72,6 +72,9 @@
             html += '<span class="tv-show-title">' + escapeHtml(a.name) + '</span>';
             html += '<span class="tv-relocated-venue">📍 ' + escapeHtml(a.relocatedVenue || '') + '</span>';
             html += '<span class="tv-relocated-note">Change of plans, meet up at ' + escapeHtml(a.relocatedVenue || '') + '.</span>';
+          } else if (a.status === 'rescheduled') {
+            html += '<span class="tv-show-title">' + escapeHtml(a.name) + '</span>';
+            html += '<span class="tv-rescheduled-note">🕐 New start time' + (a.originalTime ? ' (was ' + escapeHtml(a.originalTime) + ')' : '') + '</span>';
           } else {
             html += '<span class="tv-show-title">' + escapeHtml(a.name) + '</span>';
           }

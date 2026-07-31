@@ -100,7 +100,8 @@ router.post('/close/:id', async (req, res) => {
     return res.status(400).json({ error: 'Delay Opening requires a specific duration' });
   }
   try {
-    await closeAmenity(id, minutes != null ? Number(minutes) : null, false, closureType);
+    const isLightning = closureType === 'lightning';
+    await closeAmenity(id, minutes != null ? Number(minutes) : null, isLightning, closureType);
     return res.json({ ok: true });
   } catch (e) {
     console.error('[admin] close error:', e);
@@ -181,7 +182,7 @@ router.post('/lightning', async (req, res) => {
   }
   try {
     for (const id of LIGHTNING_IDS) {
-      await closeAmenity(id, minutes != null ? Number(minutes) : null, true);
+      await closeAmenity(id, minutes != null ? Number(minutes) : null, true, 'lightning');
     }
     let command = null;
     if (playerId) {

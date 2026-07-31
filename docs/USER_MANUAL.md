@@ -519,6 +519,22 @@ Galleries are stored in `go4launch/data/galleries.json`. To add one:
 
 Set `featured: true` for 1–3 galleries max to show as large banners at the top.
 
+### Upkeep — launch data feed health (LL2 API)
+
+Launch data comes from a third-party service called **Launch Library 2** (run by TheSpaceDevs). go4launch is "pinned" to a specific version of their feed. Once or twice a year that service can change or retire a version — when that happens, launch cards can quietly stop updating.
+
+To catch this early, the backend runs an **automatic health check** every day (7:00 AM Eastern) and again each time it restarts. **You don't have to do anything to run it** — it runs on its own.
+
+**How you'll be notified:** if you set `LL2_ALERT_EMAIL` on Render to your email address, the system will email you (using the same SendGrid account that sends the gallery emails) whenever the feed looks broken or a newer version is available. No alert email means nothing needs attention. You can also open `https://go4launch-backend.onrender.com/api/ll2-status` any time to see the latest check result.
+
+**If you get an alert email:** the launch feed needs a small code update (pointing go4launch at the new feed version). Forward the alert to whoever maintains the code — it's a quick change, not a guest-facing emergency. Existing launch cards keep showing their last-known data in the meantime.
+
+**To turn email alerts on (one-time, on Render):**
+1. In the `go4launch-backend` service, open **Environment**
+2. Add `LL2_ALERT_EMAIL` = your email address (comma-separate multiple addresses)
+3. Make sure `SENDGRID_API_KEY` and `SENDGRID_FROM` are already set (they power the existing emails)
+4. Save — Render redeploys automatically
+
 ---
 
 ## 10. Cabana Booking

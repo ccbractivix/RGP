@@ -66,6 +66,7 @@
     .slot-badge.available { background: var(--green-dim); color: var(--green); }
     .slot-badge.booked-paid { background: var(--red-dim); color: var(--red); }
     .slot-badge.booked-unpaid { background: var(--yellow-dim); color: var(--yellow); }
+    .slot-badge.booked-comped { background: var(--blue-dim); color: var(--blue); }
     .slot-badge.tentative { background: var(--blue-dim); color: var(--blue); border: 1px dashed var(--blue); }
     .slot-badge.needs-review { background: var(--purple-dim); color: var(--purple); }
     .slot-badge.maintenance { background: var(--orange-dim); color: var(--orange); }
@@ -116,6 +117,7 @@
     .status-pill { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
     .status-pill.paid { background: var(--red-dim); color: var(--red); }
     .status-pill.unpaid { background: var(--yellow-dim); color: var(--yellow); }
+    .status-pill.comped { background: var(--blue-dim); color: var(--blue); }
     .status-pill.tentative { background: var(--blue-dim); color: var(--blue); }
     .status-pill.confirmed { background: var(--green-dim); color: var(--green); }
     .status-pill.needs_review { background: var(--purple-dim); color: var(--purple); }
@@ -192,6 +194,7 @@
       <div class="legend">
         <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Available</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Booked &amp; Paid</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div> Comped</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> Needs Review</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div> 🚧 Maintenance</div>
         <div class="legend-item"><div class="legend-dot" style="background:#374151;border:1px solid var(--red)"></div> ✋ Manager Hold</div>
@@ -537,6 +540,7 @@ function buildBookingBadge(cabana, b) {
   if (b.status === 'tentative') { cls = 'tentative'; icon = '🔵'; }
   else if (b.status === 'needs_review') { cls = 'needs-review'; icon = '⚠️'; }
   else if ((b.payment_status || '').toLowerCase() === 'paid_in_full' || b.is_paid) { cls = 'booked-paid'; icon = '🔴'; }
+  else if ((b.payment_status || '').toLowerCase() === 'comped') { cls = 'booked-comped'; icon = '🔵'; }
   else { cls = 'booked-unpaid'; icon = '🟡'; }
   const slotSuffix = b.slot === 'full' ? '' : b.slot === 'am' ? ' AM' : ' PM';
   const lastName = getLastName(b.renter_name);
@@ -566,10 +570,16 @@ function openDayModal(date) {
     html += `<div class="info-row"><span class="info-label">Check-In Date</span><span class="info-value">${b.check_in_date ? fmtDate(b.check_in_date) : '—'}</span></div>`;
     html += `<div class="info-row"><span class="info-label">Date Reserved</span><span class="info-value">${b.date_reserved ? fmtDate(b.date_reserved) : '—'}</span></div>`;
     html += `<div class="info-row"><span class="info-label">Price Paid</span><span class="info-value">${b.price_paid != null ? `$${esc(String(b.price_paid))}` : '—'}</span></div>`;
+    const payStatus = b.payment_status || '';
+    const payLabel = payStatus === 'paid_in_full' || b.is_paid ? 'Paid In Full' : payStatus === 'comped' ? 'Comped' : 'Pending Payment';
+    const payPillClass = payStatus === 'paid_in_full' || b.is_paid ? 'paid' : payStatus === 'comped' ? 'comped' : 'unpaid';
     html += `<div class="info-row"><span class="info-label">Status</span><span class="info-value">
-      <span class="status-pill ${((b.payment_status || '') === 'paid_in_full' || b.is_paid) ? 'paid' : 'unpaid'}">${((b.payment_status || '') === 'paid_in_full' || b.is_paid) ? 'Paid In Full' : 'Pending Payment'}</span>
+      <span class="status-pill ${payPillClass}">${payLabel}</span>
       <span class="status-pill ${b.status}">${b.status}</span></span></div>`;
     html += `<div class="info-row"><span class="info-label">Payment Date</span><span class="info-value">${b.payment_date ? fmtDate(b.payment_date) : '—'}</span></div>`;
+    if (payStatus === 'comped' && b.comp_authorized_by) {
+      html += `<div class="info-row"><span class="info-label">Comp Authorized By</span><span class="info-value">${esc(b.comp_authorized_by)}</span></div>`;
+    }
     if (b.special_instructions) {
       html += `<div class="info-row"><span class="info-label">Notes</span><span class="info-value">${esc(b.special_instructions)}</span></div>`;
     }
@@ -625,10 +635,13 @@ function openDayModal(date) {
     <div class="form-group"><label class="form-label">Villa/Room #</label>
       <input class="form-input" id="bk-room" placeholder="Villa/Room number"></div>
     <div class="form-group"><label class="form-label">Property</label>
-      <div style="display:flex;gap:16px;padding-top:6px;">
-        <div class="form-check"><input type="radio" name="bk-prop" value="HICV" id="bk-hicv" checked><label for="bk-hicv">HICV</label></div>
-        <div class="form-check"><input type="radio" name="bk-prop" value="HIE" id="bk-hie"><label for="bk-hie">HIE</label></div>
-      </div></div></div>`;
+      <select class="form-select" id="bk-prop">
+        <option value="HICV" selected>HICV</option>
+        <option value="HIE">HIE</option>
+        <option value="Day Guest">Day Guest</option>
+        <option value="Splash Pass Member">Splash Pass Member</option>
+        <option value="Day Pass Guest">Day Pass Guest</option>
+      </select></div></div>`;
   html += `<div class="form-group"><label class="form-label">Reservation Number</label>
     <input class="form-input" id="bk-reservation-number" placeholder="Guest reservation number"></div>`;
   html += `<div class="form-row">
@@ -644,8 +657,11 @@ function openDayModal(date) {
       <select class="form-select" id="bk-payment-status">
         <option value="pending_payment">Pending Payment</option>
         <option value="paid_in_full">Paid In Full</option>
+        <option value="comped">Comped</option>
       </select></div>
   </div>`;
+  html += `<div class="form-group" id="bk-comp-auth-group" style="display:none;"><label class="form-label">Comp Authorized By</label>
+    <input class="form-input" id="bk-comp-authorized-by" placeholder="Name of authorizing manager"></div>`;
   html += `<div class="form-group"><label class="form-label">Payment Date</label>
     <input class="form-input" id="bk-payment-date" type="date"></div>`;
   html += `<div class="form-group"><label class="form-label">Notes</label>
@@ -660,9 +676,12 @@ function openDayModal(date) {
   $('#booking-popup').classList.add('open');
   $('#bk-submit').addEventListener('click', submitBooking);
   $('#bk-payment-status').addEventListener('change', () => {
+    const status = $('#bk-payment-status').value;
     const paymentDate = $('#bk-payment-date');
-    paymentDate.required = $('#bk-payment-status').value === 'paid_in_full';
+    paymentDate.required = status === 'paid_in_full';
     if (!paymentDate.required) paymentDate.value = '';
+    $('#bk-comp-auth-group').style.display = status === 'comped' ? '' : 'none';
+    $('#bk-comp-authorized-by').required = status === 'comped';
   });
 }
 
@@ -675,6 +694,9 @@ async function submitBooking() {
   const firstName = $('#bk-first-name').value.trim();
   const checkNumber = $('#bk-check-number').value.trim();
   const phoneDigits = $('#bk-phone').value.trim().replace(/\D/g, '');
+  const paymentStatus = $('#bk-payment-status').value;
+  const isComped = paymentStatus === 'comped';
+  const compAuthorizedBy = ($('#bk-comp-authorized-by') || {value:''}).value?.trim() || '';
   const body = {
     cabana_id: parseInt($('#bk-cabana').value, 10),
     date,
@@ -687,17 +709,21 @@ async function submitBooking() {
     reservation_number: $('#bk-reservation-number').value.trim(),
     check_in_date: $('#bk-check-in-date').value,
     date_reserved: $('#bk-date-reserved').value,
-    price_paid: $('#bk-price-paid').value.trim(),
-    property: document.querySelector('input[name="bk-prop"]:checked')?.value || 'HICV',
-    payment_status: $('#bk-payment-status').value,
+    price_paid: $('#bk-price-paid').value.trim() || null,
+    property: $('#bk-prop').value || 'HICV',
+    payment_status: paymentStatus,
     payment_date: $('#bk-payment-date').value || null,
     special_instructions: $('#bk-instructions').value.trim() || null,
     infogenesis_check_number: checkNumber,
     booking_agent_name: $('#bk-agent-name').value.trim(),
+    comp_authorized_by: isComped ? compAuthorizedBy : null,
   };
 
-  if (!body.last_name || !body.first_name || !body.phone || !body.room_number || !body.reservation_number || !body.check_in_date || !body.date_reserved || !body.price_paid || !body.payment_status || !body.infogenesis_check_number || !body.booking_agent_name) {
+  if (!body.last_name || !body.first_name || !body.phone || !body.room_number || !body.reservation_number || !body.check_in_date || !body.date_reserved || (!isComped && !body.price_paid) || !body.payment_status || !body.infogenesis_check_number || !body.booking_agent_name) {
     showToast('Please complete all required fields', 'error'); return;
+  }
+  if (isComped && !compAuthorizedBy) {
+    showToast('Comp Authorized By is required for Comped bookings', 'error'); return;
   }
   if (phoneDigits.length !== 10) {
     showToast('Phone number must have 10 digits', 'error'); return;
@@ -735,6 +761,8 @@ window.openEditModal = async function(bookingId) {
   const sheet = $('#booking-sheet');
   let html = `<button class="popup-close" onclick="closePopup()">✕</button>`;
   html += `<div class="popup-title">Edit Booking</div>`;
+  html += `<div class="form-group"><label class="form-label">Cabana</label>
+    <select class="form-select" id="ed-cabana">${cabanas.map(c => `<option value="${c.id}" ${c.id === booking.cabana_id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>`;
   html += `<div class="form-row">
     <div class="form-group"><label class="form-label">Last Name</label>
       <input class="form-input" id="ed-last-name" value="${esc(booking.last_name || getLastName(booking.renter_name) || '')}"></div>
@@ -750,6 +778,9 @@ window.openEditModal = async function(bookingId) {
       <select class="form-select" id="ed-property">
         <option value="HICV" ${booking.property==='HICV'?'selected':''}>HICV</option>
         <option value="HIE" ${booking.property==='HIE'?'selected':''}>HIE</option>
+        <option value="Day Guest" ${booking.property==='Day Guest'?'selected':''}>Day Guest</option>
+        <option value="Splash Pass Member" ${booking.property==='Splash Pass Member'?'selected':''}>Splash Pass Member</option>
+        <option value="Day Pass Guest" ${booking.property==='Day Pass Guest'?'selected':''}>Day Pass Guest</option>
       </select></div></div>`;
   html += `<div class="form-group"><label class="form-label">Reservation Number</label>
     <input class="form-input" id="ed-reservation-number" value="${esc(booking.reservation_number || '')}"></div>`;
@@ -766,8 +797,11 @@ window.openEditModal = async function(bookingId) {
       <select class="form-select" id="ed-payment-status">
         <option value="pending_payment" ${booking.payment_status==='pending_payment'?'selected':''}>Pending Payment</option>
         <option value="paid_in_full" ${(booking.payment_status==='paid_in_full' || booking.is_paid)?'selected':''}>Paid In Full</option>
+        <option value="comped" ${booking.payment_status==='comped'?'selected':''}>Comped</option>
       </select></div>
   </div>`;
+  html += `<div class="form-group" id="ed-comp-auth-group" style="display:${booking.payment_status==='comped'?'':'none'};"><label class="form-label">Comp Authorized By</label>
+    <input class="form-input" id="ed-comp-authorized-by" value="${esc(booking.comp_authorized_by || '')}" placeholder="Name of authorizing manager"></div>`;
   html += `<div class="form-group"><label class="form-label">Payment Date</label>
     <input class="form-input" id="ed-payment-date" type="date" value="${booking.payment_date || ''}"></div>`;
   html += `<div class="form-group"><label class="form-label">Slot</label>
@@ -787,9 +821,12 @@ window.openEditModal = async function(bookingId) {
 
   sheet.innerHTML = html;
   $('#ed-payment-status').addEventListener('change', () => {
+    const status = $('#ed-payment-status').value;
     const paymentDate = $('#ed-payment-date');
-    paymentDate.required = $('#ed-payment-status').value === 'paid_in_full';
+    paymentDate.required = status === 'paid_in_full';
     if (!paymentDate.required) paymentDate.value = '';
+    $('#ed-comp-auth-group').style.display = status === 'comped' ? '' : 'none';
+    $('#ed-comp-authorized-by').required = status === 'comped';
   });
 
   $('#ed-save').addEventListener('click', async () => {
@@ -797,6 +834,8 @@ window.openEditModal = async function(bookingId) {
     const phoneDigits = $('#ed-phone').value.trim().replace(/\D/g, '');
     const paymentStatus = $('#ed-payment-status').value;
     const paymentDate = $('#ed-payment-date').value;
+    const isComped = paymentStatus === 'comped';
+    const compAuthorizedBy = ($('#ed-comp-authorized-by') || {value:''}).value?.trim() || '';
     if (!checkNumber) {
       showToast('Infogenesis check number is required', 'error');
       return;
@@ -809,12 +848,17 @@ window.openEditModal = async function(bookingId) {
       showToast('Payment date is required when paid in full', 'error');
       return;
     }
+    if (isComped && !compAuthorizedBy) {
+      showToast('Comp Authorized By is required for Comped bookings', 'error');
+      return;
+    }
     const lastName = $('#ed-last-name').value.trim();
     const firstName = $('#ed-first-name').value.trim();
     try {
       await api(`/admin/booking/${booking.id}`, {
         method: 'PUT',
         body: {
+          cabana_id: parseInt($('#ed-cabana').value, 10),
           renter_name: `${lastName}${firstName ? `, ${firstName}` : ''}`,
           last_name: lastName,
           first_name: firstName,
@@ -823,7 +867,7 @@ window.openEditModal = async function(bookingId) {
           reservation_number: $('#ed-reservation-number').value.trim(),
           check_in_date: $('#ed-check-in-date').value,
           date_reserved: $('#ed-date-reserved').value,
-          price_paid: $('#ed-price-paid').value.trim(),
+          price_paid: $('#ed-price-paid').value.trim() || null,
           property: $('#ed-property').value,
           slot: $('#ed-slot').value,
           payment_status: paymentStatus,
@@ -831,6 +875,7 @@ window.openEditModal = async function(bookingId) {
           special_instructions: $('#ed-instructions').value.trim() || null,
           infogenesis_check_number: checkNumber,
           booking_agent_name: $('#ed-agent-name').value.trim(),
+          comp_authorized_by: isComped ? compAuthorizedBy : null,
           version: parseInt($('#ed-version').value, 10),
         },
       });
@@ -1154,7 +1199,7 @@ function reportRowsToCsv(rows) {
   const headers = [
     'Booking Date', 'Cabana', 'Slot', 'Status', 'Last Name', 'First Name', 'Guest Display',
     'Phone', 'Villa/Room Number', 'Property', 'Reservation Number', 'Check-In Date', 'Date Reserved',
-    'Price Paid', 'Payment Status', 'Payment Date', 'Infogenesis Check Number', 'Booking Agent Name', 'Notes',
+    'Price Paid', 'Payment Status', 'Payment Date', 'Infogenesis Check Number', 'Booking Agent Name', 'Comp Authorized By', 'Notes',
   ];
   const escCsv = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const lines = [headers.map(escCsv).join(',')];
@@ -1178,6 +1223,7 @@ function reportRowsToCsv(rows) {
       b.payment_date || '',
       b.infogenesis_check_number || '',
       b.booking_agent_name || '',
+      b.comp_authorized_by || '',
       b.special_instructions || '',
     ].map(escCsv).join(','));
   }
@@ -1221,6 +1267,7 @@ function exportReportPdf(rows, range) {
       <td>${b.payment_date || ''}</td>
       <td>${esc(b.infogenesis_check_number || '')}</td>
       <td>${esc(b.booking_agent_name || '')}</td>
+      <td>${esc(b.comp_authorized_by || '')}</td>
     </tr>
   `).join('');
   w.document.write(`
@@ -1239,7 +1286,7 @@ function exportReportPdf(rows, range) {
         <thead>
           <tr>
             <th>Booking Date</th><th>Cabana</th><th>Slot</th><th>Status</th><th>Last</th><th>First</th><th>Phone</th><th>Villa/Room</th><th>Property</th>
-            <th>Reservation #</th><th>Check-In</th><th>Date Reserved</th><th>Price</th><th>Payment Status</th><th>Payment Date</th><th>Check #</th><th>Agent</th>
+            <th>Reservation #</th><th>Check-In</th><th>Date Reserved</th><th>Price</th><th>Payment Status</th><th>Payment Date</th><th>Check #</th><th>Agent</th><th>Comp Auth By</th>
           </tr>
         </thead>
         <tbody>${tableRows}</tbody>
@@ -1400,6 +1447,7 @@ $('#rpt-load').addEventListener('click', async () => {
               <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Payment Date</th>
               <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Check #</th>
               <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Agent</th>
+              <th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--card-border);color:var(--text-muted);">Comp Auth By</th>
             </tr>
           </thead>
           <tbody>
@@ -1419,10 +1467,11 @@ $('#rpt-load').addEventListener('click', async () => {
                 <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${b.check_in_date ? fmtDate(b.check_in_date) : '—'}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${b.date_reserved ? fmtDate(b.date_reserved) : '—'}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${b.price_paid != null ? `$${esc(String(b.price_paid))}` : '—'}</td>
-                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${(b.payment_status || '') === 'paid_in_full' ? 'Paid In Full' : 'Pending Payment'}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${(b.payment_status || '') === 'paid_in_full' ? 'Paid In Full' : (b.payment_status || '') === 'comped' ? 'Comped' : 'Pending Payment'}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${b.payment_date ? fmtDate(b.payment_date) : '—'}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);${!b.infogenesis_check_number ? 'color:var(--yellow)' : ''}">${b.infogenesis_check_number ? esc(b.infogenesis_check_number) : '—'}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.booking_agent_name || '')}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid var(--card-border);">${esc(b.comp_authorized_by || '')}</td>
               </tr>
             `).join('')}
           </tbody>
