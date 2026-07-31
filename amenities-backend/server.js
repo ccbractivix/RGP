@@ -5,9 +5,11 @@ const express   = require('express');
 const cors      = require('cors');
 const rateLimit = require('express-rate-limit');
 
-const apiRouter   = require('./routes/api');
-const adminRouter = require('./routes/admin');
+const apiRouter    = require('./routes/api');
+const adminRouter  = require('./routes/admin');
+const playerRouter = require('./routes/player');
 const { seedAmenities, autoReopen } = require('./services/amenities');
+const { ensureSchema: ensurePlayerSchema } = require('./services/player');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -26,10 +28,12 @@ app.use(express.json());
 // Rate limiting
 const publicLimiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false });
 const adminLimiter  = rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false });
+const playerLimiter = rateLimit({ windowMs: 60_000, max: 240, standardHeaders: true, legacyHeaders: false });
 
 // Routes
 app.use('/api', publicLimiter, apiRouter);
 app.use('/admin', adminLimiter, adminRouter);
+app.use('/player', playerLimiter, playerRouter);
 
 // Health check
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
@@ -38,6 +42,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 (async () => {
   try {
     await seedAmenities();
+    await ensurePlayerSchema();
     console.log('Amenities seeded successfully');
   } catch (e) {
     console.error('Failed to seed amenities:', e);

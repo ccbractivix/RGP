@@ -11,6 +11,8 @@ Express/Node.js API for the Resort Amenities Tracker.
 | `PORT` | No | Server port (default: 3001) |
 | `NODE_ENV` | No | Set to `production` for SSL and secure defaults |
 | `CORS_ORIGIN` | No | Additional allowed origins (comma-separated) |
+| `AUDIO_PLAYER_TOKEN` | For remote player | Shared token used by the Mac Mini Python player when polling commands |
+| `AUDIO_PLAYER_DEFAULT_ID` | No | Default player ID used by admin actions when a player ID is not supplied |
 
 ## Generating Auth Codes
 
@@ -47,3 +49,48 @@ Copy the output into the `AMENITY_CODES` environment variable.
 - `POST /admin/update-now/:id` — Extend short closure by 15 min
 - `POST /admin/lightning` — Lightning closure `{ minutes: number | null }`
 - `POST /admin/lightning/clear` — Clear all lightning closures
+- `GET /admin/player/schedule?playerId=mac-mini` — Load the saved player schedule
+- `PUT /admin/player/schedule` — Save schedule and queue `reload_schedule`
+- `POST /admin/player/command` — Queue a player command
+- `GET /admin/player/commands?playerId=mac-mini` — Inspect recent player commands
+
+### Player API (requires `X-Player-Token` and `X-Player-Id`)
+
+- `POST /player/register` — Register/update player metadata and receive current schedule
+- `GET /player/commands` — Poll queued commands
+- `POST /player/commands/:id/ack` — Mark a command `completed`, `failed`, or `ignored`
+- `GET /player/schedule` — Load the latest schedule for the current player
+
+## Recommended Player Polling Flow
+
+1. Python player starts and calls `POST /player/register`
+2. Player polls `GET /player/commands` every few seconds
+3. When a command is handled, player calls `POST /player/commands/:id/ack`
+4. When schedule changes, admin saves schedule here and the backend queues `reload_schedule`
+
+## Supported Player Command Types
+
+- `play_file_now`
+- `pause_rotation`
+- `resume_rotation`
+- `start_lightning_mode`
+- `clear_lightning_mode`
+- `reload_schedule`
+
+### Example schedule payload
+
+```json
+{
+  "timezone": "America/New_York",
+  "rotation": {
+    "enabled": true,
+    "minIntervalMinutes": 30,
+    "maxIntervalMinutes": 90,
+    "files": ["announcement-a.mp3", "announcement-b.mp3", "announcement-c.mp3"]
+  },
+  "scheduledEvents": [
+    { "time": "20:00", "command": "play_file_now", "payload": { "audioFile": "bar-last-call-1.mp3" } },
+    { "time": "22:00", "command": "play_file_now", "payload": { "audioFile": "pool-close-1.mp3" } }
+  ]
+}
+```
