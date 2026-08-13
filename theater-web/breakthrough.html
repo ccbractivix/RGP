@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theater-api-url" content="https://theater-backend-qf1b.onrender.com">
+  <title>Theater Announcement</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #0a0a0f;
+      color: #f0ece4;
+      font-family: 'Montserrat', sans-serif;
+      overflow: hidden;
+    }
+
+    #page {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    /* ── Background gradient accent ── */
+    #page::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 70% 50%, rgba(230,116,74,0.12) 0%, transparent 65%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Top banner ── */
+    #top-banner {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(8px, 1.5vw, 20px);
+      padding: clamp(10px, 1.5vh, 22px) clamp(20px, 3vw, 60px);
+      background: linear-gradient(90deg, #1a1510, #2a1f12, #1a1510);
+      border-bottom: 2px solid #E6744A;
+      z-index: 1;
+    }
+
+    #top-banner .theater-name {
+      font-size: clamp(12px, 1.4vw, 20px);
+      font-weight: 700;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: #c8a87e;
+    }
+
+    #top-banner .separator {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: #E6744A;
+      flex-shrink: 0;
+    }
+
+    #top-banner .announcement-label {
+      font-size: clamp(11px, 1.2vw, 17px);
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #E6744A;
+    }
+
+    /* ── Main content ── */
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      padding: clamp(16px, 2.5vw, 48px) clamp(20px, 3.5vw, 72px);
+      gap: clamp(20px, 3vw, 60px);
+      min-height: 0;
+      z-index: 1;
+      position: relative;
+    }
+
+    /* ── Poster area ── */
+    #poster-col {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: clamp(160px, 25vw, 340px);
+    }
+
+    #poster-wrap {
+      width: 100%;
+      aspect-ratio: 2/3;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.8), 0 0 0 2px rgba(230,116,74,0.4);
+      background: #1c1610;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #poster-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    #poster-placeholder {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 24px;
+      text-align: center;
+      color: #6b5c48;
+    }
+
+    #poster-placeholder .film-icon {
+      font-size: clamp(36px, 5vw, 64px);
+    }
+
+    /* ── Info area ── */
+    #info-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: clamp(12px, 2vh, 28px);
+      min-width: 0;
+    }
+
+    #tonight-label {
+      font-size: clamp(14px, 1.8vw, 24px);
+      font-weight: 700;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      color: #E6744A;
+    }
+
+    #movie-title {
+      font-size: clamp(28px, 5.5vw, 80px);
+      font-weight: 800;
+      line-height: 1.05;
+      color: #f0ece4;
+      letter-spacing: -1px;
+      word-break: break-word;
+    }
+
+    #showtime-row {
+      display: flex;
+      align-items: center;
+      gap: clamp(8px, 1.2vw, 18px);
+    }
+
+    #showtime-badge {
+      background: #E6744A;
+      color: #fff;
+      font-size: clamp(18px, 2.8vw, 40px);
+      font-weight: 800;
+      letter-spacing: 2px;
+      padding: clamp(6px, 1vh, 12px) clamp(14px, 2vw, 28px);
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    #location-tag {
+      font-size: clamp(13px, 1.6vw, 22px);
+      font-weight: 600;
+      color: #c8a87e;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    #divider {
+      height: 2px;
+      background: linear-gradient(90deg, #E6744A, transparent);
+      width: 80%;
+      max-width: 500px;
+    }
+
+    #notice-box {
+      display: none;
+      background: rgba(180, 40, 30, 0.18);
+      border: 1px solid rgba(220, 60, 50, 0.5);
+      border-radius: 8px;
+      padding: clamp(10px, 1.5vh, 20px) clamp(14px, 2vw, 28px);
+      max-width: 680px;
+    }
+
+    #notice-box .notice-label {
+      font-size: clamp(9px, 1vw, 14px);
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: #e06060;
+      margin-bottom: 4px;
+    }
+
+    #notice-box .notice-text {
+      font-size: clamp(13px, 1.5vw, 21px);
+      font-weight: 600;
+      color: #f0c0b0;
+      line-height: 1.4;
+    }
+
+    /* ── Bottom bar ── */
+    #bottom-bar {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(8px, 1.2vh, 18px) clamp(20px, 3vw, 60px);
+      background: rgba(26,21,16,0.9);
+      border-top: 1px solid rgba(200,168,126,0.15);
+      z-index: 1;
+    }
+
+    #bottom-text {
+      font-size: clamp(10px, 1.1vw, 15px);
+      color: #6b5c48;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    /* ── Loading / error ── */
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: #0a0a0f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      font-size: clamp(16px, 2vw, 28px);
+      color: #6b5c48;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    #loading-overlay.hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <div id="loading-overlay">Loading…</div>
+
+  <div id="page">
+    <div id="top-banner">
+      <span class="theater-name">Movie Theater</span>
+      <span class="separator"></span>
+      <span class="announcement-label">Special Announcement</span>
+    </div>
+
+    <div id="main">
+      <div id="poster-col">
+        <div id="poster-wrap">
+          <img id="poster-img" src="" alt="" style="display:none">
+          <div id="poster-placeholder">
+            <div class="film-icon">🎬</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="info-col">
+        <div id="tonight-label">Showing Tonight</div>
+        <div id="movie-title">—</div>
+        <div id="showtime-row">
+          <div id="showtime-badge">—</div>
+          <div id="location-tag">Movie Theater</div>
+        </div>
+        <div id="divider"></div>
+        <div id="notice-box">
+          <div class="notice-label">Please Note</div>
+          <div class="notice-text" id="notice-text"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="bottom-bar">
+      <div id="bottom-text">All showtimes subject to change · Please silence your phone</div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  const API_BASE = document.querySelector('meta[name="theater-api-url"]')?.content || '';
+  const params = new URLSearchParams(window.location.search);
+
+  // URL params: title, time, notice, poster (optional override)
+  const paramTitle  = (params.get('title')  || '').trim();
+  const paramTime   = (params.get('time')   || '').trim();
+  const paramNotice = (params.get('notice') || '').trim();
+  const paramPoster = (params.get('poster') || '').trim();
+
+  const overlay    = document.getElementById('loading-overlay');
+  const movieTitle = document.getElementById('movie-title');
+  const showtimeBadge = document.getElementById('showtime-badge');
+  const posterImg  = document.getElementById('poster-img');
+  const posterPH   = document.getElementById('poster-placeholder');
+  const noticeBox  = document.getElementById('notice-box');
+  const noticeText = document.getElementById('notice-text');
+
+  function safeImageUrl(src) {
+    if (!src) return '';
+    try {
+      const u = new URL(src);
+      if (u.protocol !== 'https:' && u.protocol !== 'http:') return '';
+      return src;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function showPoster(src) {
+    const safeSrc = safeImageUrl(src);
+    if (!safeSrc) { posterPH.style.display = 'flex'; return; }
+    posterImg.onerror = () => {
+      posterImg.style.display = 'none';
+      posterPH.style.display = 'flex';
+    };
+    posterImg.src = safeSrc;
+    posterImg.style.display = 'block';
+    posterPH.style.display = 'none';
+  }
+
+  function render(title, time, posterSrc) {
+    movieTitle.textContent = title || 'Feature Film';
+    showtimeBadge.textContent = time || '—';
+    showPoster(posterSrc);
+
+    if (paramNotice) {
+      noticeText.textContent = paramNotice;
+      noticeBox.style.display = 'block';
+    }
+
+    overlay.classList.add('hidden');
+  }
+
+  async function init() {
+    // If a poster is explicitly provided via param, use it directly
+    if (paramPoster) {
+      render(paramTitle, paramTime, paramPoster);
+      return;
+    }
+
+    // Otherwise try to look up the poster from the theater backend
+    if (paramTitle) {
+      try {
+        const res = await fetch(`${API_BASE}/api/schedule`, {
+          signal: AbortSignal.timeout(8000),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const shows = Array.isArray(data) ? data : (data.shows || data.schedule || []);
+          // Flatten all shows from all days
+          let allShows = [];
+          shows.forEach(day => {
+            if (Array.isArray(day.shows)) allShows = allShows.concat(day.shows);
+            else if (day.title) allShows.push(day);
+          });
+
+          const normalize = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          const target = normalize(paramTitle);
+          const match = allShows.find(s => normalize(s.title) === target);
+
+          if (match) {
+            let posterSrc = match.poster || match.poster_url || '';
+            if (posterSrc && posterSrc.charAt(0) === '/') {
+              posterSrc = API_BASE + posterSrc;
+            }
+            const showTime = paramTime || match.time || match.showtime || '';
+            render(match.title || paramTitle, showTime, posterSrc);
+            return;
+          }
+        }
+      } catch (_) { /* fall through */ }
+    }
+
+    // Fallback: just show whatever params we have
+    render(paramTitle, paramTime, '');
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

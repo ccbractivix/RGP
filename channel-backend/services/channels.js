@@ -84,6 +84,8 @@ async function ensureSchema() {
   // Migration: add slide_url and source columns for URL-based breakthroughs
   await db.query('ALTER TABLE breakthroughs ADD COLUMN IF NOT EXISTS slide_url TEXT');
   await db.query('ALTER TABLE breakthroughs ADD COLUMN IF NOT EXISTS source TEXT');
+  // Migration: add expires_at for auto-expiring breakthroughs
+  await db.query('ALTER TABLE breakthroughs ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ');
   await db.query(`
     CREATE TABLE IF NOT EXISTS channel_rules (
       id              SERIAL PRIMARY KEY,
@@ -340,8 +342,8 @@ async function listBreakthroughs() {
 
 async function createBreakthrough(data) {
   const r = await db.query(`
-    INSERT INTO breakthroughs (title, message, bg_color, text_color, priority, target_channels, slide_url, source)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *
+    INSERT INTO breakthroughs (title, message, bg_color, text_color, priority, target_channels, slide_url, source, expires_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *
   `, [
     data.title, data.message,
     data.bg_color || '#D32F2F', data.text_color || '#FFFFFF',
@@ -349,11 +351,13 @@ async function createBreakthrough(data) {
     data.target_channels || null,
     data.slide_url || null,
     data.source || null,
+    data.expires_at || null,
   ]);
   return r.rows[0];
 }
 
 async function updateBreakthrough(id, data) {
+  // expires_at uses plain assignment (not COALESCE) so callers can clear it by passing null
   await db.query(`
     UPDATE breakthroughs
     SET title = COALESCE($2, title),
@@ -363,9 +367,10 @@ async function updateBreakthrough(id, data) {
         priority = COALESCE($6, priority),
         target_channels = COALESCE($7, target_channels),
         slide_url = COALESCE($8, slide_url),
-        source = COALESCE($9, source)
+        source = COALESCE($9, source),
+        expires_at = $10
     WHERE id = $1
-  `, [id, data.title, data.message, data.bg_color, data.text_color, data.priority, data.target_channels, data.slide_url, data.source]);
+  `, [id, data.title, data.message, data.bg_color, data.text_color, data.priority, data.target_channels, data.slide_url, data.source, data.expires_at || null]);
 }
 
 async function activateBreakthrough(id) {
@@ -391,6 +396,7 @@ async function getActiveBreakthroughs(channelId) {
     SELECT * FROM breakthroughs
     WHERE active = true
       AND (target_channels IS NULL OR $1 = ANY(target_channels))
+      AND (expires_at IS NULL OR expires_at > NOW())
     ORDER BY priority DESC
     LIMIT 1
   `, [channelId]);

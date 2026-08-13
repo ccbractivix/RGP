@@ -411,12 +411,16 @@
       <input type="hidden" id="bt-edit-id">
       <label>Title (shown large on screen)</label>
       <input type="text" id="bt-title" placeholder="e.g. EMERGENCY NOTICE">
-      <label>Message</label>
+      <label>Message <span style="font-weight:400;color:var(--text-muted)">(not needed when using Slide URL below)</span></label>
       <textarea id="bt-message" placeholder="The message displayed below the title"></textarea>
-      <label>Background Color</label>
+      <label>Slide URL <span style="font-weight:400;color:var(--text-muted)">(optional — shows a full-screen page instead of text)</span></label>
+      <input type="url" id="bt-slide-url" placeholder="e.g. https://ccbractivix.github.io/RGP/theater-web/breakthrough.html?title=…">
+      <label>Background Color <span style="font-weight:400;color:var(--text-muted)">(ignored when using Slide URL)</span></label>
       <input type="text" id="bt-bg" value="#D32F2F" placeholder="#D32F2F">
-      <label>Text Color</label>
+      <label>Text Color <span style="font-weight:400;color:var(--text-muted)">(ignored when using Slide URL)</span></label>
       <input type="text" id="bt-color" value="#FFFFFF" placeholder="#FFFFFF">
+      <label>Auto-expire at <span style="font-weight:400;color:var(--text-muted)">(optional — screens resume normal programming after this time; uses your local timezone)</span></label>
+      <input type="datetime-local" id="bt-expires-at" style="color-scheme:dark">
       <label>Target Channels (leave empty for ALL channels)</label>
       <div id="bt-channel-checkboxes" style="margin-bottom:12px"></div>
       <div class="modal-actions">
@@ -1018,6 +1022,23 @@
       const targets = bt.target_channels && bt.target_channels.length > 0
         ? bt.target_channels.join(', ')
         : 'All channels';
+
+      let expiryHtml = '';
+      if (bt.expires_at) {
+        const exp = new Date(bt.expires_at);
+        const now = Date.now();
+        const fmtExp = exp.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+        if (exp.getTime() <= now) {
+          expiryHtml = `<div style="font-size:12px;color:var(--text-muted);margin-top:2px">⏹ Expired ${fmtExp}</div>`;
+        } else {
+          expiryHtml = `<div style="font-size:12px;color:var(--amber);margin-top:2px">⏱ Auto-expires ${fmtExp}</div>`;
+        }
+      }
+
+      const slideUrlHtml = bt.slide_url
+        ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;word-break:break-all">🖼 Slide: ${esc(bt.slide_url)}</div>`
+        : '';
+
       card.innerHTML = `
         <div class="bt-header">
           <div>
@@ -1027,6 +1048,8 @@
           </div>
         </div>
         <div class="bt-message">${esc(bt.message)}</div>
+        ${slideUrlHtml}
+        ${expiryHtml}
         <div class="bt-targets">Targets: ${esc(targets)}</div>
         <div class="bt-actions">
           ${bt.active
@@ -1077,22 +1100,26 @@
   }
 
   /* ── Breakthrough Editor Modal ────────────────────────────────────────── */
-  const btModal   = document.getElementById('bt-modal');
-  const btMTitle  = document.getElementById('bt-modal-title');
-  const btEditId  = document.getElementById('bt-edit-id');
-  const btTitleIn = document.getElementById('bt-title');
-  const btMsgIn   = document.getElementById('bt-message');
-  const btBgIn    = document.getElementById('bt-bg');
-  const btColorIn = document.getElementById('bt-color');
-  const btChBoxes = document.getElementById('bt-channel-checkboxes');
+  const btModal    = document.getElementById('bt-modal');
+  const btMTitle   = document.getElementById('bt-modal-title');
+  const btEditId   = document.getElementById('bt-edit-id');
+  const btTitleIn  = document.getElementById('bt-title');
+  const btMsgIn    = document.getElementById('bt-message');
+  const btSlideUrl = document.getElementById('bt-slide-url');
+  const btBgIn     = document.getElementById('bt-bg');
+  const btColorIn  = document.getElementById('bt-color');
+  const btExpiresAt = document.getElementById('bt-expires-at');
+  const btChBoxes  = document.getElementById('bt-channel-checkboxes');
 
   document.getElementById('new-bt-btn').addEventListener('click', () => {
     btMTitle.textContent = 'New Breakthrough';
     btEditId.value = '';
     btTitleIn.value = '';
     btMsgIn.value = '';
+    btSlideUrl.value = '';
     btBgIn.value = '#D32F2F';
     btColorIn.value = '#FFFFFF';
+    btExpiresAt.value = '';
     renderBtChannelCheckboxes([]);
     btModal.classList.add('open');
   });
@@ -1102,8 +1129,17 @@
     btEditId.value = bt.id;
     btTitleIn.value = bt.title;
     btMsgIn.value = bt.message;
+    btSlideUrl.value = bt.slide_url || '';
     btBgIn.value = bt.bg_color || '#D32F2F';
     btColorIn.value = bt.text_color || '#FFFFFF';
+    // Convert ISO timestamp to datetime-local format (YYYY-MM-DDTHH:MM)
+    if (bt.expires_at) {
+      const d = new Date(bt.expires_at);
+      const pad = n => String(n).padStart(2, '0');
+      btExpiresAt.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } else {
+      btExpiresAt.value = '';
+    }
     renderBtChannelCheckboxes(bt.target_channels || []);
     btModal.classList.add('open');
   }
@@ -1125,17 +1161,27 @@
 
   document.getElementById('bt-cancel-btn').addEventListener('click', () => btModal.classList.remove('open'));
   document.getElementById('bt-save-btn').addEventListener('click', async () => {
-    const title = btTitleIn.value.trim();
-    const message = btMsgIn.value.trim();
-    if (!title || !message) return toast('Title and message required', 'error');
+    const title    = btTitleIn.value.trim();
+    const message  = btMsgIn.value.trim();
+    const slideUrl = btSlideUrl.value.trim();
+    if (!title || (!message && !slideUrl)) return toast('Title and either a message or slide URL are required', 'error');
 
     const checkedIds = [...btChBoxes.querySelectorAll('input:checked')].map(cb => cb.value);
 
+    // Convert datetime-local value to ISO string
+    let expiresAt = null;
+    if (btExpiresAt.value) {
+      const d = new Date(btExpiresAt.value);
+      if (!isNaN(d.getTime())) expiresAt = d.toISOString();
+    }
+
     const body = {
       title, message,
+      slide_url: slideUrl || null,
       bg_color: btBgIn.value.trim() || '#D32F2F',
       text_color: btColorIn.value.trim() || '#FFFFFF',
       target_channels: checkedIds.length > 0 ? checkedIds : null,
+      expires_at: expiresAt,
     };
 
     try {

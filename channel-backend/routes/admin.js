@@ -195,6 +195,9 @@ router.get('/breakthroughs', async (_req, res) => {
 router.post('/breakthroughs', async (req, res) => {
   const { title, message, slide_url } = req.body;
   if (!title || (!message && !slide_url)) return res.status(400).json({ error: 'title and (message or slide_url) required' });
+  if (req.body.expires_at && isNaN(Date.parse(req.body.expires_at))) {
+    return res.status(400).json({ error: 'expires_at must be a valid ISO 8601 date' });
+  }
   try {
     const bt = await createBreakthrough({ ...req.body, message: message || '' });
     return res.status(201).json({ breakthrough: bt });
@@ -205,6 +208,9 @@ router.post('/breakthroughs', async (req, res) => {
 });
 
 router.put('/breakthroughs/:id', async (req, res) => {
+  if (req.body.expires_at && isNaN(Date.parse(req.body.expires_at))) {
+    return res.status(400).json({ error: 'expires_at must be a valid ISO 8601 date' });
+  }
   try {
     await updateBreakthrough(req.params.id, req.body);
     return res.json({ ok: true });
