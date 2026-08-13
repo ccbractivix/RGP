@@ -357,6 +357,7 @@ async function createBreakthrough(data) {
 }
 
 async function updateBreakthrough(id, data) {
+  // expires_at uses plain assignment (not COALESCE) so callers can clear it by passing null
   await db.query(`
     UPDATE breakthroughs
     SET title = COALESCE($2, title),

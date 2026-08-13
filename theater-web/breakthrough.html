@@ -314,15 +314,27 @@
   const noticeBox  = document.getElementById('notice-box');
   const noticeText = document.getElementById('notice-text');
 
+  function safeImageUrl(src) {
+    if (!src) return '';
+    try {
+      const u = new URL(src);
+      if (u.protocol !== 'https:' && u.protocol !== 'http:') return '';
+      return src;
+    } catch (_) {
+      return '';
+    }
+  }
+
   function showPoster(src) {
-    if (!src) { posterPH.style.display = 'flex'; return; }
-    posterImg.src = src;
-    posterImg.style.display = 'block';
-    posterPH.style.display = 'none';
+    const safeSrc = safeImageUrl(src);
+    if (!safeSrc) { posterPH.style.display = 'flex'; return; }
     posterImg.onerror = () => {
       posterImg.style.display = 'none';
       posterPH.style.display = 'flex';
     };
+    posterImg.src = safeSrc;
+    posterImg.style.display = 'block';
+    posterPH.style.display = 'none';
   }
 
   function render(title, time, posterSrc) {
