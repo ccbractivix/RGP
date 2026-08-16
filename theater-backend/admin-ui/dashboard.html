@@ -1182,8 +1182,9 @@
         return;
       }
       const rows = [['Date', 'Day', 'Time', 'Title', 'MPAA Rating', 'Runtime (min)', 'Notes']];
-      weekData.forEach((day, i) => {
-        const dayName  = DAY_LABELS[i] || '';
+      weekData.forEach(day => {
+        const d = strToDate(day.date);
+        const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()];
         const closure  = weekClosures[day.date];
         if (closure) {
           const label = closure.type === 'maintenance' ? 'Closed for Maintenance' : 'Closed for Private Meeting';
