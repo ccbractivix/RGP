@@ -175,6 +175,35 @@ router.get('/schedule', async (_req, res) => {
   } catch (e) { console.error(e); return res.status(500).json({ error: 'Failed to load schedule' }); }
 });
 
+router.get('/schedule/week/:weekStart', async (req, res) => {
+  const { weekStart } = req.params;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) return res.status(400).json({ error: 'Invalid weekStart (YYYY-MM-DD)' });
+  const start = new Date(weekStart + 'T12:00:00Z');
+  if (start.getUTCDay() !== 1) return res.status(400).json({ error: 'weekStart must be a Monday' });
+  try {
+    const end = new Date(start); end.setUTCDate(end.getUTCDate() + 6);
+    const endStr = end.toISOString().split('T')[0];
+    const [rows, closures] = await Promise.all([
+      getRange(weekStart, endStr),
+      getClosures(weekStart, endStr),
+    ]);
+    await Promise.all([backfillPosters(rows), backfillYears(rows)]);
+    return res.json(buildDays(rows, closures, weekStart, endStr));
+  } catch (e) { console.error(e); return res.status(500).json({ error: 'Failed to load schedule' }); }
+});
+
+router.get('/library', async (_req, res) => {
+  try {
+    const r = await db.query(
+      `SELECT id, title, title_line2, title_line3, type, mpaa_rating,
+              runtime_min, genres, imdb_rating, release_year, poster_url
+       FROM library
+       ORDER BY COALESCE(parent_id, id), parent_id NULLS FIRST, title`
+    );
+    return res.json(r.rows);
+  } catch (e) { console.error(e); return res.status(500).json({ error: 'Failed to load library' }); }
+});
+
 router.get('/schedule/tv', async (_req, res) => {
   try {
     const now = new Date();

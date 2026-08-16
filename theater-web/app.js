@@ -10,8 +10,15 @@
   var API_URL = (metaTag && metaTag.getAttribute('content')) || '/api/schedule';
   var API_BASE = API_URL.replace(/\/api\/schedule$/, '');
 
+  // Current displayed week start (YYYY-MM-DD, Monday)
+  var currentWeekStart = null;
+  // Last fetched schedule data
+  var currentDays = [];
+
   document.addEventListener('DOMContentLoaded', function () {
-    fetchSchedule();
+    currentWeekStart = getMonday(todayStr());
+    syncPickerToWeek();
+    fetchScheduleForWeek(currentWeekStart);
 
     var backToTop = document.getElementById('back-to-top');
     if (backToTop) {
@@ -20,16 +27,90 @@
         window.scrollTo(0, 0);
       });
     }
+
+    var btnPrev = document.getElementById('btn-prev-week');
+    var btnNext = document.getElementById('btn-next-week');
+    var btnToday = document.getElementById('btn-today');
+    var picker = document.getElementById('week-picker');
+    var btnExportWeek = document.getElementById('btn-export-week');
+    var btnExportLib = document.getElementById('btn-export-library');
+
+    if (btnPrev) btnPrev.addEventListener('click', function () { navigateWeek(-1); });
+    if (btnNext) btnNext.addEventListener('click', function () { navigateWeek(1); });
+    if (btnToday) btnToday.addEventListener('click', function () {
+      currentWeekStart = getMonday(todayStr());
+      syncPickerToWeek();
+      fetchScheduleForWeek(currentWeekStart);
+    });
+    if (picker) picker.addEventListener('change', function () {
+      if (picker.value) {
+        currentWeekStart = getMonday(picker.value);
+        syncPickerToWeek();
+        fetchScheduleForWeek(currentWeekStart);
+      }
+    });
+    if (btnExportWeek) btnExportWeek.addEventListener('click', exportWeekCsv);
+    if (btnExportLib)  btnExportLib.addEventListener('click', exportLibraryCsv);
   });
 
-  function fetchSchedule() {
-    fetch(API_URL)
+  // ── Week helpers ─────────────────────────────────────────────────────────────
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function getMonday(dateStr) {
+    var parts = dateStr.split('-').map(Number);
+    var d = new Date(parts[0], parts[1] - 1, parts[2]);
+    var day = d.getDay(); // 0=Sun
+    var diff = (day === 0) ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+
+  function addDays(dateStr, n) {
+    var parts = dateStr.split('-').map(Number);
+    var d = new Date(parts[0], parts[1] - 1, parts[2]);
+    d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+
+  function syncPickerToWeek() {
+    var picker = document.getElementById('week-picker');
+    if (picker && currentWeekStart) picker.value = currentWeekStart;
+  }
+
+  function navigateWeek(delta) {
+    currentWeekStart = addDays(currentWeekStart, delta * 7);
+    syncPickerToWeek();
+    fetchScheduleForWeek(currentWeekStart);
+  }
+
+  // ── Fetch helpers ────────────────────────────────────────────────────────────
+
+  function isCurrentWeek() {
+    return currentWeekStart === getMonday(todayStr());
+  }
+
+  function fetchScheduleForWeek(weekStart) {
+    showLoading();
+    var url;
+    if (isCurrentWeek()) {
+      url = API_URL; // default endpoint (today + 4 days)
+    } else {
+      url = API_BASE + '/api/schedule/week/' + weekStart;
+    }
+    fetch(url)
       .then(function (response) {
         if (!response.ok) throw new Error('Network response was not ok');
         return response.json();
       })
       .then(function (data) {
-        renderSchedule(data);
+        currentDays = Array.isArray(data) ? data : [];
+        renderSchedule(currentDays);
       })
       .catch(function (err) {
         console.error('Failed to load schedule:', err);
@@ -37,6 +118,123 @@
           '<p style="color:#999;font-family:Inter,sans-serif;font-size:14px;">Unable to load schedule. Please try again later.</p>';
       });
   }
+
+  function showLoading() {
+    var loading = document.getElementById('loading');
+    var container = document.getElementById('schedule-container');
+    var footer = document.getElementById('footer');
+    if (loading) {
+      loading.innerHTML = '<div class="film-reel">' +
+        '<div class="reel-circle"></div>' +
+        '<div class="reel-circle"></div>' +
+        '<div class="reel-circle"></div>' +
+        '</div>' +
+        '<p style="margin-top:18px;font-family:\'Inter\',sans-serif;color:#888;font-size:14px;">Loading schedule...</p>';
+      loading.style.display = '';
+    }
+    if (container) container.style.display = 'none';
+    if (footer) footer.style.display = 'none';
+  }
+
+  // ── CSV Export ───────────────────────────────────────────────────────────────
+
+  function csvEscape(val) {
+    var s = (val === null || val === undefined) ? '' : String(val);
+    if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  function downloadCsv(filename, rows) {
+    var csv = rows.map(function (row) {
+      return row.map(csvEscape).join(',');
+    }).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+  }
+
+  function exportWeekCsv() {
+    if (!currentDays || currentDays.length === 0) {
+      alert('No schedule data to export.');
+      return;
+    }
+    var rows = [['Date', 'Day', 'Time', 'Title', 'Rating', 'Runtime (min)', 'Genre', 'Year', 'Notes', 'Content Type']];
+    currentDays.forEach(function (day) {
+      var parsed = parseDayLabel(day.label || '');
+      var dayName = parsed.dayName || '';
+      var dateStr = day.label || '';
+      if (day.closure) {
+        var closureLabel = day.closure.type === 'maintenance' ? 'Closed for Maintenance' : 'Closed for Private Meeting';
+        rows.push([dateStr, dayName, '', closureLabel, '', '', '', '', '', '']);
+      } else {
+        var shows = day.shows || [];
+        if (shows.length === 0) {
+          rows.push([dateStr, dayName, '', '(No shows)', '', '', '', '', '', '']);
+        } else {
+          shows.forEach(function (show) {
+            rows.push([
+              dateStr,
+              dayName,
+              show.time || '',
+              show.title || '',
+              show.rating || '',
+              show.runtime || '',
+              show.genre || '',
+              show.year || '',
+              show.notes || '',
+              show.contentType || 'movie',
+            ]);
+          });
+        }
+      }
+    });
+    var weekLabel = currentWeekStart ? 'week-' + currentWeekStart : 'schedule';
+    downloadCsv('theater-' + weekLabel + '.csv', rows);
+  }
+
+  function exportLibraryCsv() {
+    var url = API_BASE + '/api/library';
+    fetch(url)
+      .then(function (r) {
+        if (!r.ok) throw new Error('Failed to fetch library');
+        return r.json();
+      })
+      .then(function (items) {
+        if (!Array.isArray(items) || items.length === 0) {
+          alert('Library is empty.');
+          return;
+        }
+        var rows = [['Title', 'Title Line 2', 'Title Line 3', 'Type', 'MPAA Rating', 'Runtime (min)', 'Genres', 'IMDB Rating', 'Release Year', 'IMDB ID']];
+        items.forEach(function (item) {
+          rows.push([
+            item.title || '',
+            item.title_line2 || '',
+            item.title_line3 || '',
+            item.type || '',
+            item.mpaa_rating || '',
+            item.runtime_min || '',
+            Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || ''),
+            item.imdb_rating || '',
+            item.release_year || '',
+            item.id || '',
+          ]);
+        });
+        downloadCsv('theater-library.csv', rows);
+      })
+      .catch(function (err) {
+        console.error('Library export failed:', err);
+        alert('Could not export library. Please try again later.');
+      });
+  }
+
+  // ── Rendering ────────────────────────────────────────────────────────────────
 
   var MONTH_ABBR = {
     January: 'Jan', February: 'Feb', March: 'Mar', April: 'Apr',
