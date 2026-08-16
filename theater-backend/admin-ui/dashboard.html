@@ -130,6 +130,22 @@
       text-align: center;
     }
 
+    .week-picker-input {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      padding: 0.3rem 0.55rem;
+      border: 1px solid var(--border-light);
+      border-radius: 6px;
+      background: var(--card);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .week-picker-input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+
     /* ── Main area ── */
     .main {
       display: flex;
@@ -540,7 +556,9 @@
   <div class="week-nav">
     <button class="btn" id="btn-prev">←</button>
     <span id="week-label">Loading…</span>
+    <input type="date" id="week-picker" class="week-picker-input" title="Jump to week" />
     <button class="btn" id="btn-next">→</button>
+    <button class="btn" id="btn-export-week" title="Export this week&#39;s schedule as CSV">📤 Export CSV</button>
   </div>
 
   <!-- Main -->
@@ -763,6 +781,7 @@
       ])
       .then(() => {
         document.getElementById('week-label').textContent = formatWeekLabel();
+        syncPickerToWeek();
         renderGrid();
       })
       .catch(err => {
@@ -773,6 +792,7 @@
           }
         }
         document.getElementById('week-label').textContent = formatWeekLabel();
+        syncPickerToWeek();
         renderGrid();
         showToast('Could not load schedule', 'error');
       });
@@ -1132,6 +1152,66 @@
       loadWeekData();
     }
 
+    function syncPickerToWeek() {
+      const picker = document.getElementById('week-picker');
+      if (picker && currentWeekStart) picker.value = currentWeekStart;
+    }
+
+    /* ── CSV helpers ── */
+    function csvEscape(val) {
+      const s = (val === null || val === undefined) ? '' : String(val);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }
+
+    function downloadCsv(filename, rows) {
+      const csv = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+    }
+
+    function exportWeekCsv() {
+      if (!weekData || weekData.length === 0) {
+        showToast('No schedule data to export', 'error');
+        return;
+      }
+      const rows = [['Date', 'Day', 'Time', 'Title', 'MPAA Rating', 'Runtime (min)', 'Notes']];
+      weekData.forEach(day => {
+        const d = strToDate(day.date);
+        const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d.getDay()];
+        const closure  = weekClosures[day.date];
+        if (closure) {
+          const label = closure.type === 'maintenance' ? 'Closed for Maintenance' : 'Closed for Private Meeting';
+          rows.push([day.date, dayName, '', label, '', '', '']);
+        } else {
+          const sorted = [...day.shows].sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+          if (sorted.length === 0) {
+            rows.push([day.date, dayName, '', '(No shows)', '', '', '']);
+          } else {
+            sorted.forEach(show => {
+              const lib = libraryData.find(l => l.id === show.library_id) || {};
+              rows.push([
+                day.date,
+                dayName,
+                fmtTime(show.start_time),
+                show.title || lib.title || '',
+                lib.mpaa_rating || '',
+                lib.runtime_min || show.runtime_min || '',
+                show.notes || '',
+              ]);
+            });
+          }
+        }
+      });
+      downloadCsv('theater-schedule-' + currentWeekStart + '.csv', rows);
+    }
+
     /* ── Closure helpers ── */
     function todayStr() {
       const d = new Date();
@@ -1244,6 +1324,20 @@
     /* ── Top-level actions ── */
     document.getElementById('btn-prev').addEventListener('click', () => navWeek(-1));
     document.getElementById('btn-next').addEventListener('click', () => navWeek(1));
+
+    document.getElementById('week-picker').addEventListener('change', function () {
+      if (this.value) {
+        currentWeekStart = getMonday(this.value);
+        selectedDay  = null;
+        addFormOpen  = false;
+        document.getElementById('editor-inner').innerHTML = `
+          <div class="no-day"><div class="no-day-icon">📅</div>
+          <div class="no-day-text">Select a day to edit its schedule</div></div>`;
+        loadWeekData();
+      }
+    });
+
+    document.getElementById('btn-export-week').addEventListener('click', exportWeekCsv);
 
     document.getElementById('btn-logout').addEventListener('click', () => {
       apiFetch('/admin/logout', { method: 'POST' })

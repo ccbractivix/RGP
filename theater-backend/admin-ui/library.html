@@ -439,6 +439,7 @@
     <button class="btn" onclick="openAddEventModal()" style="color:var(--green);border-color:rgba(92,184,92,0.4)">＋ Add Live Event</button>
     <button class="btn" onclick="triggerCsvImport()" style="color:var(--blue);border-color:rgba(74,144,217,0.4)">📥 Import CSV</button>
     <input type="file" id="csv-file-input" accept=".csv,.tsv,.txt" style="display:none" />
+    <button class="btn" id="btn-export-library" title="Export full library as CSV">📤 Export CSV</button>
     <button class="btn" id="btn-refresh-all" onclick="refreshAll()">🔄 Refresh All</button>
     <span id="refresh-status"></span>
   </div>
@@ -1296,6 +1297,51 @@
       apiFetch('/admin/logout', { method: 'POST' })
         .finally(() => { window.location.href = '/admin-ui/login.html'; });
     });
+
+    /* ── Export CSV ── */
+    function csvEscape(val) {
+      const s = (val === null || val === undefined) ? '' : String(val);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }
+
+    function downloadCsv(filename, rows) {
+      const csv = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+    }
+
+    function exportLibraryCsv() {
+      if (!libraryItems || libraryItems.length === 0) {
+        showToast('Library is empty — nothing to export', 'error');
+        return;
+      }
+      const rows = [['Title', 'Title Line 2', 'Title Line 3', 'Type', 'MPAA Rating', 'Runtime (min)', 'Genres', 'IMDB Rating', 'Release Year', 'ID']];
+      libraryItems.forEach(item => {
+        rows.push([
+          item.title || '',
+          item.title_line2 || '',
+          item.title_line3 || '',
+          item.type || '',
+          item.mpaa_rating || '',
+          item.runtime_min || '',
+          Array.isArray(item.genres) ? item.genres.join(', ') : (item.genres || ''),
+          item.imdb_rating || '',
+          item.release_year || '',
+          item.id || '',
+        ]);
+      });
+      downloadCsv('theater-library.csv', rows);
+      showToast('Library exported!', 'success');
+    }
+
+    document.getElementById('btn-export-library').addEventListener('click', exportLibraryCsv);
 
     /* ── Format date ── */
     function formatDate(ts) {
