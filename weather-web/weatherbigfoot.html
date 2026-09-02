@@ -3,19 +3,73 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>WeatherBigfoot — Resort Weather</title>
+  <title>Weather Bigfoot — Resort Weather</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --page-bg: #1B2430;
+      --panel-bg: rgba(255, 255, 255, 0.04);
+      --panel-border: rgba(255, 255, 255, 0.10);
+      --accent: #F2A65A;
+      --primary: #EDEEF2;
+      --secondary: #9AA5B5;
+      --muted: #6C7787;
+      --wind: #6FCBE8;
+      --rain: #7EC8A0;
+    }
+
+    body[data-weather-theme="sunny"] {
+      --page-bg: #3D2E1B;
+      --panel-bg: rgba(255, 190, 72, 0.09);
+      --panel-border: rgba(255, 211, 126, 0.22);
+      --accent: #FFD166;
+      --wind: #8ED8F8;
+    }
+
+    body[data-weather-theme="rainy"] {
+      --page-bg: #172838;
+      --panel-bg: rgba(99, 159, 199, 0.08);
+      --panel-border: rgba(150, 195, 224, 0.18);
+      --accent: #8EC5E8;
+      --wind: #70D6E8;
+      --rain: #8ED1B2;
+    }
+
+    body[data-weather-theme="overcast"] {
+      --page-bg: #292E35;
+      --panel-bg: rgba(210, 218, 225, 0.05);
+      --panel-border: rgba(210, 218, 225, 0.14);
+      --accent: #C2CAD2;
+      --wind: #9BC7DC;
+    }
+
+    body[data-weather-theme="stormy"] {
+      --page-bg: #171722;
+      --panel-bg: rgba(111, 105, 150, 0.10);
+      --panel-border: rgba(187, 177, 232, 0.18);
+      --accent: #D8C7FF;
+      --wind: #8CD8E8;
+    }
+
+    body[data-weather-theme="snowy"] {
+      --page-bg: #263744;
+      --panel-bg: rgba(225, 241, 250, 0.08);
+      --panel-border: rgba(225, 241, 250, 0.20);
+      --accent: #DCEFF8;
+      --wind: #A9E1F2;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       width: 100%; height: 100%;
-      background: #1B2430;
-      color: #EDEEF2;
+      background: var(--page-bg);
+      color: var(--primary);
       font-family: 'Montserrat', sans-serif;
       overflow: hidden;
+      transition: background-color 0.8s ease;
     }
 
     #sw-page {
@@ -28,11 +82,12 @@
     /* ===== HEADER ===== */
     #sw-header {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: center;
       gap: 14px;
       padding: 12px 0 4px;
       flex-shrink: 0;
+      position: relative;
     }
 
     #sw-title-wrap {
@@ -42,38 +97,46 @@
     }
 
     #sw-icon {
-      width: clamp(30px, 3.4vw, 46px);
-      height: clamp(30px, 3.4vw, 46px);
+      width: clamp(38px, 4.2vw, 58px);
+      height: clamp(38px, 4.2vw, 58px);
       flex-shrink: 0;
+      padding: 3px;
+      background: rgba(255, 255, 255, 0.88);
+      border-radius: 8px;
     }
 
-    #sw-icon svg { width: 100%; height: 100%; fill: #F2A65A; }
+    #sw-icon img { width: 100%; height: 100%; object-fit: contain; }
 
     #sw-title {
       font-family: 'Playfair Display', serif;
       font-size: clamp(28px, 3.6vw, 50px);
       font-weight: 600;
       letter-spacing: 4px;
-      color: #F2A65A;
+      color: var(--accent);
       text-transform: uppercase;
-    }
-
-    #sw-title .sw-title-casual {
-      display: block;
-      text-align: center;
-      font-family: 'Montserrat', sans-serif;
-      font-size: clamp(9px, 0.85vw, 12px);
-      font-weight: 500;
-      letter-spacing: 2px;
-      color: #9AA5B5;
-      text-transform: none;
     }
 
     #sw-subhead {
       font-size: clamp(11px, 1vw, 15px);
-      color: #9AA5B5;
+      color: var(--secondary);
       letter-spacing: 1px;
       text-transform: uppercase;
+    }
+
+    #sw-time-wrap {
+      position: absolute;
+      top: 12px;
+      right: 14px;
+      text-align: right;
+      color: var(--secondary);
+      font-size: clamp(10px, 0.9vw, 13px);
+      line-height: 1.5;
+    }
+
+    #sw-current-time {
+      color: var(--primary);
+      font-size: clamp(12px, 1.1vw, 16px);
+      font-weight: 600;
     }
 
     #sw-loading {
@@ -82,15 +145,48 @@
       justify-content: center;
       flex: 1;
       font-size: clamp(16px, 1.5vw, 22px);
-      color: #9AA5B5;
+      color: var(--secondary);
     }
 
-    /* ===== MAIN 3-PANEL LAYOUT ===== */
+    /* ===== MAIN LAYOUT ===== */
     #sw-main {
       display: none;
+      flex-direction: column;
       flex: 1;
       gap: 10px;
       padding: 6px 14px 10px;
+      min-height: 0;
+    }
+
+    #sw-forecast {
+      flex: 0 0 clamp(92px, 15vh, 138px);
+      width: 100%;
+    }
+
+    #forecast-content {
+      display: flex;
+      align-items: center;
+      gap: clamp(14px, 2vw, 30px);
+      min-height: 0;
+    }
+
+    #forecast-summary {
+      color: var(--accent);
+      font-size: clamp(19px, 2vw, 30px);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    #forecast-details {
+      color: var(--primary);
+      font-size: clamp(11px, 1.05vw, 16px);
+      line-height: 1.45;
+    }
+
+    #sw-panels {
+      display: flex;
+      flex: 1;
+      gap: 10px;
       min-height: 0;
     }
 
@@ -98,8 +194,8 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.10);
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
       border-radius: 10px;
       padding: 12px 14px;
       min-height: 0;
@@ -110,7 +206,7 @@
       font-weight: 700;
       letter-spacing: 2px;
       text-transform: uppercase;
-      color: #F2A65A;
+      color: var(--accent);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -126,29 +222,29 @@
     }
 
     #wind-speed {
-      font-size: clamp(64px, 8vw, 120px);
+      font-size: clamp(48px, 6vw, 88px);
       font-weight: 700;
       line-height: 1;
-      color: #6FCBE8;
+      color: var(--wind);
     }
 
     #wind-speed .unit {
       font-size: clamp(18px, 2vw, 28px);
       font-weight: 600;
-      color: #9AA5B5;
+      color: var(--secondary);
       margin-left: 4px;
     }
 
     #wind-compass {
       font-size: clamp(15px, 1.6vw, 22px);
-      color: #EDEEF2;
+      color: var(--primary);
       margin-top: 6px;
       font-weight: 600;
     }
 
     #wind-gust {
       font-size: clamp(12px, 1.1vw, 16px);
-      color: #9AA5B5;
+      color: var(--secondary);
       margin-top: 10px;
     }
 
@@ -157,7 +253,7 @@
       margin-top: 8px;
       display: inline-block;
       transition: transform 0.6s ease;
-      color: #6FCBE8;
+      color: var(--wind);
     }
 
     /* ===== LIGHTNING PANEL ===== */
@@ -167,7 +263,7 @@
 
     #lightning-rings-wrap {
       position: relative;
-      width: min(100%, 34vh);
+      width: min(100%, 27vh);
       aspect-ratio: 1 / 1;
       flex: 1;
       min-height: 0;
@@ -181,7 +277,7 @@
 
     .ring-line { fill: none; stroke: rgba(255,255,255,0.14); stroke-width: 1; }
     .ring-label { fill: #6C7787; font-size: 8px; font-family: 'Montserrat', sans-serif; }
-    .center-dot { fill: #F2A65A; }
+    .center-dot { fill: var(--accent); }
     .strike-dot { fill: #FFE066; filter: drop-shadow(0 0 3px rgba(255, 224, 102, 0.9)); }
 
     #lightning-stats {
@@ -201,7 +297,7 @@
 
     .lightning-stat-label {
       font-size: clamp(9px, 0.85vw, 12px);
-      color: #9AA5B5;
+      color: var(--secondary);
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-top: 2px;
@@ -209,7 +305,7 @@
 
     #lightning-status {
       font-size: clamp(10px, 0.9vw, 13px);
-      color: #6C7787;
+      color: var(--muted);
       margin-top: 6px;
       text-align: center;
       flex-shrink: 0;
@@ -231,13 +327,13 @@
     #rain-today-pct {
       font-size: clamp(44px, 5.5vw, 72px);
       font-weight: 700;
-      color: #7EC8A0;
+      color: var(--rain);
       line-height: 1;
     }
 
     #rain-today-label {
       font-size: clamp(11px, 1vw, 15px);
-      color: #9AA5B5;
+      color: var(--secondary);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -263,7 +359,7 @@
 
     .rain-bar-pct {
       font-size: clamp(9px, 0.85vw, 12px);
-      color: #7EC8A0;
+      color: var(--rain);
       font-weight: 600;
     }
 
@@ -285,7 +381,7 @@
 
     .rain-bar-hour {
       font-size: clamp(8px, 0.75vw, 11px);
-      color: #6C7787;
+      color: var(--muted);
     }
 
     /* ===== STATUS STAMP ===== */
@@ -296,70 +392,88 @@
       font-size: 12px;
       color: #4B5563;
     }
+
+    @media (max-width: 760px) {
+      #sw-header { justify-content: flex-start; padding-left: 10px; }
+      #sw-subhead { display: none; }
+      #sw-title { font-size: clamp(20px, 5vw, 30px); letter-spacing: 2px; }
+      #sw-time-wrap { top: 8px; right: 10px; }
+      #sw-main { padding-left: 8px; padding-right: 8px; }
+      #forecast-content { align-items: flex-start; flex-direction: column; gap: 4px; }
+    }
   </style>
 </head>
 <body>
   <div id="sw-page">
     <div id="sw-header">
       <div id="sw-title-wrap">
-        <div id="sw-icon" aria-hidden="true">
-          <!-- Original Sasquatch silhouette mascot icon -->
-          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-            <path d="M32 4c-5.2 0-9.4 4.1-9.9 9.3-2.6 1-4.6 3.3-5.1 6.2-3.6.9-6.3 4.1-6.3 8 0 1.6.5 3.1 1.3 4.4-2.9 1.6-4.9 4.7-4.9 8.3 0 3.1 1.5 5.9 3.8 7.6-1.1 1.4-1.8 3.2-1.8 5.2 0 4.6 3.8 8.4 8.4 8.4 2.1 0 4-.8 5.5-2.1 1.7 2.2 4.4 3.6 7.4 3.6h6.9c3 0 5.7-1.4 7.4-3.6 1.5 1.3 3.4 2.1 5.5 2.1 4.6 0 8.4-3.8 8.4-8.4 0-2-.7-3.8-1.8-5.2 2.3-1.7 3.8-4.5 3.8-7.6 0-3.6-2-6.7-4.9-8.3.8-1.3 1.3-2.8 1.3-4.4 0-3.9-2.7-7.1-6.3-8-.5-2.9-2.5-5.2-5.1-6.2C41.4 8.1 37.2 4 32 4z"/>
-            <circle cx="26" cy="24" r="2.4" fill="#1B2430"/>
-            <circle cx="38" cy="24" r="2.4" fill="#1B2430"/>
-          </svg>
+        <div id="sw-icon">
+          <img src="images/bigfootlogo.png" alt="Weather Bigfoot logo">
         </div>
-        <div id="sw-title">WeatherBigfoot<span class="sw-title-casual">&ldquo;WeatherBig&rdquo;</span></div>
+        <div id="sw-title">Weather Bigfoot</div>
       </div>
       <div id="sw-subhead">Cocoa Beach, FL &middot; Space Coast</div>
+      <div id="sw-time-wrap">
+        <div id="sw-current-time"></div>
+        <div>Last updated <span id="sw-last-updated">—</span></div>
+      </div>
     </div>
 
     <div id="sw-loading">Loading storm data&hellip;</div>
 
     <div id="sw-main">
-      <div class="sw-panel" id="panel-wind">
-        <div class="sw-panel-title">💨 Wind</div>
-        <div id="wind-speed">—<span class="unit">mph</span></div>
-        <div id="wind-arrow">↑</div>
-        <div id="wind-compass">—</div>
-        <div id="wind-gust">Gusting to — mph</div>
+      <div class="sw-panel" id="sw-forecast">
+        <div class="sw-panel-title">Today's Forecast</div>
+        <div id="forecast-content">
+          <div id="forecast-summary">—</div>
+          <div id="forecast-details">Loading today's forecast…</div>
+        </div>
       </div>
 
-      <div class="sw-panel" id="panel-lightning">
-        <div class="sw-panel-title">⚡ Lightning</div>
-        <div id="lightning-rings-wrap">
-          <svg viewBox="0 0 200 200" id="lightning-svg">
-            <circle class="ring-line" cx="100" cy="100" r="36" />
-            <circle class="ring-line" cx="100" cy="100" r="72" />
-            <circle class="ring-line" cx="100" cy="100" r="108" />
-            <text class="ring-label" x="102" y="66">10 mi</text>
-            <text class="ring-label" x="102" y="30">20 mi</text>
-            <text class="ring-label" x="102" y="-6" transform="translate(0,6)">30 mi</text>
-            <circle class="center-dot" cx="100" cy="100" r="4" />
-            <g id="strike-dots"></g>
-          </svg>
+      <div id="sw-panels">
+        <div class="sw-panel" id="panel-wind">
+          <div class="sw-panel-title">💨 Wind</div>
+          <div id="wind-speed">—<span class="unit">mph</span></div>
+          <div id="wind-arrow">↑</div>
+          <div id="wind-compass">—</div>
+          <div id="wind-gust">Gusting to — mph</div>
         </div>
-        <div id="lightning-stats">
-          <div>
-            <div class="lightning-stat-value" id="lightning-nearest">—</div>
-            <div class="lightning-stat-label">Nearest (mi)</div>
-          </div>
-          <div>
-            <div class="lightning-stat-value" id="lightning-count">0</div>
-            <div class="lightning-stat-label">Strikes / 30 min</div>
-          </div>
-        </div>
-        <div id="lightning-status">Connecting to lightning network&hellip;</div>
-      </div>
 
-      <div class="sw-panel" id="panel-rain">
-        <div class="sw-panel-title">🌧️ Rain Forecast</div>
-        <div id="rain-today">
-          <div id="rain-today-pct">—%</div>
-          <div id="rain-today-label">Chance today</div>
+        <div class="sw-panel" id="panel-lightning">
+          <div class="sw-panel-title">⚡ Lightning</div>
+          <div id="lightning-rings-wrap">
+            <svg viewBox="0 0 200 200" id="lightning-svg">
+              <circle class="ring-line" cx="100" cy="100" r="36" />
+              <circle class="ring-line" cx="100" cy="100" r="72" />
+              <circle class="ring-line" cx="100" cy="100" r="108" />
+              <text class="ring-label" x="102" y="66">10 mi</text>
+              <text class="ring-label" x="102" y="30">20 mi</text>
+              <text class="ring-label" x="102" y="-6" transform="translate(0,6)">30 mi</text>
+              <circle class="center-dot" cx="100" cy="100" r="4" />
+              <g id="strike-dots"></g>
+            </svg>
+          </div>
+          <div id="lightning-stats">
+            <div>
+              <div class="lightning-stat-value" id="lightning-nearest">—</div>
+              <div class="lightning-stat-label">Nearest (mi)</div>
+            </div>
+            <div>
+              <div class="lightning-stat-value" id="lightning-count">0</div>
+              <div class="lightning-stat-label">Strikes / 30 min</div>
+            </div>
+          </div>
+          <div id="lightning-status">Connecting to lightning network&hellip;</div>
         </div>
-        <div id="rain-hourly"></div>
+
+        <div class="sw-panel" id="panel-rain">
+          <div class="sw-panel-title">🌧️ Rain Forecast</div>
+          <div id="rain-today">
+            <div id="rain-today-pct">—%</div>
+            <div id="rain-today-label">Chance today</div>
+          </div>
+          <div id="rain-hourly"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -373,13 +487,17 @@
     var LAT      = 28.404919;
     var LON      = -80.597154;
     var TIMEZONE = 'America/New_York';
-    var REFRESH_MS = 900000; // 15 minutes — NWS forecast/wind/rain data
+    var REFRESH_MS = 15 * 60 * 1000;
+    var LIGHTNING_REFRESH_MS = 60 * 1000;
 
     // Note: User-Agent is a forbidden header in browser fetch; weather.gov recommends it
     // but it cannot be set programmatically from a browser context.
     var FETCH_OPTS = { headers: { 'Accept': 'application/geo+json,application/json' } };
 
     var gridDataUrl = null;
+    var forecastUrl = null;
+    var weatherRefreshTimer = null;
+    var latestNearbyStrikeAt = 0;
 
     // ── Utilities ────────────────────────────────────────────────────────────
 
@@ -402,6 +520,29 @@
 
     function localDateStr(date, tz) {
       return date.toLocaleDateString('en-CA', { timeZone: tz });
+    }
+
+    function updateClock() {
+      document.getElementById('sw-current-time').textContent = new Date().toLocaleString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: TIMEZONE
+      });
+    }
+
+    function applyWeatherTheme(description) {
+      var text = (description || '').toLowerCase();
+      var theme = 'overcast';
+      if (/thunder|storm|lightning/.test(text)) theme = 'stormy';
+      else if (/snow|sleet|ice|blizzard/.test(text)) theme = 'snowy';
+      else if (/rain|shower|drizzle/.test(text)) theme = 'rainy';
+      else if (/sunny|clear|fair/.test(text)) theme = 'sunny';
+      document.body.setAttribute('data-weather-theme', theme);
     }
 
     // Haversine distance in miles
@@ -519,21 +660,64 @@
       document.getElementById('rain-hourly').innerHTML = html;
     }
 
-    function fetchGridData() {
-      fetch(gridDataUrl, FETCH_OPTS)
-        .then(function (r) { if (!r.ok) throw new Error('griddata HTTP ' + r.status); return r.json(); })
-        .then(function (gridData) {
+    function renderForecast(forecastData) {
+      var periods = forecastData && forecastData.properties && forecastData.properties.periods;
+      if (!periods || !periods.length) return;
+
+      var now = new Date();
+      var today = localDateStr(now, TIMEZONE);
+      var period = periods.filter(function (item) {
+        return localDateStr(new Date(item.startTime), TIMEZONE) === today;
+      })[0] || periods[0];
+      var temperature = period.temperature + '°' + period.temperatureUnit;
+      document.getElementById('forecast-summary').textContent =
+        period.shortForecast + ' · ' + temperature;
+      document.getElementById('forecast-details').textContent =
+        period.detailedForecast || period.shortForecast;
+      applyWeatherTheme(period.shortForecast + ' ' + (period.detailedForecast || ''));
+    }
+
+    function nextWeatherRefreshDelay() {
+      return latestNearbyStrikeAt &&
+        Date.now() - latestNearbyStrikeAt <= COUNT_WINDOW_MS ?
+        LIGHTNING_REFRESH_MS : REFRESH_MS;
+    }
+
+    function scheduleWeatherRefresh() {
+      clearTimeout(weatherRefreshTimer);
+      weatherRefreshTimer = setTimeout(fetchWeatherData, nextWeatherRefreshDelay());
+    }
+
+    function fetchJson(url, label) {
+      return fetch(url, FETCH_OPTS)
+        .then(function (r) { if (!r.ok) throw new Error(label + ' HTTP ' + r.status); return r.json(); });
+    }
+
+    function fetchWeatherData() {
+      clearTimeout(weatherRefreshTimer);
+      Promise.all([
+        fetchJson(gridDataUrl, 'griddata'),
+        fetchJson(forecastUrl, 'forecast')
+      ])
+        .then(function (results) {
+          var gridData = results[0];
           document.getElementById('sw-loading').style.display = 'none';
           document.getElementById('sw-main').style.display = 'flex';
           renderWind(gridData);
           renderRain(gridData);
-          document.getElementById('sw-status').textContent =
-            'Wind/rain updated ' + new Date().toLocaleTimeString('en-US', { timeZone: TIMEZONE });
-          setTimeout(fetchGridData, REFRESH_MS);
+          renderForecast(results[1]);
+          var updated = new Date().toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            second: '2-digit',
+            timeZone: TIMEZONE
+          });
+          document.getElementById('sw-last-updated').textContent = updated;
+          scheduleWeatherRefresh();
         })
         .catch(function (err) {
-          console.error('[weatherbigfoot] Grid data fetch failed:', err);
-          setTimeout(fetchGridData, 60000);
+          console.error('[weatherbigfoot] Weather data fetch failed:', err);
+          weatherRefreshTimer = setTimeout(fetchWeatherData, LIGHTNING_REFRESH_MS);
         });
     }
 
@@ -542,7 +726,8 @@
         .then(function (r) { if (!r.ok) throw new Error('points HTTP ' + r.status); return r.json(); })
         .then(function (data) {
           gridDataUrl = data.properties.forecastGridData;
-          fetchGridData();
+          forecastUrl = data.properties.forecast;
+          fetchWeatherData();
         })
         .catch(function (err) {
           console.error('[weatherbigfoot] Points lookup failed:', err);
@@ -653,6 +838,10 @@
         bearing: bearingDeg(LAT, LON, strike.lat, strike.lon),
         receivedAt: Date.now()
       });
+      if (dist <= MAX_RING_MILES) {
+        latestNearbyStrikeAt = Date.now();
+        scheduleWeatherRefresh();
+      }
       renderLightning();
     }
 
@@ -694,6 +883,8 @@
     // ── Init ─────────────────────────────────────────────────────────────────
 
     document.addEventListener('DOMContentLoaded', function () {
+      updateClock();
+      setInterval(updateClock, 1000);
       initNws();
       connectLightning();
     });
