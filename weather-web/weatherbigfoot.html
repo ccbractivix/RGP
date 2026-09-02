@@ -81,18 +81,27 @@
 
     /* ===== HEADER ===== */
     #sw-header {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      justify-content: center;
-      gap: 14px;
-      padding: 12px 0 4px;
+      column-gap: 14px;
+      padding: 12px 14px 8px;
       flex-shrink: 0;
-      position: relative;
+    }
+
+    #sw-title-block {
+      grid-column: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      text-align: center;
     }
 
     #sw-title-wrap {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 12px;
     }
 
@@ -124,9 +133,8 @@
     }
 
     #sw-time-wrap {
-      position: absolute;
-      top: 12px;
-      right: 14px;
+      grid-column: 3;
+      justify-self: end;
       text-align: right;
       color: var(--secondary);
       font-size: clamp(10px, 0.9vw, 13px);
@@ -137,6 +145,7 @@
       color: var(--primary);
       font-size: clamp(12px, 1.1vw, 16px);
       font-weight: 600;
+      font-variant-numeric: tabular-nums;
     }
 
     #sw-loading {
@@ -159,14 +168,18 @@
     }
 
     #sw-forecast {
-      flex: 0 0 clamp(92px, 15vh, 138px);
+      flex: 0 0 auto;
       width: 100%;
+      min-height: clamp(92px, 15vh, 138px);
+      max-height: 32vh;
+      overflow: hidden;
     }
 
     #forecast-content {
       display: flex;
       align-items: center;
       gap: clamp(14px, 2vw, 30px);
+      flex: 1;
       min-height: 0;
     }
 
@@ -181,6 +194,9 @@
       color: var(--primary);
       font-size: clamp(11px, 1.05vw, 16px);
       line-height: 1.45;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
     }
 
     #sw-panels {
@@ -394,10 +410,10 @@
     }
 
     @media (max-width: 760px) {
-      #sw-header { justify-content: flex-start; padding-left: 10px; }
-      #sw-subhead { display: none; }
+      #sw-header { grid-template-columns: 1fr auto; padding: 10px 10px 6px; }
+      #sw-title-block { grid-column: 1; align-items: flex-start; text-align: left; }
       #sw-title { font-size: clamp(20px, 5vw, 30px); letter-spacing: 2px; }
-      #sw-time-wrap { top: 8px; right: 10px; }
+      #sw-time-wrap { grid-column: 2; }
       #sw-main { padding-left: 8px; padding-right: 8px; }
       #forecast-content { align-items: flex-start; flex-direction: column; gap: 4px; }
     }
@@ -406,13 +422,15 @@
 <body>
   <div id="sw-page">
     <div id="sw-header">
-      <div id="sw-title-wrap">
-        <div id="sw-icon">
-          <img src="images/bigfootlogo.png" alt="Weather Bigfoot logo">
+      <div id="sw-title-block">
+        <div id="sw-title-wrap">
+          <div id="sw-icon">
+            <img src="images/bigfootlogo.png" alt="Weather Bigfoot logo">
+          </div>
+          <div id="sw-title">Weather Bigfoot</div>
         </div>
-        <div id="sw-title">Weather Bigfoot</div>
+        <div id="sw-subhead">Cape Canaveral Beach, FL</div>
       </div>
-      <div id="sw-subhead">Cocoa Beach, FL &middot; Space Coast</div>
       <div id="sw-time-wrap">
         <div id="sw-current-time"></div>
         <div>Last updated <span id="sw-last-updated">—</span></div>
@@ -530,7 +548,6 @@
         year: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
-        second: '2-digit',
         timeZone: TIMEZONE
       });
     }
@@ -660,6 +677,24 @@
       document.getElementById('rain-hourly').innerHTML = html;
     }
 
+    // Shrink the detailed forecast text until it fits inside the forecast panel,
+    // which itself grows (up to its CSS max-height) with the amount of text.
+    function fitForecastText() {
+      var panel = document.getElementById('sw-forecast');
+      var details = document.getElementById('forecast-details');
+      if (!panel || !details || panel.offsetParent === null) return;
+
+      var maxSize = Math.min(16, Math.max(11, window.innerWidth * 0.0105));
+      var minSize = 9;
+      var size = maxSize;
+
+      details.style.fontSize = size + 'px';
+      while (size > minSize && panel.scrollHeight > panel.clientHeight) {
+        size -= 0.5;
+        details.style.fontSize = size + 'px';
+      }
+    }
+
     function renderForecast(forecastData) {
       var periods = forecastData && forecastData.properties && forecastData.properties.periods;
       if (!periods || !periods.length) return;
@@ -675,6 +710,7 @@
       document.getElementById('forecast-details').textContent =
         period.detailedForecast || period.shortForecast;
       applyWeatherTheme(period.shortForecast + ' ' + (period.detailedForecast || ''));
+      fitForecastText();
     }
 
     function nextWeatherRefreshDelay() {
@@ -884,9 +920,15 @@
 
     document.addEventListener('DOMContentLoaded', function () {
       updateClock();
-      setInterval(updateClock, 1000);
+      setInterval(updateClock, 15000);
       initNws();
       connectLightning();
+    });
+
+    var forecastResizeTimer = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(forecastResizeTimer);
+      forecastResizeTimer = setTimeout(fitForecastText, 150);
     });
   })();
   </script>
