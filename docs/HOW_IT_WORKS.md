@@ -394,6 +394,21 @@ Render provides managed PostgreSQL. Tables are auto-created on first startup. Co
 - **Auth:** None (free public API)
 - **File:** `weather-web/tv.html`
 
+### WeatherBigfoot — Wind/Lightning/Rain TV (weather-web)
+
+- **Wind & rain data:** `https://api.weather.gov/points/{lat},{lon}` → `forecastGridData` (same coordinates as above)
+  - **Refresh:** Every 15 minutes
+  - **Auth:** None (free public API)
+- **Lightning data:** Blitzortung.org community network, streamed live over a public WebSocket
+  (`wss://ws1.blitzortung.org/`, with `ws7`/`ws8` as fallback hosts)
+  - Free, open, non-commercial community feed — no API key or registration; the same feed
+    powers public sites such as lightningmaps.org
+  - Frames are LZW-compressed JSON and are decoded client-side; strikes are filtered to those
+    within ~120 miles of the resort and plotted on a simple radial distance chart (nearest
+    strike distance + rolling 30-minute strike count)
+  - Reconnects automatically with backoff if the socket drops
+- **File:** `weather-web/weatherbigfoot.html`
+
 ### Launch Library 2 (go4launch)
 
 - **Endpoint:** `https://ll.thespacedevs.com/2.2.0/launch/upcoming/`

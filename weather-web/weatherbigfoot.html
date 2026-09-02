@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WeatherBigfoot — Resort Weather</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #1B2430;
+      color: #EDEEF2;
+      font-family: 'Montserrat', sans-serif;
+      overflow: hidden;
+    }
+
+    #sw-page {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ===== HEADER ===== */
+    #sw-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 14px;
+      padding: 12px 0 4px;
+      flex-shrink: 0;
+    }
+
+    #sw-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #sw-icon {
+      width: clamp(30px, 3.4vw, 46px);
+      height: clamp(30px, 3.4vw, 46px);
+      flex-shrink: 0;
+    }
+
+    #sw-icon svg { width: 100%; height: 100%; fill: #F2A65A; }
+
+    #sw-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(28px, 3.6vw, 50px);
+      font-weight: 600;
+      letter-spacing: 4px;
+      color: #F2A65A;
+      text-transform: uppercase;
+    }
+
+    #sw-title .sw-title-casual {
+      display: block;
+      text-align: center;
+      font-family: 'Montserrat', sans-serif;
+      font-size: clamp(9px, 0.85vw, 12px);
+      font-weight: 500;
+      letter-spacing: 2px;
+      color: #9AA5B5;
+      text-transform: none;
+    }
+
+    #sw-subhead {
+      font-size: clamp(11px, 1vw, 15px);
+      color: #9AA5B5;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    #sw-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      font-size: clamp(16px, 1.5vw, 22px);
+      color: #9AA5B5;
+    }
+
+    /* ===== MAIN 3-PANEL LAYOUT ===== */
+    #sw-main {
+      display: none;
+      flex: 1;
+      gap: 10px;
+      padding: 6px 14px 10px;
+      min-height: 0;
+    }
+
+    .sw-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 10px;
+      padding: 12px 14px;
+      min-height: 0;
+    }
+
+    .sw-panel-title {
+      font-size: clamp(13px, 1.1vw, 17px);
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #F2A65A;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      margin-bottom: 8px;
+    }
+
+    /* ===== WIND PANEL ===== */
+    #panel-wind {
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    #wind-speed {
+      font-size: clamp(64px, 8vw, 120px);
+      font-weight: 700;
+      line-height: 1;
+      color: #6FCBE8;
+    }
+
+    #wind-speed .unit {
+      font-size: clamp(18px, 2vw, 28px);
+      font-weight: 600;
+      color: #9AA5B5;
+      margin-left: 4px;
+    }
+
+    #wind-compass {
+      font-size: clamp(15px, 1.6vw, 22px);
+      color: #EDEEF2;
+      margin-top: 6px;
+      font-weight: 600;
+    }
+
+    #wind-gust {
+      font-size: clamp(12px, 1.1vw, 16px);
+      color: #9AA5B5;
+      margin-top: 10px;
+    }
+
+    #wind-arrow {
+      font-size: clamp(28px, 3vw, 44px);
+      margin-top: 8px;
+      display: inline-block;
+      transition: transform 0.6s ease;
+      color: #6FCBE8;
+    }
+
+    /* ===== LIGHTNING PANEL ===== */
+    #panel-lightning {
+      align-items: center;
+    }
+
+    #lightning-rings-wrap {
+      position: relative;
+      width: min(100%, 34vh);
+      aspect-ratio: 1 / 1;
+      flex: 1;
+      min-height: 0;
+    }
+
+    #lightning-rings-wrap svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .ring-line { fill: none; stroke: rgba(255,255,255,0.14); stroke-width: 1; }
+    .ring-label { fill: #6C7787; font-size: 8px; font-family: 'Montserrat', sans-serif; }
+    .center-dot { fill: #F2A65A; }
+    .strike-dot { fill: #FFE066; filter: drop-shadow(0 0 3px rgba(255, 224, 102, 0.9)); }
+
+    #lightning-stats {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+
+    .lightning-stat-value {
+      font-size: clamp(24px, 2.8vw, 38px);
+      font-weight: 700;
+      color: #FFE066;
+      line-height: 1;
+    }
+
+    .lightning-stat-label {
+      font-size: clamp(9px, 0.85vw, 12px);
+      color: #9AA5B5;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+
+    #lightning-status {
+      font-size: clamp(10px, 0.9vw, 13px);
+      color: #6C7787;
+      margin-top: 6px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    /* ===== RAIN PANEL ===== */
+    #panel-rain {
+      justify-content: flex-start;
+    }
+
+    #rain-today {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+
+    #rain-today-pct {
+      font-size: clamp(44px, 5.5vw, 72px);
+      font-weight: 700;
+      color: #7EC8A0;
+      line-height: 1;
+    }
+
+    #rain-today-label {
+      font-size: clamp(11px, 1vw, 15px);
+      color: #9AA5B5;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    #rain-hourly {
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .rain-bar-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      height: 100%;
+      gap: 3px;
+    }
+
+    .rain-bar-pct {
+      font-size: clamp(9px, 0.85vw, 12px);
+      color: #7EC8A0;
+      font-weight: 600;
+    }
+
+    .rain-bar-track {
+      width: 60%;
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .rain-bar-fill {
+      width: 100%;
+      background: linear-gradient(180deg, #9BE3BE, #4E9E76);
+      border-radius: 3px 3px 0 0;
+    }
+
+    .rain-bar-hour {
+      font-size: clamp(8px, 0.75vw, 11px);
+      color: #6C7787;
+    }
+
+    /* ===== STATUS STAMP ===== */
+    #sw-status {
+      position: fixed;
+      bottom: 4px;
+      right: 14px;
+      font-size: 12px;
+      color: #4B5563;
+    }
+  </style>
+</head>
+<body>
+  <div id="sw-page">
+    <div id="sw-header">
+      <div id="sw-title-wrap">
+        <div id="sw-icon" aria-hidden="true">
+          <!-- Original Sasquatch silhouette mascot icon -->
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+            <path d="M32 4c-5.2 0-9.4 4.1-9.9 9.3-2.6 1-4.6 3.3-5.1 6.2-3.6.9-6.3 4.1-6.3 8 0 1.6.5 3.1 1.3 4.4-2.9 1.6-4.9 4.7-4.9 8.3 0 3.1 1.5 5.9 3.8 7.6-1.1 1.4-1.8 3.2-1.8 5.2 0 4.6 3.8 8.4 8.4 8.4 2.1 0 4-.8 5.5-2.1 1.7 2.2 4.4 3.6 7.4 3.6h6.9c3 0 5.7-1.4 7.4-3.6 1.5 1.3 3.4 2.1 5.5 2.1 4.6 0 8.4-3.8 8.4-8.4 0-2-.7-3.8-1.8-5.2 2.3-1.7 3.8-4.5 3.8-7.6 0-3.6-2-6.7-4.9-8.3.8-1.3 1.3-2.8 1.3-4.4 0-3.9-2.7-7.1-6.3-8-.5-2.9-2.5-5.2-5.1-6.2C41.4 8.1 37.2 4 32 4z"/>
+            <circle cx="26" cy="24" r="2.4" fill="#1B2430"/>
+            <circle cx="38" cy="24" r="2.4" fill="#1B2430"/>
+          </svg>
+        </div>
+        <div id="sw-title">WeatherBigfoot<span class="sw-title-casual">&ldquo;WeatherBig&rdquo;</span></div>
+      </div>
+      <div id="sw-subhead">Cocoa Beach, FL &middot; Space Coast</div>
+    </div>
+
+    <div id="sw-loading">Loading storm data&hellip;</div>
+
+    <div id="sw-main">
+      <div class="sw-panel" id="panel-wind">
+        <div class="sw-panel-title">💨 Wind</div>
+        <div id="wind-speed">—<span class="unit">mph</span></div>
+        <div id="wind-arrow">↑</div>
+        <div id="wind-compass">—</div>
+        <div id="wind-gust">Gusting to — mph</div>
+      </div>
+
+      <div class="sw-panel" id="panel-lightning">
+        <div class="sw-panel-title">⚡ Lightning</div>
+        <div id="lightning-rings-wrap">
+          <svg viewBox="0 0 200 200" id="lightning-svg">
+            <circle class="ring-line" cx="100" cy="100" r="36" />
+            <circle class="ring-line" cx="100" cy="100" r="72" />
+            <circle class="ring-line" cx="100" cy="100" r="108" />
+            <text class="ring-label" x="102" y="66">10 mi</text>
+            <text class="ring-label" x="102" y="30">20 mi</text>
+            <text class="ring-label" x="102" y="-6" transform="translate(0,6)">30 mi</text>
+            <circle class="center-dot" cx="100" cy="100" r="4" />
+            <g id="strike-dots"></g>
+          </svg>
+        </div>
+        <div id="lightning-stats">
+          <div>
+            <div class="lightning-stat-value" id="lightning-nearest">—</div>
+            <div class="lightning-stat-label">Nearest (mi)</div>
+          </div>
+          <div>
+            <div class="lightning-stat-value" id="lightning-count">0</div>
+            <div class="lightning-stat-label">Strikes / 30 min</div>
+          </div>
+        </div>
+        <div id="lightning-status">Connecting to lightning network&hellip;</div>
+      </div>
+
+      <div class="sw-panel" id="panel-rain">
+        <div class="sw-panel-title">🌧️ Rain Forecast</div>
+        <div id="rain-today">
+          <div id="rain-today-pct">—%</div>
+          <div id="rain-today-label">Chance today</div>
+        </div>
+        <div id="rain-hourly"></div>
+      </div>
+    </div>
+  </div>
+  <div id="sw-status"></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // ── Fixed location (Space Coast resort) ────────────────────────────────
+    var LAT      = 28.404919;
+    var LON      = -80.597154;
+    var TIMEZONE = 'America/New_York';
+    var REFRESH_MS = 900000; // 15 minutes — NWS forecast/wind/rain data
+
+    // Note: User-Agent is a forbidden header in browser fetch; weather.gov recommends it
+    // but it cannot be set programmatically from a browser context.
+    var FETCH_OPTS = { headers: { 'Accept': 'application/geo+json,application/json' } };
+
+    var gridDataUrl = null;
+
+    // ── Utilities ────────────────────────────────────────────────────────────
+
+    function kmhToMph(kmh) { return Math.round(kmh * 0.621371); }
+
+    function degToCompass(d) {
+      var dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+      return dirs[Math.round(d / 22.5) % 16];
+    }
+
+    // Parse ISO 8601 duration string (e.g. "PT1H", "PT6H") → milliseconds
+    function parseDurationMs(dur) {
+      var ms = 0;
+      var dm = dur.match(/(\d+)D/);
+      var hm = dur.match(/T(\d+)H/);
+      if (dm) ms += parseInt(dm[1], 10) * 86400000;
+      if (hm) ms += parseInt(hm[1], 10) * 3600000;
+      return ms || 3600000;
+    }
+
+    function localDateStr(date, tz) {
+      return date.toLocaleDateString('en-CA', { timeZone: tz });
+    }
+
+    // Haversine distance in miles
+    function distanceMiles(lat1, lon1, lat2, lon2) {
+      var R = 3958.8;
+      var dLat = (lat2 - lat1) * Math.PI / 180;
+      var dLon = (lon2 - lon1) * Math.PI / 180;
+      var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    // Bearing in degrees (0 = north) from point 1 to point 2
+    function bearingDeg(lat1, lon1, lat2, lon2) {
+      var phi1 = lat1 * Math.PI / 180, phi2 = lat2 * Math.PI / 180;
+      var dLambda = (lon2 - lon1) * Math.PI / 180;
+      var y = Math.sin(dLambda) * Math.cos(phi2);
+      var x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLambda);
+      return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WIND + RAIN — NWS forecastGridData (api.weather.gov), refreshed every
+    // 15 minutes. Free, public, no key required.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    function groupByDay(valuesArray, tz) {
+      var result = {};
+      (valuesArray || []).forEach(function (entry) {
+        if (entry.value === null || entry.value === undefined) return;
+        var slash  = entry.validTime.indexOf('/');
+        var start  = new Date(entry.validTime.slice(0, slash));
+        var durMs  = parseDurationMs(entry.validTime.slice(slash + 1));
+        var hours  = Math.max(1, Math.round(durMs / 3600000));
+        for (var h = 0; h < hours; h++) {
+          var t = new Date(start.getTime() + h * 3600000);
+          var d = localDateStr(t, tz);
+          if (!result[d]) result[d] = [];
+          result[d].push({ time: t, value: entry.value });
+        }
+      });
+      return result;
+    }
+
+    // Flatten into a plain time-ordered array of {time, value}
+    function flattenSeries(valuesArray) {
+      var out = [];
+      (valuesArray || []).forEach(function (entry) {
+        if (entry.value === null || entry.value === undefined) return;
+        var slash = entry.validTime.indexOf('/');
+        var start = new Date(entry.validTime.slice(0, slash));
+        var durMs = parseDurationMs(entry.validTime.slice(slash + 1));
+        var hours = Math.max(1, Math.round(durMs / 3600000));
+        for (var h = 0; h < hours; h++) {
+          out.push({ time: new Date(start.getTime() + h * 3600000), value: entry.value });
+        }
+      });
+      out.sort(function (a, b) { return a.time - b.time; });
+      return out;
+    }
+
+    function renderWind(gridData) {
+      var props = gridData.properties;
+      var now = Date.now();
+
+      var speeds = flattenSeries(props.windSpeed && props.windSpeed.values);
+      var gusts  = flattenSeries(props.windGust  && props.windGust.values);
+      var dirs   = flattenSeries(props.windDirection && props.windDirection.values);
+
+      var currentSpeed = speeds.filter(function (e) { return e.time.getTime() <= now; }).pop() || speeds[0];
+      var currentGust  = gusts.filter(function (e) { return e.time.getTime() <= now; }).pop()  || gusts[0];
+      var currentDir   = dirs.filter(function (e) { return e.time.getTime() <= now; }).pop()   || dirs[0];
+
+      var speedMph = currentSpeed ? kmhToMph(currentSpeed.value) : null;
+      var gustMph  = currentGust  ? kmhToMph(currentGust.value)  : null;
+      var dirDeg   = currentDir   ? currentDir.value             : null;
+
+      document.getElementById('wind-speed').innerHTML =
+        (speedMph !== null ? speedMph : '—') + '<span class="unit">mph</span>';
+      document.getElementById('wind-compass').textContent =
+        dirDeg !== null ? degToCompass(dirDeg) + ' (' + Math.round(dirDeg) + '°)' : '—';
+      document.getElementById('wind-gust').textContent =
+        'Gusting to ' + (gustMph !== null ? gustMph : '—') + ' mph';
+
+      var arrow = document.getElementById('wind-arrow');
+      // Arrow points in the direction the wind is blowing TOWARD (dirDeg is FROM)
+      arrow.style.transform = 'rotate(' + ((dirDeg !== null ? dirDeg : 0) + 180) + 'deg)';
+    }
+
+    function renderRain(gridData) {
+      var props = gridData.properties;
+      var now   = new Date();
+      var todayStr = localDateStr(now, TIMEZONE);
+
+      var popByDay = groupByDay(props.probabilityOfPrecipitation && props.probabilityOfPrecipitation.values, TIMEZONE);
+      var todayPops = (popByDay[todayStr] || []).map(function (e) { return e.value || 0; });
+      var todayMax  = todayPops.length ? Math.max.apply(null, todayPops) : 0;
+      document.getElementById('rain-today-pct').textContent = Math.round(todayMax) + '%';
+
+      // Next 8 hours, hour by hour
+      var allPops = flattenSeries(props.probabilityOfPrecipitation && props.probabilityOfPrecipitation.values);
+      var upcoming = allPops.filter(function (e) { return e.time.getTime() >= now.getTime() - 3600000; }).slice(0, 8);
+
+      var html = '';
+      upcoming.forEach(function (e) {
+        var pct = Math.round(e.value || 0);
+        var hourLabel = e.time.toLocaleTimeString('en-US', { hour: 'numeric', timeZone: TIMEZONE }).replace(' ', '');
+        html += '<div class="rain-bar-col">';
+        html += '<div class="rain-bar-pct">' + pct + '%</div>';
+        html += '<div class="rain-bar-track"><div class="rain-bar-fill" style="height:' + Math.max(pct, 3) + '%"></div></div>';
+        html += '<div class="rain-bar-hour">' + hourLabel + '</div>';
+        html += '</div>';
+      });
+      document.getElementById('rain-hourly').innerHTML = html;
+    }
+
+    function fetchGridData() {
+      fetch(gridDataUrl, FETCH_OPTS)
+        .then(function (r) { if (!r.ok) throw new Error('griddata HTTP ' + r.status); return r.json(); })
+        .then(function (gridData) {
+          document.getElementById('sw-loading').style.display = 'none';
+          document.getElementById('sw-main').style.display = 'flex';
+          renderWind(gridData);
+          renderRain(gridData);
+          document.getElementById('sw-status').textContent =
+            'Wind/rain updated ' + new Date().toLocaleTimeString('en-US', { timeZone: TIMEZONE });
+          setTimeout(fetchGridData, REFRESH_MS);
+        })
+        .catch(function (err) {
+          console.error('[weatherbigfoot] Grid data fetch failed:', err);
+          setTimeout(fetchGridData, 60000);
+        });
+    }
+
+    function initNws() {
+      fetch('https://api.weather.gov/points/' + LAT + ',' + LON, FETCH_OPTS)
+        .then(function (r) { if (!r.ok) throw new Error('points HTTP ' + r.status); return r.json(); })
+        .then(function (data) {
+          gridDataUrl = data.properties.forecastGridData;
+          fetchGridData();
+        })
+        .catch(function (err) {
+          console.error('[weatherbigfoot] Points lookup failed:', err);
+          setTimeout(initNws, 120000);
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LIGHTNING — Blitzortung.org community network, streamed live over a
+    // public WebSocket. Free, no API key or registration; the feed is
+    // openly published for non-commercial use by the Blitzortung volunteer
+    // network (the same open feed used by sites such as lightningmaps.org).
+    // Frames are LZW-compressed JSON strings that must be decoded locally.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    var LIGHTNING_HOSTS = ['ws1.blitzortung.org', 'ws7.blitzortung.org', 'ws8.blitzortung.org'];
+    var MAX_RING_MILES = 30;   // outer ring radius on the proximity chart
+    var TRACK_MILES    = 120;  // strikes farther than this are ignored entirely
+    var COUNT_WINDOW_MS = 30 * 60 * 1000; // 30-minute rolling strike count
+    var strikes = []; // { lat, lon, distMi, bearing, receivedAt }
+    var lightningSocket = null;
+    var lightningHostIdx = 0;
+
+    // Decode Blitzortung's LZW-compressed data frames into plain JSON text
+    function lzwDecode(input) {
+      var dict = {};
+      var data = (input + '').split('');
+      var currChar = data[0];
+      var oldPhrase = currChar;
+      var out = [currChar];
+      var code = 256;
+      var phrase;
+      for (var i = 1; i < data.length; i++) {
+        var currCode = data[i].charCodeAt(0);
+        if (currCode < 256) {
+          phrase = data[i];
+        } else {
+          phrase = dict[currCode] ? dict[currCode] : (oldPhrase + currChar);
+        }
+        out.push(phrase);
+        currChar = phrase.charAt(0);
+        dict[code] = oldPhrase + currChar;
+        code++;
+        oldPhrase = phrase;
+      }
+      return out.join('');
+    }
+
+    function pruneOldStrikes() {
+      var cutoff = Date.now() - COUNT_WINDOW_MS;
+      strikes = strikes.filter(function (s) { return s.receivedAt >= cutoff; });
+    }
+
+    function renderLightning() {
+      pruneOldStrikes();
+
+      var nearestEl = document.getElementById('lightning-nearest');
+      var countEl   = document.getElementById('lightning-count');
+      var dotsEl    = document.getElementById('strike-dots');
+
+      if (strikes.length === 0) {
+        nearestEl.textContent = '—';
+      } else {
+        var nearest = strikes.reduce(function (min, s) { return s.distMi < min ? s.distMi : min; }, Infinity);
+        nearestEl.textContent = nearest.toFixed(1);
+      }
+      countEl.textContent = strikes.length;
+
+      // Plot strikes within MAX_RING_MILES on the proximity chart (center = resort)
+      var svgRadius = 90; // matches outer <circle r="108"> scaled to viewBox minus margin; using 90 for padding
+      var html = '';
+      strikes.forEach(function (s) {
+        if (s.distMi > MAX_RING_MILES) return;
+        var r = (s.distMi / MAX_RING_MILES) * 108;
+        var angleRad = (s.bearing - 90) * Math.PI / 180; // 0° = north = up
+        var x = 100 + r * Math.cos(angleRad);
+        var y = 100 + r * Math.sin(angleRad);
+        var age = Date.now() - s.receivedAt;
+        var opacity = Math.max(0.15, 1 - age / COUNT_WINDOW_MS);
+        html += '<circle class="strike-dot" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) +
+                '" r="3" style="opacity:' + opacity.toFixed(2) + '"></circle>';
+      });
+      dotsEl.innerHTML = html;
+    }
+
+    function handleLightningMessage(raw) {
+      var decoded;
+      try {
+        decoded = lzwDecode(raw);
+      } catch (e) {
+        return;
+      }
+      var strike;
+      try {
+        strike = JSON.parse(decoded);
+      } catch (e) {
+        return;
+      }
+      if (typeof strike.lat !== 'number' || typeof strike.lon !== 'number') return;
+
+      var dist = distanceMiles(LAT, LON, strike.lat, strike.lon);
+      if (dist > TRACK_MILES) return;
+
+      strikes.push({
+        lat: strike.lat,
+        lon: strike.lon,
+        distMi: dist,
+        bearing: bearingDeg(LAT, LON, strike.lat, strike.lon),
+        receivedAt: Date.now()
+      });
+      renderLightning();
+    }
+
+    function connectLightning() {
+      var host = LIGHTNING_HOSTS[lightningHostIdx % LIGHTNING_HOSTS.length];
+      lightningHostIdx++;
+      var statusEl = document.getElementById('lightning-status');
+
+      try {
+        lightningSocket = new WebSocket('wss://' + host + '/');
+      } catch (e) {
+        statusEl.textContent = 'Lightning feed unavailable — retrying…';
+        setTimeout(connectLightning, 15000);
+        return;
+      }
+
+      lightningSocket.onopen = function () {
+        statusEl.textContent = 'Live lightning feed connected';
+        lightningSocket.send(JSON.stringify({ a: 111 }));
+      };
+
+      lightningSocket.onmessage = function (evt) {
+        handleLightningMessage(evt.data);
+      };
+
+      lightningSocket.onerror = function () {
+        statusEl.textContent = 'Lightning feed error — reconnecting…';
+      };
+
+      lightningSocket.onclose = function () {
+        statusEl.textContent = 'Lightning feed disconnected — reconnecting…';
+        setTimeout(connectLightning, 10000);
+      };
+    }
+
+    // Periodically re-render so the strike count/rings age out even with no new strikes
+    setInterval(renderLightning, 30000);
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+
+    document.addEventListener('DOMContentLoaded', function () {
+      initNws();
+      connectLightning();
+    });
+  })();
+  </script>
+</body>
+</html>
