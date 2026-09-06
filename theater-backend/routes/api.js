@@ -27,6 +27,14 @@ function calcEndTime(t, min) {
   const h12 = h===0?12:h>12?h-12:h;
   return `${h12}:${String(m).padStart(2,'0')} ${s}`;
 }
+function calcEndTime24(t, min) {
+  if (!t || !min) return '';
+  const [hStr, mStr] = t.split(':');
+  let total = parseInt(hStr,10)*60 + parseInt(mStr,10) + parseInt(min,10);
+  total = total % 1440;
+  const h = Math.floor(total/60), m = total%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`;
+}
 
 async function getRange(startDate, endDate) {
   const r = await db.query(
@@ -157,6 +165,69 @@ async function getClosures(startDate, endDate) {
   });
   return map;
 }
+
+router.get('/library/:id', async (req, res) => {
+  const id = (req.params.id || '').trim();
+  if (!/^tt\d{7,8}$/.test(id) && !/^EVT-[A-Z0-9]+$/.test(id)) {
+    return res.status(400).json({ error: 'Invalid library ID' });
+  }
+  try {
+    const r = await db.query(
+      `SELECT id, title, title_line2, title_line3, type, runtime_min, release_year
+       FROM library WHERE id = $1`,
+      [id]
+    );
+    if (!r.rows.length) return res.status(404).json({ error: 'Library entry not found' });
+    const row = r.rows[0];
+    return res.json({
+      id: row.id,
+      title: row.title,
+      titleLine2: row.title_line2 || '',
+      titleLine3: row.title_line3 || '',
+      type: row.type,
+      runtimeMin: row.runtime_min || null,
+      releaseYear: row.release_year || '',
+    });
+  } catch (e) { console.error(e); return res.status(500).json({ error: 'Failed to load library entry' }); }
+});
+
+router.get('/schedule/playback', async (_req, res) => {
+  try {
+    const now = new Date();
+    const today = now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const end = new Date(now); end.setDate(end.getDate() + 1);
+    const endStr = end.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    const [rows, closures] = await Promise.all([
+      getRange(today, endStr),
+      getClosures(today, endStr),
+    ]);
+    const shows = rows
+      .filter(row => row.type === 'movie')
+      .map(row => {
+        const date = String(row.date).split('T')[0];
+        return {
+          id: row.id,
+          date,
+          startTime: row.start_time,
+          endTime: calcEndTime24(row.start_time, row.runtime_min),
+          libraryId: row.library_id,
+          title: row.title,
+          type: row.type,
+          runtimeMin: row.runtime_min || null,
+          releaseYear: row.release_year || '',
+          filenamePrefix: `[${row.library_id}]`,
+          blockedByClosure: Boolean(closures && closures[date]),
+        };
+      });
+    return res.json({
+      generatedAt: new Date().toISOString(),
+      timezone: 'America/New_York',
+      windowDays: 2,
+      closures,
+      shows,
+    });
+  } catch (e) { console.error(e); return res.status(500).json({ error: 'Failed to load playback schedule' }); }
+});
 
 router.get('/schedule', async (_req, res) => {
   try {
