@@ -1,0 +1,13 @@
+{
+  "schedule_url": "https://theater-backend-qf1b.onrender.com/api/schedule/playback",
+  "library_api_base": "https://theater-backend-qf1b.onrender.com/api/library",
+  "movie_folder": "/Users/theater/Movies/Theater",
+  "vlc_executable": "/Applications/VLC.app/Contents/MacOS/VLC",
+  "poll_seconds": 30,
+  "fullscreen": true,
+  "stop_at_end": true,
+  "take_control_of_vlc": true,
+  "recursive_search": true,
+  "media_extensions": [".mp4", ".m4v", ".mov", ".mkv"],
+  "log_file": "/Users/theater/TheaterPlayer/theater-player.log"
+}
