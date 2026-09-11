@@ -352,7 +352,7 @@
       <div id="status-badge">Loading</div>
     </div>
 
-    <div id="loading">Loading launch spotlight…</div>
+    <div id="loading" role="status" aria-live="polite">Loading launch spotlight…</div>
 
     <div id="error-state" role="alert" aria-live="assertive">Unable to load launch data right now. Please try again shortly.</div>
 
@@ -465,6 +465,7 @@
         if (!Number.isFinite(net)) return false;
         if (isInFlight(launch)) return true;
         if (isCompleted(launch)) return false;
+        if (net < now) return false;
         return net <= now + MAX_FUTURE_DAYS * MS_PER_DAY;
       }
 
