@@ -420,9 +420,7 @@
       var imageMatchCache = {};
       var currentLaunch = null;
       var lastFetchFailed = false;
-      var PAGE_ORIGIN = window.location.origin && window.location.origin !== 'null' ? window.location.origin : '';
-      var SITE_ROOT = PAGE_ORIGIN + window.location.pathname.replace(/\/channel-web\/[^/]*$/, '/');
-      var GO4LAUNCH_IMAGE_ROOT = SITE_ROOT + 'go4launch/images/';
+      var GO4LAUNCH_IMAGE_ROOT = new URL('../go4launch/images/', window.location.href).href;
 
       var API_BASE = (function () {
         var meta = document.querySelector('meta[name="api-base"]');
@@ -900,7 +898,7 @@
             var now = Date.now();
             var upcoming = launches
               .filter(function (launch) { return shouldShowLaunch(launch, now); })
-              .sort(function (a, b) { return new Date(a.net) - new Date(b.net); });
+              .sort(function (a, b) { return new Date(a.net).getTime() - new Date(b.net).getTime(); });
 
             var launch = pickPrimaryLaunch(upcoming, now);
             if (!launch) {
