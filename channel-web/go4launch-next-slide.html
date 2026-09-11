@@ -768,6 +768,10 @@
           });
       }
 
+      function setQrImage() {
+        document.getElementById('qr-image').src = GO4LAUNCH_IMAGE_ROOT + 'go4launch-app-qr.png';
+      }
+
       function updateTimestamp() {
         document.getElementById('updated-at').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', {
           timeZone: 'America/New_York',
@@ -933,6 +937,3 @@
   </script>
 </body>
 </html>
-      function setQrImage() {
-        document.getElementById('qr-image').src = GO4LAUNCH_IMAGE_ROOT + 'go4launch-app-qr.png';
-      }
