@@ -15,6 +15,11 @@ const DEFAULT_SLIDES = [
     description: 'Real-time space launch countdown display for KSC and Cape Canaveral',
   },
   {
+    url:   'https://ccbractivix.github.io/RGP/channel-web/go4launch-next-slide.html',
+    label: 'Launch Spotlight',
+    description: 'Single featured upcoming launch slide with hero image, countdown, and Go4Launch QR code',
+  },
+  {
     url:   'https://ccbractivix.github.io/RGP/amenities-web/tv.html',
     label: 'Amenity Status',
     description: 'Live resort amenity status grid with lightning closure alerts',
