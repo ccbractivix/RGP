@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-base" content="https://go4launch-backend.onrender.com">
+  <title>Go4Launch — Next Launch Spotlight</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F2F1E8;
+      --panel: rgba(255, 255, 255, 0.72);
+      --panel-solid: #fff;
+      --text: #454040;
+      --secondary: #6B6460;
+      --accent: #E5754A;
+      --accent-dark: #CF6843;
+      --gold: #F4B13D;
+      --gold-soft: rgba(244, 177, 61, 0.18);
+      --active: #2D8A3E;
+      --active-rgb: 45, 138, 62;
+      --red: #E63946;
+      --border: #D2CDC5;
+      --shadow: 0 16px 36px rgba(69, 64, 64, 0.12);
+    }
+
+    html {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+    }
+
+    body {
+      width: 1920px;
+      height: 1080px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      overflow: hidden;
+      transform-origin: top left;
+      background:
+        radial-gradient(circle at top right, rgba(229, 117, 74, 0.18), transparent 30%),
+        linear-gradient(180deg, #f8f6ef 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: 'Montserrat', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #page {
+      width: 100%;
+      height: 100%;
+      padding: 42px 52px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    #header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 28px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      font-size: 22px;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .brand-title {
+      font-size: 58px;
+      line-height: 1;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .brand-subtitle {
+      font-size: 22px;
+      color: var(--secondary);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    #status-badge {
+      flex: 0 0 auto;
+      min-width: 170px;
+      text-align: center;
+      padding: 16px 24px;
+      border-radius: 999px;
+      color: #fff;
+      background: var(--red);
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      box-shadow: var(--shadow);
+    }
+
+    #status-badge.status-go,
+    #status-badge.status-success {
+      background: var(--active);
+      animation: status-glow 2s ease-in-out infinite;
+    }
+
+    #main {
+      flex: 1;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1.22fr) minmax(520px, 0.92fr);
+      gap: 26px;
+    }
+
+    .panel {
+      border: 2px solid var(--border);
+      border-radius: 30px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    #image-panel {
+      position: relative;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #launch-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    #image-empty {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+      text-align: center;
+      color: var(--secondary);
+      font-size: 32px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, rgba(229, 117, 74, 0.14), rgba(255, 255, 255, 0.92));
+    }
+
+    .image-label {
+      position: absolute;
+      left: 24px;
+      bottom: 24px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: rgba(69, 64, 64, 0.75);
+      color: #fff;
+      font-size: 19px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-weight: 700;
+      backdrop-filter: blur(6px);
+    }
+
+    #info-panel {
+      padding: 32px 34px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .rocket-name {
+      font-size: 34px;
+      line-height: 1.1;
+      color: var(--accent);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .mission-name {
+      font-size: 56px;
+      line-height: 1.06;
+      color: var(--text);
+      font-weight: 800;
+    }
+
+    #countdown {
+      padding: 20px 24px;
+      border-radius: 24px;
+      border: 2px solid rgba(244, 177, 61, 0.55);
+      background: var(--gold-soft);
+      color: var(--accent-dark);
+      font-size: 82px;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    .meta-list {
+      display: grid;
+      grid-template-columns: 170px minmax(0, 1fr);
+      gap: 14px 18px;
+      align-items: start;
+    }
+
+    .meta-label {
+      font-size: 19px;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: 1.1px;
+      color: var(--secondary);
+      font-weight: 700;
+    }
+
+    .meta-value {
+      font-size: 28px;
+      line-height: 1.22;
+      color: var(--text);
+      font-weight: 700;
+      min-width: 0;
+    }
+
+    .footer-row {
+      margin-top: auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 220px;
+      gap: 22px;
+      align-items: end;
+    }
+
+    .cta {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .cta-title {
+      font-size: 34px;
+      line-height: 1.08;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .cta-copy {
+      font-size: 24px;
+      line-height: 1.3;
+      color: var(--secondary);
+      font-weight: 600;
+    }
+
+    .shortcut {
+      color: var(--accent);
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .qr-card {
+      background: var(--panel-solid);
+      border: 2px solid var(--border);
+      border-radius: 24px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 10px 22px rgba(69, 64, 64, 0.12);
+    }
+
+    .qr-card img {
+      width: 176px;
+      height: 176px;
+      display: block;
+      object-fit: contain;
+    }
+
+    .qr-card span {
+      font-size: 17px;
+      line-height: 1.15;
+      color: var(--secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    #loading,
+    #error-state {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--secondary);
+      font-size: 32px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    #error-state {
+      display: none;
+      padding: 0 120px;
+    }
+
+    #updated-at {
+      text-align: center;
+      color: var(--secondary);
+      font-size: 18px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      min-height: 22px;
+    }
+
+    .hidden { display: none !important; }
+
+    @keyframes status-glow {
+      0%, 100% { box-shadow: 0 0 10px rgba(var(--active-rgb), 0.35); }
+      50% { box-shadow: 0 0 22px rgba(var(--active-rgb), 0.65); }
+    }
+  </style>
+</head>
+<body>
+  <div id="page">
+    <div id="header">
+      <div class="brand">
+        <div class="brand-mark">Go4Launch</div>
+        <div class="brand-title">Next Upcoming Launch</div>
+        <div class="brand-subtitle">Live launch timing for Cape Canaveral and Kennedy Space Center</div>
+      </div>
+      <div id="status-badge">Loading</div>
+    </div>
+
+    <div id="loading" role="status" aria-live="polite">Loading launch spotlight…</div>
+
+    <div id="error-state" role="alert" aria-live="assertive">Unable to load launch data right now. Please try again shortly.</div>
+
+    <div id="main" class="hidden">
+      <div id="image-panel" class="panel" aria-live="polite" aria-atomic="true">
+        <img id="launch-image" class="hidden" alt="">
+        <div id="image-empty">Launch image coming soon</div>
+        <div class="image-label">Launch Spotlight</div>
+      </div>
+
+      <div id="info-panel" class="panel">
+        <div class="rocket-name" id="rocket-name">Rocket TBA</div>
+        <div class="mission-name" id="mission-name">Mission TBA</div>
+        <div id="countdown">TBD</div>
+
+        <div class="meta-list">
+          <div class="meta-label">Launch Date</div>
+          <div class="meta-value" id="launch-date">To be announced</div>
+
+          <div class="meta-label">Launch Time</div>
+          <div class="meta-value" id="launch-time">To be announced</div>
+
+          <div class="meta-label">Provider</div>
+          <div class="meta-value" id="provider-name">To be announced</div>
+
+          <div class="meta-label">Launch Site</div>
+          <div class="meta-value" id="launch-site">To be announced</div>
+        </div>
+
+        <div class="footer-row">
+          <div class="cta">
+            <div class="cta-title" id="cta-title">Scan for launch guides, viewing tips, photos, and live updates.</div>
+            <div class="cta-copy" id="cta-copy"><span id="cta-copy-prefix">Open the Go4Launch guest page or visit </span><span class="shortcut" id="cta-copy-highlight">rocketbeachresort.com</span><span id="cta-copy-suffix">.</span></div>
+          </div>
+
+          <div class="qr-card" id="qr-card">
+            <img id="qr-image" alt="QR code for Go4Launch guest page" src="">
+            <span>Scan Me</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="updated-at">Loading…</div>
+  </div>
+
+  <script>
+    (function () {
+      var BASE_WIDTH = 1920;
+      var BASE_HEIGHT = 1080;
+      var REFRESH_MS = 60000;
+      var RETRY_MS = 15000;
+      var FETCH_TIMEOUT_MS = 10000;
+      var MS_PER_HOUR = 3600000;
+      var MS_PER_DAY = 24 * MS_PER_HOUR;
+      var MAX_FUTURE_DAYS = 14;
+      var RESIZE_DEBOUNCE_MS = 250;
+      var resizeTimer = null;
+      var refreshTimer = null;
+      var countdownTimer = null;
+      var imageProbeCache = {};
+      var imageMatchCache = {};
+      var currentLaunch = null;
+      var lastFetchFailed = false;
+      var pathParts = window.location.pathname.split('/').filter(Boolean);
+      var channelWebIndex = pathParts.lastIndexOf('channel-web');
+      var repoBasePath = channelWebIndex > 0 ? '/' + pathParts.slice(0, channelWebIndex).join('/') + '/' : '/';
+      var GO4LAUNCH_IMAGE_ROOT = (window.location.origin || '') + repoBasePath + 'go4launch/images/';
+
+      var API_BASE = (function () {
+        var meta = document.querySelector('meta[name="api-base"]');
+        return (meta && meta.getAttribute('content')) || '';
+      })();
+
+      function statusClass(status) {
+        if (!status) return 'status-tbd';
+        switch (status.id) {
+          case 1: return 'status-go';
+          case 2: return 'status-tbd';
+          case 3: return 'status-success';
+          case 4: return 'status-failure';
+          case 5: return 'status-hold';
+          case 6: return 'status-inflight';
+          case 7: return 'status-failure';
+          case 8: return 'status-tbc';
+          default: return 'status-tbd';
+        }
+      }
+
+      function statusLabel(status) {
+        if (!status) return 'TBD';
+        return status.abbrev || status.name || 'TBD';
+      }
+
+      function getStatusId(launch) {
+        return launch && launch.status && launch.status.id;
+      }
+
+      function isCompleted(launch) {
+        var id = getStatusId(launch);
+        return id === 3 || id === 4 || id === 7;
+      }
+
+      function isInFlight(launch) {
+        return getStatusId(launch) === 6;
+      }
+
+      function shouldShowLaunch(launch, now) {
+        var net = new Date(launch.net).getTime();
+        if (!Number.isFinite(net)) return false;
+        if (isInFlight(launch)) return true;
+        if (isCompleted(launch)) return false;
+        if (net < now) return false;
+        return net <= now + MAX_FUTURE_DAYS * MS_PER_DAY;
+      }
+
+      function getRocketName(launch) {
+        var cfg = launch && launch.rocket && launch.rocket.configuration;
+        return (cfg && (cfg.full_name || cfg.name)) || 'Rocket TBA';
+      }
+
+      function stripRocketPrefix(launchName, rocketName) {
+        if (!launchName || !rocketName || rocketName === 'Rocket TBA') return launchName;
+        if (launchName.toLowerCase().indexOf(rocketName.toLowerCase()) !== 0) return launchName;
+        var suffix = launchName.slice(rocketName.length).replace(/^[\s|:–—-]+/, '');
+        return suffix || launchName;
+      }
+
+      function getMissionName(launch) {
+        var mission = launch && launch.mission && launch.mission.name;
+        if (mission) return mission;
+        return stripRocketPrefix(launch && launch.name, getRocketName(launch)) || 'Mission TBA';
+      }
+
+      function getProvider(launch) {
+        return (launch && launch.launch_service_provider && launch.launch_service_provider.name) || 'To be announced';
+      }
+
+      function getLocation(launch) {
+        var location = (launch && launch.pad && launch.pad.location && launch.pad.location.name) || '';
+        var pad = (launch && launch.pad && launch.pad.name) || '';
+        if (location && pad && pad.toLowerCase().indexOf(location.toLowerCase()) === -1) {
+          return location + ' • ' + pad;
+        }
+        return location || pad || 'To be announced';
+      }
+
+      function getImageUrl(launch, cms) {
+        if (cms && cms.card_image_path) return GO4LAUNCH_IMAGE_ROOT + 'launches/' + cms.card_image_path;
+        var img = launch && launch.image;
+        if (img && img.image_url) return img.image_url;
+        if (img && img.thumbnail_url) return img.thumbnail_url;
+        var cfg = launch && launch.rocket && launch.rocket.configuration;
+        if (cfg && cfg.image_url) return cfg.image_url;
+        return null;
+      }
+
+      function normalizeForMatch(text) {
+        return String(text || '')
+          .toLowerCase()
+          .replace(/&/g, ' and ')
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim();
+      }
+
+      function buildLcCandidates(launch) {
+        var rocket = normalizeForMatch(getRocketName(launch));
+        if (!rocket) return [];
+
+        var words = rocket.split(/\s+/).filter(Boolean);
+        var exts = ['jpg', 'jpeg', 'png', 'webp'];
+        var variantScores = {};
+        var urlScores = {};
+
+        function addVariant(variant, score) {
+          var normalized = normalizeForMatch(variant);
+          if (!normalized) return;
+          var parts = normalized.split(/\s+/).filter(Boolean);
+          if (!parts.length) return;
+
+          [
+            parts.join(' '),
+            parts.join('-'),
+            parts.join('_'),
+            parts.join('')
+          ].forEach(function (shape) {
+            if (!shape) return;
+            if (!Object.prototype.hasOwnProperty.call(variantScores, shape) || score > variantScores[shape]) {
+              variantScores[shape] = score;
+            }
+          });
+        }
+
+        addVariant(rocket, 120);
+
+        for (var start = 0; start < words.length; start++) {
+          for (var end = words.length - 1; end >= start; end--) {
+            if (start === 0 && end === words.length - 1) continue;
+            var tokenCount = end - start + 1;
+            if (tokenCount <= 0) continue;
+            addVariant(words.slice(start, end + 1).join(' '), 82 + tokenCount * 6 - start * 2);
+          }
+        }
+
+        var stopWords = {
+          block: true, flight: true, mission: true, booster: true, stage: true,
+          first: true, second: true, rocket: true, vehicle: true, and: true
+        };
+
+        words.forEach(function (word, index) {
+          if (word.length < 3 || stopWords[word]) return;
+          addVariant(word, 58 - index);
+        });
+
+        [
+          ['falcon', ['falcon', 'falcon9', 'falcon-9', 'falcon_heavy', 'falcon-heavy']],
+          ['atlas', ['atlas', 'atlasv', 'atlas-v']],
+          ['vulcan', ['vulcan', 'vulcan-centaur', 'vulcan_centaur']],
+          ['starship', ['starship', 'super-heavy', 'super_heavy']],
+          ['sls', ['sls', 'space-launch-system']],
+          ['new glenn', ['new-glenn', 'new_glenn', 'newglenn']],
+          ['electron', ['electron', 'rocket-lab-electron']],
+          ['ariane', ['ariane6', 'ariane-6', 'ariane_6']]
+        ].forEach(function (entry) {
+          if (rocket.indexOf(entry[0]) === -1) return;
+          entry[1].forEach(function (alias) { addVariant(alias, 106); });
+        });
+
+        function addUrl(url, score) {
+          var encoded = encodeURI(url);
+          if (!Object.prototype.hasOwnProperty.call(urlScores, encoded) || score > urlScores[encoded]) {
+            urlScores[encoded] = score;
+          }
+        }
+
+        Object.keys(variantScores).forEach(function (variant) {
+          var score = variantScores[variant];
+          exts.forEach(function (ext) {
+            addUrl(GO4LAUNCH_IMAGE_ROOT + 'lc_' + variant + '.' + ext, score);
+          });
+        });
+
+        return Object.keys(urlScores).sort(function (a, b) {
+          return urlScores[b] - urlScores[a];
+        });
+      }
+
+      function probeImage(url) {
+        if (!url) return Promise.resolve(false);
+        if (!imageProbeCache[url]) {
+          imageProbeCache[url] = new Promise(function (resolve) {
+            var img = new Image();
+            img.onload = function () { resolve(true); };
+            img.onerror = function () { resolve(false); };
+            img.src = url;
+          });
+        }
+        return imageProbeCache[url];
+      }
+
+      function findFeatureImage(launch, cms) {
+        var directImage = getImageUrl(launch, cms);
+        if (directImage) return Promise.resolve(directImage);
+
+        var key = normalizeForMatch(getRocketName(launch));
+        if (Object.prototype.hasOwnProperty.call(imageMatchCache, key)) {
+          return Promise.resolve(imageMatchCache[key]);
+        }
+
+        var candidates = buildLcCandidates(launch);
+        function check(index) {
+          if (index >= candidates.length) return Promise.resolve(null);
+          var candidate = candidates[index];
+          return probeImage(candidate).then(function (ok) {
+            if (ok) return candidate;
+            return check(index + 1);
+          });
+        }
+
+        return check(0).then(function (match) {
+          imageMatchCache[key] = match;
+          return match;
+        });
+      }
+
+      function formatDayET(dateStr) {
+        return new Date(dateStr).toLocaleDateString('en-US', {
+          timeZone: 'America/New_York',
+          weekday: 'long'
+        });
+      }
+
+      function formatDateET(dateStr) {
+        return new Date(dateStr).toLocaleDateString('en-US', {
+          timeZone: 'America/New_York',
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
+
+      function formatTimeET(dateStr) {
+        return new Date(dateStr).toLocaleTimeString('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          minute: '2-digit'
+        });
+      }
+
+      function formatCountdown(launch) {
+        var diff = new Date(launch.net).getTime() - Date.now();
+        if (diff <= 0) {
+          if (isInFlight(launch) || isCompleted(launch)) return 'LIFTOFF';
+          if (getStatusId(launch) === 5) return 'ON HOLD';
+          return 'AWAITING UPDATE';
+        }
+        var total = Math.floor(diff / 1000);
+        var days = Math.floor(total / 86400);
+        var hours = Math.floor((total % 86400) / 3600);
+        var mins = Math.floor((total % 3600) / 60);
+        var secs = total % 60;
+        if (days > 0) {
+          return 'T-' + days + 'D ' + String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+        }
+        return 'T-' + String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+      }
+
+      function fetchWithTimeout(url, timeoutMs) {
+        if (typeof AbortController !== 'function') {
+          return fetch(url);
+        }
+        var controller = new AbortController();
+        var timer = setTimeout(function () { controller.abort(); }, timeoutMs || FETCH_TIMEOUT_MS);
+        return fetch(url, { signal: controller.signal })
+          .then(function (response) {
+            clearTimeout(timer);
+            return response;
+          })
+          .catch(function (err) {
+            clearTimeout(timer);
+            if (err.name === 'AbortError') throw new Error('Timeout: ' + url);
+            throw err;
+          });
+      }
+
+      function fetchBackendLaunches() {
+        if (!API_BASE) return Promise.resolve([]);
+        return fetchWithTimeout(API_BASE + '/api/launches')
+          .then(function (response) {
+            if (!response.ok) throw new Error('Launches HTTP ' + response.status);
+            return response.json();
+          });
+      }
+
+      function fetchLaunches() {
+        return fetchBackendLaunches().then(function (launches) {
+          return Array.isArray(launches) ? launches : [];
+        });
+      }
+
+      function fetchContent() {
+        if (!API_BASE) return Promise.resolve({});
+        return fetchWithTimeout(API_BASE + '/api/content')
+          .then(function (response) {
+            if (!response.ok) throw new Error('Content HTTP ' + response.status);
+            return response.json();
+          })
+          .catch(function () {
+            return {};
+          });
+      }
+
+      function setQrImage() {
+        document.getElementById('qr-image').src = GO4LAUNCH_IMAGE_ROOT + 'go4launch-app-qr.png';
+      }
+
+      function updateTimestamp() {
+        document.getElementById('updated-at').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', {
+          timeZone: 'America/New_York',
+          hour: 'numeric',
+          minute: '2-digit'
+        }) + ' ET';
+      }
+
+      function renderNoLaunch() {
+        currentLaunch = null;
+        lastFetchFailed = false;
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('error-state').style.display = 'none';
+        document.getElementById('main').classList.remove('hidden');
+        document.getElementById('status-badge').className = '';
+        document.getElementById('status-badge').textContent = 'No Launch';
+        document.getElementById('rocket-name').textContent = 'Go4Launch';
+        document.getElementById('mission-name').textContent = 'No upcoming launches scheduled';
+        document.getElementById('countdown').textContent = 'CHECK APP';
+        document.getElementById('launch-date').textContent = 'To be announced';
+        document.getElementById('launch-time').textContent = 'To be announced';
+        document.getElementById('provider-name').textContent = 'Stay tuned';
+        document.getElementById('launch-site').textContent = 'Check Go4Launch for updates';
+        document.getElementById('cta-title').textContent = 'No upcoming launches are posted right now.';
+        document.getElementById('cta-copy-prefix').textContent = 'Please check back later for the next Cape launch opportunity.';
+        document.getElementById('cta-copy-highlight').textContent = '';
+        document.getElementById('cta-copy-suffix').textContent = '';
+        document.getElementById('qr-card').classList.add('hidden');
+        document.getElementById('launch-image').classList.add('hidden');
+        document.getElementById('launch-image').removeAttribute('src');
+        document.getElementById('launch-image').alt = '';
+        document.getElementById('image-empty').classList.remove('hidden');
+        updateTimestamp();
+      }
+
+      function applyImage(url, altText) {
+        var image = document.getElementById('launch-image');
+        var empty = document.getElementById('image-empty');
+        if (!url) {
+          image.classList.add('hidden');
+          image.removeAttribute('src');
+          image.alt = '';
+          empty.classList.remove('hidden');
+          return;
+        }
+
+        image.onload = function () {
+          empty.classList.add('hidden');
+          image.classList.remove('hidden');
+        };
+        image.onerror = function () {
+          image.classList.add('hidden');
+          image.removeAttribute('src');
+          image.alt = '';
+          empty.classList.remove('hidden');
+        };
+        image.alt = altText;
+        image.src = url;
+        if (image.complete && image.naturalWidth > 0) {
+          empty.classList.add('hidden');
+          image.classList.remove('hidden');
+        }
+      }
+
+      function renderLaunch(launch, cms) {
+        currentLaunch = launch;
+        lastFetchFailed = false;
+        var launchId = launch.id;
+        var badge = document.getElementById('status-badge');
+        badge.className = statusClass(launch.status);
+        badge.textContent = statusLabel(launch.status);
+
+        document.getElementById('rocket-name').textContent = getRocketName(launch);
+        document.getElementById('mission-name').textContent = getMissionName(launch);
+        document.getElementById('launch-date').textContent = formatDayET(launch.net) + ', ' + formatDateET(launch.net);
+        document.getElementById('launch-time').textContent = formatTimeET(launch.net) + ' ET';
+        document.getElementById('provider-name').textContent = getProvider(launch);
+        document.getElementById('launch-site').textContent = getLocation(launch);
+        document.getElementById('cta-title').textContent = 'Scan for launch guides, viewing tips, photos, and live updates.';
+        document.getElementById('cta-copy-prefix').textContent = 'Open the Go4Launch guest page or visit ';
+        document.getElementById('cta-copy-highlight').textContent = 'rocketbeachresort.com';
+        document.getElementById('cta-copy-suffix').textContent = '.';
+        setQrImage();
+        document.getElementById('qr-card').classList.remove('hidden');
+
+        findFeatureImage(launch, cms).then(function (imageUrl) {
+          if (!currentLaunch || currentLaunch.id !== launchId) return;
+          applyImage(imageUrl, getMissionName(launch));
+        }).catch(function () {
+          if (!currentLaunch || currentLaunch.id !== launchId) return;
+          applyImage(null, '');
+        });
+
+        refreshCountdown();
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('error-state').style.display = 'none';
+        document.getElementById('main').classList.remove('hidden');
+        updateTimestamp();
+      }
+
+      function refreshCountdown() {
+        var countdown = document.getElementById('countdown');
+        if (!currentLaunch) {
+          if (!countdown.textContent) countdown.textContent = 'TBD';
+          return;
+        }
+        countdown.textContent = formatCountdown(currentLaunch);
+      }
+
+      function renderError() {
+        currentLaunch = null;
+        lastFetchFailed = true;
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('main').classList.add('hidden');
+        document.getElementById('error-state').style.display = 'flex';
+        document.getElementById('status-badge').className = '';
+        document.getElementById('status-badge').textContent = 'Offline';
+        document.getElementById('updated-at').textContent = 'Retrying shortly';
+      }
+
+      function scheduleRefresh() {
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(fetchAndRender, lastFetchFailed ? RETRY_MS : REFRESH_MS);
+      }
+
+      function fetchAndRender() {
+        Promise.all([fetchLaunches(), fetchContent()])
+          .then(function (results) {
+            var launches = Array.isArray(results[0]) ? results[0] : [];
+            var cmsContent = results[1] || {};
+            var now = Date.now();
+            var launch = null;
+            launches.forEach(function (candidate) {
+              if (!shouldShowLaunch(candidate, now)) return;
+              if (!launch || new Date(candidate.net).getTime() < new Date(launch.net).getTime()) {
+                launch = candidate;
+              }
+            });
+            if (!launch) {
+              renderNoLaunch();
+              scheduleRefresh();
+              return;
+            }
+
+            renderLaunch(launch, cmsContent[launch.id] || {});
+            scheduleRefresh();
+          })
+          .catch(function () {
+            renderError();
+            scheduleRefresh();
+          });
+      }
+
+      function applyTvScale() {
+        var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+        var viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        if (!viewportWidth || !viewportHeight) return;
+        var scale = Math.min(viewportWidth / BASE_WIDTH, viewportHeight / BASE_HEIGHT);
+        var offsetX = (viewportWidth - BASE_WIDTH * scale) / 2;
+        var offsetY = (viewportHeight - BASE_HEIGHT * scale) / 2;
+        document.body.style.transform = 'translate(' + offsetX + 'px, ' + offsetY + 'px) scale(' + scale + ')';
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        setQrImage();
+        applyTvScale();
+        fetchAndRender();
+        countdownTimer = setInterval(refreshCountdown, 1000);
+        window.addEventListener('resize', function () {
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(applyTvScale, RESIZE_DEBOUNCE_MS);
+        });
+        window.addEventListener('beforeunload', function () {
+          clearTimeout(refreshTimer);
+          clearTimeout(resizeTimer);
+          clearInterval(countdownTimer);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
