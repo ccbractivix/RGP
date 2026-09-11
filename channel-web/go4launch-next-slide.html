@@ -384,11 +384,11 @@
 
         <div class="footer-row">
           <div class="cta">
-            <div class="cta-title">Scan for launch guides, viewing tips, photos, and live updates.</div>
-            <div class="cta-copy">Open the Go4Launch guest page or visit <span class="shortcut">rocketbeachresort.com</span>.</div>
+            <div class="cta-title" id="cta-title">Scan for launch guides, viewing tips, photos, and live updates.</div>
+            <div class="cta-copy" id="cta-copy">Open the Go4Launch guest page or visit <span class="shortcut">rocketbeachresort.com</span>.</div>
           </div>
 
-          <div class="qr-card">
+          <div class="qr-card" id="qr-card">
             <img id="qr-image" alt="QR code for Go4Launch guest page" src="../go4launch/images/go4launch-app-qr.png">
             <span>Scan Me</span>
           </div>
@@ -706,6 +706,7 @@
       }
 
       function fetchBackendLaunches() {
+        if (!API_BASE) return Promise.reject(new Error('Missing API base'));
         return fetchWithTimeout(API_BASE + '/api/launches')
           .then(function (response) {
             if (!response.ok) throw new Error('Launches HTTP ' + response.status);
@@ -754,6 +755,7 @@
       }
 
       function fetchContent() {
+        if (!API_BASE) return Promise.resolve({});
         return fetchWithTimeout(API_BASE + '/api/content')
           .then(function (response) {
             if (!response.ok) throw new Error('Content HTTP ' + response.status);
@@ -787,6 +789,9 @@
         document.getElementById('launch-time').textContent = 'To be announced';
         document.getElementById('provider-name').textContent = 'Stay tuned';
         document.getElementById('launch-site').textContent = 'Check Go4Launch for updates';
+        document.getElementById('cta-title').textContent = 'No upcoming launches are posted right now.';
+        document.getElementById('cta-copy').textContent = 'Please check back later for the next Cape launch opportunity.';
+        document.getElementById('qr-card').classList.add('hidden');
         document.getElementById('launch-image').classList.add('hidden');
         document.getElementById('launch-image').removeAttribute('src');
         document.getElementById('launch-image').alt = '';
@@ -833,6 +838,9 @@
         document.getElementById('launch-time').textContent = formatTimeET(launch.net) + ' ET';
         document.getElementById('provider-name').textContent = getProvider(launch);
         document.getElementById('launch-site').textContent = getLocation(launch);
+        document.getElementById('cta-title').textContent = 'Scan for launch guides, viewing tips, photos, and live updates.';
+        document.getElementById('cta-copy').innerHTML = 'Open the Go4Launch guest page or visit <span class="shortcut">rocketbeachresort.com</span>.';
+        document.getElementById('qr-card').classList.remove('hidden');
 
         findFeatureImage(launch, cms).then(function (imageUrl) {
           if (!currentLaunch || currentLaunch.id !== launchId) return;
