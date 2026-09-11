@@ -409,12 +409,7 @@
       var MS_PER_HOUR = 3600000;
       var MS_PER_DAY = 24 * MS_PER_HOUR;
       var MAX_FUTURE_DAYS = 14;
-      var SUCCESS_PRIMARY_GRACE_MS = 6 * MS_PER_HOUR;
-      var MAX_FETCH_LAUNCHES = 12;
-      var PREVIOUS_LAUNCHES_LOOKBACK_DAYS = 30;
       var RESIZE_DEBOUNCE_MS = 250;
-      var LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
-      var LOCATION_IDS = '12,27';
       var resizeTimer = null;
       var refreshTimer = null;
       var countdownTimer = null;
@@ -465,28 +460,12 @@
         return getStatusId(launch) === 6;
       }
 
-      function isSuccess(launch) {
-        return getStatusId(launch) === 3;
-      }
-
       function shouldShowLaunch(launch, now) {
         var net = new Date(launch.net).getTime();
         if (!Number.isFinite(net)) return false;
         if (isInFlight(launch)) return true;
         if (isCompleted(launch)) return false;
         return net <= now + MAX_FUTURE_DAYS * MS_PER_DAY;
-      }
-
-      function pickPrimaryLaunch(upcoming, now) {
-        for (var i = 0; i < upcoming.length; i++) {
-          var launch = upcoming[i];
-          var net = new Date(launch.net).getTime();
-          if (isSuccess(launch) && Number.isFinite(net) && now > net + SUCCESS_PRIMARY_GRACE_MS) {
-            continue;
-          }
-          return launch;
-        }
-        return upcoming[0] || null;
       }
 
       function getRocketName(launch) {
@@ -727,22 +706,9 @@
           });
       }
 
-      function fetchLL2Direct() {
-        return fetchWithTimeout(LL2_BASE + '/launches/upcoming/?location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed')
-          .then(function (response) {
-            if (!response.ok) throw new Error('LL2 upcoming HTTP ' + response.status);
-            return response.json();
-          }).then(function (data) {
-            return data && data.results ? data.results : [];
-        });
-      }
-
       function fetchLaunches() {
         return fetchBackendLaunches().then(function (launches) {
-          if (Array.isArray(launches) && launches.length) return launches;
-          return fetchLL2Direct();
-        }).catch(function () {
-          return fetchLL2Direct();
+          return Array.isArray(launches) ? launches : [];
         });
       }
 
@@ -897,7 +863,7 @@
               .filter(function (launch) { return shouldShowLaunch(launch, now); })
               .sort(function (a, b) { return new Date(a.net).getTime() - new Date(b.net).getTime(); });
 
-            var launch = pickPrimaryLaunch(upcoming, now);
+            var launch = upcoming[0] || null;
             if (!launch) {
               renderNoLaunch();
               scheduleRefresh();
