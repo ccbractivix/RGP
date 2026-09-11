@@ -698,7 +698,7 @@
       }
 
       function fetchBackendLaunches() {
-        if (!API_BASE) return Promise.reject(new Error('Missing API base'));
+        if (!API_BASE) return Promise.resolve([]);
         return fetchWithTimeout(API_BASE + '/api/launches')
           .then(function (response) {
             if (!response.ok) throw new Error('Launches HTTP ' + response.status);
