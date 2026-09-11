@@ -850,6 +850,7 @@
         document.getElementById('cta-copy-prefix').textContent = 'Open the Go4Launch guest page or visit ';
         document.getElementById('cta-copy-highlight').textContent = 'rocketbeachresort.com';
         document.getElementById('cta-copy-suffix').textContent = '.';
+        setQrImage();
         document.getElementById('qr-card').classList.remove('hidden');
 
         findFeatureImage(launch, cms).then(function (imageUrl) {
