@@ -354,10 +354,10 @@
 
     <div id="loading">Loading launch spotlight…</div>
 
-    <div id="error-state">Unable to load launch data right now. Please try again shortly.</div>
+    <div id="error-state" role="alert" aria-live="assertive">Unable to load launch data right now. Please try again shortly.</div>
 
     <div id="main" class="hidden">
-      <div id="image-panel" class="panel">
+      <div id="image-panel" class="panel" aria-live="polite" aria-atomic="true">
         <img id="launch-image" class="hidden" alt="">
         <div id="image-empty">Launch image coming soon</div>
         <div class="image-label">Launch Spotlight</div>
@@ -859,11 +859,13 @@
             var launches = Array.isArray(results[0]) ? results[0] : [];
             var cmsContent = results[1] || {};
             var now = Date.now();
-            var upcoming = launches
-              .filter(function (launch) { return shouldShowLaunch(launch, now); })
-              .sort(function (a, b) { return new Date(a.net).getTime() - new Date(b.net).getTime(); });
-
-            var launch = upcoming[0] || null;
+            var launch = null;
+            launches.forEach(function (candidate) {
+              if (!shouldShowLaunch(candidate, now)) return;
+              if (!launch || new Date(candidate.net).getTime() < new Date(launch.net).getTime()) {
+                launch = candidate;
+              }
+            });
             if (!launch) {
               renderNoLaunch();
               scheduleRefresh();
