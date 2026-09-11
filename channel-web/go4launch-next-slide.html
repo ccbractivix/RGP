@@ -606,8 +606,6 @@
           var score = variantScores[variant];
           exts.forEach(function (ext) {
             addUrl('../go4launch/images/lc_' + variant + '.' + ext, score);
-            addUrl('../go4launch/images/lc_"' + variant + '".' + ext, score + 3);
-            addUrl('../go4launch/images/lc_%22' + variant + '%22.' + ext, score + 2);
           });
         });
 
@@ -728,6 +726,9 @@
             return response.json();
           });
         return Promise.allSettled([upcomingReq, previousReq]).then(function (responses) {
+          if (responses[0].status !== 'fulfilled' && responses[1].status !== 'fulfilled') {
+            throw new Error('Unable to load launch data from Launch Library 2');
+          }
           var byId = {};
           var upcomingData = responses[0].status === 'fulfilled' ? (responses[0].value || {}) : {};
           var previousData = responses[1].status === 'fulfilled' ? (responses[1].value || {}) : {};
