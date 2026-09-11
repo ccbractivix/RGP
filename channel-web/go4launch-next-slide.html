@@ -385,7 +385,7 @@
         <div class="footer-row">
           <div class="cta">
             <div class="cta-title" id="cta-title">Scan for launch guides, viewing tips, photos, and live updates.</div>
-            <div class="cta-copy" id="cta-copy">Open the Go4Launch guest page or visit <span class="shortcut">rocketbeachresort.com</span>.</div>
+            <div class="cta-copy" id="cta-copy"><span id="cta-copy-prefix">Open the Go4Launch guest page or visit </span><span class="shortcut" id="cta-copy-highlight">rocketbeachresort.com</span><span id="cta-copy-suffix">.</span></div>
           </div>
 
           <div class="qr-card" id="qr-card">
@@ -790,7 +790,9 @@
         document.getElementById('provider-name').textContent = 'Stay tuned';
         document.getElementById('launch-site').textContent = 'Check Go4Launch for updates';
         document.getElementById('cta-title').textContent = 'No upcoming launches are posted right now.';
-        document.getElementById('cta-copy').textContent = 'Please check back later for the next Cape launch opportunity.';
+        document.getElementById('cta-copy-prefix').textContent = 'Please check back later for the next Cape launch opportunity.';
+        document.getElementById('cta-copy-highlight').textContent = '';
+        document.getElementById('cta-copy-suffix').textContent = '';
         document.getElementById('qr-card').classList.add('hidden');
         document.getElementById('launch-image').classList.add('hidden');
         document.getElementById('launch-image').removeAttribute('src');
@@ -839,7 +841,9 @@
         document.getElementById('provider-name').textContent = getProvider(launch);
         document.getElementById('launch-site').textContent = getLocation(launch);
         document.getElementById('cta-title').textContent = 'Scan for launch guides, viewing tips, photos, and live updates.';
-        document.getElementById('cta-copy').innerHTML = 'Open the Go4Launch guest page or visit <span class="shortcut">rocketbeachresort.com</span>.';
+        document.getElementById('cta-copy-prefix').textContent = 'Open the Go4Launch guest page or visit ';
+        document.getElementById('cta-copy-highlight').textContent = 'rocketbeachresort.com';
+        document.getElementById('cta-copy-suffix').textContent = '.';
         document.getElementById('qr-card').classList.remove('hidden');
 
         findFeatureImage(launch, cms).then(function (imageUrl) {
