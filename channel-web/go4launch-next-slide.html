@@ -902,6 +902,11 @@
         document.getElementById('updated-at').textContent = 'Retrying shortly';
       }
 
+      function scheduleRefresh() {
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(fetchAndRender, lastFetchFailed ? RETRY_MS : REFRESH_MS);
+      }
+
       function fetchAndRender() {
         Promise.all([fetchLaunches(), fetchContent()])
           .then(function (results) {
@@ -915,17 +920,16 @@
             var launch = pickPrimaryLaunch(upcoming, now);
             if (!launch) {
               renderNoLaunch();
+              scheduleRefresh();
               return;
             }
 
             renderLaunch(launch, cmsContent[launch.id] || {});
+            scheduleRefresh();
           })
           .catch(function () {
             renderError();
-          })
-          .finally(function () {
-            clearTimeout(refreshTimer);
-            refreshTimer = setTimeout(fetchAndRender, lastFetchFailed ? RETRY_MS : REFRESH_MS);
+            scheduleRefresh();
           });
       }
 
