@@ -417,6 +417,7 @@
       var LOCATION_IDS = '12,27';
       var resizeTimer = null;
       var refreshTimer = null;
+      var countdownTimer = null;
       var imageProbeCache = {};
       var imageMatchCache = {};
       var currentLaunch = null;
@@ -472,7 +473,7 @@
         var net = new Date(launch.net).getTime();
         if (!Number.isFinite(net)) return false;
         if (isInFlight(launch)) return true;
-        if (isCompleted(launch)) return now <= net + 48 * MS_PER_HOUR;
+        if (isCompleted(launch)) return false;
         return net <= now + MAX_FUTURE_DAYS * MS_PER_DAY;
       }
 
@@ -727,33 +728,12 @@
       }
 
       function fetchLL2Direct() {
-        var thirtyDaysAgo = new Date(Date.now() - PREVIOUS_LAUNCHES_LOOKBACK_DAYS * MS_PER_DAY).toISOString();
-        var upcomingReq = fetchWithTimeout(LL2_BASE + '/launches/upcoming/?location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed')
+        return fetchWithTimeout(LL2_BASE + '/launches/upcoming/?location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed')
           .then(function (response) {
             if (!response.ok) throw new Error('LL2 upcoming HTTP ' + response.status);
             return response.json();
-          });
-        var previousReq = fetchWithTimeout(LL2_BASE + '/launches/previous/?location__ids=' + LOCATION_IDS + '&limit=' + MAX_FETCH_LAUNCHES + '&mode=detailed&net__gte=' + encodeURIComponent(thirtyDaysAgo))
-          .then(function (response) {
-            if (!response.ok) throw new Error('LL2 previous HTTP ' + response.status);
-            return response.json();
-          });
-        return Promise.allSettled([upcomingReq, previousReq]).then(function (responses) {
-          if (responses[0].status !== 'fulfilled' && responses[1].status !== 'fulfilled') {
-            throw new Error('Unable to load launch data from Launch Library 2');
-          }
-          var byId = {};
-          var upcomingData = responses[0].status === 'fulfilled' ? (responses[0].value || {}) : {};
-          var previousData = responses[1].status === 'fulfilled' ? (responses[1].value || {}) : {};
-
-          (previousData.results || []).forEach(function (launch) {
-            if (launch && launch.id) byId[launch.id] = launch;
-          });
-          (upcomingData.results || []).forEach(function (launch) {
-            if (launch && launch.id) byId[launch.id] = launch;
-          });
-
-          return Object.keys(byId).map(function (id) { return byId[id]; });
+          }).then(function (data) {
+            return data && data.results ? data.results : [];
         });
       }
 
@@ -947,10 +927,15 @@
         setQrImage();
         applyTvScale();
         fetchAndRender();
-        setInterval(refreshCountdown, 1000);
+        countdownTimer = setInterval(refreshCountdown, 1000);
         window.addEventListener('resize', function () {
           clearTimeout(resizeTimer);
           resizeTimer = setTimeout(applyTvScale, RESIZE_DEBOUNCE_MS);
+        });
+        window.addEventListener('beforeunload', function () {
+          clearTimeout(refreshTimer);
+          clearTimeout(resizeTimer);
+          clearInterval(countdownTimer);
         });
       });
     })();
