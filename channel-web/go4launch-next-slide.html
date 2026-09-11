@@ -416,6 +416,7 @@
       var LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
       var LOCATION_IDS = '12,27';
       var resizeTimer = null;
+      var refreshTimer = null;
       var imageProbeCache = {};
       var imageMatchCache = {};
       var currentLaunch = null;
@@ -688,9 +689,13 @@
           return 'AWAITING UPDATE';
         }
         var total = Math.floor(diff / 1000);
-        var hours = Math.floor(total / 3600);
+        var days = Math.floor(total / 86400);
+        var hours = Math.floor((total % 86400) / 3600);
         var mins = Math.floor((total % 3600) / 60);
         var secs = total % 60;
+        if (days > 0) {
+          return 'T-' + days + 'D ' + String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+        }
         return 'T-' + String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
       }
 
@@ -835,6 +840,10 @@
         };
         image.alt = altText;
         image.src = url;
+        if (image.complete && image.naturalWidth > 0) {
+          empty.classList.add('hidden');
+          image.classList.remove('hidden');
+        }
       }
 
       function renderLaunch(launch, cms) {
@@ -915,7 +924,8 @@
             renderError();
           })
           .finally(function () {
-            setTimeout(fetchAndRender, lastFetchFailed ? RETRY_MS : REFRESH_MS);
+            clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(fetchAndRender, lastFetchFailed ? RETRY_MS : REFRESH_MS);
           });
       }
 
