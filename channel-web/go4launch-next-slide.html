@@ -849,6 +849,9 @@
         findFeatureImage(launch, cms).then(function (imageUrl) {
           if (!currentLaunch || currentLaunch.id !== launchId) return;
           applyImage(imageUrl, getMissionName(launch));
+        }).catch(function () {
+          if (!currentLaunch || currentLaunch.id !== launchId) return;
+          applyImage(null, '');
         });
 
         refreshCountdown();
