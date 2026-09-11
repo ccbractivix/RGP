@@ -420,7 +420,10 @@
       var imageMatchCache = {};
       var currentLaunch = null;
       var lastFetchFailed = false;
-      var GO4LAUNCH_IMAGE_ROOT = new URL('../go4launch/images/', window.location.href).href;
+      var pathParts = window.location.pathname.split('/').filter(Boolean);
+      var channelWebIndex = pathParts.lastIndexOf('channel-web');
+      var repoBasePath = channelWebIndex > 0 ? '/' + pathParts.slice(0, channelWebIndex).join('/') + '/' : '/';
+      var GO4LAUNCH_IMAGE_ROOT = (window.location.origin || '') + repoBasePath + 'go4launch/images/';
 
       var API_BASE = (function () {
         var meta = document.querySelector('meta[name="api-base"]');
