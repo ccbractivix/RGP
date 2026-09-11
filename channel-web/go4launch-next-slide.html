@@ -389,7 +389,7 @@
           </div>
 
           <div class="qr-card">
-            <img id="qr-image" alt="QR code for Go4Launch guest page" src="">
+            <img id="qr-image" alt="QR code for Go4Launch guest page" src="../go4launch/images/go4launch-app-qr.png">
             <span>Scan Me</span>
           </div>
         </div>
@@ -413,14 +413,13 @@
       var MAX_FETCH_LAUNCHES = 12;
       var PREVIOUS_LAUNCHES_LOOKBACK_DAYS = 30;
       var RESIZE_DEBOUNCE_MS = 250;
-      var GO4LAUNCH_URL = 'https://ccbractivix.github.io/RGP/go4launch/index.html';
-      var QR_FALLBACK_URL = '../go4launch/images/go4launch-app-qr.png';
       var LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
       var LOCATION_IDS = '12,27';
       var resizeTimer = null;
       var imageProbeCache = {};
       var imageMatchCache = {};
       var currentLaunch = null;
+      var lastFetchFailed = false;
 
       var API_BASE = (function () {
         var meta = document.querySelector('meta[name="api-base"]');
@@ -764,16 +763,6 @@
           });
       }
 
-      function setQrImage() {
-        var qrSize = 220;
-        var qrImage = document.getElementById('qr-image');
-        qrImage.onerror = function () {
-          qrImage.onerror = null;
-          qrImage.src = QR_FALLBACK_URL;
-        };
-        qrImage.src = 'https://api.qrserver.com/v1/create-qr-code/?size=' + qrSize + 'x' + qrSize + '&margin=0&data=' + encodeURIComponent(GO4LAUNCH_URL);
-      }
-
       function updateTimestamp() {
         document.getElementById('updated-at').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', {
           timeZone: 'America/New_York',
@@ -784,6 +773,7 @@
 
       function renderNoLaunch() {
         currentLaunch = null;
+        lastFetchFailed = false;
         document.getElementById('loading').classList.add('hidden');
         document.getElementById('error-state').style.display = 'none';
         document.getElementById('main').classList.remove('hidden');
@@ -830,6 +820,8 @@
 
       function renderLaunch(launch, cms) {
         currentLaunch = launch;
+        lastFetchFailed = false;
+        var launchId = launch.id;
         var badge = document.getElementById('status-badge');
         badge.className = statusClass(launch.status);
         badge.textContent = statusLabel(launch.status);
@@ -842,6 +834,7 @@
         document.getElementById('launch-site').textContent = getLocation(launch);
 
         findFeatureImage(launch, cms).then(function (imageUrl) {
+          if (!currentLaunch || currentLaunch.id !== launchId) return;
           applyImage(imageUrl, getMissionName(launch));
         });
 
@@ -863,6 +856,7 @@
 
       function renderError() {
         currentLaunch = null;
+        lastFetchFailed = true;
         document.getElementById('loading').classList.add('hidden');
         document.getElementById('main').classList.add('hidden');
         document.getElementById('error-state').style.display = 'flex';
@@ -893,7 +887,7 @@
             renderError();
           })
           .finally(function () {
-            setTimeout(fetchAndRender, currentLaunch ? REFRESH_MS : RETRY_MS);
+            setTimeout(fetchAndRender, lastFetchFailed ? RETRY_MS : REFRESH_MS);
           });
       }
 
@@ -908,7 +902,6 @@
       }
 
       document.addEventListener('DOMContentLoaded', function () {
-        setQrImage();
         applyTvScale();
         fetchAndRender();
         setInterval(refreshCountdown, 1000);
