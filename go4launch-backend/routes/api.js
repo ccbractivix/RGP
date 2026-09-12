@@ -23,7 +23,8 @@ const PARSED_LOC_IDS = (process.env.GO4LAUNCH_LOCATION_IDS || '')
   .filter(Number.isFinite);
 const LOC_IDS  = PARSED_LOC_IDS.length ? PARSED_LOC_IDS : [12, 27];
 const PREV_LIMIT = 50; // max previous launches to fetch from LL2
-const ALLOWED_SKY_ICON_SQL = ALLOWED_SKY_ICONS.map(icon => `'${icon}'`).join(', ');
+const escapeSqlLiteral = (value) => `'${String(value).replace(/'/g, "''")}'`;
+const ALLOWED_SKY_ICON_SQL = ALLOWED_SKY_ICONS.map(escapeSqlLiteral).join(', ');
 
 // In-memory cache for LL2 launches (avoids hitting LL2 on every request)
 let launchCache = { data: null, ts: 0 };
