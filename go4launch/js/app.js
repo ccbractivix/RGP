@@ -13,6 +13,7 @@ const CONFIG = {
     CACHE_KEY: 'go4launch_v1',
     CACHE_TTL: 6 * 60 * 60 * 1000,
     DATA_REFRESH_MS: 5 * 60 * 1000,
+    CELESTIAL_CACHE_TTL: 60 * 60 * 1000,
     MAX_LAUNCHES: 15,
     MAX_DAYS: 14,
     GALLERIES_JSON: 'data/galleries.json',
@@ -187,25 +188,29 @@ async function loadCelestialSection(launch) {
 
     const cacheKey = getCelestialCacheKey(launch);
     if (Object.prototype.hasOwnProperty.call(celestialCache, cacheKey)) {
-        slot.innerHTML = buildCelestialSection(celestialCache[cacheKey]);
-        return;
+        const cached = celestialCache[cacheKey];
+        if (cached && Date.now() - cached.ts < CONFIG.CELESTIAL_CACHE_TTL) {
+            slot.innerHTML = buildCelestialSection(cached.data);
+            return;
+        }
+        delete celestialCache[cacheKey];
     }
 
     try {
         const res = await fetch(`${CONFIG.BACKEND}/api/launches/${encodeURIComponent(launch.id)}/celestial`);
         if (!res.ok) {
-            celestialCache[cacheKey] = null;
+            celestialCache[cacheKey] = { data: null, ts: Date.now() };
             return;
         }
 
         const data = await res.json();
-        celestialCache[cacheKey] = data;
+        celestialCache[cacheKey] = { data, ts: Date.now() };
 
         if (slot.dataset.launchId === launch.id && slot.dataset.launchNet === (launch.net || '')) {
             slot.innerHTML = buildCelestialSection(data);
         }
     } catch (e) {
-        celestialCache[cacheKey] = null;
+        celestialCache[cacheKey] = { data: null, ts: Date.now() };
         console.warn('Celestial data load failed:', e);
     }
 }
@@ -350,6 +355,7 @@ async function refreshLaunchData() {
         if (!fresh.length) return;
         localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
         allLaunches = fresh;
+        celestialCache = {};
         await loadCMS();
         handleRoute();
     } catch (e) {

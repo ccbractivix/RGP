@@ -31,6 +31,7 @@ const VIEW_TIME_ZONE = process.env.GO4LAUNCH_VIEW_TIME_ZONE || 'America/New_York
 // In-memory cache for LL2 launches (avoids hitting LL2 on every request)
 let launchCache = { data: null, ts: 0 };
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CELESTIAL_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 const celestialCache = new Map();
 
 async function fetchLL2(endpoint, params) {
@@ -118,7 +119,8 @@ function toCelestialBody(name, altitude, azimuth) {
 async function fetchCelestialAtT0(launch) {
   const cacheKey = `${launch.id}:${launch.net || ''}`;
   const cached = celestialCache.get(cacheKey);
-  if (cached) return cached;
+  if (cached && Date.now() - cached.ts < CELESTIAL_CACHE_TTL) return cached.data;
+  if (cached) celestialCache.delete(cacheKey);
 
   const { date, time } = getEasternDateAndTime(launch.net);
   const { data } = await axios.get(ASTRONOMY_API_URL, {
@@ -151,7 +153,7 @@ async function fetchCelestialAtT0(launch) {
     moon,
   };
 
-  celestialCache.set(cacheKey, result);
+  celestialCache.set(cacheKey, { data: result, ts: Date.now() });
   if (celestialCache.size > 200) {
     const firstKey = celestialCache.keys().next().value;
     if (firstKey) celestialCache.delete(firstKey);
