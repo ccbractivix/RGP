@@ -162,17 +162,14 @@ function formatAngle(value) {
     return Number.isFinite(value) ? `${value.toFixed(1)}°` : '—';
 }
 
-function buildCelestialSection(data, fallbackMessage = 'No Sun or Moon is visible from this viewing location at T-0.') {
+function buildCelestialSection(data, fallbackMessage = 'No Sun or Moon is visible from the beach at T-0.') {
     const visibleBodies = Array.isArray(data?.visibleBodies) ? data.visibleBodies : [];
-    const locationText = data.location
-        ? `${data.location.latitude}, ${data.location.longitude}`
-        : 'the viewing location';
 
     const rows = visibleBodies.map(item => `<div class="celestial-row">
             <span class="celestial-body">${esc(item.body)}</span>
-            <span class="celestial-value">${esc(formatAngle(item.altitude))} up</span>
+            <span class="celestial-value">${esc(formatAngle(item.altitude))} altitude</span>
             <span class="celestial-sep">•</span>
-            <span class="celestial-value">azimuth ${esc(formatAngle(item.azimuth))}${item.direction ? ` (${esc(item.direction)})` : ''}</span>
+            <span class="celestial-value">${esc(formatAngle(item.azimuth))} clockwise from due north</span>
         </div>`).join('');
 
     const content = rows
@@ -181,7 +178,7 @@ function buildCelestialSection(data, fallbackMessage = 'No Sun or Moon is visibl
 
     return `<div class="detail-section section-celestial">
         <div class="detail-section-title"><span class="section-icon">☀️</span> T-0 Sky Position</div>
-        <div class="section-text">From ${esc(locationText)} at liftoff. Sun appears during daylight hours. Moon appears only when it is between +1° and 90° above the horizon.</div>
+        <div class="section-text">As viewed from the beach at liftoff.</div>
         ${content}
     </div>`;
 }
