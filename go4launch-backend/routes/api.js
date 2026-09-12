@@ -112,7 +112,6 @@ function toCelestialBody(name, altitude, azimuth) {
     azimuth: az,
     direction: azimuthToCompass(az),
     aboveHorizon: Number.isFinite(alt) && alt > 0,
-    easternSky: Number.isFinite(az) && az >= 0 && az <= 180,
   };
 }
 
@@ -140,13 +139,13 @@ async function fetchCelestialAtT0(launch) {
   const visibleBodies = [];
 
   if (sun.aboveHorizon) visibleBodies.push(sun);
-  if (moon.aboveHorizon && moon.easternSky) visibleBodies.push(moon);
+  if (Number.isFinite(moon.altitude) && moon.altitude >= 1 && moon.altitude <= 90) visibleBodies.push(moon);
 
   const result = {
     source: 'ipgeolocation.io',
     location: { latitude: VIEW_LAT, longitude: VIEW_LON },
     t0: { utc: launch.net, eastern_date: date, eastern_time: time },
-    moonRule: 'Shown only when above the horizon with azimuth between 0° and 180°',
+    moonRule: 'Shown only when altitude is between +1° and 90° above the horizon',
     hasVisibleBody: visibleBodies.length > 0,
     visibleBodies,
     sun,
