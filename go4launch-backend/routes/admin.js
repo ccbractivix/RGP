@@ -4,8 +4,10 @@ const express = require('express');
 const axios   = require('axios');
 const db      = require('../db/db');
 const { sendGalleryEmail, ARCHIVE_BASE_URL } = require('./api');
+const { ALLOWED_SKY_ICONS } = require('../constants/skyIcons');
 
 const router = express.Router();
+const ALLOWED_SKY_ICON_SET = new Set(ALLOWED_SKY_ICONS);
 
 // UUID v4 format validation to prevent SSRF / path traversal
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -48,24 +50,54 @@ router.get('/content/:launchId', async (req, res) => {
 
 // ── POST /admin/content — save/update content for a launch ──
 router.post('/content', async (req, res) => {
-  const { launch_id, headline, viewing_guide, chris_says, trajectory, gallery_url, rtl_datetime, rtl_notes } = req.body;
+  const {
+    launch_id,
+    headline,
+    viewing_guide,
+    chris_says,
+    trajectory,
+    sky_position_icon,
+    sky_position_text,
+    gallery_url,
+    rtl_datetime,
+    rtl_notes,
+  } = req.body;
   if (!launch_id) {
     return res.status(400).json({ error: 'launch_id required' });
   }
+
+  const incomingSkyIcon = typeof sky_position_icon === 'string' ? sky_position_icon.trim().toLowerCase() : '';
+  const normalizedSkyIcon = ALLOWED_SKY_ICON_SET.has(incomingSkyIcon) ? incomingSkyIcon : 'sun';
+  const normalizedSkyText = typeof sky_position_text === 'string'
+    ? sky_position_text.trim()
+    : '';
   try {
     await db.query(`
-      INSERT INTO go4launch_content (launch_id, headline, viewing_guide, chris_says, trajectory, gallery_url, rtl_datetime, rtl_notes, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+      INSERT INTO go4launch_content (launch_id, headline, viewing_guide, chris_says, trajectory, sky_position_icon, sky_position_text, gallery_url, rtl_datetime, rtl_notes, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
       ON CONFLICT (launch_id) DO UPDATE SET
         headline = EXCLUDED.headline,
         viewing_guide = EXCLUDED.viewing_guide,
         chris_says = EXCLUDED.chris_says,
         trajectory = EXCLUDED.trajectory,
+        sky_position_icon = EXCLUDED.sky_position_icon,
+        sky_position_text = EXCLUDED.sky_position_text,
         gallery_url = EXCLUDED.gallery_url,
         rtl_datetime = EXCLUDED.rtl_datetime,
         rtl_notes = EXCLUDED.rtl_notes,
         updated_at = NOW()
-    `, [launch_id, headline || null, viewing_guide || null, chris_says || null, trajectory || null, gallery_url || null, rtl_datetime || null, rtl_notes || null]);
+    `, [
+      launch_id,
+      headline || null,
+      viewing_guide || null,
+      chris_says || null,
+      trajectory || null,
+      normalizedSkyIcon,
+      normalizedSkyText || null,
+      gallery_url || null,
+      rtl_datetime || null,
+      rtl_notes || null,
+    ]);
     return res.json({ ok: true });
   } catch (err) {
     console.error('[go4launch] POST /admin/content error:', err.message);

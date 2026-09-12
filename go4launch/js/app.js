@@ -13,7 +13,6 @@ const CONFIG = {
     CACHE_KEY: 'go4launch_v1',
     CACHE_TTL: 6 * 60 * 60 * 1000,
     DATA_REFRESH_MS: 5 * 60 * 1000,
-    CELESTIAL_CACHE_TTL: 60 * 60 * 1000,
     MAX_LAUNCHES: 15,
     MAX_DAYS: 14,
     GALLERIES_JSON: 'data/galleries.json',
@@ -33,7 +32,24 @@ let launchRefreshTimer = null;
 let queuedLaunchRefreshTimer = null;
 let launchRefreshInFlight = false;
 let currentSawItLaunchId = null;
-let celestialCache = {};
+const SKY_POSITION_ICON_MAP = {
+    sun: '☀️',
+    'clear-sky': '🌞',
+    'mostly-sunny': '🌤️',
+    'partly-cloudy': '⛅',
+    'mostly-cloudy': '🌥️',
+    overcast: '☁️',
+    moon: '🌙',
+    'moon-new': '🌑',
+    'moon-waxing-crescent': '🌒',
+    'moon-first-quarter': '🌓',
+    'moon-waxing-gibbous': '🌔',
+    'moon-full': '🌕',
+    'moon-waning-gibbous': '🌖',
+    'moon-third-quarter': '🌗',
+    'moon-last-quarter': '🌗',
+    'moon-waning-crescent': '🌘',
+};
 
 // ============================================================
 // UTILITIES
@@ -154,77 +170,22 @@ function getLocation(launch) {
     return launch.pad?.location?.name || launch.pad?.name || '';
 }
 
-function getCelestialCacheKey(launch) {
-    return `${launch?.id || ''}:${launch?.net || ''}`;
+function resolveSkyPositionIcon(icon) {
+    return SKY_POSITION_ICON_MAP[icon] || SKY_POSITION_ICON_MAP.sun;
 }
 
-function formatAngle(value) {
-    return Number.isFinite(value) ? `${value.toFixed(1)}°` : '—';
-}
+function buildSkyPositionSection(cms) {
+    const selectedIcon = (cms?.sky_position_icon || '').toLowerCase();
+    const text = (cms?.sky_position_text || '').trim();
+    const hasCustomIcon = !!selectedIcon && selectedIcon !== 'sun';
+    if (!text && !hasCustomIcon) return '';
 
-function buildCelestialSection(data, fallbackMessage = 'No Sun or Moon is visible from the beach at T-0.') {
-    const visibleBodies = Array.isArray(data?.visibleBodies) ? data.visibleBodies : [];
-
-    const rows = visibleBodies.map(item => `<div class="celestial-row">
-            <span class="celestial-body">${esc(item.body)}</span>
-            <span class="celestial-value">${esc(formatAngle(item.altitude))} altitude</span>
-            <span class="celestial-sep">•</span>
-            <span class="celestial-value">${esc(formatAngle(item.azimuth))} clockwise from due north${item.direction ? ` (${esc(item.direction)})` : ''}</span>
-        </div>`).join('');
-
-    const content = rows
-        ? `<div class="celestial-list">${rows}</div>`
-        : `<div class="section-text">${esc(fallbackMessage)}</div>`;
-
+    const icon = resolveSkyPositionIcon(selectedIcon);
+    const textHtml = text ? `<div class="sky-position-text">${sanitizeCmsHtml(text)}</div>` : '';
     return `<div class="detail-section section-celestial">
-        <div class="detail-section-title"><span class="section-icon">☀️</span> T-0 Sky Position</div>
-        <div class="section-text">As viewed from the beach at liftoff.</div>
-        ${content}
+        <div class="detail-section-title"><span class="section-icon">${icon}</span> T-0 Sky Position</div>
+        ${textHtml}
     </div>`;
-}
-
-async function loadCelestialSection(launch) {
-    const slot = document.getElementById('celestial-section-slot');
-    if (!slot || !launch?.id) return;
-    if (!CONFIG.BACKEND) {
-        slot.innerHTML = buildCelestialSection(null, 'T-0 sky data is unavailable because the backend is not configured.');
-        return;
-    }
-
-    const cacheKey = getCelestialCacheKey(launch);
-    const renderUnavailable = (message = 'T-0 sky data is currently unavailable.') => {
-        celestialCache[cacheKey] = { data: null, ts: Date.now() };
-        if (slot.dataset.launchId === launch.id && slot.dataset.launchNet === (launch.net || '')) {
-            slot.innerHTML = buildCelestialSection(null, message);
-        }
-    };
-
-    if (Object.prototype.hasOwnProperty.call(celestialCache, cacheKey)) {
-        const cached = celestialCache[cacheKey];
-        if (cached && Date.now() - cached.ts < CONFIG.CELESTIAL_CACHE_TTL) {
-            slot.innerHTML = buildCelestialSection(cached.data);
-            return;
-        }
-        delete celestialCache[cacheKey];
-    }
-
-    try {
-        const res = await fetch(`${CONFIG.BACKEND}/api/launches/${encodeURIComponent(launch.id)}/celestial`);
-        if (!res.ok) {
-            renderUnavailable();
-            return;
-        }
-
-        const data = await res.json();
-        celestialCache[cacheKey] = { data, ts: Date.now() };
-
-        if (slot.dataset.launchId === launch.id && slot.dataset.launchNet === (launch.net || '')) {
-            slot.innerHTML = buildCelestialSection(data);
-        }
-    } catch (e) {
-        renderUnavailable();
-        console.warn('Celestial data load failed:', e);
-    }
 }
 
 // ============================================================
@@ -367,7 +328,6 @@ async function refreshLaunchData() {
         if (!fresh.length) return;
         localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
         allLaunches = fresh;
-        celestialCache = {};
         await loadCMS();
         handleRoute();
     } catch (e) {
@@ -698,7 +658,7 @@ function renderDetailContent(launch, cms, backHash) {
         </div>`;
     }
 
-    html += `<div id="celestial-section-slot" data-launch-id="${esc(launch.id)}" data-launch-net="${esc(launch.net || '')}"></div>`;
+    html += buildSkyPositionSection(cms);
 
     // --- CMS: Rocket Talk LIVE! ---
     if (cms?.rtl_datetime) {
@@ -740,7 +700,6 @@ function renderDetailContent(launch, cms, backHash) {
 
     app.innerHTML = html;
     startCountdowns();
-    loadCelestialSection(launch);
     window.scrollTo(0, 0);
 }
 

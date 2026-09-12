@@ -721,6 +721,12 @@ body {
     color: var(--text-dim);
 }
 
+.section-celestial .sky-position-text {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
 /* --- Rocket Talk LIVE Section (Purple accent) --- */
 .section-rtl {
     border-left: 3px solid var(--accent-purple);
