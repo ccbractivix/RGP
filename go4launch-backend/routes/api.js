@@ -139,6 +139,7 @@ async function fetchCelestialAtT0(launch) {
     source: 'ipgeolocation.io',
     location: { latitude: VIEW_LAT, longitude: VIEW_LON },
     t0: { utc: launch.net, eastern_date: date, eastern_time: time },
+    moonRule: 'Shown only when above the horizon with azimuth between 0° and 180°',
     hasVisibleBody: visibleBodies.length > 0,
     visibleBodies,
     sun,

@@ -44,7 +44,7 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 - `GET /api/content` — All CMS content
 - `GET /api/content/:launchId` — Single launch content
 - `GET /api/launches` — Upcoming/recent LL2 launches (proxy + cache)
-- `GET /api/launches/:id/celestial` — Sun/Moon position at T-0 from the configured viewing location
+- `GET /api/launches/:id/celestial` — Sun position at T-0, plus Moon position only when it is above the horizon in the eastern sky (azimuth `0`–`180`) from the configured viewing location
 - `GET /api/galleries` — Auto-built gallery hall (see **Gallery hall automation** below)
 - `GET /api/ll2-status` — Latest result of the scheduled LL2 API version/deprecation monitor
 - `POST /api/archive` — Archive a completed launch

@@ -176,7 +176,7 @@ function buildCelestialSection(data) {
 
     return `<div class="detail-section section-celestial">
         <div class="detail-section-title"><span class="section-icon">☀️</span> T-0 Sky Position</div>
-        <div class="section-text">From ${esc(locationText)} at liftoff.</div>
+        <div class="section-text">From ${esc(locationText)} at liftoff. Moon appears only when it is above the horizon in the eastern sky.</div>
         <div class="celestial-list">${rows}</div>
     </div>`;
 }
