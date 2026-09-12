@@ -190,7 +190,7 @@ async function autoArchiveCompleted(launches) {
         viewing_guide   TEXT,
         chris_says      TEXT,
         trajectory      TEXT,
-        sky_position_icon TEXT,
+        sky_position_icon TEXT CHECK (sky_position_icon IN ('sun', 'moon')),
         sky_position_text TEXT,
         card_image_path TEXT,
         gallery_url     TEXT,
@@ -229,6 +229,21 @@ async function autoArchiveCompleted(launches) {
       UPDATE go4launch_content
       SET sky_position_icon = 'sun'
       WHERE sky_position_icon IS NULL OR sky_position_icon NOT IN ('sun', 'moon')
+    `);
+    await db.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conname = 'go4launch_content_sky_position_icon_check'
+        ) THEN
+          ALTER TABLE go4launch_content
+            ADD CONSTRAINT go4launch_content_sky_position_icon_check
+            CHECK (sky_position_icon IN ('sun', 'moon'));
+        END IF;
+      END
+      $$;
     `);
 
     await db.query(`
