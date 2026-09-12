@@ -338,6 +338,16 @@
           <textarea id="f-trajectory" placeholder="Launch trajectory details, direction, visibility arc…"></textarea>
           <div class="field-hint">Trajectory information for this launch. Leave blank to omit this section.</div>
 
+          <label for="f-sky-position-icon">T-0 Sky Position Icon</label>
+          <select id="f-sky-position-icon">
+            <option value="sun">☀️ Sun</option>
+            <option value="moon">🌙 Moon</option>
+          </select>
+
+          <label for="f-sky-position-text">T-0 Sky Position Text</label>
+          <textarea id="f-sky-position-text" rows="3" placeholder="Enter your custom T-0 sky position message…"></textarea>
+          <div class="field-hint">Manual message shown in the T-0 Sky Position section. Leave blank to hide the section.</div>
+
           <label for="f-gallery-url">Photo Gallery URL</label>
           <input type="url" id="f-gallery-url" placeholder="https://photos.example.com/launch-gallery">
           <div class="field-hint">Link to a photo gallery for this launch. Shows on the More Info and Archive pages.</div>
@@ -594,6 +604,8 @@
               document.getElementById('f-viewing-guide').value = data.viewing_guide || '';
               document.getElementById('f-chris-says').value = data.chris_says || '';
               document.getElementById('f-trajectory').value = data.trajectory || '';
+              document.getElementById('f-sky-position-icon').value = (data.sky_position_icon || 'sun').toLowerCase() === 'moon' ? 'moon' : 'sun';
+              document.getElementById('f-sky-position-text').value = data.sky_position_text || '';
               document.getElementById('f-gallery-url').value = data.gallery_url || '';
               if (data.rtl_datetime) {
                 document.getElementById('f-rtl-datetime').value = utcToEasternLocal(data.rtl_datetime);
@@ -614,9 +626,10 @@
       }
 
       function clearForm() {
-        ['f-headline', 'f-viewing-guide', 'f-chris-says', 'f-trajectory', 'f-gallery-url', 'f-rtl-datetime', 'f-rtl-notes'].forEach(id => {
+        ['f-headline', 'f-viewing-guide', 'f-chris-says', 'f-trajectory', 'f-sky-position-text', 'f-gallery-url', 'f-rtl-datetime', 'f-rtl-notes'].forEach(id => {
           document.getElementById(id).value = '';
         });
+        document.getElementById('f-sky-position-icon').value = 'sun';
         document.getElementById('f-image').value = '';
         document.getElementById('image-preview').style.display = 'none';
         document.getElementById('btn-upload').disabled = true;
@@ -647,6 +660,8 @@
               viewing_guide: document.getElementById('f-viewing-guide').value.trim(),
               chris_says: document.getElementById('f-chris-says').value.trim(),
               trajectory: document.getElementById('f-trajectory').value.trim(),
+              sky_position_icon: document.getElementById('f-sky-position-icon').value,
+              sky_position_text: document.getElementById('f-sky-position-text').value.trim(),
               gallery_url: document.getElementById('f-gallery-url').value.trim(),
               rtl_datetime: toEasternISO(document.getElementById('f-rtl-datetime').value),
               rtl_notes: document.getElementById('f-rtl-notes').value.trim(),
