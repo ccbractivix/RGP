@@ -14,6 +14,7 @@ const ALLOWED_SKY_ICONS = [
   'moon-waxing-gibbous',
   'moon-full',
   'moon-waning-gibbous',
+  'moon-third-quarter',
   'moon-last-quarter',
   'moon-waning-crescent',
 ];

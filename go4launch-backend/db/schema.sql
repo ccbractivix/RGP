@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS go4launch_content (
     'moon-waxing-gibbous',
     'moon-full',
     'moon-waning-gibbous',
+    'moon-third-quarter',
     'moon-last-quarter',
     'moon-waning-crescent'
   )),

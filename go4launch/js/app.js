@@ -46,6 +46,7 @@ const SKY_POSITION_ICON_MAP = {
     'moon-waxing-gibbous': '🌔',
     'moon-full': '🌕',
     'moon-waning-gibbous': '🌖',
+    'moon-third-quarter': '🌗',
     'moon-last-quarter': '🌗',
     'moon-waning-crescent': '🌘',
 };
