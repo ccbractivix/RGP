@@ -65,6 +65,9 @@ router.post('/content', async (req, res) => {
   }
 
   const normalizedSkyIcon = sky_position_icon === 'moon' ? 'moon' : 'sun';
+  const normalizedSkyText = typeof sky_position_text === 'string'
+    ? sky_position_text.trim()
+    : '';
   try {
     await db.query(`
       INSERT INTO go4launch_content (launch_id, headline, viewing_guide, chris_says, trajectory, sky_position_icon, sky_position_text, gallery_url, rtl_datetime, rtl_notes, updated_at)
@@ -87,7 +90,7 @@ router.post('/content', async (req, res) => {
       chris_says || null,
       trajectory || null,
       normalizedSkyIcon,
-      sky_position_text || null,
+      normalizedSkyText || null,
       gallery_url || null,
       rtl_datetime || null,
       rtl_notes || null,
