@@ -153,8 +153,24 @@ function getLocation(launch) {
 }
 
 function resolveSkyPositionIcon(icon) {
-    if (icon === 'moon') return '🌙';
-    return '☀️';
+    const icons = {
+        sun: '☀️',
+        'clear-sky': '🌞',
+        'mostly-sunny': '🌤️',
+        'partly-cloudy': '⛅',
+        'mostly-cloudy': '🌥️',
+        overcast: '☁️',
+        moon: '🌙',
+        'moon-new': '🌑',
+        'moon-waxing-crescent': '🌒',
+        'moon-first-quarter': '🌓',
+        'moon-waxing-gibbous': '🌔',
+        'moon-full': '🌕',
+        'moon-waning-gibbous': '🌖',
+        'moon-last-quarter': '🌗',
+        'moon-waning-crescent': '🌘',
+    };
+    return icons[icon] || icons.sun;
 }
 
 function buildSkyPositionSection(cms) {

@@ -190,7 +190,23 @@ async function autoArchiveCompleted(launches) {
         viewing_guide   TEXT,
         chris_says      TEXT,
         trajectory      TEXT,
-        sky_position_icon TEXT NOT NULL DEFAULT 'sun' CHECK (sky_position_icon IN ('sun', 'moon')),
+        sky_position_icon TEXT NOT NULL DEFAULT 'sun' CHECK (sky_position_icon IN (
+          'sun',
+          'clear-sky',
+          'mostly-sunny',
+          'partly-cloudy',
+          'mostly-cloudy',
+          'overcast',
+          'moon',
+          'moon-new',
+          'moon-waxing-crescent',
+          'moon-first-quarter',
+          'moon-waxing-gibbous',
+          'moon-full',
+          'moon-waning-gibbous',
+          'moon-last-quarter',
+          'moon-waning-crescent'
+        )),
         sky_position_text TEXT,
         card_image_path TEXT,
         gallery_url     TEXT,
@@ -228,7 +244,23 @@ async function autoArchiveCompleted(launches) {
     await db.query(`
       UPDATE go4launch_content
       SET sky_position_icon = 'sun'
-      WHERE sky_position_icon IS NULL OR sky_position_icon NOT IN ('sun', 'moon')
+      WHERE sky_position_icon IS NULL OR sky_position_icon NOT IN (
+        'sun',
+        'clear-sky',
+        'mostly-sunny',
+        'partly-cloudy',
+        'mostly-cloudy',
+        'overcast',
+        'moon',
+        'moon-new',
+        'moon-waxing-crescent',
+        'moon-first-quarter',
+        'moon-waxing-gibbous',
+        'moon-full',
+        'moon-waning-gibbous',
+        'moon-last-quarter',
+        'moon-waning-crescent'
+      )
     `);
     await db.query("ALTER TABLE go4launch_content ALTER COLUMN sky_position_icon SET DEFAULT 'sun'");
     await db.query(`
@@ -237,20 +269,27 @@ async function autoArchiveCompleted(launches) {
       WHERE sky_position_icon IS NULL
     `);
     await db.query('ALTER TABLE go4launch_content ALTER COLUMN sky_position_icon SET NOT NULL');
+    await db.query('ALTER TABLE go4launch_content DROP CONSTRAINT IF EXISTS go4launch_content_sky_position_icon_check');
     await db.query(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1
-          FROM pg_constraint
-          WHERE conname = 'go4launch_content_sky_position_icon_check'
-        ) THEN
-          ALTER TABLE go4launch_content
-            ADD CONSTRAINT go4launch_content_sky_position_icon_check
-            CHECK (sky_position_icon IN ('sun', 'moon'));
-        END IF;
-      END
-      $$;
+      ALTER TABLE go4launch_content
+      ADD CONSTRAINT go4launch_content_sky_position_icon_check
+      CHECK (sky_position_icon IN (
+        'sun',
+        'clear-sky',
+        'mostly-sunny',
+        'partly-cloudy',
+        'mostly-cloudy',
+        'overcast',
+        'moon',
+        'moon-new',
+        'moon-waxing-crescent',
+        'moon-first-quarter',
+        'moon-waxing-gibbous',
+        'moon-full',
+        'moon-waning-gibbous',
+        'moon-last-quarter',
+        'moon-waning-crescent'
+      ))
     `);
 
     await db.query(`

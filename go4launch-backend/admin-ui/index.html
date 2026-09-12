@@ -340,8 +340,25 @@
 
           <label for="f-sky-position-icon">T-0 Sky Position Icon</label>
           <select id="f-sky-position-icon">
-            <option value="sun">☀️ Sun</option>
-            <option value="moon">🌙 Moon</option>
+            <optgroup label="Sun / Weather">
+              <option value="sun">☀️ Sun (Default)</option>
+              <option value="clear-sky">🌞 Clear Sky</option>
+              <option value="mostly-sunny">🌤️ Mostly Sunny</option>
+              <option value="partly-cloudy">⛅ Partly Cloudy</option>
+              <option value="mostly-cloudy">🌥️ Mostly Cloudy</option>
+              <option value="overcast">☁️ Overcast</option>
+            </optgroup>
+            <optgroup label="Moon / Phases">
+              <option value="moon">🌙 Moon (Generic)</option>
+              <option value="moon-new">🌑 New Moon</option>
+              <option value="moon-waxing-crescent">🌒 Waxing Crescent</option>
+              <option value="moon-first-quarter">🌓 First Quarter</option>
+              <option value="moon-waxing-gibbous">🌔 Waxing Gibbous</option>
+              <option value="moon-full">🌕 Full Moon</option>
+              <option value="moon-waning-gibbous">🌖 Waning Gibbous</option>
+              <option value="moon-last-quarter">🌗 Last Quarter</option>
+              <option value="moon-waning-crescent">🌘 Waning Crescent</option>
+            </optgroup>
           </select>
 
           <label for="f-sky-position-text">T-0 Sky Position Text</label>
@@ -604,7 +621,10 @@
               document.getElementById('f-viewing-guide').value = data.viewing_guide || '';
               document.getElementById('f-chris-says').value = data.chris_says || '';
               document.getElementById('f-trajectory').value = data.trajectory || '';
-              document.getElementById('f-sky-position-icon').value = (data.sky_position_icon || 'sun').toLowerCase() === 'moon' ? 'moon' : 'sun';
+              const skyIcon = (data.sky_position_icon || 'sun').toLowerCase();
+              const skyIconSelect = document.getElementById('f-sky-position-icon');
+              skyIconSelect.value = skyIcon;
+              if (skyIconSelect.value !== skyIcon) skyIconSelect.value = 'sun';
               document.getElementById('f-sky-position-text').value = data.sky_position_text || '';
               document.getElementById('f-gallery-url').value = data.gallery_url || '';
               if (data.rtl_datetime) {
