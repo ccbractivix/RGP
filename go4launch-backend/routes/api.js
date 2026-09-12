@@ -26,7 +26,7 @@ const ASTRONOMY_API_URL = 'https://api.ipgeolocation.io/v3/astronomy';
 const ASTRONOMY_API_KEY = process.env.GO4LAUNCH_ASTRONOMY_API_KEY || '';
 const VIEW_LAT = parseFloat(process.env.GO4LAUNCH_VIEW_LAT || '28.4049766');
 const VIEW_LON = parseFloat(process.env.GO4LAUNCH_VIEW_LON || '-80.5957059');
-const VIEW_TIME_ZONE = 'America/New_York';
+const VIEW_TIME_ZONE = process.env.GO4LAUNCH_VIEW_TIME_ZONE || 'America/New_York';
 
 // In-memory cache for LL2 launches (avoids hitting LL2 on every request)
 let launchCache = { data: null, ts: 0 };
