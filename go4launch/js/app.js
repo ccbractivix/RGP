@@ -169,7 +169,7 @@ function buildCelestialSection(data, fallbackMessage = 'No Sun or Moon is visibl
             <span class="celestial-body">${esc(item.body)}</span>
             <span class="celestial-value">${esc(formatAngle(item.altitude))} altitude</span>
             <span class="celestial-sep">•</span>
-            <span class="celestial-value">${esc(formatAngle(item.azimuth))} clockwise from due north</span>
+            <span class="celestial-value">${esc(formatAngle(item.azimuth))} clockwise from due north${item.direction ? ` (${esc(item.direction)})` : ''}</span>
         </div>`).join('');
 
     const content = rows
