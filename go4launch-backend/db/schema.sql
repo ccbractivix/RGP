@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS go4launch_content (
   viewing_guide   TEXT,
   chris_says      TEXT,
   trajectory      TEXT,
-  sky_position_icon TEXT CHECK (sky_position_icon IN ('sun', 'moon')),
+  sky_position_icon TEXT NOT NULL DEFAULT 'sun' CHECK (sky_position_icon IN ('sun', 'moon')),
   sky_position_text TEXT,
   card_image_path TEXT,
   gallery_url     TEXT,

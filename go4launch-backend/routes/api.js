@@ -190,7 +190,7 @@ async function autoArchiveCompleted(launches) {
         viewing_guide   TEXT,
         chris_says      TEXT,
         trajectory      TEXT,
-        sky_position_icon TEXT CHECK (sky_position_icon IN ('sun', 'moon')),
+        sky_position_icon TEXT NOT NULL DEFAULT 'sun' CHECK (sky_position_icon IN ('sun', 'moon')),
         sky_position_text TEXT,
         card_image_path TEXT,
         gallery_url     TEXT,
@@ -230,6 +230,13 @@ async function autoArchiveCompleted(launches) {
       SET sky_position_icon = 'sun'
       WHERE sky_position_icon IS NULL OR sky_position_icon NOT IN ('sun', 'moon')
     `);
+    await db.query("ALTER TABLE go4launch_content ALTER COLUMN sky_position_icon SET DEFAULT 'sun'");
+    await db.query(`
+      UPDATE go4launch_content
+      SET sky_position_icon = 'sun'
+      WHERE sky_position_icon IS NULL
+    `);
+    await db.query('ALTER TABLE go4launch_content ALTER COLUMN sky_position_icon SET NOT NULL');
     await db.query(`
       DO $$
       BEGIN
