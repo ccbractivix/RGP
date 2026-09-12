@@ -195,6 +195,13 @@ async function loadCelestialSection(launch) {
     }
 
     const cacheKey = getCelestialCacheKey(launch);
+    const renderUnavailable = (message = 'T-0 sky data is currently unavailable.') => {
+        celestialCache[cacheKey] = { data: null, ts: Date.now() };
+        if (slot.dataset.launchId === launch.id && slot.dataset.launchNet === (launch.net || '')) {
+            slot.innerHTML = buildCelestialSection(null, message);
+        }
+    };
+
     if (Object.prototype.hasOwnProperty.call(celestialCache, cacheKey)) {
         const cached = celestialCache[cacheKey];
         if (cached && Date.now() - cached.ts < CONFIG.CELESTIAL_CACHE_TTL) {
@@ -207,10 +214,7 @@ async function loadCelestialSection(launch) {
     try {
         const res = await fetch(`${CONFIG.BACKEND}/api/launches/${encodeURIComponent(launch.id)}/celestial`);
         if (!res.ok) {
-            celestialCache[cacheKey] = { data: null, ts: Date.now() };
-            if (slot.dataset.launchId === launch.id && slot.dataset.launchNet === (launch.net || '')) {
-                slot.innerHTML = buildCelestialSection(null, 'T-0 sky data is currently unavailable.');
-            }
+            renderUnavailable();
             return;
         }
 
@@ -221,10 +225,7 @@ async function loadCelestialSection(launch) {
             slot.innerHTML = buildCelestialSection(data);
         }
     } catch (e) {
-        celestialCache[cacheKey] = { data: null, ts: Date.now() };
-        if (slot.dataset.launchId === launch.id && slot.dataset.launchNet === (launch.net || '')) {
-            slot.innerHTML = buildCelestialSection(null, 'T-0 sky data is currently unavailable.');
-        }
+        renderUnavailable();
         console.warn('Celestial data load failed:', e);
     }
 }
