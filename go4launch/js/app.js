@@ -186,14 +186,17 @@ async function loadCelestialSection(launch) {
     if (!slot || !launch?.id || !CONFIG.BACKEND) return;
 
     const cacheKey = getCelestialCacheKey(launch);
-    if (celestialCache[cacheKey]) {
+    if (Object.prototype.hasOwnProperty.call(celestialCache, cacheKey)) {
         slot.innerHTML = buildCelestialSection(celestialCache[cacheKey]);
         return;
     }
 
     try {
         const res = await fetch(`${CONFIG.BACKEND}/api/launches/${encodeURIComponent(launch.id)}/celestial`);
-        if (!res.ok) return;
+        if (!res.ok) {
+            celestialCache[cacheKey] = null;
+            return;
+        }
 
         const data = await res.json();
         celestialCache[cacheKey] = data;
@@ -202,6 +205,7 @@ async function loadCelestialSection(launch) {
             slot.innerHTML = buildCelestialSection(data);
         }
     } catch (e) {
+        celestialCache[cacheKey] = null;
         console.warn('Celestial data load failed:', e);
     }
 }

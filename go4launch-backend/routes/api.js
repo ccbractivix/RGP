@@ -64,6 +64,11 @@ async function getLaunchById(id) {
 }
 
 function getEasternDateAndTime(isoString) {
+  const dateObj = new Date(isoString);
+  if (Number.isNaN(dateObj.getTime())) {
+    throw new Error('Invalid launch T-0 time');
+  }
+
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: VIEW_TIME_ZONE,
     year: 'numeric',
@@ -73,7 +78,7 @@ function getEasternDateAndTime(isoString) {
     minute: '2-digit',
     hour12: false,
     hourCycle: 'h23',
-  }).formatToParts(new Date(isoString));
+  }).formatToParts(dateObj);
 
   const map = {};
   for (const part of parts) {
@@ -115,7 +120,7 @@ async function fetchCelestialAtT0(launch) {
   const cached = celestialCache.get(cacheKey);
   if (cached) return cached;
 
-  const { date, time } = getEasternDateAndTime(launch.net || new Date().toISOString());
+  const { date, time } = getEasternDateAndTime(launch.net);
   const { data } = await axios.get(ASTRONOMY_API_URL, {
     params: {
       apiKey: ASTRONOMY_API_KEY,
@@ -251,12 +256,16 @@ router.get('/launches/:id/celestial', async (req, res) => {
   try {
     const launch = await getLaunchById(req.params.id);
     if (!launch) return res.status(404).json({ error: 'Launch not found' });
+    if (!launch.net) return res.status(422).json({ error: 'Launch does not have a scheduled T-0 time' });
 
     const result = await fetchCelestialAtT0(launch);
     return res.json(result);
   } catch (err) {
     if (err.response && err.response.status === 404) {
       return res.status(404).json({ error: 'Launch not found' });
+    }
+    if (err.message === 'Invalid launch T-0 time') {
+      return res.status(422).json({ error: 'Launch does not have a valid scheduled T-0 time' });
     }
     console.error('[go4launch] /api/launches/:id/celestial error:', err.message);
     return res.status(502).json({ error: 'Failed to fetch T-0 celestial data' });
