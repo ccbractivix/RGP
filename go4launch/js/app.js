@@ -162,31 +162,46 @@ function formatAngle(value) {
     return Number.isFinite(value) ? `${value.toFixed(1)}°` : '—';
 }
 
-function buildCelestialSection(data) {
-    if (!data?.hasVisibleBody || !Array.isArray(data.visibleBodies) || !data.visibleBodies.length) return '';
+function buildCelestialSection(data, fallbackMessage = 'No Sun or Moon is visible from this viewing location at T-0.') {
+    const visibleBodies = Array.isArray(data?.visibleBodies) ? data.visibleBodies : [];
     const locationText = data.location
         ? `${data.location.latitude}, ${data.location.longitude}`
         : 'the viewing location';
 
-    const rows = data.visibleBodies.map(item => `<div class="celestial-row">
+    const rows = visibleBodies.map(item => `<div class="celestial-row">
             <span class="celestial-body">${esc(item.body)}</span>
             <span class="celestial-value">${esc(formatAngle(item.altitude))} up</span>
             <span class="celestial-sep">•</span>
             <span class="celestial-value">azimuth ${esc(formatAngle(item.azimuth))}${item.direction ? ` (${esc(item.direction)})` : ''}</span>
         </div>`).join('');
 
+    const content = rows
+        ? `<div class="celestial-list">${rows}</div>`
+        : `<div class="section-text">${esc(fallbackMessage)}</div>`;
+
     return `<div class="detail-section section-celestial">
         <div class="detail-section-title"><span class="section-icon">☀️</span> T-0 Sky Position</div>
-        <div class="section-text">From ${esc(locationText)} at liftoff. Moon appears only when it is above the horizon in the eastern sky.</div>
-        <div class="celestial-list">${rows}</div>
+        <div class="section-text">From ${esc(locationText)} at liftoff. Sun appears during daylight hours. Moon appears only when it is between +1° and 90° above the horizon.</div>
+        ${content}
     </div>`;
 }
 
 async function loadCelestialSection(launch) {
     const slot = document.getElementById('celestial-section-slot');
-    if (!slot || !launch?.id || !CONFIG.BACKEND) return;
+    if (!slot || !launch?.id) return;
+    if (!CONFIG.BACKEND) {
+        slot.innerHTML = buildCelestialSection(null, 'T-0 sky data is unavailable because the backend is not configured.');
+        return;
+    }
 
     const cacheKey = getCelestialCacheKey(launch);
+    const renderUnavailable = (message = 'T-0 sky data is currently unavailable.') => {
+        celestialCache[cacheKey] = { data: null, ts: Date.now() };
+        if (slot.dataset.launchId === launch.id && slot.dataset.launchNet === (launch.net || '')) {
+            slot.innerHTML = buildCelestialSection(null, message);
+        }
+    };
+
     if (Object.prototype.hasOwnProperty.call(celestialCache, cacheKey)) {
         const cached = celestialCache[cacheKey];
         if (cached && Date.now() - cached.ts < CONFIG.CELESTIAL_CACHE_TTL) {
@@ -199,7 +214,7 @@ async function loadCelestialSection(launch) {
     try {
         const res = await fetch(`${CONFIG.BACKEND}/api/launches/${encodeURIComponent(launch.id)}/celestial`);
         if (!res.ok) {
-            celestialCache[cacheKey] = { data: null, ts: Date.now() };
+            renderUnavailable();
             return;
         }
 
@@ -210,7 +225,7 @@ async function loadCelestialSection(launch) {
             slot.innerHTML = buildCelestialSection(data);
         }
     } catch (e) {
-        celestialCache[cacheKey] = { data: null, ts: Date.now() };
+        renderUnavailable();
         console.warn('Celestial data load failed:', e);
     }
 }

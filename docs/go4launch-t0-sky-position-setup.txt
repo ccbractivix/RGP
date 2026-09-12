@@ -36,8 +36,8 @@ What you need to do
 6. Verify the frontend
    - Open a launch in go4launch and tap "More Info"
    - If the Sun is above the horizon at T-0, the page will show the Sun
-   - If the Moon is above the horizon and its azimuth is between 0 and 180 degrees, the page will show the Moon
-   - If neither condition is true, the T-0 Sky Position section will not appear
+   - If the Moon is between +1 and 90 degrees above the horizon, the page will show the Moon
+   - If neither body is visible at T-0, the T-0 Sky Position section still appears with a visibility message
 
 Important note
 
