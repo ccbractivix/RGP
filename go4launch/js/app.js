@@ -164,7 +164,7 @@ function buildSkyPositionSection(cms) {
     const icon = resolveSkyPositionIcon((cms?.sky_position_icon || '').toLowerCase());
     return `<div class="detail-section section-celestial">
         <div class="detail-section-title"><span class="section-icon">${icon}</span> T-0 Sky Position</div>
-        <div class="section-text">${sanitizeCmsHtml(text)}</div>
+        <div class="sky-position-text">${sanitizeCmsHtml(text)}</div>
     </div>`;
 }
 
