@@ -26,6 +26,9 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 | `GO4LAUNCH_LOCATION_IDS` | No | Comma-separated LL2 location IDs (default: `12,27`) |
 | `GO4LAUNCH_GALLERY_BASE_URL` | No | Base URL of the Google Sites gallery hall used to auto-derive per-launch gallery links (default: `https://sites.google.com/view/holidayinnclubcape/home/rocket-talk/galleries`) |
 | `GO4LAUNCH_GALLERY_WINDOW_DAYS` | No | How many days back to pull completed launches when building the gallery hall (default: `120`) |
+| `GO4LAUNCH_ASTRONOMY_API_KEY` | For T-0 sky position | IPGeolocation Astronomy API key used to return Sun/Moon position for a launch's T-0 |
+| `GO4LAUNCH_VIEW_LAT` | No | Viewpoint latitude for T-0 Sun/Moon position checks (default: `28.4049766`) |
+| `GO4LAUNCH_VIEW_LON` | No | Viewpoint longitude for T-0 Sun/Moon position checks (default: `-80.5957059`) |
 | `LL2_BASE_URL` | No | Override the LL2 base URL/version (default: `https://ll.thespacedevs.com/2.3.0`) |
 | `LL2_VERSION_CHECK_CRON` | No | Cron expression for the scheduled LL2 version monitor (default: `0 7 * * *`, i.e. daily 7:00 AM Eastern) |
 | `LL2_ALERT_WEBHOOK_URL` | No | Incoming webhook (Slack/Discord/Teams) to actively notify when LL2 looks deprecated or a newer version appears. If unset, alerts go to the logs only |
@@ -40,6 +43,7 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 - `GET /api/content` — All CMS content
 - `GET /api/content/:launchId` — Single launch content
 - `GET /api/launches` — Upcoming/recent LL2 launches (proxy + cache)
+- `GET /api/launches/:id/celestial` — Sun/Moon position at T-0 from the configured viewing location
 - `GET /api/galleries` — Auto-built gallery hall (see **Gallery hall automation** below)
 - `GET /api/ll2-status` — Latest result of the scheduled LL2 API version/deprecation monitor
 - `POST /api/archive` — Archive a completed launch

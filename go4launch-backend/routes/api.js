@@ -22,10 +22,16 @@ const PARSED_LOC_IDS = (process.env.GO4LAUNCH_LOCATION_IDS || '')
   .filter(Number.isFinite);
 const LOC_IDS  = PARSED_LOC_IDS.length ? PARSED_LOC_IDS : [12, 27];
 const PREV_LIMIT = 50; // max previous launches to fetch from LL2
+const ASTRONOMY_API_URL = 'https://api.ipgeolocation.io/v3/astronomy';
+const ASTRONOMY_API_KEY = process.env.GO4LAUNCH_ASTRONOMY_API_KEY || '';
+const VIEW_LAT = parseFloat(process.env.GO4LAUNCH_VIEW_LAT || '28.4049766');
+const VIEW_LON = parseFloat(process.env.GO4LAUNCH_VIEW_LON || '-80.5957059');
+const VIEW_TIME_ZONE = 'America/New_York';
 
 // In-memory cache for LL2 launches (avoids hitting LL2 on every request)
 let launchCache = { data: null, ts: 0 };
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const celestialCache = new Map();
 
 async function fetchLL2(endpoint, params) {
   const headers = {};
@@ -33,6 +39,118 @@ async function fetchLL2(endpoint, params) {
   const url = `${LL2_BASE}${endpoint}`;
   const res = await axios.get(url, { params, headers, timeout: 15000 });
   return res.data;
+}
+
+async function getLaunchById(id) {
+  if (launchCache.data && Date.now() - launchCache.ts < CACHE_TTL) {
+    const cached = launchCache.data.find(l => l.id === id);
+    if (cached) return cached;
+  }
+  try {
+    const data = await fetchLL2(`/launches/${encodeURIComponent(id)}/`, { mode: 'detailed' });
+    if (data && data.id) return data;
+  } catch (err) {
+    if (!err.response || err.response.status !== 404) throw err;
+  }
+
+  const { rows } = await db.query(
+    'SELECT launch_data FROM go4launch_archive WHERE launch_id = $1',
+    [id]
+  );
+  if (!rows.length || !rows[0].launch_data) return null;
+  const archived = rows[0].launch_data;
+  if (!archived.id) archived.id = id;
+  return archived;
+}
+
+function getEasternDateAndTime(isoString) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: VIEW_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    hourCycle: 'h23',
+  }).formatToParts(new Date(isoString));
+
+  const map = {};
+  for (const part of parts) {
+    if (part.type !== 'literal') map[part.type] = part.value;
+  }
+  return {
+    date: `${map.year}-${map.month}-${map.day}`,
+    time: `${map.hour}:${map.minute}`,
+  };
+}
+
+function parseAngle(value) {
+  const num = typeof value === 'number' ? value : parseFloat(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function azimuthToCompass(azimuth) {
+  if (!Number.isFinite(azimuth)) return '';
+  const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  const normalized = ((azimuth % 360) + 360) % 360;
+  return directions[Math.round(normalized / 22.5) % directions.length];
+}
+
+function toCelestialBody(name, altitude, azimuth) {
+  const alt = parseAngle(altitude);
+  const az = parseAngle(azimuth);
+  return {
+    body: name,
+    altitude: alt,
+    azimuth: az,
+    direction: azimuthToCompass(az),
+    aboveHorizon: Number.isFinite(alt) && alt > 0,
+    easternSky: Number.isFinite(az) && az >= 0 && az <= 180,
+  };
+}
+
+async function fetchCelestialAtT0(launch) {
+  const cacheKey = `${launch.id}:${launch.net || ''}`;
+  const cached = celestialCache.get(cacheKey);
+  if (cached) return cached;
+
+  const { date, time } = getEasternDateAndTime(launch.net || new Date().toISOString());
+  const { data } = await axios.get(ASTRONOMY_API_URL, {
+    params: {
+      apiKey: ASTRONOMY_API_KEY,
+      lat: VIEW_LAT,
+      long: VIEW_LON,
+      date,
+      time,
+    },
+    timeout: 15000,
+  });
+
+  const astronomy = data?.astronomy || data || {};
+  const sun = toCelestialBody('Sun', astronomy.sun_altitude, astronomy.sun_azimuth);
+  const moon = toCelestialBody('Moon', astronomy.moon_altitude, astronomy.moon_azimuth);
+  const visibleBodies = [];
+
+  if (sun.aboveHorizon) visibleBodies.push(sun);
+  if (moon.aboveHorizon && moon.easternSky) visibleBodies.push(moon);
+
+  const result = {
+    source: 'ipgeolocation.io',
+    location: { latitude: VIEW_LAT, longitude: VIEW_LON },
+    t0: { utc: launch.net, eastern_date: date, eastern_time: time },
+    hasVisibleBody: visibleBodies.length > 0,
+    visibleBodies,
+    sun,
+    moon,
+  };
+
+  celestialCache.set(cacheKey, result);
+  if (celestialCache.size > 200) {
+    const firstKey = celestialCache.keys().next().value;
+    if (firstKey) celestialCache.delete(firstKey);
+  }
+  return result;
 }
 
 // GET /api/launches — proxied upcoming + recent launches
@@ -109,15 +227,8 @@ router.get('/launches', async (_req, res) => {
 router.get('/launches/:id', async (req, res) => {
   const id = req.params.id;
   try {
-    // 1. Check in-memory cache first
-    if (launchCache.data && Date.now() - launchCache.ts < CACHE_TTL) {
-      const cached = launchCache.data.find(l => l.id === id);
-      if (cached) return res.json(cached);
-    }
-
-    // 2. Direct LL2 lookup
-    const data = await fetchLL2(`/launches/${encodeURIComponent(id)}/`, { mode: 'detailed' });
-    if (data && data.id) return res.json(data);
+    const data = await getLaunchById(id);
+    if (data) return res.json(data);
 
     return res.status(404).json({ error: 'Launch not found' });
   } catch (err) {
@@ -127,6 +238,27 @@ router.get('/launches/:id', async (req, res) => {
     }
     console.error('[go4launch] /api/launches/:id error:', err.message);
     return res.status(502).json({ error: 'Failed to fetch launch' });
+  }
+});
+
+// GET /api/launches/:id/celestial — Sun/Moon position at T-0 from the resort viewpoint
+router.get('/launches/:id/celestial', async (req, res) => {
+  if (!ASTRONOMY_API_KEY) {
+    return res.status(503).json({ error: 'Astronomy API key is not configured' });
+  }
+
+  try {
+    const launch = await getLaunchById(req.params.id);
+    if (!launch) return res.status(404).json({ error: 'Launch not found' });
+
+    const result = await fetchCelestialAtT0(launch);
+    return res.json(result);
+  } catch (err) {
+    if (err.response && err.response.status === 404) {
+      return res.status(404).json({ error: 'Launch not found' });
+    }
+    console.error('[go4launch] /api/launches/:id/celestial error:', err.message);
+    return res.status(502).json({ error: 'Failed to fetch T-0 celestial data' });
   }
 });
 

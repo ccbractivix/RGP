@@ -691,6 +691,36 @@ body {
     border-left: 3px solid var(--accent-gold);
 }
 
+/* --- T-0 Sky Position Section (Silver accent) --- */
+.section-celestial {
+    border-left: 3px solid #b0bec5;
+}
+
+.celestial-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-top: 0.75rem;
+}
+
+.celestial-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+    font-size: 0.92rem;
+    color: var(--text-muted);
+}
+
+.celestial-body {
+    color: var(--text);
+    font-weight: 700;
+}
+
+.celestial-sep {
+    color: var(--text-dim);
+}
+
 /* --- Rocket Talk LIVE Section (Purple accent) --- */
 .section-rtl {
     border-left: 3px solid var(--accent-purple);
