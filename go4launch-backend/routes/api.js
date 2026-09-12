@@ -5,6 +5,7 @@ const axios   = require('axios');
 const db      = require('../db/db');
 const { getLastStatus } = require('../services/ll2VersionCheck');
 const { buildHall } = require('../services/galleryHall');
+const { ALLOWED_SKY_ICONS } = require('../constants/skyIcons');
 
 const router = express.Router();
 
@@ -22,6 +23,7 @@ const PARSED_LOC_IDS = (process.env.GO4LAUNCH_LOCATION_IDS || '')
   .filter(Number.isFinite);
 const LOC_IDS  = PARSED_LOC_IDS.length ? PARSED_LOC_IDS : [12, 27];
 const PREV_LIMIT = 50; // max previous launches to fetch from LL2
+const ALLOWED_SKY_ICON_SQL = ALLOWED_SKY_ICONS.map(icon => `'${icon}'`).join(', ');
 
 // In-memory cache for LL2 launches (avoids hitting LL2 on every request)
 let launchCache = { data: null, ts: 0 };
@@ -190,23 +192,7 @@ async function autoArchiveCompleted(launches) {
         viewing_guide   TEXT,
         chris_says      TEXT,
         trajectory      TEXT,
-        sky_position_icon TEXT NOT NULL DEFAULT 'sun' CHECK (sky_position_icon IN (
-          'sun',
-          'clear-sky',
-          'mostly-sunny',
-          'partly-cloudy',
-          'mostly-cloudy',
-          'overcast',
-          'moon',
-          'moon-new',
-          'moon-waxing-crescent',
-          'moon-first-quarter',
-          'moon-waxing-gibbous',
-          'moon-full',
-          'moon-waning-gibbous',
-          'moon-last-quarter',
-          'moon-waning-crescent'
-        )),
+        sky_position_icon TEXT NOT NULL DEFAULT 'sun' CHECK (sky_position_icon IN (${ALLOWED_SKY_ICON_SQL})),
         sky_position_text TEXT,
         card_image_path TEXT,
         gallery_url     TEXT,
@@ -244,23 +230,7 @@ async function autoArchiveCompleted(launches) {
     await db.query(`
       UPDATE go4launch_content
       SET sky_position_icon = 'sun'
-      WHERE sky_position_icon IS NULL OR sky_position_icon NOT IN (
-        'sun',
-        'clear-sky',
-        'mostly-sunny',
-        'partly-cloudy',
-        'mostly-cloudy',
-        'overcast',
-        'moon',
-        'moon-new',
-        'moon-waxing-crescent',
-        'moon-first-quarter',
-        'moon-waxing-gibbous',
-        'moon-full',
-        'moon-waning-gibbous',
-        'moon-last-quarter',
-        'moon-waning-crescent'
-      )
+      WHERE sky_position_icon IS NULL OR sky_position_icon NOT IN (${ALLOWED_SKY_ICON_SQL})
     `);
     await db.query("ALTER TABLE go4launch_content ALTER COLUMN sky_position_icon SET DEFAULT 'sun'");
     await db.query(`
@@ -273,23 +243,7 @@ async function autoArchiveCompleted(launches) {
     await db.query(`
       ALTER TABLE go4launch_content
       ADD CONSTRAINT go4launch_content_sky_position_icon_check
-      CHECK (sky_position_icon IN (
-        'sun',
-        'clear-sky',
-        'mostly-sunny',
-        'partly-cloudy',
-        'mostly-cloudy',
-        'overcast',
-        'moon',
-        'moon-new',
-        'moon-waxing-crescent',
-        'moon-first-quarter',
-        'moon-waxing-gibbous',
-        'moon-full',
-        'moon-waning-gibbous',
-        'moon-last-quarter',
-        'moon-waning-crescent'
-      ))
+      CHECK (sky_position_icon IN (${ALLOWED_SKY_ICON_SQL}))
     `);
 
     await db.query(`

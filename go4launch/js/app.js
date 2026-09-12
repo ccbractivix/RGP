@@ -32,6 +32,23 @@ let launchRefreshTimer = null;
 let queuedLaunchRefreshTimer = null;
 let launchRefreshInFlight = false;
 let currentSawItLaunchId = null;
+const SKY_POSITION_ICON_MAP = {
+    sun: '☀️',
+    'clear-sky': '🌞',
+    'mostly-sunny': '🌤️',
+    'partly-cloudy': '⛅',
+    'mostly-cloudy': '🌥️',
+    overcast: '☁️',
+    moon: '🌙',
+    'moon-new': '🌑',
+    'moon-waxing-crescent': '🌒',
+    'moon-first-quarter': '🌓',
+    'moon-waxing-gibbous': '🌔',
+    'moon-full': '🌕',
+    'moon-waning-gibbous': '🌖',
+    'moon-last-quarter': '🌗',
+    'moon-waning-crescent': '🌘',
+};
 
 // ============================================================
 // UTILITIES
@@ -153,24 +170,7 @@ function getLocation(launch) {
 }
 
 function resolveSkyPositionIcon(icon) {
-    const icons = {
-        sun: '☀️',
-        'clear-sky': '🌞',
-        'mostly-sunny': '🌤️',
-        'partly-cloudy': '⛅',
-        'mostly-cloudy': '🌥️',
-        overcast: '☁️',
-        moon: '🌙',
-        'moon-new': '🌑',
-        'moon-waxing-crescent': '🌒',
-        'moon-first-quarter': '🌓',
-        'moon-waxing-gibbous': '🌔',
-        'moon-full': '🌕',
-        'moon-waning-gibbous': '🌖',
-        'moon-last-quarter': '🌗',
-        'moon-waning-crescent': '🌘',
-    };
-    return icons[icon] || icons.sun;
+    return SKY_POSITION_ICON_MAP[icon] || SKY_POSITION_ICON_MAP.sun;
 }
 
 function buildSkyPositionSection(cms) {

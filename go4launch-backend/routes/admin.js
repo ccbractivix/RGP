@@ -4,25 +4,10 @@ const express = require('express');
 const axios   = require('axios');
 const db      = require('../db/db');
 const { sendGalleryEmail, ARCHIVE_BASE_URL } = require('./api');
+const { ALLOWED_SKY_ICONS } = require('../constants/skyIcons');
 
 const router = express.Router();
-const ALLOWED_SKY_ICONS = new Set([
-  'sun',
-  'clear-sky',
-  'mostly-sunny',
-  'partly-cloudy',
-  'mostly-cloudy',
-  'overcast',
-  'moon',
-  'moon-new',
-  'moon-waxing-crescent',
-  'moon-first-quarter',
-  'moon-waxing-gibbous',
-  'moon-full',
-  'moon-waning-gibbous',
-  'moon-last-quarter',
-  'moon-waning-crescent',
-]);
+const ALLOWED_SKY_ICON_SET = new Set(ALLOWED_SKY_ICONS);
 
 // UUID v4 format validation to prevent SSRF / path traversal
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -82,7 +67,7 @@ router.post('/content', async (req, res) => {
   }
 
   const incomingSkyIcon = typeof sky_position_icon === 'string' ? sky_position_icon.trim().toLowerCase() : '';
-  const normalizedSkyIcon = ALLOWED_SKY_ICONS.has(incomingSkyIcon) ? incomingSkyIcon : 'sun';
+  const normalizedSkyIcon = ALLOWED_SKY_ICON_SET.has(incomingSkyIcon) ? incomingSkyIcon : 'sun';
   const normalizedSkyText = typeof sky_position_text === 'string'
     ? sky_position_text.trim()
     : '';
