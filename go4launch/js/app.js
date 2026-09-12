@@ -174,13 +174,16 @@ function resolveSkyPositionIcon(icon) {
 }
 
 function buildSkyPositionSection(cms) {
+    const selectedIcon = (cms?.sky_position_icon || '').toLowerCase();
     const text = (cms?.sky_position_text || '').trim();
-    if (!text) return '';
+    const hasCustomIcon = !!selectedIcon && selectedIcon !== 'sun';
+    if (!text && !hasCustomIcon) return '';
 
-    const icon = resolveSkyPositionIcon((cms?.sky_position_icon || '').toLowerCase());
+    const icon = resolveSkyPositionIcon(selectedIcon);
+    const textHtml = text ? `<div class="sky-position-text">${sanitizeCmsHtml(text)}</div>` : '';
     return `<div class="detail-section section-celestial">
         <div class="detail-section-title"><span class="section-icon">${icon}</span> T-0 Sky Position</div>
-        <div class="sky-position-text">${sanitizeCmsHtml(text)}</div>
+        ${textHtml}
     </div>`;
 }
 
