@@ -1,0 +1,51 @@
+go4launch T-0 Sky Position Setup
+
+This feature is already coded in the repository, but it will not return live Sun/Moon data until the backend is configured with an astronomy API key.
+
+What you need to do
+
+1. Create an IPGeolocation account
+   - Go to https://ipgeolocation.io/
+   - Sign up for the free tier
+   - Create or copy your Astronomy API key
+
+2. Add the API key to the go4launch backend environment
+   - Set this environment variable on the deployed go4launch backend:
+     GO4LAUNCH_ASTRONOMY_API_KEY=your_key_here
+   - Do not put this key in the frontend or commit it into the repository
+
+3. Confirm the viewing location settings
+   - The code already defaults to:
+     GO4LAUNCH_VIEW_LAT=28.4049766
+     GO4LAUNCH_VIEW_LON=-80.5957059
+     GO4LAUNCH_VIEW_TIME_ZONE=America/New_York
+   - If this is the correct viewing location, you do not need to set these
+   - Only set them if you want to override the defaults
+
+4. Redeploy or restart the go4launch backend
+   - The new environment variable must be present when the backend starts
+   - If you use Render, add the variable in the service settings and redeploy
+
+5. Verify the backend endpoint
+   - Open:
+     /api/launches/{launch_id}/celestial
+   - Example:
+     https://your-go4launch-backend.example.com/api/launches/LAUNCH_ID/celestial
+   - A working response will include Sun and Moon position data for T-0
+
+6. Verify the frontend
+   - Open a launch in go4launch and tap "More Info"
+   - If the Sun is above the horizon at T-0, the page will show the Sun
+   - If the Moon is above the horizon and its azimuth is between 0 and 180 degrees, the page will show the Moon
+   - If neither condition is true, the T-0 Sky Position section will not appear
+
+Important note
+
+Yes, the API configuration is something you need to do in deployment.
+The code is in place, but without GO4LAUNCH_ASTRONOMY_API_KEY the backend will not be able to call the astronomy service.
+
+Security reminder
+
+- Keep the API key only in backend environment variables
+- Do not hardcode it in HTML or JavaScript served to browsers
+- Do not commit it to GitHub
