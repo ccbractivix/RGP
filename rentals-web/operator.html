@@ -406,6 +406,55 @@
 
     .divider { margin: 12px 0; border: none; border-top: 1px solid var(--border); }
 
+    /* Rentals log */
+    .rentals-log {
+      margin: 0 12px 16px;
+      padding: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .rentals-log h3 {
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .rentals-log-list {
+      list-style: none;
+      max-height: 220px;
+      overflow: auto;
+    }
+
+    .rentals-log-item {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 7px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .rentals-log-item:first-child { border-top: none; padding-top: 0; }
+
+    .rentals-log-empty {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .r-rated-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .r-rated-check input {
+      margin: 2px 0 0;
+      width: auto;
+      flex-shrink: 0;
+    }
+
     /* ── Print ─────────────────────────────────────────────────────── */
     #print-view { display: none; }
 
@@ -532,12 +581,37 @@
 
     <div class="list-meta" id="list-meta"></div>
     <div id="title-list"></div>
+
+    <div class="rentals-log">
+      <h3>R-Rated Checkout Log</h3>
+      <ul class="rentals-log-list" id="rentals-log-list"></ul>
+      <div class="rentals-log-empty" id="rentals-log-empty">No R-rated checkout verifications yet.</div>
+    </div>
   </div>
 
   <!-- Action Modal -->
   <div class="modal-overlay hidden" id="modal-overlay">
     <div class="modal" id="modal">
       <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- R-Rated Confirmation Modal -->
+  <div class="modal-overlay hidden" id="r-rated-overlay">
+    <div class="modal">
+      <h2>R-Rated Checkout Verification</h2>
+      <div class="modal-sub">Operator confirmation is required before checkout.</div>
+      <label for="r-rated-operator-name">Operator Name</label>
+      <input type="text" id="r-rated-operator-name" placeholder="Enter your name" autocomplete="off">
+      <label class="r-rated-check">
+        <input type="checkbox" id="r-rated-age-check">
+        <span>I confirm that you have verified the guest is over 17 years of age.</span>
+      </label>
+      <div id="r-rated-error" class="modal-error" style="display:none"></div>
+      <div class="modal-actions">
+        <button class="btn btn-outline" id="r-rated-cancel-btn">Cancel</button>
+        <button class="btn btn-green" id="r-rated-confirm-btn">Complete Checkout</button>
+      </div>
     </div>
   </div>
 
@@ -564,6 +638,9 @@
     var allTitles    = [];
     var activeFilter = 'all';
     var searchQuery  = '';
+    var RENTALS_LOG_KEY = 'operator_r_rated_rentals_log_v1';
+    var rentalsLog = [];
+    var pendingRRatedConfirm = null;
 
     // Checkout session: {roomNumber, lastName, items:[{copyId,copyLabel,titleName}]}
     var session = null;
@@ -586,6 +663,77 @@
       t.textContent = msg;
       t.classList.add('show');
       setTimeout(function () { t.classList.remove('show'); }, 2500);
+    }
+
+    function isRRatedMovie(title) {
+      if (!title || title.format !== 'movie' || !title.mpaaRating) return false;
+      var rating = String(title.mpaaRating).trim().toUpperCase();
+      return rating === 'R' || rating.indexOf('RATED R') === 0;
+    }
+
+    function loadRentalsLog() {
+      try {
+        var stored = JSON.parse(localStorage.getItem(RENTALS_LOG_KEY) || '[]');
+        rentalsLog = Array.isArray(stored) ? stored : [];
+      } catch (_) {
+        rentalsLog = [];
+      }
+      renderRentalsLog();
+    }
+
+    function renderRentalsLog() {
+      var list = document.getElementById('rentals-log-list');
+      var empty = document.getElementById('rentals-log-empty');
+      if (!list || !empty) return;
+
+      if (rentalsLog.length === 0) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+
+      empty.style.display = 'none';
+      var html = '';
+      rentalsLog.forEach(function (entry) {
+        html += '<li class="rentals-log-item">' +
+          esc(entry.date || '—') + ' ' + esc(entry.time || '') +
+          ' · Operator: ' + esc(entry.operator || '—') +
+          ' · Age verified: ' + (entry.confirmed ? 'Yes' : 'No') +
+        '</li>';
+      });
+      list.innerHTML = html;
+    }
+
+    function addRentalsLogEntry(operatorName, confirmed) {
+      var now = new Date();
+      rentalsLog.unshift({
+        date: now.toLocaleDateString('en-US'),
+        time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }),
+        operator: operatorName,
+        confirmed: !!confirmed
+      });
+      rentalsLog = rentalsLog.slice(0, 200);
+      localStorage.setItem(RENTALS_LOG_KEY, JSON.stringify(rentalsLog));
+      renderRentalsLog();
+    }
+
+    function showRRatedError(msg) {
+      var el = document.getElementById('r-rated-error');
+      el.textContent = msg || '';
+      el.style.display = msg ? 'block' : 'none';
+    }
+
+    function openRRatedModal(onConfirm) {
+      pendingRRatedConfirm = onConfirm;
+      document.getElementById('r-rated-operator-name').value = '';
+      document.getElementById('r-rated-age-check').checked = false;
+      showRRatedError('');
+      document.getElementById('r-rated-overlay').classList.remove('hidden');
+    }
+
+    function closeRRatedModal() {
+      pendingRRatedConfirm = null;
+      document.getElementById('r-rated-overlay').classList.add('hidden');
     }
 
     function apiCall(method, path, body) {
@@ -640,12 +788,29 @@
       localStorage.removeItem('op_code'); authCode = ''; showLogin();
     });
 
+    document.getElementById('r-rated-cancel-btn').addEventListener('click', closeRRatedModal);
+    document.getElementById('r-rated-overlay').addEventListener('click', function (e) {
+      if (e.target === this) closeRRatedModal();
+    });
+    document.getElementById('r-rated-confirm-btn').addEventListener('click', function () {
+      if (!pendingRRatedConfirm) return;
+      var operatorName = (document.getElementById('r-rated-operator-name').value || '').trim();
+      var confirmed = document.getElementById('r-rated-age-check').checked;
+      if (!operatorName) { showRRatedError('Please enter your name.'); return; }
+      if (!confirmed) { showRRatedError('You must confirm age verification to continue.'); return; }
+      var handler = pendingRRatedConfirm;
+      pendingRRatedConfirm = null;
+      document.getElementById('r-rated-overlay').classList.add('hidden');
+      handler(operatorName, confirmed);
+    });
+
     // ── Load ──────────────────────────────────────────────────────────────────
 
     function loadTitles() {
       apiCall('GET', '/operator/titles').then(function (d) {
         allTitles = d.titles || [];
         render();
+        renderRentalsLog();
       }).catch(function (e) {
         if (e.message !== 'Unauthorized') showToast('Failed to load titles');
       });
@@ -666,24 +831,35 @@
 
     document.getElementById('session-checkout-btn').addEventListener('click', function () {
       if (!session || session.items.length === 0) return;
-      this.disabled = true;
       var self = this;
       var copyIds = session.items.map(function (i) { return i.copyId; });
-      apiCall('POST', '/operator/checkout', {
-        room_number: session.roomNumber,
-        last_name: session.lastName,
-        copy_ids: copyIds,
-      }).then(function (d) {
-        if (d.ok) {
-          showToast('✅ Checked out ' + session.items.length + ' title(s) to Room ' + session.roomNumber);
-          session = null;
-          updateSessionBar();
-          loadTitles();
-        } else {
-          showToast('❌ Error: ' + (d.error || 'Checkout failed'));
-        }
-      }).catch(function () { showToast('Connection error'); })
-      .finally(function () { self.disabled = false; });
+      var requiresRRatedCheck = session.items.some(function (i) { return i.isRRatedMovie; });
+
+      function runCheckout(operatorName, ageConfirmed) {
+        self.disabled = true;
+        apiCall('POST', '/operator/checkout', {
+          room_number: session.roomNumber,
+          last_name: session.lastName,
+          copy_ids: copyIds,
+        }).then(function (d) {
+          if (d.ok) {
+            if (requiresRRatedCheck) addRentalsLogEntry(operatorName, ageConfirmed);
+            showToast('✅ Checked out ' + session.items.length + ' title(s) to Room ' + session.roomNumber);
+            session = null;
+            updateSessionBar();
+            loadTitles();
+          } else {
+            showToast('❌ Error: ' + (d.error || 'Checkout failed'));
+          }
+        }).catch(function () { showToast('Connection error'); })
+        .finally(function () { self.disabled = false; });
+      }
+
+      if (requiresRRatedCheck) {
+        openRRatedModal(runCheckout);
+      } else {
+        runCheckout('', false);
+      }
     });
 
     document.getElementById('session-clear-btn').addEventListener('click', function () {
@@ -950,7 +1126,12 @@
           if (session.items.length >= 3) { showModalError('Maximum 3 titles per checkout'); return; }
           if (session.items.some(function (i) { return i.copyId === copyId; })) { showModalError('Copy already in session'); return; }
 
-          session.items.push({ copyId: copyId, copyLabel: copy ? copy.copyLabel : '?', titleName: title.title });
+          session.items.push({
+            copyId: copyId,
+            copyLabel: copy ? copy.copyLabel : '?',
+            titleName: title.title,
+            isRRatedMovie: isRRatedMovie(title)
+          });
           updateSessionBar();
           closeModal();
           showToast(title.title + ' added to session (' + session.items.length + '/3)');
@@ -973,26 +1154,40 @@
 
           var sessionItems = session ? session.items.slice() : [];
           if (!sessionItems.some(function (i) { return i.copyId === copyId; })) {
-            sessionItems.push({ copyId: copyId });
+            sessionItems.push({ copyId: copyId, isRRatedMovie: isRRatedMovie(title) });
+          }
+          var requiresRRatedCheck = sessionItems.some(function (i) { return i.isRRatedMovie; });
+
+          function runCheckout(operatorName, ageConfirmed) {
+            apiCall('POST', '/operator/checkout', {
+              room_number: info.roomNumber,
+              last_name:   info.lastName,
+              copy_ids:    sessionItems.map(function (i) { return i.copyId; }),
+            }).then(function (d) {
+              if (d.ok) {
+                if (requiresRRatedCheck) addRentalsLogEntry(operatorName, ageConfirmed);
+                var total = sessionItems.length;
+                showToast('✅ Checked out ' + total + ' title(s) to Room ' + info.roomNumber);
+                session = null;
+                updateSessionBar();
+                closeModal();
+                loadTitles();
+              } else {
+                showModalError(d.error || 'Checkout failed');
+              }
+            }).catch(function () { showModalError('Connection error'); })
+            .finally(function () { self.disabled = false; });
           }
 
-          apiCall('POST', '/operator/checkout', {
-            room_number: info.roomNumber,
-            last_name:   info.lastName,
-            copy_ids:    sessionItems.map(function (i) { return i.copyId; }),
-          }).then(function (d) {
-            if (d.ok) {
-              var total = sessionItems.length;
-              showToast('✅ Checked out ' + total + ' title(s) to Room ' + info.roomNumber);
-              session = null;
-              updateSessionBar();
-              closeModal();
-              loadTitles();
-            } else {
-              showModalError(d.error || 'Checkout failed');
-            }
-          }).catch(function () { showModalError('Connection error'); })
-          .finally(function () { self.disabled = false; });
+          if (requiresRRatedCheck) {
+            self.disabled = false;
+            openRRatedModal(function (operatorName, ageConfirmed) {
+              self.disabled = true;
+              runCheckout(operatorName, ageConfirmed);
+            });
+          } else {
+            runCheckout('', false);
+          }
         });
       }
 
@@ -1068,6 +1263,7 @@
     });
 
     // ── Init ──────────────────────────────────────────────────────────────────
+    loadRentalsLog();
     if (authCode) { showDashboard(); } else { showLogin(); }
   })();
   </script>
