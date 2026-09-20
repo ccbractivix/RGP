@@ -4,6 +4,7 @@ const {
   getOperatorTitles,
   getCopiesForTitle,
   checkoutCopies,
+  getCopyTitleMetadata,
   addAgeVerificationLog,
   getAgeVerificationLog,
   checkinCopy,
@@ -69,27 +70,35 @@ router.post('/checkout', async (req, res) => {
   if (!room_number || !last_name || !Array.isArray(copy_ids) || copy_ids.length === 0) {
     return res.status(400).json({ error: 'room_number, last_name, and copy_ids[] required' });
   }
-
-  if (age_verification !== undefined) {
-    const operatorName = String((age_verification && age_verification.operator_name) || '').trim();
-    const confirmed = age_verification && age_verification.confirmed === true;
-    if (!operatorName || !confirmed) {
-      return res.status(400).json({ error: 'Valid R-rated age verification is required' });
-    }
-  }
+  const normalizedCopyIds = copy_ids.map(Number).filter(n => !Number.isNaN(n));
 
   try {
+    const copyMeta = await getCopyTitleMetadata(normalizedCopyIds);
+    const rRatedTitles = copyMeta.filter(function (item) {
+      if (item.format !== 'movie' || !item.mpaaRating) return false;
+      const rating = String(item.mpaaRating).trim().toUpperCase();
+      return rating === 'R' || rating.startsWith('RATED R');
+    });
+    const requiresAgeVerification = rRatedTitles.length > 0;
+    const operatorName = String((age_verification && age_verification.operator_name) || '').trim();
+    const confirmed = age_verification && age_verification.confirmed === true;
+
+    if (requiresAgeVerification && (!operatorName || !confirmed)) {
+      return res.status(400).json({ error: 'Valid R-rated age verification is required' });
+    }
+
     const result = await checkoutCopies({
       roomNumber: String(room_number).trim(),
       lastName:   String(last_name).trim(),
-      copyIds:    copy_ids.map(Number),
+      copyIds:    normalizedCopyIds,
     });
-    if (age_verification) {
+
+    if (requiresAgeVerification) {
       await addAgeVerificationLog({
-        operatorName: String(age_verification.operator_name).trim(),
+        operatorName,
         roomNumber: String(room_number).trim(),
-        titleNames: Array.isArray(age_verification.title_names) ? age_verification.title_names : [],
-        confirmed: age_verification.confirmed === true,
+        titleNames: rRatedTitles.map(item => item.title),
+        confirmed,
       });
     }
     return res.json(result);

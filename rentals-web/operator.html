@@ -838,8 +838,7 @@
         if (requiresRRatedCheck) {
           payload.age_verification = {
             operator_name: operatorName,
-            confirmed: !!ageConfirmed,
-            title_names: session.items.map(function (i) { return i.titleName; })
+            confirmed: !!ageConfirmed
           };
         }
 
@@ -1170,8 +1169,7 @@
             if (requiresRRatedCheck) {
               payload.age_verification = {
                 operator_name: operatorName,
-                confirmed: !!ageConfirmed,
-                title_names: sessionItems.map(function (i) { return i.titleName || title.title; })
+                confirmed: !!ageConfirmed
               };
             }
             apiCall('POST', '/operator/checkout', payload).then(function (d) {

@@ -184,6 +184,22 @@ async function checkoutCopies({ roomNumber, lastName, copyIds }) {
   return { ok: true, checkoutIds };
 }
 
+async function getCopyTitleMetadata(copyIds) {
+  if (!Array.isArray(copyIds) || copyIds.length === 0) return [];
+  const result = await db.query(`
+    SELECT c.id AS copy_id, t.title, t.format, t.mpaa_rating
+      FROM rental_copies c
+      JOIN rental_titles t ON t.id = c.title_id
+     WHERE c.id = ANY($1::int[])
+  `, [copyIds]);
+  return result.rows.map(row => ({
+    copyId: row.copy_id,
+    title: row.title,
+    format: row.format,
+    mpaaRating: row.mpaa_rating,
+  }));
+}
+
 async function addAgeVerificationLog({ operatorName, roomNumber, titleNames, confirmed }) {
   const titles = Array.isArray(titleNames)
     ? titleNames.map(t => String(t || '').trim()).filter(Boolean)
@@ -194,7 +210,7 @@ async function addAgeVerificationLog({ operatorName, roomNumber, titleNames, con
   `, [
     String(operatorName || '').trim(),
     String(roomNumber || '').trim(),
-    titles.join(', '),
+    JSON.stringify(titles),
     confirmed === true
   ]);
 }
@@ -211,7 +227,14 @@ async function getAgeVerificationLog(limit = 200) {
   return result.rows.map(row => ({
     operator: row.operator_name,
     roomNumber: row.room_number,
-    titles: (row.title_names || '').split(',').map(s => s.trim()).filter(Boolean),
+    titles: (() => {
+      try {
+        const parsed = JSON.parse(row.title_names || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    })(),
     confirmed: row.confirmed === true,
     createdAt: row.created_at,
   }));
@@ -477,6 +500,7 @@ module.exports = {
   getOperatorTitles,
   getCopiesForTitle,
   checkoutCopies,
+  getCopyTitleMetadata,
   addAgeVerificationLog,
   getAgeVerificationLog,
   checkinCopy,
