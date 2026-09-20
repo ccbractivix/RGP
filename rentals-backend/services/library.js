@@ -184,6 +184,39 @@ async function checkoutCopies({ roomNumber, lastName, copyIds }) {
   return { ok: true, checkoutIds };
 }
 
+async function addAgeVerificationLog({ operatorName, roomNumber, titleNames, confirmed }) {
+  const titles = Array.isArray(titleNames)
+    ? titleNames.map(t => String(t || '').trim()).filter(Boolean)
+    : [];
+  await db.query(`
+    INSERT INTO rental_age_verifications (operator_name, room_number, title_names, confirmed)
+    VALUES ($1, $2, $3, $4)
+  `, [
+    String(operatorName || '').trim(),
+    String(roomNumber || '').trim(),
+    titles.join(', '),
+    confirmed === true
+  ]);
+}
+
+async function getAgeVerificationLog(limit = 200) {
+  const capped = Math.max(1, Math.min(parseInt(limit, 10) || 200, 500));
+  const result = await db.query(`
+    SELECT operator_name, room_number, title_names, confirmed, created_at
+      FROM rental_age_verifications
+     ORDER BY created_at DESC
+     LIMIT $1
+  `, [capped]);
+
+  return result.rows.map(row => ({
+    operator: row.operator_name,
+    roomNumber: row.room_number,
+    titles: (row.title_names || '').split(',').map(s => s.trim()).filter(Boolean),
+    confirmed: row.confirmed === true,
+    createdAt: row.created_at,
+  }));
+}
+
 /**
  * Check in a single copy.
  * If damaged=true the copy is marked 'damaged' and hidden from the public library.
@@ -444,6 +477,8 @@ module.exports = {
   getOperatorTitles,
   getCopiesForTitle,
   checkoutCopies,
+  addAgeVerificationLog,
+  getAgeVerificationLog,
   checkinCopy,
   getAllTitles,
   addTitle,

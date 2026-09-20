@@ -638,7 +638,6 @@
     var allTitles    = [];
     var activeFilter = 'all';
     var searchQuery  = '';
-    var RENTALS_LOG_KEY = 'operator_r_rated_rentals_log_v1';
     var rentalsLog = [];
     var pendingRRatedConfirm = null;
 
@@ -672,13 +671,12 @@
     }
 
     function loadRentalsLog() {
-      try {
-        var stored = JSON.parse(localStorage.getItem(RENTALS_LOG_KEY) || '[]');
-        rentalsLog = Array.isArray(stored) ? stored : [];
-      } catch (_) {
-        rentalsLog = [];
-      }
-      renderRentalsLog();
+      return apiCall('GET', '/operator/r-rated-log').then(function (d) {
+        rentalsLog = Array.isArray(d.entries) ? d.entries : [];
+        renderRentalsLog();
+      }).catch(function (e) {
+        if (e.message !== 'Unauthorized') showToast('Failed to load R-rated checkout log');
+      });
     }
 
     function renderRentalsLog() {
@@ -695,9 +693,12 @@
       empty.style.display = 'none';
       var html = '';
       rentalsLog.forEach(function (entry) {
+        var stamp = entry.createdAt ? new Date(entry.createdAt) : null;
+        var dateText = entry.date || (stamp ? stamp.toLocaleDateString('en-US') : '—');
+        var timeText = entry.time || (stamp ? stamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '');
         var titles = Array.isArray(entry.titles) && entry.titles.length ? entry.titles.join(', ') : 'R-rated title';
         html += '<li class="rentals-log-item">' +
-          esc(entry.date || '—') + ' ' + esc(entry.time || '') +
+          esc(dateText) + ' ' + esc(timeText) +
           ' · Operator: ' + esc(entry.operator || '—') +
           (entry.roomNumber ? ' · Room ' + esc(entry.roomNumber) : '') +
           ' · Title(s): ' + esc(titles) +
@@ -705,21 +706,6 @@
         '</li>';
       });
       list.innerHTML = html;
-    }
-
-    function addRentalsLogEntry(operatorName, confirmed, details) {
-      var now = new Date();
-      rentalsLog.unshift({
-        date: now.toLocaleDateString('en-US'),
-        time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }),
-        operator: operatorName,
-        confirmed: !!confirmed,
-        roomNumber: details && details.roomNumber ? String(details.roomNumber) : '',
-        titles: details && Array.isArray(details.titles) ? details.titles : []
-      });
-      rentalsLog = rentalsLog.slice(0, 200);
-      localStorage.setItem(RENTALS_LOG_KEY, JSON.stringify(rentalsLog));
-      renderRentalsLog();
     }
 
     function showRRatedError(msg) {
@@ -765,6 +751,7 @@
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       loadTitles();
+      loadRentalsLog();
     }
 
     document.getElementById('login-btn').addEventListener('click', function () {
@@ -818,7 +805,6 @@
       apiCall('GET', '/operator/titles').then(function (d) {
         allTitles = d.titles || [];
         render();
-        renderRentalsLog();
       }).catch(function (e) {
         if (e.message !== 'Unauthorized') showToast('Failed to load titles');
       });
@@ -844,19 +830,23 @@
       var requiresRRatedCheck = session.items.some(function (i) { return i.isRRatedMovie; });
 
       function runCheckout(operatorName, ageConfirmed) {
-        self.disabled = true;
-        apiCall('POST', '/operator/checkout', {
+        var payload = {
           room_number: session.roomNumber,
           last_name: session.lastName,
           copy_ids: copyIds,
-        }).then(function (d) {
+        };
+        if (requiresRRatedCheck) {
+          payload.age_verification = {
+            operator_name: operatorName,
+            confirmed: !!ageConfirmed,
+            title_names: session.items.map(function (i) { return i.titleName; })
+          };
+        }
+
+        self.disabled = true;
+        apiCall('POST', '/operator/checkout', payload).then(function (d) {
           if (d.ok) {
-            if (requiresRRatedCheck) {
-              addRentalsLogEntry(operatorName, ageConfirmed, {
-                roomNumber: session.roomNumber,
-                titles: session.items.map(function (i) { return i.titleName; })
-              });
-            }
+            if (requiresRRatedCheck) loadRentalsLog();
             showToast('✅ Checked out ' + session.items.length + ' title(s) to Room ' + session.roomNumber);
             session = null;
             updateSessionBar();
@@ -1172,18 +1162,21 @@
           var requiresRRatedCheck = sessionItems.some(function (i) { return i.isRRatedMovie; });
 
           function runCheckout(operatorName, ageConfirmed) {
-            apiCall('POST', '/operator/checkout', {
+            var payload = {
               room_number: info.roomNumber,
               last_name:   info.lastName,
               copy_ids:    sessionItems.map(function (i) { return i.copyId; }),
-            }).then(function (d) {
+            };
+            if (requiresRRatedCheck) {
+              payload.age_verification = {
+                operator_name: operatorName,
+                confirmed: !!ageConfirmed,
+                title_names: sessionItems.map(function (i) { return i.titleName || title.title; })
+              };
+            }
+            apiCall('POST', '/operator/checkout', payload).then(function (d) {
               if (d.ok) {
-                if (requiresRRatedCheck) {
-                  addRentalsLogEntry(operatorName, ageConfirmed, {
-                    roomNumber: info.roomNumber,
-                    titles: sessionItems.map(function (i) { return i.titleName || title.title; })
-                  });
-                }
+                if (requiresRRatedCheck) loadRentalsLog();
                 var total = sessionItems.length;
                 showToast('✅ Checked out ' + total + ' title(s) to Room ' + info.roomNumber);
                 session = null;
@@ -1281,7 +1274,6 @@
     });
 
     // ── Init ──────────────────────────────────────────────────────────────────
-    loadRentalsLog();
     if (authCode) { showDashboard(); } else { showLogin(); }
   })();
   </script>

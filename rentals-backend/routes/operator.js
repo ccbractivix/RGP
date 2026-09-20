@@ -4,6 +4,8 @@ const {
   getOperatorTitles,
   getCopiesForTitle,
   checkoutCopies,
+  addAgeVerificationLog,
+  getAgeVerificationLog,
   checkinCopy,
   getReservationsForTitle,
   cancelReservation,
@@ -63,20 +65,48 @@ router.get('/copies/:titleId', async (req, res) => {
 // ── POST /operator/checkout ───────────────────────────────────────────────────
 // Body: { room_number, last_name, copy_ids: [1,2,3] }
 router.post('/checkout', async (req, res) => {
-  const { room_number, last_name, copy_ids } = req.body || {};
+  const { room_number, last_name, copy_ids, age_verification } = req.body || {};
   if (!room_number || !last_name || !Array.isArray(copy_ids) || copy_ids.length === 0) {
     return res.status(400).json({ error: 'room_number, last_name, and copy_ids[] required' });
   }
+
+  if (age_verification !== undefined) {
+    const operatorName = String((age_verification && age_verification.operator_name) || '').trim();
+    const confirmed = age_verification && age_verification.confirmed === true;
+    if (!operatorName || !confirmed) {
+      return res.status(400).json({ error: 'Valid R-rated age verification is required' });
+    }
+  }
+
   try {
     const result = await checkoutCopies({
       roomNumber: String(room_number).trim(),
       lastName:   String(last_name).trim(),
       copyIds:    copy_ids.map(Number),
     });
+    if (age_verification) {
+      await addAgeVerificationLog({
+        operatorName: String(age_verification.operator_name).trim(),
+        roomNumber: String(room_number).trim(),
+        titleNames: Array.isArray(age_verification.title_names) ? age_verification.title_names : [],
+        confirmed: age_verification.confirmed === true,
+      });
+    }
     return res.json(result);
   } catch (e) {
     const status = e.message.includes('not available') ? 409 : 400;
     return res.status(status).json({ error: e.message });
+  }
+});
+
+// ── GET /operator/r-rated-log ──────────────────────────────────────────────────
+router.get('/r-rated-log', async (_req, res) => {
+  try {
+    const entries = await getAgeVerificationLog(200);
+    return res.json({ entries });
+  } catch (e) {
+    console.error('[operator] /r-rated-log error:', e);
+    return res.status(500).json({ error: 'Failed to load verification log' });
   }
 });
 
