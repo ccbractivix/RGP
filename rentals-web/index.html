@@ -547,7 +547,7 @@
     <button class="sort-btn" data-sort="year">Year</button>
     <button class="sort-btn" data-sort="genre">Genre</button>
     <label class="sort-toggle" for="show-r-rated-toggle">
-      <input type="checkbox" id="show-r-rated-toggle">
+      <input type="checkbox" id="show-r-rated-toggle" aria-label="Filter: Show R-Rated titles">
       Show R-Rated titles
     </label>
   </div>
@@ -651,7 +651,8 @@
 
     function isRRatedMovie(title) {
       if (!title || title.format !== 'movie' || !title.mpaaRating) return false;
-      return String(title.mpaaRating).trim().toUpperCase() === 'R';
+      var rating = String(title.mpaaRating).trim().toUpperCase();
+      return rating === 'R' || rating.indexOf('RATED R') === 0;
     }
 
     function sortTitles(arr, by) {

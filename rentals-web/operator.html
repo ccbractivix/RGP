@@ -695,22 +695,27 @@
       empty.style.display = 'none';
       var html = '';
       rentalsLog.forEach(function (entry) {
+        var titles = Array.isArray(entry.titles) && entry.titles.length ? entry.titles.join(', ') : 'R-rated title';
         html += '<li class="rentals-log-item">' +
           esc(entry.date || '—') + ' ' + esc(entry.time || '') +
           ' · Operator: ' + esc(entry.operator || '—') +
+          (entry.roomNumber ? ' · Room ' + esc(entry.roomNumber) : '') +
+          ' · Title(s): ' + esc(titles) +
           ' · Age verified: ' + (entry.confirmed ? 'Yes' : 'No') +
         '</li>';
       });
       list.innerHTML = html;
     }
 
-    function addRentalsLogEntry(operatorName, confirmed) {
+    function addRentalsLogEntry(operatorName, confirmed, details) {
       var now = new Date();
       rentalsLog.unshift({
         date: now.toLocaleDateString('en-US'),
         time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }),
         operator: operatorName,
-        confirmed: !!confirmed
+        confirmed: !!confirmed,
+        roomNumber: details && details.roomNumber ? String(details.roomNumber) : '',
+        titles: details && Array.isArray(details.titles) ? details.titles : []
       });
       rentalsLog = rentalsLog.slice(0, 200);
       localStorage.setItem(RENTALS_LOG_KEY, JSON.stringify(rentalsLog));
@@ -728,6 +733,7 @@
       document.getElementById('r-rated-operator-name').value = '';
       document.getElementById('r-rated-age-check').checked = false;
       showRRatedError('');
+      document.getElementById('r-rated-confirm-btn').disabled = false;
       document.getElementById('r-rated-overlay').classList.remove('hidden');
     }
 
@@ -793,11 +799,13 @@
       if (e.target === this) closeRRatedModal();
     });
     document.getElementById('r-rated-confirm-btn').addEventListener('click', function () {
-      if (!pendingRRatedConfirm) return;
+      if (this.disabled) return;
+      this.disabled = true;
+      if (!pendingRRatedConfirm) { this.disabled = false; return; }
       var operatorName = (document.getElementById('r-rated-operator-name').value || '').trim();
       var confirmed = document.getElementById('r-rated-age-check').checked;
-      if (!operatorName) { showRRatedError('Please enter your name.'); return; }
-      if (!confirmed) { showRRatedError('You must confirm age verification to continue.'); return; }
+      if (!operatorName) { showRRatedError('Please enter your name.'); this.disabled = false; return; }
+      if (!confirmed) { showRRatedError('You must confirm age verification to continue.'); this.disabled = false; return; }
       var handler = pendingRRatedConfirm;
       pendingRRatedConfirm = null;
       document.getElementById('r-rated-overlay').classList.add('hidden');
@@ -843,7 +851,12 @@
           copy_ids: copyIds,
         }).then(function (d) {
           if (d.ok) {
-            if (requiresRRatedCheck) addRentalsLogEntry(operatorName, ageConfirmed);
+            if (requiresRRatedCheck) {
+              addRentalsLogEntry(operatorName, ageConfirmed, {
+                roomNumber: session.roomNumber,
+                titles: session.items.map(function (i) { return i.titleName; })
+              });
+            }
             showToast('✅ Checked out ' + session.items.length + ' title(s) to Room ' + session.roomNumber);
             session = null;
             updateSessionBar();
@@ -1154,7 +1167,7 @@
 
           var sessionItems = session ? session.items.slice() : [];
           if (!sessionItems.some(function (i) { return i.copyId === copyId; })) {
-            sessionItems.push({ copyId: copyId, isRRatedMovie: isRRatedMovie(title) });
+            sessionItems.push({ copyId: copyId, isRRatedMovie: isRRatedMovie(title), titleName: title.title });
           }
           var requiresRRatedCheck = sessionItems.some(function (i) { return i.isRRatedMovie; });
 
@@ -1165,7 +1178,12 @@
               copy_ids:    sessionItems.map(function (i) { return i.copyId; }),
             }).then(function (d) {
               if (d.ok) {
-                if (requiresRRatedCheck) addRentalsLogEntry(operatorName, ageConfirmed);
+                if (requiresRRatedCheck) {
+                  addRentalsLogEntry(operatorName, ageConfirmed, {
+                    roomNumber: info.roomNumber,
+                    titles: sessionItems.map(function (i) { return i.titleName || title.title; })
+                  });
+                }
                 var total = sessionItems.length;
                 showToast('✅ Checked out ' + total + ' title(s) to Room ' + info.roomNumber);
                 session = null;
