@@ -70,7 +70,10 @@ router.post('/checkout', async (req, res) => {
   if (!room_number || !last_name || !Array.isArray(copy_ids) || copy_ids.length === 0) {
     return res.status(400).json({ error: 'room_number, last_name, and copy_ids[] required' });
   }
-  const normalizedCopyIds = copy_ids.map(Number).filter(n => !Number.isNaN(n));
+  const normalizedCopyIds = copy_ids.map(Number);
+  if (normalizedCopyIds.some(Number.isNaN)) {
+    return res.status(400).json({ error: 'copy_ids must contain only numeric ids' });
+  }
 
   try {
     const copyMeta = await getCopyTitleMetadata(normalizedCopyIds);
@@ -94,12 +97,16 @@ router.post('/checkout', async (req, res) => {
     });
 
     if (requiresAgeVerification) {
-      await addAgeVerificationLog({
-        operatorName,
-        roomNumber: String(room_number).trim(),
-        titleNames: rRatedTitles.map(item => item.title),
-        confirmed,
-      });
+      try {
+        await addAgeVerificationLog({
+          operatorName,
+          roomNumber: String(room_number).trim(),
+          titleNames: rRatedTitles.map(item => item.title),
+          confirmed,
+        });
+      } catch (logErr) {
+        console.error('[operator] failed to persist R-rated verification log:', logErr);
+      }
     }
     return res.json(result);
   } catch (e) {
