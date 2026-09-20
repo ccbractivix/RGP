@@ -598,20 +598,22 @@
 
   <!-- R-Rated Confirmation Modal -->
   <div class="modal-overlay hidden" id="r-rated-overlay">
-    <div class="modal">
-      <h2>R-Rated Checkout Verification</h2>
-      <div class="modal-sub">Operator confirmation is required before checkout.</div>
-      <label for="r-rated-operator-name">Operator Name</label>
-      <input type="text" id="r-rated-operator-name" placeholder="Enter your name" autocomplete="off">
-      <label class="r-rated-check">
-        <input type="checkbox" id="r-rated-age-check">
-        <span>I confirm that you have verified the guest is over 17 years of age.</span>
-      </label>
-      <div id="r-rated-error" class="modal-error" style="display:none"></div>
-      <div class="modal-actions">
-        <button class="btn btn-outline" id="r-rated-cancel-btn">Cancel</button>
-        <button class="btn btn-green" id="r-rated-confirm-btn">Complete Checkout</button>
-      </div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="r-rated-title" aria-describedby="r-rated-subtitle">
+      <h2 id="r-rated-title">R-Rated Checkout Verification</h2>
+      <div class="modal-sub" id="r-rated-subtitle">Operator confirmation is required before checkout.</div>
+      <form id="r-rated-form">
+        <label for="r-rated-operator-name">Operator Name</label>
+        <input type="text" id="r-rated-operator-name" placeholder="Enter your name" autocomplete="off">
+        <label class="r-rated-check">
+          <input type="checkbox" id="r-rated-age-check">
+          <span>I confirm that you have verified the guest is over 17 years of age.</span>
+        </label>
+        <div id="r-rated-error" class="modal-error" style="display:none"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="r-rated-cancel-btn">Cancel</button>
+          <button type="submit" class="btn btn-green" id="r-rated-confirm-btn">Complete Checkout</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -785,14 +787,16 @@
     document.getElementById('r-rated-overlay').addEventListener('click', function (e) {
       if (e.target === this) closeRRatedModal();
     });
-    document.getElementById('r-rated-confirm-btn').addEventListener('click', function () {
-      if (this.disabled) return;
-      this.disabled = true;
-      if (!pendingRRatedConfirm) { this.disabled = false; return; }
+    document.getElementById('r-rated-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var confirmBtn = document.getElementById('r-rated-confirm-btn');
+      if (confirmBtn.disabled) return;
+      confirmBtn.disabled = true;
+      if (!pendingRRatedConfirm) { confirmBtn.disabled = false; return; }
       var operatorName = (document.getElementById('r-rated-operator-name').value || '').trim();
       var confirmed = document.getElementById('r-rated-age-check').checked;
-      if (!operatorName) { showRRatedError('Please enter your name.'); this.disabled = false; return; }
-      if (!confirmed) { showRRatedError('You must confirm age verification to continue.'); this.disabled = false; return; }
+      if (!operatorName) { showRRatedError('Please enter your name.'); confirmBtn.disabled = false; return; }
+      if (!confirmed) { showRRatedError('You must confirm age verification to continue.'); confirmBtn.disabled = false; return; }
       var handler = pendingRRatedConfirm;
       pendingRRatedConfirm = null;
       document.getElementById('r-rated-overlay').classList.add('hidden');

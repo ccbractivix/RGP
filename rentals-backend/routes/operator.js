@@ -77,6 +77,11 @@ router.post('/checkout', async (req, res) => {
 
   try {
     const copyMeta = await getCopyTitleMetadata(normalizedCopyIds);
+    const resolvedCopyIds = new Set(copyMeta.map(item => item.copyId));
+    if (normalizedCopyIds.some(id => !resolvedCopyIds.has(id))) {
+      return res.status(400).json({ error: 'One or more copy_ids were not found' });
+    }
+
     const rRatedTitles = copyMeta.filter(function (item) {
       if (item.format !== 'movie' || !item.mpaaRating) return false;
       const rating = String(item.mpaaRating).trim().toUpperCase();
