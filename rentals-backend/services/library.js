@@ -155,33 +155,101 @@ async function getCopiesForTitle(titleId) {
  * Checkout up to 3 copies in one transaction.
  * copyIds must all be currently 'available'.
  */
-async function checkoutCopies({ roomNumber, lastName, copyIds }) {
+async function checkoutCopies({ roomNumber, lastName, copyIds, ageVerification }) {
   if (!Array.isArray(copyIds) || copyIds.length === 0 || copyIds.length > 3) {
     throw new Error('Must check out 1–3 copies');
   }
 
-  // Verify availability
-  const check = await db.query(
-    `SELECT id, status FROM rental_copies WHERE id = ANY($1::int[])`,
-    [copyIds]
-  );
-  for (const row of check.rows) {
-    if (row.status !== 'available') {
-      throw new Error(`Copy ${row.id} is not available`);
+  return db.withTransaction(async (tx) => {
+    // Verify availability and lock selected rows
+    const check = await tx.query(
+      `SELECT id, status FROM rental_copies WHERE id = ANY($1::int[]) FOR UPDATE`,
+      [copyIds]
+    );
+    for (const row of check.rows) {
+      if (row.status !== 'available') {
+        throw new Error(`Copy ${row.id} is not available`);
+      }
     }
-  }
 
-  const checkoutIds = [];
-  for (const copyId of copyIds) {
-    await db.query(`UPDATE rental_copies SET status = 'out' WHERE id = $1`, [copyId]);
-    const co = await db.query(`
-      INSERT INTO rental_checkouts (copy_id, room_number, last_name)
-           VALUES ($1, $2, $3) RETURNING id
-    `, [copyId, roomNumber, lastName]);
-    checkoutIds.push(co.rows[0].id);
-  }
+    const checkoutIds = [];
+    for (const copyId of copyIds) {
+      await tx.query(`UPDATE rental_copies SET status = 'out' WHERE id = $1`, [copyId]);
+      const co = await tx.query(`
+        INSERT INTO rental_checkouts (copy_id, room_number, last_name)
+             VALUES ($1, $2, $3) RETURNING id
+      `, [copyId, roomNumber, lastName]);
+      checkoutIds.push(co.rows[0].id);
+    }
 
-  return { ok: true, checkoutIds };
+    if (ageVerification) {
+      await addAgeVerificationLog({
+        operatorName: ageVerification.operatorName,
+        roomNumber: ageVerification.roomNumber,
+        titleNames: ageVerification.titleNames,
+        confirmed: ageVerification.confirmed,
+      }, tx);
+    }
+
+    return { ok: true, checkoutIds };
+  });
+}
+
+async function getCopyTitleMetadata(copyIds) {
+  if (!Array.isArray(copyIds) || copyIds.length === 0) return [];
+  const result = await db.query(`
+    SELECT c.id AS copy_id, t.title, t.format, t.mpaa_rating
+      FROM rental_copies c
+      JOIN rental_titles t ON t.id = c.title_id
+     WHERE c.id = ANY($1::int[])
+  `, [copyIds]);
+  return result.rows.map(row => ({
+    copyId: row.copy_id,
+    title: row.title,
+    format: row.format,
+    mpaaRating: row.mpaa_rating,
+  }));
+}
+
+async function addAgeVerificationLog({ operatorName, roomNumber, titleNames, confirmed }, queryable) {
+  const titles = Array.isArray(titleNames)
+    ? titleNames.map(t => String(t || '').trim()).filter(Boolean)
+    : [];
+  const dbClient = queryable || db;
+  await dbClient.query(`
+    INSERT INTO rental_age_verifications (operator_name, room_number, title_names, confirmed)
+    VALUES ($1, $2, $3, $4)
+  `, [
+    String(operatorName || '').trim(),
+    String(roomNumber || '').trim(),
+    JSON.stringify(titles),
+    confirmed === true
+  ]);
+}
+
+async function getAgeVerificationLog(limit = 200) {
+  const capped = Math.max(1, Math.min(parseInt(limit, 10) || 200, 500));
+  const result = await db.query(`
+    SELECT operator_name, room_number, title_names, confirmed, created_at
+      FROM rental_age_verifications
+     ORDER BY created_at DESC
+     LIMIT $1
+  `, [capped]);
+
+  return result.rows.map(row => ({
+    operator: row.operator_name,
+    roomNumber: row.room_number,
+    titles: (() => {
+      try {
+        const parsed = JSON.parse(row.title_names || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    })(),
+    confirmed: row.confirmed === true,
+    createdAt: row.created_at,
+  }));
 }
 
 /**
@@ -444,6 +512,9 @@ module.exports = {
   getOperatorTitles,
   getCopiesForTitle,
   checkoutCopies,
+  getCopyTitleMetadata,
+  addAgeVerificationLog,
+  getAgeVerificationLog,
   checkinCopy,
   getAllTitles,
   addTitle,

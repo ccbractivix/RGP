@@ -406,6 +406,55 @@
 
     .divider { margin: 12px 0; border: none; border-top: 1px solid var(--border); }
 
+    /* Rentals log */
+    .rentals-log {
+      margin: 0 12px 16px;
+      padding: 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .rentals-log h3 {
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .rentals-log-list {
+      list-style: none;
+      max-height: 220px;
+      overflow: auto;
+    }
+
+    .rentals-log-item {
+      font-size: 12px;
+      color: var(--muted);
+      padding: 7px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .rentals-log-item:first-child { border-top: none; padding-top: 0; }
+
+    .rentals-log-empty {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .r-rated-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .r-rated-check input {
+      margin: 2px 0 0;
+      width: auto;
+      flex-shrink: 0;
+    }
+
     /* ── Print ─────────────────────────────────────────────────────── */
     #print-view { display: none; }
 
@@ -532,12 +581,39 @@
 
     <div class="list-meta" id="list-meta"></div>
     <div id="title-list"></div>
+
+    <div class="rentals-log">
+      <h3>R-Rated Checkout Log</h3>
+      <ul class="rentals-log-list" id="rentals-log-list"></ul>
+      <div class="rentals-log-empty" id="rentals-log-empty">No R-rated checkout verifications yet.</div>
+    </div>
   </div>
 
   <!-- Action Modal -->
   <div class="modal-overlay hidden" id="modal-overlay">
     <div class="modal" id="modal">
       <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <!-- R-Rated Confirmation Modal -->
+  <div class="modal-overlay hidden" id="r-rated-overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="r-rated-title" aria-describedby="r-rated-subtitle">
+      <h2 id="r-rated-title">R-Rated Checkout Verification</h2>
+      <div class="modal-sub" id="r-rated-subtitle">Operator confirmation is required before checkout.</div>
+      <form id="r-rated-form">
+        <label for="r-rated-operator-name">Operator Name</label>
+        <input type="text" id="r-rated-operator-name" placeholder="Enter your name" autocomplete="off">
+        <div class="r-rated-check">
+          <input type="checkbox" id="r-rated-age-check">
+          <label for="r-rated-age-check">I confirm that you have verified the guest is over 17 years of age.</label>
+        </div>
+        <div id="r-rated-error" class="modal-error" style="display:none"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-outline" id="r-rated-cancel-btn">Cancel</button>
+          <button type="submit" class="btn btn-green" id="r-rated-confirm-btn">Complete Checkout</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -564,6 +640,9 @@
     var allTitles    = [];
     var activeFilter = 'all';
     var searchQuery  = '';
+    var rentalsLog = [];
+    var pendingRRatedConfirm = null;
+    var lastRRatedTrigger = null;
 
     // Checkout session: {roomNumber, lastName, items:[{copyId,copyLabel,titleName}]}
     var session = null;
@@ -586,6 +665,76 @@
       t.textContent = msg;
       t.classList.add('show');
       setTimeout(function () { t.classList.remove('show'); }, 2500);
+    }
+
+    function isRRatedMovie(title) {
+      if (!title || title.format !== 'movie' || !title.mpaaRating) return false;
+      var rating = String(title.mpaaRating).trim().toUpperCase();
+      return rating === 'R' || rating.indexOf('RATED R') === 0;
+    }
+
+    function loadRentalsLog() {
+      return apiCall('GET', '/operator/r-rated-log').then(function (d) {
+        rentalsLog = Array.isArray(d.entries) ? d.entries : [];
+        renderRentalsLog();
+      }).catch(function (e) {
+        if (e.message !== 'Unauthorized') showToast('Failed to load R-rated checkout log');
+      });
+    }
+
+    function renderRentalsLog() {
+      var list = document.getElementById('rentals-log-list');
+      var empty = document.getElementById('rentals-log-empty');
+      if (!list || !empty) return;
+
+      if (rentalsLog.length === 0) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+
+      empty.style.display = 'none';
+      var html = '';
+      rentalsLog.forEach(function (entry) {
+        var stamp = entry.createdAt ? new Date(entry.createdAt) : null;
+        var dateText = entry.date || (stamp ? stamp.toLocaleDateString('en-US') : '—');
+        var timeText = entry.time || (stamp ? stamp.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '');
+        var titles = Array.isArray(entry.titles) && entry.titles.length ? entry.titles.join(', ') : 'R-rated title';
+        html += '<li class="rentals-log-item">' +
+          esc(dateText) + ' ' + esc(timeText) +
+          ' · Operator: ' + esc(entry.operator || '—') +
+          (entry.roomNumber ? ' · Room ' + esc(entry.roomNumber) : '') +
+          ' · Title(s): ' + esc(titles) +
+          ' · Age verified: ' + (entry.confirmed ? 'Yes' : 'No') +
+        '</li>';
+      });
+      list.innerHTML = html;
+    }
+
+    function showRRatedError(msg) {
+      var el = document.getElementById('r-rated-error');
+      el.textContent = msg || '';
+      el.style.display = msg ? 'block' : 'none';
+    }
+
+    function openRRatedModal(onConfirm, triggerEl) {
+      pendingRRatedConfirm = onConfirm;
+      lastRRatedTrigger = triggerEl || document.activeElement || null;
+      document.getElementById('r-rated-operator-name').value = '';
+      document.getElementById('r-rated-age-check').checked = false;
+      showRRatedError('');
+      document.getElementById('r-rated-confirm-btn').disabled = false;
+      document.getElementById('r-rated-overlay').classList.remove('hidden');
+      document.getElementById('r-rated-operator-name').focus();
+    }
+
+    function closeRRatedModal() {
+      pendingRRatedConfirm = null;
+      document.getElementById('r-rated-overlay').classList.add('hidden');
+      if (lastRRatedTrigger && typeof lastRRatedTrigger.focus === 'function') {
+        lastRRatedTrigger.focus();
+      }
+      lastRRatedTrigger = null;
     }
 
     function apiCall(method, path, body) {
@@ -611,6 +760,7 @@
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
       loadTitles();
+      loadRentalsLog();
     }
 
     document.getElementById('login-btn').addEventListener('click', function () {
@@ -640,6 +790,25 @@
       localStorage.removeItem('op_code'); authCode = ''; showLogin();
     });
 
+    document.getElementById('r-rated-cancel-btn').addEventListener('click', closeRRatedModal);
+    document.getElementById('r-rated-overlay').addEventListener('click', function (e) {
+      if (e.target === this) closeRRatedModal();
+    });
+    document.getElementById('r-rated-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var confirmBtn = document.getElementById('r-rated-confirm-btn');
+      if (confirmBtn.disabled) return;
+      confirmBtn.disabled = true;
+      if (!pendingRRatedConfirm) { confirmBtn.disabled = false; return; }
+      var operatorName = (document.getElementById('r-rated-operator-name').value || '').trim();
+      var confirmed = document.getElementById('r-rated-age-check').checked;
+      if (!operatorName) { showRRatedError('Please enter your name.'); confirmBtn.disabled = false; return; }
+      if (!confirmed) { showRRatedError('You must confirm age verification to continue.'); confirmBtn.disabled = false; return; }
+      var handler = pendingRRatedConfirm;
+      closeRRatedModal();
+      handler(operatorName, confirmed);
+    });
+
     // ── Load ──────────────────────────────────────────────────────────────────
 
     function loadTitles() {
@@ -666,24 +835,43 @@
 
     document.getElementById('session-checkout-btn').addEventListener('click', function () {
       if (!session || session.items.length === 0) return;
-      this.disabled = true;
       var self = this;
       var copyIds = session.items.map(function (i) { return i.copyId; });
-      apiCall('POST', '/operator/checkout', {
-        room_number: session.roomNumber,
-        last_name: session.lastName,
-        copy_ids: copyIds,
-      }).then(function (d) {
-        if (d.ok) {
-          showToast('✅ Checked out ' + session.items.length + ' title(s) to Room ' + session.roomNumber);
-          session = null;
-          updateSessionBar();
-          loadTitles();
-        } else {
-          showToast('❌ Error: ' + (d.error || 'Checkout failed'));
+      var requiresRRatedCheck = session.items.some(function (i) { return i.isRRatedMovie; });
+
+      function runCheckout(operatorName, ageConfirmed) {
+        var payload = {
+          room_number: session.roomNumber,
+          last_name: session.lastName,
+          copy_ids: copyIds,
+        };
+        if (requiresRRatedCheck) {
+          payload.age_verification = {
+            operator_name: operatorName,
+            confirmed: !!ageConfirmed
+          };
         }
-      }).catch(function () { showToast('Connection error'); })
-      .finally(function () { self.disabled = false; });
+
+        self.disabled = true;
+        apiCall('POST', '/operator/checkout', payload).then(function (d) {
+          if (d.ok) {
+            if (requiresRRatedCheck) loadRentalsLog();
+            showToast('✅ Checked out ' + session.items.length + ' title(s) to Room ' + session.roomNumber);
+            session = null;
+            updateSessionBar();
+            loadTitles();
+          } else {
+            showToast('❌ Error: ' + (d.error || 'Checkout failed'));
+          }
+        }).catch(function () { showToast('Connection error'); })
+        .finally(function () { self.disabled = false; });
+      }
+
+      if (requiresRRatedCheck) {
+        openRRatedModal(runCheckout, this);
+      } else {
+        runCheckout('', false);
+      }
     });
 
     document.getElementById('session-clear-btn').addEventListener('click', function () {
@@ -950,7 +1138,12 @@
           if (session.items.length >= 3) { showModalError('Maximum 3 titles per checkout'); return; }
           if (session.items.some(function (i) { return i.copyId === copyId; })) { showModalError('Copy already in session'); return; }
 
-          session.items.push({ copyId: copyId, copyLabel: copy ? copy.copyLabel : '?', titleName: title.title });
+          session.items.push({
+            copyId: copyId,
+            copyLabel: copy ? copy.copyLabel : '?',
+            titleName: title.title,
+            isRRatedMovie: isRRatedMovie(title)
+          });
           updateSessionBar();
           closeModal();
           showToast(title.title + ' added to session (' + session.items.length + '/3)');
@@ -973,26 +1166,47 @@
 
           var sessionItems = session ? session.items.slice() : [];
           if (!sessionItems.some(function (i) { return i.copyId === copyId; })) {
-            sessionItems.push({ copyId: copyId });
+            sessionItems.push({ copyId: copyId, isRRatedMovie: isRRatedMovie(title), titleName: title.title });
+          }
+          var requiresRRatedCheck = sessionItems.some(function (i) { return i.isRRatedMovie; });
+
+          function runCheckout(operatorName, ageConfirmed) {
+            var payload = {
+              room_number: info.roomNumber,
+              last_name:   info.lastName,
+              copy_ids:    sessionItems.map(function (i) { return i.copyId; }),
+            };
+            if (requiresRRatedCheck) {
+              payload.age_verification = {
+                operator_name: operatorName,
+                confirmed: !!ageConfirmed
+              };
+            }
+            apiCall('POST', '/operator/checkout', payload).then(function (d) {
+              if (d.ok) {
+                if (requiresRRatedCheck) loadRentalsLog();
+                var total = sessionItems.length;
+                showToast('✅ Checked out ' + total + ' title(s) to Room ' + info.roomNumber);
+                session = null;
+                updateSessionBar();
+                closeModal();
+                loadTitles();
+              } else {
+                showModalError(d.error || 'Checkout failed');
+              }
+            }).catch(function () { showModalError('Connection error'); })
+            .finally(function () { self.disabled = false; });
           }
 
-          apiCall('POST', '/operator/checkout', {
-            room_number: info.roomNumber,
-            last_name:   info.lastName,
-            copy_ids:    sessionItems.map(function (i) { return i.copyId; }),
-          }).then(function (d) {
-            if (d.ok) {
-              var total = sessionItems.length;
-              showToast('✅ Checked out ' + total + ' title(s) to Room ' + info.roomNumber);
-              session = null;
-              updateSessionBar();
-              closeModal();
-              loadTitles();
-            } else {
-              showModalError(d.error || 'Checkout failed');
-            }
-          }).catch(function () { showModalError('Connection error'); })
-          .finally(function () { self.disabled = false; });
+          if (requiresRRatedCheck) {
+            self.disabled = false;
+            openRRatedModal(function (operatorName, ageConfirmed) {
+              self.disabled = true;
+              runCheckout(operatorName, ageConfirmed);
+            }, self);
+          } else {
+            runCheckout('', false);
+          }
         });
       }
 

@@ -177,6 +177,22 @@
       font-weight: 600;
     }
 
+    .sort-toggle {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .sort-toggle input {
+      margin: 0;
+      accent-color: var(--accent);
+    }
+
     /* ── Context bar (for filtered views) ─────────────────────────── */
     .context-bar {
       display: flex;
@@ -530,6 +546,10 @@
     <button class="sort-btn active" data-sort="title">Title</button>
     <button class="sort-btn" data-sort="year">Year</button>
     <button class="sort-btn" data-sort="genre">Genre</button>
+    <label class="sort-toggle" for="show-r-rated-toggle">
+      <input type="checkbox" id="show-r-rated-toggle" aria-label="Filter: Show R-Rated titles">
+      Show R-Rated titles
+    </label>
   </div>
 
   <!-- List meta -->
@@ -612,6 +632,7 @@
     var activeGenre     = null;
     var activeCollection = null;
     var collectionTitles = null; // Titles loaded for active collection
+    var showRRatedTitles = false;
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -626,6 +647,12 @@
       if (!q) return true;
       var hay = ((title || '') + ' ' + (genres || '')).toLowerCase();
       return q.toLowerCase().trim().split(/\s+/).every(function (w) { return hay.includes(w); });
+    }
+
+    function isRRatedMovie(title) {
+      if (!title || title.format !== 'movie' || !title.mpaaRating) return false;
+      var rating = String(title.mpaaRating).trim().toUpperCase();
+      return rating === 'R' || rating.indexOf('RATED R') === 0;
     }
 
     function sortTitles(arr, by) {
@@ -727,6 +754,7 @@
         if (collectionTitles === null && activeFilter !== 'all' && activeFilter !== 'genres' && activeFilter !== 'collections') {
           if (t.format !== activeFilter) return false;
         }
+        if (!showRRatedTitles && isRRatedMovie(t)) return false;
         // Genre filter
         if (activeGenre) {
           if (!t.genres) return false;
@@ -906,6 +934,11 @@
       render();
     });
 
+    document.getElementById('show-r-rated-toggle').addEventListener('change', function () {
+      showRRatedTitles = this.checked;
+      render();
+    });
+
     // Search
     var searchInput = document.getElementById('search-input');
     var searchClear = document.getElementById('search-clear');
@@ -926,7 +959,9 @@
     // ── Genre Picker ──────────────────────────────────────────────────────────
 
     function openGenrePicker() {
-      var genres = extractGenres(allTitles);
+      var genres = extractGenres(allTitles.filter(function (t) {
+        return showRRatedTitles || !isRRatedMovie(t);
+      }));
       var listEl = document.getElementById('genre-list');
 
       if (genres.length === 0) {

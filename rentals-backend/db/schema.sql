@@ -39,6 +39,16 @@ CREATE TABLE IF NOT EXISTS rental_checkouts (
   checked_in_at   TIMESTAMPTZ
 );
 
+-- Operator age-verification log for R-rated rentals
+CREATE TABLE IF NOT EXISTS rental_age_verifications (
+  id             SERIAL      PRIMARY KEY,
+  operator_name  TEXT        NOT NULL,
+  room_number    TEXT        NOT NULL,
+  title_names    TEXT        NOT NULL,
+  confirmed      BOOLEAN     NOT NULL DEFAULT FALSE,
+  created_at     TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Guest reservations (expire after 24 hours)
 CREATE TABLE IF NOT EXISTS rental_reservations (
   id           SERIAL      PRIMARY KEY,
