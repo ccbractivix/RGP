@@ -5,7 +5,6 @@ const {
   getCopiesForTitle,
   checkoutCopies,
   getCopyTitleMetadata,
-  addAgeVerificationLog,
   getAgeVerificationLog,
   checkinCopy,
   getReservationsForTitle,
@@ -99,20 +98,13 @@ router.post('/checkout', async (req, res) => {
       roomNumber: String(room_number).trim(),
       lastName:   String(last_name).trim(),
       copyIds:    normalizedCopyIds,
-    });
-
-    if (requiresAgeVerification) {
-      try {
-        await addAgeVerificationLog({
+      ageVerification: requiresAgeVerification ? {
           operatorName,
           roomNumber: String(room_number).trim(),
           titleNames: rRatedTitles.map(item => item.title),
           confirmed,
-        });
-      } catch (logErr) {
-        console.error('[operator] failed to persist R-rated verification log:', logErr);
-      }
-    }
+      } : null
+    });
     return res.json(result);
   } catch (e) {
     const status = e.message.includes('not available') ? 409 : 400;

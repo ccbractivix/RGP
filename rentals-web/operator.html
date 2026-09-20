@@ -604,10 +604,10 @@
       <form id="r-rated-form">
         <label for="r-rated-operator-name">Operator Name</label>
         <input type="text" id="r-rated-operator-name" placeholder="Enter your name" autocomplete="off">
-        <label class="r-rated-check">
+        <div class="r-rated-check">
           <input type="checkbox" id="r-rated-age-check">
-          <span>I confirm that you have verified the guest is over 17 years of age.</span>
-        </label>
+          <label for="r-rated-age-check">I confirm that you have verified the guest is over 17 years of age.</label>
+        </div>
         <div id="r-rated-error" class="modal-error" style="display:none"></div>
         <div class="modal-actions">
           <button type="button" class="btn btn-outline" id="r-rated-cancel-btn">Cancel</button>
@@ -642,6 +642,7 @@
     var searchQuery  = '';
     var rentalsLog = [];
     var pendingRRatedConfirm = null;
+    var lastRRatedTrigger = null;
 
     // Checkout session: {roomNumber, lastName, items:[{copyId,copyLabel,titleName}]}
     var session = null;
@@ -716,18 +717,24 @@
       el.style.display = msg ? 'block' : 'none';
     }
 
-    function openRRatedModal(onConfirm) {
+    function openRRatedModal(onConfirm, triggerEl) {
       pendingRRatedConfirm = onConfirm;
+      lastRRatedTrigger = triggerEl || document.activeElement || null;
       document.getElementById('r-rated-operator-name').value = '';
       document.getElementById('r-rated-age-check').checked = false;
       showRRatedError('');
       document.getElementById('r-rated-confirm-btn').disabled = false;
       document.getElementById('r-rated-overlay').classList.remove('hidden');
+      document.getElementById('r-rated-operator-name').focus();
     }
 
     function closeRRatedModal() {
       pendingRRatedConfirm = null;
       document.getElementById('r-rated-overlay').classList.add('hidden');
+      if (lastRRatedTrigger && typeof lastRRatedTrigger.focus === 'function') {
+        lastRRatedTrigger.focus();
+      }
+      lastRRatedTrigger = null;
     }
 
     function apiCall(method, path, body) {
@@ -798,8 +805,7 @@
       if (!operatorName) { showRRatedError('Please enter your name.'); confirmBtn.disabled = false; return; }
       if (!confirmed) { showRRatedError('You must confirm age verification to continue.'); confirmBtn.disabled = false; return; }
       var handler = pendingRRatedConfirm;
-      pendingRRatedConfirm = null;
-      document.getElementById('r-rated-overlay').classList.add('hidden');
+      closeRRatedModal();
       handler(operatorName, confirmed);
     });
 
@@ -862,7 +868,7 @@
       }
 
       if (requiresRRatedCheck) {
-        openRRatedModal(runCheckout);
+        openRRatedModal(runCheckout, this);
       } else {
         runCheckout('', false);
       }
@@ -1197,7 +1203,7 @@
             openRRatedModal(function (operatorName, ageConfirmed) {
               self.disabled = true;
               runCheckout(operatorName, ageConfirmed);
-            });
+            }, self);
           } else {
             runCheckout('', false);
           }
