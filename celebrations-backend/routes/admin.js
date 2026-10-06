@@ -5,6 +5,7 @@ const {
   createCelebration,
   deleteCelebration,
   CELEBRATION_TYPES,
+  isValidDate,
 } = require('../services/celebrations');
 
 const router = express.Router();
@@ -55,8 +56,16 @@ router.post('/celebrations', async (req, res) => {
       error: `Invalid type. Must be one of: ${CELEBRATION_TYPES.join(', ')}`,
     });
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(checkout_date)) {
+  if (!isValidDate(checkout_date)) {
     return res.status(400).json({ error: 'checkout_date must be YYYY-MM-DD' });
+  }
+  for (const field of ['cabana1', 'cabana2']) {
+    if (req.body[field] !== undefined && typeof req.body[field] !== 'boolean') {
+      return res.status(400).json({ error: `${field} must be a boolean` });
+    }
+  }
+  if ((req.body.cabana1 || req.body.cabana2) && !isValidDate(req.body.cabana_date)) {
+    return res.status(400).json({ error: 'A valid cabana_date (YYYY-MM-DD) is required when selecting a cabana' });
   }
 
   try {

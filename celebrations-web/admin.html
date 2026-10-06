@@ -203,6 +203,17 @@
     #toast.info    { border-left: 4px solid var(--blue); }
     #toast.show    { display: block; }
 
+    .cabana-options { display: flex; gap: 20px; margin-bottom: 12px; }
+    .cabana-options label { display: flex; align-items: center; gap: 8px; }
+    .cabana-options input { width: auto; }
+    #cabana-dialog {
+      margin: auto; padding: 24px; border: 1px solid var(--card-border);
+      border-radius: 12px; background: var(--card); color: var(--text);
+      width: min(420px, 90vw);
+    }
+    #cabana-dialog::backdrop { background: rgba(0, 0, 0, 0.65); }
+    #cabana-dialog h2 { margin-bottom: 16px; }
+
     /* ── Responsive ─────────────────────────────────────────────────────────── */
     @media (max-width: 600px) {
       .form-row { grid-template-columns: 1fr; }
@@ -251,6 +262,7 @@
             <option value="baby-blue">💙 Welcome Baby (Blue)</option>
             <option value="graduate">🎓 Congratulations Graduate!</option>
             <option value="retirement">🌟 Retirement</option>
+            <option value="general">🎉 General</option>
           </select>
         </div>
 
@@ -299,6 +311,19 @@
           </div>
         </div>
 
+        <div class="form-group">
+          <label>Also display on cabana channels</label>
+          <div class="cabana-options">
+            <label><input type="checkbox" id="cel-cabana1"> Cabana 1</label>
+            <label><input type="checkbox" id="cel-cabana2"> Cabana 2</label>
+          </div>
+          <div id="cabana-schedule" hidden>
+            <span id="cabana-date-label"></span>
+            <button class="btn btn-ghost btn-sm" id="cabana-change-date" type="button">Change date</button>
+          </div>
+          <div class="hint">Forced into the selected cabana playlists only on the chosen date (Eastern Time), independently of checkout.</div>
+        </div>
+
         <button class="btn btn-green" id="create-btn" style="width:100%;padding:12px;font-size:15px;margin-top:4px;">
           Create Celebration Slide
         </button>
@@ -343,6 +368,7 @@
           <option value="baby-blue">Welcome Baby (Blue)</option>
           <option value="graduate">Graduate</option>
           <option value="retirement">Retirement</option>
+          <option value="general">General</option>
         </select>
         <input type="text" id="filter-building" placeholder="Filter by building…" style="width:180px;">
       </div>
@@ -352,6 +378,19 @@
       </div>
     </div>
   </div>
+
+  <dialog id="cabana-dialog" aria-labelledby="cabana-dialog-title">
+    <form id="cabana-date-form">
+      <h2 id="cabana-dialog-title">Cabana display date</h2>
+      <div class="form-group">
+        <label for="cel-cabana-date">Display date *</label>
+        <input type="date" id="cel-cabana-date" required>
+        <div class="hint">The slide is shown for this date only, in Eastern Time.</div>
+      </div>
+      <button class="btn btn-green" type="submit">Set date</button>
+      <button class="btn btn-ghost" id="cabana-date-cancel" type="button">Cancel</button>
+    </form>
+  </dialog>
 
   <!-- Toast -->
   <div id="toast"></div>
@@ -385,6 +424,7 @@
     'baby-blue':        '💙 Welcome Baby (Blue)',
     'graduate':         '🎓 Graduate',
     'retirement':       '🌟 Retirement',
+    'general':          '🎉 General',
   };
 
   const TYPE_COLORS = {
@@ -396,6 +436,7 @@
     'baby-blue':        { bg: 'rgba(59,130,246,0.15)',  text: '#93c5fd' },
     'graduate':         { bg: 'rgba(34,197,94,0.2)',    text: '#4ade80' },
     'retirement':       { bg: 'rgba(245,158,11,0.2)',   text: '#fbbf24' },
+    'general':          { bg: '#1D6247', text: '#fff' },
   };
 
   /* ── Auth state ─────────────────────────────────────────────────────────── */
@@ -512,6 +553,48 @@
     document.getElementById('field-anniversary').classList.toggle('visible', type === 'anniversary');
   }
 
+  const cabanaBoxes = ['cel-cabana1', 'cel-cabana2'].map(id => document.getElementById(id));
+  const cabanaDialog = document.getElementById('cabana-dialog');
+  const cabanaDateInput = document.getElementById('cel-cabana-date');
+  let cabanaDate = '';
+  let pendingCabanaBox = null;
+
+  function updateCabanaSchedule() {
+    const selected = cabanaBoxes.some(box => box.checked);
+    document.getElementById('cabana-schedule').hidden = !selected || !cabanaDate;
+    document.getElementById('cabana-date-label').textContent = `Display on ${cabanaDate} (Eastern Time)`;
+  }
+
+  function openCabanaDate(box = null) {
+    pendingCabanaBox = box;
+    cabanaDateInput.value = cabanaDate;
+    cabanaDialog.showModal();
+  }
+
+  cabanaBoxes.forEach(box => box.addEventListener('change', () => {
+    if (box.checked) openCabanaDate(box);
+    else updateCabanaSchedule();
+  }));
+  document.getElementById('cabana-change-date').addEventListener('click', () => openCabanaDate());
+  document.getElementById('cabana-date-form').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!cabanaDateInput.reportValidity()) return;
+    cabanaDate = cabanaDateInput.value;
+    pendingCabanaBox = null;
+    cabanaDialog.close();
+    updateCabanaSchedule();
+  });
+  function cancelCabanaDate() {
+    if (pendingCabanaBox) pendingCabanaBox.checked = false;
+    pendingCabanaBox = null;
+    updateCabanaSchedule();
+  }
+  cabanaDialog.addEventListener('cancel', cancelCabanaDate);
+  document.getElementById('cabana-date-cancel').addEventListener('click', () => {
+    cancelCabanaDate();
+    cabanaDialog.close();
+  });
+
   /* ── Register a slide in the Channel Manager library ───────────────────── */
   async function registerSlideInChannelLibrary(slideUrl, celData) {
     const typeLabel = TYPE_LABELS[celData.type] || celData.type;
@@ -623,6 +706,12 @@
       const added = await addSlideToChannelPlaylist(channelId, slideUrl, label, 30);
       return { channelId, ok: added };
     }));
+    // Cabana celebrations are injected by the backend, not saved in editable playlists.
+    for (const channelId of ['cabana1', 'cabana2']) {
+      if (!celData[channelId]) continue;
+      targets.push(channelId);
+      results.push({ channelId, ok: await ensureChannelExists(channelId) });
+    }
 
     return {
       targets,
@@ -658,6 +747,10 @@
     if (!name1)    { toast('Name 1 is required.', 'error'); return; }
     if (!building) { toast('Building number is required.', 'error'); return; }
     if (!checkout) { toast('Check out date is required.', 'error'); return; }
+    if (cabanaBoxes.some(box => box.checked) && !cabanaDate) {
+      openCabanaDate();
+      return;
+    }
 
     const body = {
       type,
@@ -668,6 +761,9 @@
       checkout_date:    checkout,
       anniversary_num:  anniversary ? parseInt(anniversary, 10) : undefined,
       birthday_num:     birthday    ? parseInt(birthday, 10)    : undefined,
+      cabana1:          cabanaBoxes[0].checked,
+      cabana2:          cabanaBoxes[1].checked,
+      cabana_date:      cabanaBoxes.some(box => box.checked) ? cabanaDate : undefined,
     };
 
     createBtn.disabled = true;
@@ -828,6 +924,8 @@
       details += ` · ${special ? special + ' ' : ordinal(c.anniversary_num) + ' '}Anniversary`;
     }
     details += ` · Expires ${checkoutFmt}`;
+    const cabanas = [c.cabana1 ? 'Cabana 1' : '', c.cabana2 ? 'Cabana 2' : ''].filter(Boolean);
+    if (cabanas.length) details += ` · ${cabanas.join(', ')} on ${String(c.cabana_date).slice(0, 10)} (Eastern Time)`;
 
     return `
       <div class="celebration-card${active ? '' : ' expired'}">

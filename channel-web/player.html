@@ -262,11 +262,34 @@
     return String(slide.url || '').includes('/celebrations-web/slide.html');
   }
 
+  function isScheduledCabanaCelebration(slide, now) {
+    if (!isCelebrationSlide(slide)) return false;
+    try {
+      const params = new URL(slide.url).searchParams;
+      return params.get('cabana_channel') === channelId
+        && params.get('cabana_date') === now.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    } catch {
+      return false;
+    }
+  }
+
+  function isDateRestrictedCelebration(slide) {
+    if (!isCelebrationSlide(slide)) return false;
+    try {
+      const params = new URL(slide.url).searchParams;
+      return params.has('cabana_date') || params.has('cabana_channel');
+    } catch {
+      return false;
+    }
+  }
+
   function getEffectiveSlides(now = new Date()) {
-    const source = Array.isArray(baseSlides) ? baseSlides : [];
+    const source = (Array.isArray(baseSlides) ? baseSlides : []).filter(s =>
+      !/^cabana[12]$/.test(channelId) || !isDateRestrictedCelebration(s) || isScheduledCabanaCelebration(s, now)
+    );
     if (source.length === 0) return [];
     if (!isWithinForcedExpressWindow(now)) return source;
-    const filtered = source.filter(s => isExpressCheckoutSlide(s) || isAmenitiesStatusSlide(s));
+    const filtered = source.filter(s => isExpressCheckoutSlide(s) || isAmenitiesStatusSlide(s) || isScheduledCabanaCelebration(s, now));
     return filtered.length > 0 ? filtered : source;
   }
 
@@ -280,10 +303,15 @@
     currentIdx = 0;
     pendingNextIdx = null;
     pendingReady = false;
+    pendingToken++;
     if (rotationTimer) clearTimeout(rotationTimer);
     if (preloadTimer) clearTimeout(preloadTimer);
     if (readinessTimer) clearTimeout(readinessTimer);
-    if (forcedCelebrationActive || slides.length === 0) return;
+    if (forcedCelebrationActive) return;
+    if (slides.length === 0) {
+      showEmptyPlaylist();
+      return;
+    }
     loadSlide(activeFrame, slides[0].url).then(() => {
       activeFrame.classList.add('visible');
       activeFrame.classList.remove('hidden');
@@ -382,8 +410,18 @@
   }
 
   /* ── Start rotation ────────────────────────────────────────────────────── */
+  function showEmptyPlaylist() {
+    clearFrame(activeFrame);
+    clearFrame(pendingFrame);
+    loading.classList.remove('hidden');
+    loadText.textContent = 'No slides scheduled for this channel.';
+  }
+
   async function startRotation() {
-    if (slides.length === 0) return;
+    if (slides.length === 0) {
+      showEmptyPlaylist();
+      return;
+    }
 
     // Load first slide immediately
     currentIdx = 0;
@@ -571,7 +609,7 @@
   /* ── Config refresh (picks up slide changes without page reload) ────────── */
   async function refreshConfig() {
     const data = await loadConfig();
-    if (!data || !data.slides || data.slides.length === 0) return;
+    if (!data || !Array.isArray(data.slides)) return;
     const nextRules = data.rules || {};
     const nextBaseSlides = data.slides;
     const oldJson = JSON.stringify({ slides: baseSlides, rules: channelRules });
@@ -595,8 +633,10 @@
     forcedCelebrationQueue = [];
     pendingNextIdx = null;
     pendingReady = false;
-    await loadSlide(activeFrame, slides[0].url);
-    if (slides.length > 1) scheduleNext();
+    pendingToken++;
+    pendingFrame.classList.remove('visible');
+    pendingFrame.classList.add('hidden');
+    await startRotation();
   }
 
   /* ── Init ───────────────────────────────────────────────────────────────── */
@@ -609,12 +649,7 @@
       return;
     }
 
-    if (!data.slides || data.slides.length === 0) {
-      loadText.textContent = `Channel "${data.name}" has no slides configured.`;
-      return;
-    }
-
-    baseSlides = data.slides;
+    baseSlides = data.slides || [];
     channelRules = data.rules || {};
     slides = getEffectiveSlides(new Date());
     setTitle(data.name);

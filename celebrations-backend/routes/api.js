@@ -1,6 +1,6 @@
 'use strict';
 const express = require('express');
-const { listActive } = require('../services/celebrations');
+const { listActive, listCabana } = require('../services/celebrations');
 
 const router = express.Router();
 
@@ -8,7 +8,11 @@ const router = express.Router();
 router.get('/celebrations', async (req, res) => {
   try {
     const building = req.query.building || null;
-    const celebrations = await listActive(building);
+    const channel = req.query.channel;
+    if (channel && !['cabana1', 'cabana2'].includes(channel)) {
+      return res.status(400).json({ error: 'channel must be cabana1 or cabana2' });
+    }
+    const celebrations = channel ? await listCabana(channel) : await listActive(building);
     return res.json({ celebrations });
   } catch (e) {
     console.error('[api] /celebrations error:', e);

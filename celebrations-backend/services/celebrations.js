@@ -10,6 +10,7 @@ const CELEBRATION_TYPES = [
   'baby-blue',
   'graduate',
   'retirement',
+  'general',
 ];
 
 /* ── Schema bootstrap ──────────────────────────────────────────────────────── */
@@ -29,6 +30,9 @@ async function ensureSchema() {
       created_at       TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await db.query(`ALTER TABLE celebrations ADD COLUMN IF NOT EXISTS cabana1 BOOLEAN NOT NULL DEFAULT false`);
+  await db.query(`ALTER TABLE celebrations ADD COLUMN IF NOT EXISTS cabana2 BOOLEAN NOT NULL DEFAULT false`);
+  await db.query(`ALTER TABLE celebrations ADD COLUMN IF NOT EXISTS cabana_date DATE`);
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_celebrations_checkout ON celebrations(checkout_at)
   `);
@@ -69,6 +73,25 @@ async function listAll() {
   return r.rows;
 }
 
+function isValidDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+async function listCabana(channel) {
+  const column = channel === 'cabana1' ? 'cabana1' : channel === 'cabana2' ? 'cabana2' : null;
+  if (!column) throw new Error('Invalid cabana channel');
+  const r = await db.query(`
+    SELECT *, to_char(cabana_date, 'YYYY-MM-DD') AS cabana_date
+    FROM celebrations
+    WHERE ${column} = true
+      AND cabana_date = (NOW() AT TIME ZONE 'America/New_York')::date
+    ORDER BY created_at DESC
+  `);
+  return r.rows;
+}
+
 /**
  * Creates a new celebration.
  * checkout_date is a YYYY-MM-DD string; the record expires at noon UTC on that date.
@@ -82,8 +105,9 @@ async function createCelebration(data) {
 
   const r = await db.query(`
     INSERT INTO celebrations
-      (type, name1, name2, family_name, anniversary_num, birthday_num, building_number, checkout_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      (type, name1, name2, family_name, anniversary_num, birthday_num, building_number, checkout_at,
+       cabana1, cabana2, cabana_date)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING *
   `, [
     data.type,
@@ -94,6 +118,9 @@ async function createCelebration(data) {
     data.birthday_num    ? parseInt(data.birthday_num, 10)    : null,
     data.building_number,
     checkoutAt.toISOString(),
+    data.cabana1 === true,
+    data.cabana2 === true,
+    data.cabana1 || data.cabana2 ? data.cabana_date : null,
   ]);
   return r.rows[0];
 }
@@ -109,4 +136,6 @@ module.exports = {
   createCelebration,
   deleteCelebration,
   CELEBRATION_TYPES,
+  isValidDate,
+  listCabana,
 };

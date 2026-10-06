@@ -158,6 +158,23 @@
     .theme-retirement .band { background: #fff9e6; }
     .theme-retirement .divider { background: #ffd700; }
 
+    .theme-general {
+      background: #1D6247;
+      color: #fff;
+      font-family: 'Fredoka', sans-serif;
+    }
+    .theme-general .band, .theme-general .divider { background: #fff; }
+    .confetti { position: absolute; inset: 0; pointer-events: none; }
+    .confetti span {
+      position: absolute; width: 10px; height: 18px; opacity: 0.8;
+      animation: float-3 4s ease-in-out infinite;
+    }
+    .theme-general > :not(.confetti) { position: relative; z-index: 1; }
+    .theme-general > .band { position: absolute; }
+    @media (prefers-reduced-motion: reduce) {
+      .deco span, .confetti span { animation: none; }
+    }
+
     /* ── CSS confetti for kids (purely decorative) ──────────────────────────── */
     @keyframes float-1 { 0%,100% { transform: translateY(0)   rotate(0deg); }   50% { transform: translateY(-18px) rotate(8deg); } }
     @keyframes float-2 { 0%,100% { transform: translateY(0)   rotate(0deg); }   50% { transform: translateY(-12px) rotate(-6deg); } }
@@ -257,6 +274,11 @@
       deco:    ['🌟', '🥂', '✨', '🌟'],
       headline: () => 'Happy Retirement!',
     },
+    'general': {
+      theme: 'general',
+      deco: ['🎉', '✨', '🎊', '✨', '🎉'],
+      headline: () => "Let's Celebrate!",
+    },
   };
 
   /* ── Read URL params ────────────────────────────────────────────────────── */
@@ -274,6 +296,21 @@
 
   const slide = document.getElementById('slide');
   slide.classList.add(`theme-${cfg.theme}`);
+  if (type === 'general') {
+    const confetti = document.createElement('div');
+    confetti.className = 'confetti';
+    confetti.setAttribute('aria-hidden', 'true');
+    const colors = ['#fff', '#ffd700', '#ff8fa3', '#8be9fd'];
+    for (let i = 0; i < 48; i++) {
+      const piece = document.createElement('span');
+      piece.style.left = `${(i * 37) % 100}%`;
+      piece.style.top = `${(i * 23) % 100}%`;
+      piece.style.background = colors[i % colors.length];
+      piece.style.animationDelay = `${(i % 8) * -0.5}s`;
+      confetti.appendChild(piece);
+    }
+    slide.prepend(confetti);
+  }
 
   /* ── Decoration emojis ──────────────────────────────────────────────────── */
 
