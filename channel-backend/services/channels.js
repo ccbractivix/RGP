@@ -299,7 +299,8 @@ async function getCabanaCelebrationSlides(channelId) {
     });
   } catch (e) {
     console.error('[channels] cabana celebrations unavailable:', e.message);
-    return [];
+    // Let the player fall back to its last successful config instead of caching an empty schedule.
+    throw e;
   }
 }
 

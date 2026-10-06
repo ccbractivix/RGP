@@ -273,9 +273,19 @@
     }
   }
 
+  function isDateRestrictedCelebration(slide) {
+    if (!isCelebrationSlide(slide)) return false;
+    try {
+      const params = new URL(slide.url).searchParams;
+      return params.has('cabana_date') || params.has('cabana_channel');
+    } catch {
+      return false;
+    }
+  }
+
   function getEffectiveSlides(now = new Date()) {
     const source = (Array.isArray(baseSlides) ? baseSlides : []).filter(s =>
-      !/^cabana[12]$/.test(channelId) || !isCelebrationSlide(s) || isScheduledCabanaCelebration(s, now)
+      !/^cabana[12]$/.test(channelId) || !isDateRestrictedCelebration(s) || isScheduledCabanaCelebration(s, now)
     );
     if (source.length === 0) return [];
     if (!isWithinForcedExpressWindow(now)) return source;
