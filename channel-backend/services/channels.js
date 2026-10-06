@@ -32,6 +32,8 @@ const DEFAULT_CHANNELS = [
   { id: 'building-3',   name: 'building-3' },
   { id: 'restaurant',   name: 'Restaurant' },
   { id: 'no-limits',    name: 'No Limits' },
+  { id: 'cabana1',      name: 'Cabana 1' },
+  { id: 'cabana2',      name: 'Cabana 2' },
 ];
 
 /* ── Schema bootstrap ──────────────────────────────────────────────────────── */
@@ -271,6 +273,36 @@ async function getChannelSlides(channelId) {
   return r.rows;
 }
 
+async function getCabanaCelebrationSlides(channelId) {
+  if (!['cabana1', 'cabana2'].includes(channelId)) return [];
+  const base = process.env.CELEBRATIONS_API_URL || 'https://celebrations-backend-ul37.onrender.com';
+  try {
+    const res = await fetch(`${base}/api/celebrations?channel=${channelId}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const { celebrations } = await res.json();
+    return celebrations.map(c => {
+      const params = new URLSearchParams({
+        type: c.type, name1: c.name1, celebration_id: String(c.id),
+        cabana_date: c.cabana_date, cabana_channel: channelId,
+      });
+      if (c.name2) params.set('name2', c.name2);
+      if (c.family_name) params.set('family', c.family_name);
+      if (c.anniversary_num) params.set('anniversary', c.anniversary_num);
+      if (c.birthday_num) params.set('birthday', c.birthday_num);
+      return {
+        slide_url: `https://ccbractivix.github.io/RGP/celebrations-web/slide.html?${params}`,
+        duration_sec: 30,
+        label: `${c.type === 'general' ? 'General' : 'Celebration'} — ${c.name1}${c.name2 ? ` & ${c.name2}` : ''}`,
+      };
+    });
+  } catch (e) {
+    console.error('[channels] cabana celebrations unavailable:', e.message);
+    return [];
+  }
+}
+
 async function replaceChannelSlides(channelId, slides) {
   const client = await db.connect();
   try {
@@ -449,6 +481,7 @@ module.exports = {
   updateChannel,
   deleteChannel,
   getChannelSlides,
+  getCabanaCelebrationSlides,
   replaceChannelSlides,
   listAvailableSlides,
   createAvailableSlide,

@@ -3,6 +3,7 @@ const express = require('express');
 const {
   getChannel,
   getChannelSlides,
+  getCabanaCelebrationSlides,
   getActiveBreakthroughs,
   getChannelRules,
   recordHeartbeat,
@@ -17,7 +18,16 @@ router.get('/channels/:id', async (req, res) => {
     const channel = await getChannel(req.params.id);
     if (!channel) return res.status(404).json({ error: 'Channel not found' });
 
-    const slides = await getChannelSlides(req.params.id);
+    const [configuredSlides, celebrationSlides] = await Promise.all([
+      getChannelSlides(req.params.id),
+      getCabanaCelebrationSlides(req.params.id),
+    ]);
+    const slides = [...configuredSlides];
+    for (const slide of celebrationSlides) {
+      if (!slides.some(s => s.slide_url === slide.slide_url)) {
+        slides.push({ ...slide, display_order: slides.length + 1 });
+      }
+    }
     const rules = await getChannelRules(req.params.id);
     const ruleMap = {};
     rules.forEach(r => {

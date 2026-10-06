@@ -127,6 +127,7 @@ Set these on your hosting platform:
 | `CHANNEL_CODES` | ✅ Yes | Comma-separated 4-digit admin codes | `1234,5678` |
 | `CORS_ORIGIN` | Optional | Extra allowed origins (comma-separated) | `https://example.com` |
 | `AMENITIES_API_URL` | Optional | Amenities backend URL for lightning polling | `https://amenities-web.onrender.com/api/status` |
+| `CELEBRATIONS_API_URL` | Optional | Celebrations backend base URL for forced cabana celebrations; defaults to the hosted celebrations backend | `https://celebrations-backend-ul37.onrender.com` |
 | `PORT` | Optional | Server port (default: 3003) | `3003` |
 | `NODE_ENV` | Optional | Set to `production` for SSL connections | `production` |
 
@@ -141,6 +142,14 @@ Set these on your hosting platform:
 7. Deploy!
 
 The server will automatically create all database tables and seed the default channels and slides on first start.
+
+### Cabana Celebrations
+
+In `celebrations-web/admin.html`, create a celebration and check **Cabana 1**, **Cabana 2**, or both. Select the display date in the date-picker modal; both selected cabanas use that date.
+
+The slide is automatically included in the `cabana1` and/or `cabana2` player playlist for that date only, from midnight to midnight in **America/New_York (Eastern Time)**. Cabana scheduling is independent of the building channel's checkout expiration. These forced slides do not need to be manually added in Channel Manager and remain included even when the editable playlist is replaced. Changes are picked up by the player's normal configuration refresh; deleting the celebration removes it on the next refresh.
+
+The **General** celebration type uses a `#1D6247` background, white text, and decorative confetti.
 
 ### Update Frontend API URL
 
