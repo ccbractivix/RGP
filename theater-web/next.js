@@ -91,7 +91,7 @@
 
   /**
    * Find the earliest show whose start time is at or after (now − 60 s).
-   * Only movies are considered (live events are excluded).
+   * Only movies are considered (live events and videos are excluded).
    * Returns { show, startDate, dayLabel } or null.
    */
   function findNextShow(days) {
@@ -105,7 +105,7 @@
       var shows = dayObj.shows || [];
       for (var j = 0; j < shows.length; j++) {
         var show = shows[j];
-        if (show.contentType === 'live event') continue;
+        if (show.contentType === 'live event' || show.contentType === 'video') continue;
         var startDate = toDate(dayObj.label, show.time);
         if (!startDate) continue;
         if (startDate < cutoff) continue;

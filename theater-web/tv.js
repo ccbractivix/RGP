@@ -168,6 +168,9 @@
           if (show.titleLine3) {
             html += '<span class="tv-show-title">' + escapeHtml(show.titleLine3) + '</span>';
           }
+          if (show.versionLabel) {
+            html += '<span class="tv-show-meta">' + escapeHtml(show.versionLabel) + '</span>';
+          }
           if (meta.length) {
             html += '<span class="tv-show-meta">' + escapeHtml(meta.join(' · ')) + '</span>';
           }

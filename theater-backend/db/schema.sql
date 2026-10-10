@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS library (
   title          TEXT NOT NULL,
   title_line2    TEXT,
   title_line3    TEXT,
-  type           TEXT NOT NULL CHECK (type IN ('movie', 'live_event')),
+  type           TEXT NOT NULL CHECK (type IN ('movie', 'live_event', 'video')),
   mpaa_rating    TEXT,
   runtime_min    INT,
   genres         TEXT[],

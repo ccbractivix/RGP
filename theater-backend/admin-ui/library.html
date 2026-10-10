@@ -437,6 +437,7 @@
   <div class="action-bar">
     <button class="btn btn-gold" onclick="openAddMovieModal()">＋ Add Movie</button>
     <button class="btn" onclick="openAddEventModal()" style="color:var(--green);border-color:rgba(92,184,92,0.4)">＋ Add Live Event</button>
+    <button class="btn" onclick="openAddEventModal('video')">＋ Add Video</button>
     <button class="btn" onclick="triggerCsvImport()" style="color:var(--blue);border-color:rgba(74,144,217,0.4)">📥 Import CSV</button>
     <input type="file" id="csv-file-input" accept=".csv,.tsv,.txt" style="display:none" />
     <button class="btn" id="btn-export-library" title="Export full library as CSV">📤 Export CSV</button>
@@ -503,9 +504,9 @@
       </div>
       <div class="modal-body">
         <div class="form-row" id="event-id-row">
-          <label>Event ID</label>
+          <label id="event-id-label">Event ID</label>
           <input type="text" class="form-control" id="event-id" placeholder="EVT-XXX" spellcheck="false" />
-          <div class="form-hint">Must match pattern EVT-[A-Z0-9]+</div>
+          <div class="form-hint" id="event-id-hint">Must match pattern EVT-[A-Z0-9]+</div>
         </div>
         <div class="form-row">
           <label>Title Line 1</label>
@@ -518,6 +519,10 @@
         <div class="form-row">
           <label>Title Line 3 <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
           <input type="text" class="form-control" id="event-title-line3" placeholder="Third line of title" />
+        </div>
+        <div class="form-row">
+          <label>Version Label <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
+          <input type="text" class="form-control" id="event-version-label" placeholder="e.g. Extended Edition" />
         </div>
         <div class="form-row">
           <label>Runtime (minutes) <span style="color:var(--text-dim);font-weight:400">(optional)</span></label>
@@ -536,7 +541,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal('modal-event')">Cancel</button>
-        <button class="btn btn-gold" onclick="addEvent()">Add Event</button>
+        <button class="btn btn-gold" id="btn-confirm-event" onclick="addEvent()">Add Event</button>
       </div>
     </div>
   </div>
@@ -797,7 +802,7 @@
 
         const typeBadge = isMovie
           ? `<span class="badge badge-movie">Movie</span>`
-          : `<span class="badge badge-event">Live Event</span>`;
+          : `<span class="badge badge-event">${item.type === 'video' ? 'Video' : 'Live Event'}</span>`;
 
         const mpaa = item.mpaa_rating
           ? `<span class="mpaa-badge">${esc(item.mpaa_rating)}</span>`
@@ -1014,11 +1019,23 @@
     }
 
     /* ── Event modal ── */
-    function openAddEventModal() {
+    let _entryType = 'live_event';
+
+    function openAddEventModal(type) {
+      _entryType = type === 'video' ? 'video' : 'live_event';
+      const isVideo = _entryType === 'video';
+      const prefix = isVideo ? 'VID' : 'EVT';
+      document.getElementById('event-modal-title').textContent = isVideo ? 'Add Video' : 'Add Live Event';
+      document.getElementById('event-id-label').textContent = isVideo ? 'Video ID' : 'Event ID';
+      document.getElementById('event-id').placeholder = prefix + '-XXX';
+      document.getElementById('event-id-hint').textContent = 'Must match pattern ' + prefix + '-[A-Z0-9]+';
+      document.getElementById('event-title').placeholder = isVideo ? 'Video title (required)' : 'Event title (required)';
+      document.getElementById('btn-confirm-event').textContent = isVideo ? 'Add Video' : 'Add Event';
       document.getElementById('event-id').value = '';
       document.getElementById('event-title').value = '';
       document.getElementById('event-title-line2').value = '';
       document.getElementById('event-title-line3').value = '';
+      document.getElementById('event-version-label').value = '';
       document.getElementById('event-runtime').value = '';
       document.getElementById('event-ticket-url').value = '';
       document.getElementById('event-art').value = '';
@@ -1032,6 +1049,7 @@
       const title      = document.getElementById('event-title').value.trim();
       const titleLine2 = document.getElementById('event-title-line2').value.trim();
       const titleLine3 = document.getElementById('event-title-line3').value.trim();
+      const versionLabel = document.getElementById('event-version-label').value.trim();
       const runtime    = document.getElementById('event-runtime').value.trim();
       const ticketUrl  = document.getElementById('event-ticket-url').value.trim();
       const art        = document.getElementById('event-art').value.trim();
@@ -1039,8 +1057,10 @@
 
       errEl.className = 'modal-error';
 
-      if (!/^EVT-[A-Z0-9]+$/.test(eventId)) {
-        errEl.textContent = 'Event ID must match EVT-[A-Z0-9]+ (e.g. EVT-SHOW1)';
+      const isVideo = _entryType === 'video';
+      const prefix = isVideo ? 'VID' : 'EVT';
+      if (!(isVideo ? /^VID-[A-Z0-9]+$/ : /^EVT-[A-Z0-9]+$/).test(eventId)) {
+        errEl.textContent = (isVideo ? 'Video' : 'Event') + ' ID must match ' + prefix + '-[A-Z0-9]+ (e.g. ' + prefix + '-SHOW1)';
         errEl.className = 'modal-error visible';
         document.getElementById('event-id').focus();
         return;
@@ -1056,22 +1076,23 @@
       const payload = { id: eventId, title };
       if (titleLine2) payload.title_line2 = titleLine2;
       if (titleLine3) payload.title_line3 = titleLine3;
+      if (versionLabel) payload.version_label = versionLabel;
       if (runtime)    payload.runtime_min = parseInt(runtime, 10);
       if (ticketUrl)  payload.ticket_url  = ticketUrl;
       if (art)        payload.custom_art  = art;
 
-      apiFetch('/admin/library/event', {
+      apiFetch('/admin/library/' + (isVideo ? 'video' : 'event'), {
         method: 'POST',
         body: JSON.stringify(payload)
       })
       .then(r => {
         if (r.ok) {
           closeModal('modal-event');
-          showToast('Event added: ' + title, 'success');
+          showToast((isVideo ? 'Video' : 'Event') + ' added: ' + title, 'success');
           loadLibrary();
         } else {
           return r.json().then(d => {
-            errEl.textContent = d.error || d.message || 'Failed to add event';
+            errEl.textContent = d.error || d.message || (isVideo ? 'Failed to add video' : 'Failed to add event');
             errEl.className = 'modal-error visible';
           });
         }

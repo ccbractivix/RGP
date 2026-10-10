@@ -140,22 +140,27 @@ router.post('/:id/version', async (req, res) => {
   } catch (e) { return res.status(500).json({ error: e.message }); }
 });
 
-router.post('/event', async (req, res) => {
-  const { id, title, title_line2, title_line3, ticket_url, custom_art, runtime_min } = req.body;
-  if (!id || !title) return res.status(400).json({ error: 'id and title are required' });
-  if (!/^EVT-[A-Z0-9]+$/.test(id)) return res.status(400).json({ error: 'Live event ID must match EVT-XXXX format' });
+router.post(['/event', '/video'], async (req, res) => {
+  const isVideo = req.path === '/video';
+  const type = isVideo ? 'video' : 'live_event';
+  const idPattern = isVideo ? /^VID-[A-Z0-9]+$/ : /^EVT-[A-Z0-9]+$/;
+  const { id, title, title_line2, title_line3, ticket_url, custom_art, runtime_min, version_label } = req.body;
+  if (typeof title !== 'string' || !title.trim()) return res.status(400).json({ error: 'id and title are required' });
+  if (typeof id !== 'string' || !idPattern.test(id)) return res.status(400).json({ error: isVideo ? 'Video ID must match VID-XXXX format' : 'Live event ID must match EVT-XXXX format' });
   const parsedRuntime = runtime_min ? parseInt(runtime_min, 10) : null;
   if (parsedRuntime !== null && (isNaN(parsedRuntime) || parsedRuntime <= 0)) {
     return res.status(400).json({ error: 'Runtime must be a positive number (minutes)' });
   }
   try {
-    await db.query(
-      `INSERT INTO library (id, title, title_line2, title_line3, type, ticket_url, custom_art, runtime_min, last_updated)
-       VALUES ($1,$2,$3,$4,'live_event',$5,$6,$7,NOW())
-       ON CONFLICT (id) DO UPDATE SET title=$2, title_line2=$3, title_line3=$4, ticket_url=$5, custom_art=$6, runtime_min=$7, last_updated=NOW()`,
-      [id, title, title_line2 || null, title_line3 || null, ticket_url || null, custom_art || null, parsedRuntime]
+    const r = await db.query(
+      `INSERT INTO library (id, title, title_line2, title_line3, type, ticket_url, custom_art, runtime_min, version_label, last_updated)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
+       ON CONFLICT (id) DO UPDATE SET title=$2, title_line2=$3, title_line3=$4, ticket_url=$6, custom_art=$7, runtime_min=$8,
+       version_label=COALESCE(EXCLUDED.version_label, library.version_label), last_updated=NOW()
+       WHERE library.type = EXCLUDED.type RETURNING *`,
+      [id, title.trim(), title_line2 || null, title_line3 || null, type, ticket_url || null, custom_art || null, parsedRuntime, version_label || null]
     );
-    const r = await db.query('SELECT * FROM library WHERE id = $1', [id]);
+    if (!r.rows.length) return res.status(409).json({ error: 'ID belongs to a different library category' });
     return res.status(201).json(r.rows[0]);
   } catch (e) { return res.status(500).json({ error: e.message }); }
 });

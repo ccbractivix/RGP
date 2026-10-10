@@ -180,6 +180,13 @@ body {
   text-decoration: underline;
 }
 
+.show-version {
+  display: block;
+  font-size: 13px;
+  color: #666;
+  margin-top: 2px;
+}
+
 /* ===== IMDB LINKS ===== */
 .imdb-links {
   display: flex;

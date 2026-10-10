@@ -21,6 +21,9 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: process
     )`);
     await pool.query('ALTER TABLE library ADD COLUMN IF NOT EXISTS version_label TEXT');
     await pool.query('ALTER TABLE library ADD COLUMN IF NOT EXISTS parent_id TEXT REFERENCES library(id) ON DELETE SET NULL');
+    await pool.query(`ALTER TABLE library
+      DROP CONSTRAINT IF EXISTS library_type_check,
+      ADD CONSTRAINT library_type_check CHECK (type IN ('movie', 'live_event', 'video'))`);
   } catch (_) { /* ignore — older Postgres or table doesn't exist yet */ }
 })();
 

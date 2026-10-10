@@ -142,6 +142,8 @@
         var shows = dayObj.shows || [];
         shows.forEach(function (show) {
         var isLive = (show.contentType || '').toLowerCase() === 'live event';
+        var isVideo = (show.contentType || '').toLowerCase() === 'video';
+        var isManual = isLive || isVideo;
 
         html += '<div class="showtime-card">';
 
@@ -157,20 +159,23 @@
         // Card info
         html += '<div class="card-info">';
 
-        // Title (up to 3 lines for live events)
-        html += '<div class="show-title' + (isLive ? ' live-event-title' : '') + '">';
+        // Title (up to 3 lines for live events and videos)
+        html += '<div class="show-title' + (isManual ? ' live-event-title' : '') + '">';
         if (isLive) html += '<span class="live-badge">LIVE</span> ';
         html += escapeHtml(show.title);
         html += '</div>';
         if (show.titleLine2) {
-          html += '<div class="show-title' + (isLive ? ' live-event-title' : '') + '">';
+          html += '<div class="show-title' + (isManual ? ' live-event-title' : '') + '">';
           html += escapeHtml(show.titleLine2);
           html += '</div>';
         }
         if (show.titleLine3) {
-          html += '<div class="show-title' + (isLive ? ' live-event-title' : '') + '">';
+          html += '<div class="show-title' + (isManual ? ' live-event-title' : '') + '">';
           html += escapeHtml(show.titleLine3);
           html += '</div>';
+        }
+        if (show.versionLabel) {
+          html += '<div class="show-version">' + escapeHtml(show.versionLabel) + '</div>';
         }
 
         // Time + Rating + Runtime
@@ -186,13 +191,13 @@
           html += '<div class="show-notes">' + escapeHtml(show.notes) + '</div>';
         }
 
-        // Live event ticket link
-        if (isLive && show.ticketUrl) {
+        // Live event or video ticket link
+        if (isManual && show.ticketUrl) {
           html += '<div class="ticket-link"><a href="' + escapeAttr(show.ticketUrl) + '" target="_blank" rel="noopener">🎟️ Get Tickets</a></div>';
         }
 
         // IMDB links (movies only)
-        if (!isLive && show.imdbUrl) {
+        if (!isManual && show.imdbUrl) {
           html += '<div class="imdb-links">';
           html += '<a href="' + escapeAttr(show.imdbUrl) + '" target="_blank" rel="noopener">IMDb ⭐ ' + escapeHtml(show.imdbRating ? String(show.imdbRating) : 'N/A') + '</a>';
           if (show.parentsGuideUrl) {
