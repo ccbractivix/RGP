@@ -74,7 +74,8 @@ function buildDays(rows, closures, startDate, endDate) {
       map.set(ds, { label: formatDateLabel(d), shows: [] });
     }
     const isLive = row.type === 'live_event';
-    const imdbId = isLive ? null : row.library_id;
+    const isVideo = row.type === 'video';
+    const imdbId = isLive || isVideo ? null : row.library_id;
     map.get(ds).shows.push({
       title: row.title,
       titleLine2: row.title_line2 || '',
@@ -85,14 +86,14 @@ function buildDays(rows, closures, startDate, endDate) {
       rating: row.mpaa_rating || '',
       year: row.release_year || '',
       genre: (row.genres || []).join(', '),
-      poster: isLive && row.custom_art
+      poster: (isLive || isVideo) && row.custom_art
         ? 'static/' + row.custom_art
         : (row.poster_url || ''),
       imdbId,
       imdbRating: row.imdb_rating || null,
       imdbUrl: imdbId ? `https://www.imdb.com/title/${imdbId}/` : '',
       parentsGuideUrl: imdbId ? `https://www.imdb.com/title/${imdbId}/parentalguide` : '',
-      contentType: isLive ? 'live event' : 'movie',
+      contentType: isLive ? 'live event' : isVideo ? 'video' : 'movie',
       notes: row.notes || '',
       ticketUrl: row.ticket_url || '',
       libraryId: row.library_id,
@@ -170,7 +171,7 @@ async function getClosures(startDate, endDate) {
 
 router.get('/library/:id', async (req, res) => {
   const id = (req.params.id || '').trim();
-  if (!/^tt\d{7,8}$/.test(id) && !/^EVT-[A-Z0-9]+$/.test(id)) {
+  if (!/^tt\d{7,8}$/.test(id) && !/^(EVT|VID)-[A-Z0-9]+$/.test(id)) {
     return res.status(400).json({ error: 'Invalid library ID' });
   }
   try {
