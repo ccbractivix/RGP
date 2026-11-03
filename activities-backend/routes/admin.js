@@ -7,7 +7,7 @@ const router  = express.Router();
 
 const IMAGES_DIR = path.join(__dirname, '..', '..', 'static', 'images');
 
-const VENUES = ['Water Slide','Main Pool Deck','Main Lobby','Caribe Room','Sports Courts','Tiki Bar','Arcade'];
+const VENUES = ['Water Slide','Main Pool Deck','Main Lobby','Caribe Room','Sports Courts','Tiki Bar','Arcade','Movie Theater','Apollo Room'];
 
 // Operator codes for the activities-web/admin.html cancel/relocate UI
 function getOperatorCodes() {
