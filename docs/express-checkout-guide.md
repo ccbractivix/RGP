@@ -24,7 +24,10 @@
 
 ## 1. First-time deployment
 
-The backend is a standalone Node/Express service that lives in `checkout-backend/`. It is deployed separately from the theater backend.
+The Node/Express service lives in `checkout-backend/` and also serves Magic
+Show under `/magic-show/`. It is deployed separately from the theater backend.
+If updating an existing Checkout service, retain its existing environment
+variables and database and change the settings below on that service.
 
 ### On Render
 
@@ -34,15 +37,18 @@ The backend is a standalone Node/Express service that lives in `checkout-backend
 
    | Field | Value |
    |---|---|
-   | **Root Directory** | `checkout-backend` |
-   | **Build Command** | `npm install` |
-   | **Start Command** | `npm start` |
+   | **Root Directory** | Leave blank (repository root) |
+   | **Build Command** | `npm ci --prefix checkout-backend && npm ci --prefix magic-show-backend` |
+   | **Start Command** | `npm start --prefix checkout-backend` |
    | **Environment** | `Node` |
 
 4. Add the environment variables listed in [Section 2](#2-environment-variables).
 5. Click **Create Web Service**. Note the URL Render assigns (e.g. `https://checkout-backend-xxxx.onrender.com`). You will need it in Step 3.
 
-> **Database**: the service uses the same PostgreSQL connection string as the other Render services. It auto-creates the `checkouts` table on first start — no manual migration is required.
+> **Database**: the service uses its existing PostgreSQL connection string. It
+> auto-creates the `checkouts` and Magic Show tables on startup; no manual
+> migration is required. Magic Show's data is not affected by Checkout's daily
+> clear. See the [Magic Show setup guide](../magic-show-web/SETUP_GUIDE.md).
 
 ---
 

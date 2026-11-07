@@ -74,12 +74,13 @@ RGP is a modular resort platform built as a collection of independent micro-serv
 | **Disc Rentals** | `rentals-backend/` + `rentals-web/` | 3002 | Movie/game library, checkout/checkin, reservations | PIN (operator + admin codes) |
 | **go4launch** | `go4launch-backend/` + `go4launch/` | 3002 | Rocket launch tracker, blog, galleries | PIN (X-Auth-Code) |
 | **Cabana Booking** | `cabana-backend/` + `cabana-web/` | 3007 | Poolside cabana reservations | Session + CSRF |
-| **Magic Show** | `magic-show-backend/` + `magic-show-web/` | 3009 | Weekly reservations, overselling, partial-party check-in | Open access (no authentication) |
+| **Magic Show** | `magic-show-backend/` + `magic-show-web/` | 3005 via Checkout; 3009 standalone | Weekly reservations, overselling, partial-party check-in | Open access (no authentication) |
 
 > **Note:** go4launch-backend and rentals-backend both default to port 3002 locally; on Render they are separate services with separate URLs.
 
-Magic Show uses its own PostgreSQL database (`magic_shows` and
-`magic_reservations`), with per-show transaction locks and reservation versions
+Magic Show runs under `/magic-show/` on the Express Checkout service and uses
+the same PostgreSQL database with separate `magic_shows` and
+`magic_reservations` tables, per-show transaction locks, and reservation versions
 to coordinate concurrent check-ins. Capacity is 53; booking beyond capacity is
 allowed, while admission beyond capacity requires an explicit override.
 `shared/rooms.js` supplies the same room/unit data to Express Checkout and
