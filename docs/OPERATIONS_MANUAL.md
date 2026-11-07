@@ -28,6 +28,9 @@
 16. [Troubleshooting](#16-troubleshooting)
 17. [Glossary](#17-glossary)
 
+**Magic Show:** [Deployment and operations guide](../magic-show-web/SETUP_GUIDE.md)
+— separate backend/database, desktop reservations, and smartphone check-in.
+
 ---
 
 ## 1. What Is RGP?

@@ -20,6 +20,9 @@
 12. [Emergency Messaging & Lightning Alerts](#12-emergency-messaging--lightning-alerts)
 13. [Quick Reference](#13-quick-reference)
 
+**Magic Show:** [Reservations desk and smartphone check-in guide](../magic-show-web/SETUP_GUIDE.md)
+— free Thursday shows at 7 pm Eastern, general admission, 53 seats with overselling.
+
 ---
 
 ## 1. Introduction
