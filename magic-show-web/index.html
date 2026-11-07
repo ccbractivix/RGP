@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="api-url" content="">
+  <title>Magic Show | Reservations Desk</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="../shared/rooms.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body data-mode="desk">
+  <header><div><p class="eyebrow">GUEST EXPERIENCES</p><h1>Magic show reservations</h1><p>Free admission &middot; Thursdays at 7 pm Eastern &middot; General admission</p></div><a href="check-in.html">Open check-in</a></header>
+  <main>
+    <section class="show-bar" aria-label="Show selection">
+      <label for="show-date">Thursday show date<input type="date" id="show-date" required></label>
+      <p id="show-label"></p><span id="sync-status" role="status">Connecting...</span>
+    </section>
+    <section id="scoreboard" class="scoreboard" aria-label="Seating scoreboard" aria-live="polite"></section>
+    <p id="message" role="alert" hidden></p>
+    <div class="desk-layout">
+      <section class="panel booking-panel">
+        <h2 id="form-title">New reservation</h2>
+        <p>Reservations may exceed 53 seats. No assigned seats.</p>
+        <form id="reservation-form">
+          <label for="first-name">First name<input id="first-name" autocomplete="given-name" maxlength="100" required></label>
+          <label for="last-name">Last name<input id="last-name" autocomplete="family-name" maxlength="100" required></label>
+          <label>Room number<button id="booking-room" type="button">Select room / unit</button></label>
+          <label for="seats">Seats requested<input id="seats" type="number" inputmode="numeric" min="1" max="2147483647" step="1" value="1" required></label>
+          <button type="submit" class="primary" id="save-reservation">Save reservation</button>
+          <button type="button" id="reset-form" hidden>Discard edit</button>
+        </form>
+      </section>
+      <section class="panel list-panel">
+        <div class="list-heading"><h2>Reservations <span id="reservation-count"></span></h2><button id="refresh" type="button">Refresh</button></div>
+        <div class="filters"><label for="search">Search name or room<input id="search" type="search" placeholder="Last name or room number"></label><button id="filter-room" type="button">Filter by room</button><button id="clear-filter" type="button" hidden>Clear room</button></div>
+        <div id="reservation-list"></div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
