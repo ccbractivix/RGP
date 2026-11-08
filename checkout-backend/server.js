@@ -1,41 +1,21 @@
 'use strict';
 require('dotenv').config();
 
-const express   = require('express');
-const cors      = require('cors');
-const rateLimit = require('express-rate-limit');
-
-const apiRouter   = require('./routes/api');
-const adminRouter = require('./routes/admin');
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const db = require('./db/db');
+const { createApp } = require('./app');
 const { ensureSchema, scheduledClear } = require('./services/checkouts');
 
-const app  = express();
+const app = createApp(db);
 const PORT = process.env.PORT || 3005;
-
-// CORS — always allow the GitHub Pages site; additional origins via env
-const allowedOrigins = ['https://ccbractivix.github.io'];
-if (process.env.CORS_ORIGIN) {
-  process.env.CORS_ORIGIN.split(',').map(s => s.trim()).forEach(o => {
-    if (o && !allowedOrigins.includes(o)) allowedOrigins.push(o);
-  });
-}
-app.use(cors({ origin: allowedOrigins }));
-
-app.use(express.json());
-
-// Rate limiting
-const publicLimiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false });
-const adminLimiter  = rateLimit({ windowMs: 60_000, max:  60, standardHeaders: true, legacyHeaders: false });
-
-app.use('/api',   publicLimiter, apiRouter);
-app.use('/admin', adminLimiter,  adminRouter);
-
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 (async () => {
   try {
     await ensureSchema();
     console.log('Checkout schema ready');
+    await db.query(await fs.readFile(path.join(__dirname, '../magic-show-backend/db/schema.sql'), 'utf8'));
+    console.log('Magic show schema ready');
   } catch (e) {
     console.error('Failed to initialise schema:', e);
     process.exit(1);

@@ -2,7 +2,8 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const mobile = document.body.dataset.mode === 'check-in';
-  const api = document.querySelector('meta[name="api-url"]').content.trim().replace(/\/$/, '');
+  const configuredApi = document.querySelector('meta[name="api-url"]').content.trim().replace(/\/$/, '');
+  const api = configuredApi || (location.pathname.startsWith('/magic-show/') ? '/magic-show' : '');
   const { VILLA_DATA } = window.ResortRooms;
   let state = null;
   let editing = null;
