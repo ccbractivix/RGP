@@ -1,0 +1,12 @@
+* { box-sizing: border-box; }
+body { margin: 0; background: #0f172a; color: #e2e8f0; font: 16px system-ui, sans-serif; }
+main { max-width: 760px; margin: 48px auto; padding: 24px; }
+h1 { color: #E37433; }
+nav { display: grid; gap: 16px; }
+nav a { padding: 20px; border: 1px solid #334155; border-radius: 12px; background: #1e293b; color: inherit; text-decoration: none; }
+nav a:hover, nav a:focus-visible { border-color: #E37433; }
+nav strong, nav span { display: block; }
+nav span { margin-top: 8px; color: #94a3b8; }
+button { padding: 10px 16px; cursor: pointer; }
+[hidden] { display: none !important; }
+#message { color: #fca5a5; }

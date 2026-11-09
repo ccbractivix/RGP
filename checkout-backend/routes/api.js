@@ -1,8 +1,10 @@
 'use strict';
 const express = require('express');
-const { VALID_VILLAS, submitCheckout, getHousekeepingCheckouts } = require('../services/checkouts');
+const { VALID_VILLAS } = require('../services/checkouts');
 
+function createApiRouter(service, requireStaff) {
 const router = express.Router();
+const { submitCheckout, getHousekeepingCheckouts } = service;
 
 // ── POST /api/checkout ────────────────────────────────────────────────────────
 router.post('/checkout', async (req, res) => {
@@ -33,7 +35,7 @@ router.post('/checkout', async (req, res) => {
 });
 
 // ── GET /api/checkouts/housekeeping ───────────────────────────────────────────
-router.get('/checkouts/housekeeping', async (_req, res) => {
+router.get('/checkouts/housekeeping', requireStaff, async (_req, res) => {
   try {
     const rows = await getHousekeepingCheckouts();
     return res.json({ checkouts: rows });
@@ -43,4 +45,7 @@ router.get('/checkouts/housekeeping', async (_req, res) => {
   }
 });
 
-module.exports = router;
+return router;
+}
+
+module.exports = { createApiRouter };

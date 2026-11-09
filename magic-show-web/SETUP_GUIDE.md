@@ -7,19 +7,18 @@ its PostgreSQL database. No separate Render service, database, Static Site,
 Docker, persistent disk, or manual migration is needed. Both apps share the
 service's availability and deploy together.
 
-**Open access:** there is no access code or authentication, by request. Anyone
-who can reach the API can read guest names and room numbers and modify records.
-CORS is not access control. Use a private network or hosting-level access
-restriction if these records must not be publicly accessible. This tool does
-not provision a hosting service or database itself. Decide whether this access
-model is acceptable **before entering real guest information**.
+**Staff access:** Magic Show now uses the same shared staff code as checkout
+operations and housekeeping. Sign in from the service's `/staff/` launcher or
+directly on the Magic Show pages. API requests without the code return 401.
+Follow [the consolidated Render guide](../docs/resort-apps-render-guide.md)
+for the full migration, team access, and rollback instructions.
 
 ### Step 1: Prepare the existing service
 
 1. Sign in to [Render](https://render.com) and open the existing Express
    Checkout **Web Service**, not its database.
 2. Ensure its selected repository branch contains `checkout-backend/`,
-   `magic-show-backend/`, `magic-show-web/`, and `shared/`, including these
+   `resort-web/`, `checkout-web/`, `magic-show-web/`, and `shared/`, including these
    integration changes. Push them to that branch before deploying.
 3. Keep the existing `DATABASE_URL`, `CHECKOUT_CODES`, `GITHUB_TOKEN`, and other
    Checkout settings. Magic Show uses the same database connection; its tables
@@ -39,14 +38,14 @@ may vary slightly. Preserve the existing service name, region, branch, and plan.
 |---|---|
 | Runtime / Language | Node |
 | Root Directory | **Leave blank** to use the repository root |
-| Build Command | `npm ci --prefix checkout-backend && npm ci --prefix magic-show-backend` |
+| Build Command | `npm ci --prefix checkout-backend` |
 | Start Command | `npm start --prefix checkout-backend` |
 | Health Check Path | `/health` (under advanced settings, if shown) |
 
 **Do not set Root Directory to either backend directory.** Checkout imports
-Magic Show and the shared room data from sibling directories. Both `npm ci`
-commands are required because each backend has its own dependencies. There is
-no frontend build command.
+Magic Show web pages and shared room data from sibling directories. Its backend
+implementation is now inside checkout-backend and uses the same dependency
+installation. There is no frontend build command.
 
 ### Step 3: Check environment variables and deploy
 
@@ -57,6 +56,7 @@ variables and verify:
 |---|---|---|
 | `DATABASE_URL` | Existing Checkout PostgreSQL connection string | Yes |
 | `NODE_ENV` | `production` | Yes; enables the backend's production database SSL configuration |
+| `STAFF_ACCESS_CODE` | One long shared staff code, configured privately | Yes; legacy `CHECKOUT_CODES` is a transition fallback |
 | `CORS_ORIGIN` | Additional frontend origins, separated by commas | Only for additional frontend hosts; see Step 6 |
 
 Do not replace Checkout's database URL with the local-development example.
@@ -64,13 +64,14 @@ Do not upload a `.env` file to Render or commit one to the repository.
 
 **Leave `PORT` unset in your custom variables.** Render supplies it, and the
 server uses that value automatically. Port `3005` is Checkout's local fallback.
-No additional Magic Show access-code or API-key variable is required.
+No separate Magic Show code is needed; use the shared staff code.
 
 1. Save the settings and deploy the branch containing these changes. If needed,
    select **Manual Deploy → Deploy latest commit**.
-2. Watch the logs for both dependency installations and `Checkout schema ready`,
-   `Magic show schema ready`, and `Checkout backend running on port ...`.
-   The service will not listen if either schema initialization fails.
+2. Watch the logs for the dependency installation,
+   `Resort apps database ready (checkout + magic show)`, and
+   `Resort apps backend running on port ...`.
+   The service will not listen if migrations fail.
 3. Copy the existing Checkout service's public HTTPS URL from Render. In the
    following steps replace `YOUR-SERVICE` with its actual hostname.
 
@@ -82,9 +83,11 @@ No additional Magic Show access-code or API-key variable is required.
    {"status":"ok"}
    ```
 
-2. Open `https://YOUR-SERVICE.onrender.com/magic-show/api/shows/2026-11-12`. This is an
-   example Thursday; you can substitute another date in `YYYY-MM-DD` format,
-   but it must be a Thursday. For a date without reservations, expect:
+2. Open `/staff/`, sign in, and open Magic Show reservations. Choose
+   `2026-11-12` (or another Thursday in `YYYY-MM-DD` format). The page sends the
+   shared code in its API header. Direct browser navigation to the API without
+   that header returns 401. For a date without reservations, the authenticated
+   response has this shape:
 
    ```json
    {

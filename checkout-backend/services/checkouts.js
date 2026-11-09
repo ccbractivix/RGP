@@ -1,8 +1,7 @@
 'use strict';
-const db = require('../db/db');
-
 const { VALID_VILLAS, VILLA_DATA } = require('../../shared/rooms');
 
+function createCheckoutService(db) {
 // ── Schema ────────────────────────────────────────────────────────────────────
 
 async function ensureSchema() {
@@ -224,7 +223,7 @@ async function scheduledClear() {
   }
 }
 
-module.exports = {
+return {
   VALID_VILLAS,
   VILLA_DATA,
   ensureSchema,
@@ -234,3 +233,6 @@ module.exports = {
   toCsv,
   scheduledClear,
 };
+}
+
+module.exports = { createCheckoutService, VALID_VILLAS, VILLA_DATA };

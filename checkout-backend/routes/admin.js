@@ -1,29 +1,18 @@
 'use strict';
 const express = require('express');
-const { getAllCheckouts, toCsv } = require('../services/checkouts');
 
+function createAdminRouter(service, auth) {
 const router = express.Router();
-
-// Parse valid operator codes once at module load
-const validCodes = (process.env.CHECKOUT_CODES || '').split(',').map(c => c.trim()).filter(Boolean);
-
-// ── Auth middleware ───────────────────────────────────────────────────────────
-function requireAuth(req, res, next) {
-  const code = (req.headers['x-auth-code'] || '').trim();
-  if (!code || validCodes.length === 0 || !validCodes.includes(code)) {
-    return res.status(401).json({ error: 'Invalid or missing auth code' });
-  }
-  return next();
-}
+const { getAllCheckouts, toCsv } = service;
 
 // ── POST /admin/verify ────────────────────────────────────────────────────────
 router.post('/verify', (req, res) => {
-  const code = (req.body.code || '').trim();
-  return res.json({ valid: validCodes.includes(code) });
+  res.set('Cache-Control', 'no-store');
+  return res.json({ valid: auth.valid(req.body?.code) });
 });
 
 // All routes below require auth
-router.use(requireAuth);
+router.use(auth.requireStaff);
 
 // ── GET /admin/checkouts ──────────────────────────────────────────────────────
 router.get('/checkouts', async (_req, res) => {
@@ -52,4 +41,7 @@ router.get('/export', async (_req, res) => {
   }
 });
 
-module.exports = router;
+return router;
+}
+
+module.exports = { createAdminRouter };

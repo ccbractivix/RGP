@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="api-url" content="https://checkout-backend-9jr4.onrender.com">
   <title>Express Check Out — Operator</title>
+  <link rel="stylesheet" href="../shared/staff-access.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -215,7 +216,7 @@
   <p>Express Check Out · Staff Access</p>
   <div class="login-card">
     <label for="code-input">Access Code</label>
-    <input type="password" id="code-input" maxlength="10" inputmode="numeric"
+    <input type="password" id="code-input" maxlength="256"
            placeholder="••••" autocomplete="off">
     <div class="login-err" id="login-err">Invalid access code.</div>
     <button class="btn-login" id="login-btn">Sign In</button>
@@ -263,11 +264,14 @@
   </div>
 </div>
 
+<script src="../shared/staff-access.js"></script>
 <script>
 (function () {
   'use strict';
 
-  const API = document.querySelector('meta[name="api-url"]').content.replace(/\/$/, '');
+  const API = location.pathname.startsWith('/checkout/') || location.pathname.startsWith('/checkout-web/')
+    ? location.origin : document.querySelector('meta[name="api-url"]').content.replace(/\/$/, '');
+  const staff = ResortStaff.createClient(API);
 
   let authCode       = null;
   let refreshTimer   = null;
@@ -310,28 +314,17 @@
   const loginBtn    = document.getElementById('login-btn');
 
   async function doLogin() {
-    const code = codeInput.value.trim();
-    if (!code) return;
     loginBtn.disabled = true;
     loginErr.classList.remove('show');
     try {
-      const res  = await fetch(`${API}/admin/verify`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ code }),
-      });
-      const data = await res.json();
-      if (data.valid) {
-        authCode = code;
-        loginScreen.style.display = 'none';
-        dashboard.style.display   = 'block';
-        loadData();
-        scheduleRefresh();
-      } else {
-        loginErr.classList.add('show');
-      }
-    } catch (_) {
-      loginErr.textContent = 'Could not reach server. Try again.';
+      authCode = await staff.signIn();
+      codeInput.value = '';
+      loginScreen.style.display = 'none';
+      dashboard.style.display   = 'block';
+      loadData();
+      scheduleRefresh();
+    } catch (error) {
+      loginErr.textContent = error.message;
       loginErr.classList.add('show');
     }
     loginBtn.disabled = false;
@@ -339,20 +332,21 @@
 
   loginBtn.addEventListener('click', doLogin);
   codeInput.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  codeInput.hidden = true;
+  document.querySelector('label[for="code-input"]').hidden = true;
+  doLogin();
 
   /* ── Load data ──────────────────────────────────────────────────────────── */
   async function loadData() {
     try {
-      const res  = await fetch(`${API}/admin/checkouts`, {
-        headers: { 'X-Auth-Code': authCode },
-      });
-      if (res.status === 401) { showLoginAgain(); return; }
+      const res  = await staff.request(`${API}/admin/checkouts`);
+      if (!res.ok) throw new Error(`Checkout request failed (${res.status}).`);
       const data = await res.json();
       renderTable(data.checkouts || []);
       const ts = data.serverTime || new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
       document.getElementById('last-updated').textContent = `Last updated: ${ts}`;
-    } catch (_) {
-      document.getElementById('last-updated').textContent = 'Error loading data';
+    } catch (error) {
+      document.getElementById('last-updated').textContent = error.message;
     }
   }
 
@@ -396,6 +390,7 @@
     loginErr.textContent = 'Session expired. Please sign in again.';
     loginErr.classList.add('show');
   }
+  document.addEventListener('staff-signed-out', showLoginAgain);
 
   /* ── Auto-refresh ────────────────────────────────────────────────────────── */
   function scheduleRefresh() {
@@ -426,12 +421,11 @@
   /* ── CSV export ──────────────────────────────────────────────────────────── */
   document.getElementById('export-btn').addEventListener('click', () => {
     if (!authCode) return;
-    const a = document.createElement('a');
-    a.href = `${API}/admin/export`;
-    a.setAttribute('download', '');
-    // Include auth in URL via fetch + Blob so header is passed
-    fetch(`${API}/admin/export`, { headers: { 'X-Auth-Code': authCode } })
-      .then(r => r.blob())
+    staff.request(`${API}/admin/export`)
+      .then(r => {
+        if (!r.ok) throw new Error(`Export failed (${r.status}).`);
+        return r.blob();
+      })
       .then(blob => {
         const url = URL.createObjectURL(blob);
         const dl  = document.createElement('a');
@@ -439,6 +433,9 @@
         dl.download = `checkouts-${new Date().toISOString().slice(0,10)}.csv`;
         dl.click();
         URL.revokeObjectURL(url);
+      })
+      .catch(error => {
+        document.getElementById('last-updated').textContent = error.message;
       });
   });
 

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resort staff tools</title>
+  <link rel="stylesheet" href="/shared/launcher.css">
+  <link rel="stylesheet" href="/shared/staff-access.css">
+  <script defer src="/shared/staff-access.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <main>
+    <h1>Staff tools</h1>
+    <p>One staff code for checkout operations, housekeeping, and Magic Show.</p>
+    <p id="message" role="alert"></p>
+    <button id="sign-in" type="button">Sign in</button>
+    <div id="tools" hidden>
+      <nav aria-label="Staff tools">
+        <a href="/checkout/operator.html"><strong>Checkout operations</strong><span>Guest submissions, signatures, and CSV export.</span></a>
+        <a href="/checkout/housekeeping.html"><strong>Housekeeping</strong><span>Villa checkout log.</span></a>
+        <a href="/magic-show/"><strong>Magic Show reservations</strong><span>Create and manage reservations.</span></a>
+        <a href="/magic-show/check-in.html"><strong>Magic Show check-in</strong><span>Arrivals and seating counts.</span></a>
+      </nav>
+      <p>Games are maintained separately and will be linked here when ready.</p>
+      <button id="sign-out" type="button">Sign out</button>
+    </div>
+  </main>
+</body>
+</html>

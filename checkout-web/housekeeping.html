@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="api-url" content="https://checkout-backend-9jr4.onrender.com">
   <title>Housekeeping — Check-Out Log</title>
+  <link rel="stylesheet" href="../shared/staff-access.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -216,11 +217,14 @@
   </div>
 </footer>
 
+<script src="../shared/staff-access.js"></script>
 <script>
 (function () {
   'use strict';
 
-  const API = document.querySelector('meta[name="api-url"]').content.replace(/\/$/, '');
+  const API = location.pathname.startsWith('/checkout/') || location.pathname.startsWith('/checkout-web/')
+    ? location.origin : document.querySelector('meta[name="api-url"]').content.replace(/\/$/, '');
+  const staff = ResortStaff.createClient(API);
 
   let refreshTimer = null;
 
@@ -261,15 +265,16 @@
   /* ── Load ────────────────────────────────────────────────────────────────── */
   async function loadData() {
     try {
-      const res  = await fetch(`${API}/api/checkouts/housekeeping`);
+      const res  = await staff.request(`${API}/api/checkouts/housekeeping`);
+      if (!res.ok) throw new Error(`Housekeeping request failed (${res.status}).`);
       const data = await res.json();
       renderList(data.checkouts || []);
       document.getElementById('updated-ts').textContent =
         new Date().toLocaleTimeString('en-US', {
           timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true,
         });
-    } catch (_) {
-      document.getElementById('updated-ts').textContent = 'Error';
+    } catch (error) {
+      document.getElementById('updated-ts').textContent = error.message;
     }
   }
 
