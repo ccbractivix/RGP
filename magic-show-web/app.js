@@ -4,7 +4,7 @@
   const mobile = document.body.dataset.mode === 'check-in';
   const configuredApi = document.querySelector('meta[name="api-url"]').content.trim().replace(/\/$/, '');
   const api = configuredApi || (location.pathname.startsWith('/magic-show/') ? '/magic-show' : '');
-  const { VILLA_DATA } = window.ResortRooms;
+  const staff = ResortStaff.createClient(api || location.origin);
   let state = null;
   let editing = null;
   let bookingRoom = '';
@@ -43,9 +43,9 @@
   async function request(url, options = {}) {
     let response;
     try {
-      response = await fetch(url, { ...options, headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000) });
+      response = await staff.request(url, { ...options, headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(15000) });
     } catch (error) {
-      throw new Error('Connection failed. Refresh before retrying; a submitted change may already have been saved.', { cause: error });
+      throw new Error(`${error.message} Refresh before retrying; a submitted change may already have been saved.`, { cause: error });
     }
     let data;
     try { data = await response.json(); } catch (error) {
@@ -166,49 +166,20 @@
   function roomDialog(initial, done) {
     const el = dialog('Select room / unit');
     const form = document.createElement('form');
-    const buildings = element('div', undefined, 'building-buttons');
-    const roomLabel = element('label', 'Room number');
-    const rooms = document.createElement('select');
-    rooms.required = true;
-    roomLabel.append(rooms);
-    const unitLabel = element('label', 'Unit');
-    const units = document.createElement('select');
-    units.append(new Option('Select unit', ''), ...['A', 'B', 'A+B'].map(unit => new Option(unit, unit)));
-    unitLabel.append(units);
-    function updateUnit() {
-      unitLabel.hidden = !VILLA_DATA.B1_AB.includes(Number(rooms.value));
-      units.required = !unitLabel.hidden;
-      units.value = '';
-    }
-    function chooseBuilding(building) {
-      buildings.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.building === String(building))));
-      const numbers = building === 1 ? [...VILLA_DATA.B1_WHOLE, ...VILLA_DATA.B1_AB].sort((a, b) => a - b) : VILLA_DATA[`B${building}`];
-      rooms.replaceChildren(new Option('Select room', ''), ...numbers.map(room => new Option(String(room), String(room))));
-      updateUnit();
-    }
-    [1, 2, 3].forEach(building => {
-      const b = button(`Building ${building}`, () => chooseBuilding(building));
-      b.dataset.building = String(building);
-      buildings.append(b);
-    });
+    const container = element('div');
+    form.append(container);
+    const picker = ResortRoomPicker.mount(container);
+    if (initial) picker.setValue(initial);
     const actions = element('div', undefined, 'dialog-actions');
     const use = element('button', 'Use room', 'primary');
     use.type = 'submit';
     actions.append(button('Close', () => el.close()), use);
-    form.append(buildings, roomLabel, unitLabel, actions);
+    form.append(actions);
     el.append(form);
-    chooseBuilding(initial ? Number(initial[0]) : 1);
-    if (initial) {
-      const [room, unit] = initial.split(' ');
-      rooms.value = room;
-      updateUnit();
-      units.value = unit || '';
-    }
-    rooms.addEventListener('change', updateUnit);
     form.addEventListener('submit', event => {
       event.preventDefault();
-      const villa = rooms.value + (unitLabel.hidden ? '' : ` ${units.value}`);
-      done(villa);
+      if (!picker.validate()) return;
+      done(picker.getValue());
       el.close();
     });
     el.showModal();

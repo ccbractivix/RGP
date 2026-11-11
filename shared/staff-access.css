@@ -1,0 +1,25 @@
+.resort-staff-login {
+  margin: auto;
+  padding: 24px;
+  width: min(92vw, 380px);
+  border: 1px solid #334155;
+  border-radius: 14px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font: 16px system-ui, sans-serif;
+}
+.resort-staff-login::backdrop { background: rgba(0, 0, 0, 0.8); }
+.resort-staff-login h2, .resort-staff-login p { margin: 0 0 16px; }
+.resort-staff-login label { display: block; }
+.resort-staff-login input {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0 16px;
+  color: inherit;
+  background: #1e293b;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+}
+.resort-staff-login button { padding: 10px 16px; cursor: pointer; }
+.resort-staff-login [role="alert"] { color: #fca5a5; }

@@ -75,6 +75,10 @@ selections have an empty `value`. Building and room are numbers or `null`,
 and unit is `A`, `B`, `A+B`, or `null`. The event also fires on reset.
 Multiple pickers can be mounted in separate containers.
 
+Call `picker.setValue('1105 A+B')` to preselect a saved room when editing.
+It throws for values outside the shared roster and emits the same change
+events as interactive selection.
+
 The stylesheet scopes its rules to `.resort-room-picker`; its
 `--room-picker-*` CSS variables can be overridden on the container for a
 different theme. The example uses checkout's colors and font.

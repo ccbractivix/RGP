@@ -565,7 +565,8 @@
   const B1_AB_SET = new Set(B1_AB);
 
   /* ── API base ────────────────────────────────────────────────────────────── */
-  const API = document.querySelector('meta[name="api-url"]').content.replace(/\/$/, '');
+  const API = location.pathname.startsWith('/checkout/') || location.pathname.startsWith('/checkout-web/')
+    ? location.origin : document.querySelector('meta[name="api-url"]').content.replace(/\/$/, '');
 
   /* ── State ───────────────────────────────────────────────────────────────── */
   let selectedBuilding = null;

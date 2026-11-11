@@ -135,7 +135,19 @@
       notify();
     }
 
-    return { getValue: value, validate, reset };
+    function setValue(villa) {
+      if (!root.ResortRooms.VALID_VILLAS.has(villa)) {
+        throw new RangeError('Select a valid room and unit.');
+      }
+      const [number, selectedUnit] = villa.split(' ');
+      const selectedBuilding = Number(number[0]);
+      buildingRow.querySelector(`[data-building="${selectedBuilding}"]`).click();
+      roomSelect.value = number;
+      roomSelect.dispatchEvent(new Event('change'));
+      if (selectedUnit) unitRow.querySelector(`[data-unit="${selectedUnit}"]`).click();
+    }
+
+    return { getValue: value, validate, reset, setValue };
   }
 
   root.ResortRoomPicker = { mount };

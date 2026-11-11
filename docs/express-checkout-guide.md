@@ -1,5 +1,10 @@
 # Express Check Out — Setup & Operations Guide
 
+> **Consolidated service:** follow [Resort apps: Render deployment and team
+> access](resort-apps-render-guide.md) for the current deployment, shared staff
+> code, team links, verification, and rollback. Guest checkout is public;
+> operator, housekeeping, and Magic Show data now require staff sign-in.
+
 > **Service overview**  
 > Express Check Out lets resort guests check out from their phone by scanning a QR code displayed on in-room TVs and common-area screens. Staff see submissions in real time via a protected operator dashboard. A separate TV display is provided for the housekeeping team. All records are automatically cleared at 4 pm ET each day, with a CSV archive written to the repository for safekeeping.
 
@@ -38,7 +43,7 @@ variables and database and change the settings below on that service.
    | Field | Value |
    |---|---|
    | **Root Directory** | Leave blank (repository root) |
-   | **Build Command** | `npm ci --prefix checkout-backend && npm ci --prefix magic-show-backend` |
+   | **Build Command** | `npm ci --prefix checkout-backend` |
    | **Start Command** | `npm start --prefix checkout-backend` |
    | **Environment** | `Node` |
 
@@ -59,7 +64,8 @@ Set these in the Render dashboard under **Environment → Environment Variables*
 | Variable | Required | Description |
 |---|---|---|
 | `DATABASE_URL` | ✅ | PostgreSQL connection string (same DB as theater-backend). |
-| `CHECKOUT_CODES` | ✅ | Comma-separated access codes for the operator dashboard, e.g. `4872` or `4872,5590`. 4-digit numeric codes are recommended. |
+| `STAFF_ACCESS_CODE` | ✅ | One long shared staff code for operator, housekeeping, and Magic Show tools. |
+| `CHECKOUT_CODES` | Legacy | Used only if `STAFF_ACCESS_CODE` is unset. Preserve temporarily for rollback. |
 | `NODE_ENV` | ✅ | Set to `production`. Enables SSL on the DB connection. |
 | `GITHUB_TOKEN` | Recommended | Personal access token (classic) with `repo` write scope. Used to push daily CSV exports to the repository. If omitted, the daily archive is skipped — records are still cleared at 4 pm. |
 | `GITHUB_REPO` | Optional | Repository to push exports to. Defaults to `ccbractivix/RGP`. |
@@ -79,7 +85,10 @@ Set these in the Render dashboard under **Environment → Environment Variables*
 
 ## 3. Frontend configuration
 
-After the Render service is deployed and you have its URL, two edits are needed in the source files.
+Pages hosted at the Render service's `/checkout/` path use the same service
+origin automatically; no API URL edit is needed. Share `/staff/` with the
+team. The configuration below applies only to separate GitHub Pages hosting
+and existing QR targets.
 
 ### 3a. Update the API URL in all three web pages
 

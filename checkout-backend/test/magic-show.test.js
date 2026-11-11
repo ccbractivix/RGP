@@ -12,7 +12,7 @@ test('checkout and magic show share a server without sharing routes', async t =>
       return { rows: [] };
     },
   };
-  const server = createApp(db).listen(0, '127.0.0.1');
+  const server = createApp(db, { staffAccessCode: 'test-staff-code' }).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   t.after(() => new Promise(resolve => server.close(resolve)));
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -28,18 +28,52 @@ test('checkout and magic show share a server without sharing routes', async t =>
   assert.equal(checkout.status, 400);
   assert.deepEqual(await checkout.json(), { error: 'last_name_required' });
 
-  const show = await fetch(`${base}/magic-show/api/shows/2026-11-12`);
+  const show = await fetch(`${base}/magic-show/api/shows/2026-11-12`, {
+    headers: { 'X-Auth-Code': 'test-staff-code' },
+  });
   assert.equal(show.status, 200);
   assert.equal((await show.json()).scoreboard.available, 53);
   assert.deepEqual(queries[0].params, ['2026-11-12']);
   assert.equal((await fetch(`${base}/api/shows/2026-11-12`)).status, 404);
-  assert.equal((await fetch(`${base}/magic-show/api/checkout`)).status, 404);
+  assert.equal((await fetch(`${base}/magic-show/api/checkout`, {
+    headers: { 'X-Auth-Code': 'test-staff-code' },
+  })).status, 404);
 
-  for (const route of ['/magic-show/', '/magic-show/check-in.html', '/magic-show/app.js', '/shared/rooms.js']) {
+  for (const route of ['/', '/staff/', '/checkout/', '/checkout-web/', '/checkout/operator.html',
+    '/checkout/housekeeping.html', '/magic-show/', '/magic-show/check-in.html',
+    '/magic-show/app.js', '/shared/rooms.js', '/shared/staff-access.js',
+    '/shared/room-picker/room-picker.js']) {
     assert.equal((await fetch(base + route)).status, 200, route);
   }
   const page = await (await fetch(`${base}/magic-show/index.html`)).text();
   assert.match(page, /src="\.\.\/shared\/rooms\.js"/);
   const script = await (await fetch(`${base}/magic-show/app.js`)).text();
   assert.match(script, /location\.pathname\.startsWith\('\/magic-show\/'\)/);
+});
+
+test('all staff data requires the shared code and guest checkout stays public', async t => {
+  const db = { async query() { return { rows: [] }; } };
+  const server = createApp(db, { staffAccessCode: 'test-staff-code' }).listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  for (const route of ['/admin/checkouts', '/admin/export', '/api/checkouts/housekeeping',
+    '/magic-show/api/shows/2026-11-12']) {
+    assert.equal((await fetch(base + route)).status, 401, route);
+    assert.equal((await fetch(base + route, { headers: { 'X-Auth-Code': 'wrong' } })).status, 401);
+    const response = await fetch(base + route, { headers: { 'X-Auth-Code': 'test-staff-code' } });
+    assert.equal(response.status, 200, route);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+  }
+  for (const method of ['POST', 'PATCH', 'DELETE']) {
+    const response = await fetch(`${base}/magic-show/api/shows/2026-11-12/reservations/1`, { method });
+    assert.equal(response.status, 401);
+  }
+  for (const code of ['test-staff-code', 'wrong', 123, null]) {
+    const response = await fetch(`${base}/admin/verify`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    assert.deepEqual(await response.json(), { valid: code === 'test-staff-code' });
+  }
 });
