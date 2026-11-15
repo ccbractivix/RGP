@@ -302,7 +302,7 @@
       <!-- Launch Selector -->
       <div class="panel">
         <div class="panel-title">📋 Select Launch</div>
-        <label for="launch-select">Upcoming & Recent Launches</label>
+        <label for="launch-select">Managed Launches</label>
         <select id="launch-select">
           <option value="">— Loading launches… —</option>
         </select>
@@ -321,6 +321,11 @@
       <div id="editor" style="display:none;">
         <div class="panel">
           <div class="panel-title">✏️ Launch Content</div>
+
+          <label for="f-visible" style="display:flex;align-items:center;gap:0.5rem;">
+            <input type="checkbox" id="f-visible" checked> Display this launch
+          </label>
+          <div class="field-hint">Uncheck to hide this launch from the main listing. Save content to apply; past and future launches remain until hidden.</div>
 
           <label for="f-headline">Headline Banner</label>
           <input type="text" id="f-headline" placeholder="e.g., LAUNCH TODAY 5:15 PM">
@@ -414,11 +419,6 @@
 
   <script>
     (function() {
-      const LL2_BASE = 'https://ll.thespacedevs.com/2.3.0';
-      const LL2_KEY  = '506485404eb785c1b7e1c3dac3ba394ba8fb6834';
-      const LOC_IDS  = [12, 27]; // Cape Canaveral SFS (12), Kennedy Space Center (27) — Florida only
-      const WINDOW   = 14;
-
       let authCode = sessionStorage.getItem('go4launch_code') || '';
       let currentLaunchId = '';
       let allLaunches = [];
@@ -507,69 +507,14 @@
         await populateDropdown();
       }
 
-      // ── Fetch Upcoming & Recent Launches ──
-      // Primary: use backend proxy (same origin, no CORS issues)
-      // Fallback: direct LL2 API calls
       async function fetchUpcoming() {
-        // Try backend proxy first (same-origin)
-        try {
-          const proxyResp = await fetch('/api/launches');
-          if (proxyResp.ok) {
-            const data = await proxyResp.json();
-            if (Array.isArray(data)) {
-              allLaunches = data;
-              allLaunches.sort((a, b) => new Date(a.net || a.window_start || '2099') - new Date(b.net || b.window_start || '2099'));
-              if (allLaunches.length) {
-                sessionStorage.setItem('go4launch_admin_launches', JSON.stringify(allLaunches));
-              }
-              return allLaunches;
-            }
-          }
-        } catch (e) {
-          console.warn('Backend proxy failed, trying LL2 direct:', e.message);
-        }
-
-        // Fallback: direct LL2 API calls
-        const locIds = LOC_IDS.join(',');
-        const cutoff = new Date(Date.now() + WINDOW * 86400000).toISOString();
-        const launches = [];
-
-        const headers = LL2_KEY ? { Authorization: `Token ${LL2_KEY}` } : {};
-        const [upResp, prevResp] = await Promise.allSettled([
-          fetch(`${LL2_BASE}/launches/upcoming/?location__ids=${locIds}&limit=50&mode=detailed&net__lte=${cutoff}`, { headers }),
-          fetch(`${LL2_BASE}/launches/previous/?location__ids=${locIds}&limit=5&mode=detailed`, { headers }),
-        ]);
-
-        if (upResp.status === 'fulfilled' && upResp.value.ok) {
-          const d = await upResp.value.json();
-          if (d.results) launches.push(...d.results);
-        } else {
-          console.warn('LL2 upcoming failed:', upResp.status === 'rejected' ? upResp.reason : `HTTP ${upResp.value?.status}`);
-        }
-        if (prevResp.status === 'fulfilled' && prevResp.value.ok) {
-          const d = await prevResp.value.json();
-          if (d.results) launches.push(...d.results);
-        } else {
-          console.warn('LL2 previous failed:', prevResp.status === 'rejected' ? prevResp.reason : `HTTP ${prevResp.value?.status}`);
-        }
-
-        const seen = new Set();
-        allLaunches = launches.filter(l => { if (seen.has(l.id)) return false; seen.add(l.id); return true; });
+        const response = await adminFetch('/admin/launches');
+        if (response.status === 401) { doLogout(); throw new Error('Session expired'); }
+        if (!response.ok) throw new Error(`Launch list returned ${response.status}`);
+        const launches = await response.json();
+        if (!Array.isArray(launches)) throw new Error('Unexpected launch list');
+        allLaunches = launches;
         allLaunches.sort((a, b) => new Date(a.net || a.window_start || '2099') - new Date(b.net || b.window_start || '2099'));
-
-        if (allLaunches.length) {
-          sessionStorage.setItem('go4launch_admin_launches', JSON.stringify(allLaunches));
-        } else {
-          // API returned nothing — fall back to cached launches
-          const cached = sessionStorage.getItem('go4launch_admin_launches');
-          if (cached) {
-            try {
-              const prev = JSON.parse(cached);
-              if (Array.isArray(prev) && prev.length) allLaunches = prev;
-            } catch (_) { /* ignore */ }
-          }
-        }
-
         return allLaunches;
       }
 
@@ -590,13 +535,13 @@
             select.appendChild(opt);
           });
           if (!launches.length) {
-            status.textContent = 'No launches found within 14 days. Use the manual launch ID field below.';
+            status.textContent = 'No launches found. Use the manual launch ID field below.';
             status.className = 'status-msg info';
           }
         } catch (e) {
           console.warn('LL2 fetch error:', e);
           select.innerHTML = '<option value="">— Could not load launches —</option>';
-          status.textContent = 'LL2 API unavailable. Use the manual launch ID field below.';
+          status.textContent = 'Could not load managed launches. Try again or use the manual launch ID field below.';
           status.className = 'status-msg error';
         }
       }
@@ -604,20 +549,23 @@
       // ── Load Content for Selected Launch ──
       async function loadContent(launchId) {
         if (!launchId) {
+          currentLaunchId = '';
           document.getElementById('editor').style.display = 'none';
           return;
         }
         currentLaunchId = launchId;
-        document.getElementById('editor').style.display = 'block';
+        document.getElementById('editor').style.display = 'none';
 
         clearForm();
 
         try {
           const r = await adminFetch(`/admin/content/${encodeURIComponent(launchId)}`);
+          if (currentLaunchId !== launchId) return;
           if (r.status === 401) { doLogout(); return; }
           if (r.ok) {
             const data = await r.json();
             if (data) {
+              document.getElementById('f-visible').checked = data.is_visible !== false;
               document.getElementById('f-headline').value = data.headline || '';
               document.getElementById('f-viewing-guide').value = data.viewing_guide || '';
               document.getElementById('f-chris-says').value = data.chris_says || '';
@@ -638,9 +586,16 @@
                 document.getElementById('upload-status').className = 'status-msg info';
               }
             }
+            document.getElementById('editor').style.display = 'block';
+          } else {
+            throw new Error(`Content load returned ${r.status}`);
           }
         } catch (e) {
           console.warn('Load content failed:', e);
+          const status = document.getElementById('select-status');
+          status.textContent = 'Could not load launch content. Please try again.';
+          status.className = 'status-msg error';
+          return;
         }
 
         loadSawItList(launchId);
@@ -677,6 +632,7 @@
             method: 'POST',
             body: JSON.stringify({
               launch_id: currentLaunchId,
+              is_visible: document.getElementById('f-visible').checked,
               headline: document.getElementById('f-headline').value.trim(),
               viewing_guide: document.getElementById('f-viewing-guide').value.trim(),
               chris_says: document.getElementById('f-chris-says').value.trim(),
@@ -693,6 +649,8 @@
           if (r.ok) {
             status.textContent = '✓ Content saved successfully!';
             status.className = 'status-msg success';
+            await populateDropdown();
+            document.getElementById('launch-select').value = currentLaunchId;
           } else {
             const d = await r.json().catch(() => ({}));
             status.textContent = d.error || 'Save failed.';

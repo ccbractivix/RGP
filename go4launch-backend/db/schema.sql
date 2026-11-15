@@ -39,6 +39,12 @@ CREATE TABLE IF NOT EXISTS go4launch_archive (
   archived_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS go4launch_listing (
+  launch_id   TEXT PRIMARY KEY,
+  launch_data JSONB NOT NULL,
+  is_visible  BOOLEAN NOT NULL DEFAULT TRUE
+);
+
 CREATE TABLE IF NOT EXISTS go4launch_saw_it (
   id         SERIAL PRIMARY KEY,
   launch_id  TEXT NOT NULL,

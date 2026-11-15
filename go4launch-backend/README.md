@@ -39,7 +39,7 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 ### Public (`/api`)
 - `GET /api/content` — All CMS content
 - `GET /api/content/:launchId` — Single launch content
-- `GET /api/launches` — Upcoming/recent LL2 launches (proxy + cache)
+- `GET /api/launches` — Launches selected for the main listing (LL2 proxy + stored snapshots)
 - `GET /api/galleries` — Auto-built gallery hall (see **Gallery hall automation** below)
 - `GET /api/ll2-status` — Latest result of the scheduled LL2 API version/deprecation monitor
 - `POST /api/archive` — Archive a completed launch
@@ -50,6 +50,7 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 
 ### Admin (`/admin`) — requires `X-Auth-Code` header
 - `POST /admin/verify` — Verify an auth code (no auth required)
+- `GET /admin/launches` — All managed launches, including hidden ones
 - `GET /admin/content/:launchId` — Load content for editing
 - `POST /admin/content` — Save/update launch content
 - `POST /admin/upload-image` — Upload launch card image
@@ -58,6 +59,13 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 
 ### Admin UI
 - `/admin-ui/` — Self-contained admin dashboard (served same-origin)
+
+Newly discovered launches are displayed automatically and retained until hidden.
+Select a launch in the editor, change **Display this launch**, and save to show
+or hide it. Hidden launches remain in the editor. To add an older or more distant
+launch, enter its LL2 UUID manually and save it with the box checked. LL2
+discovery still covers the next 14 days and recent launches; the archive and
+gallery pages are independent of this main-listing setting.
 
 ## Gallery hall automation
 
