@@ -28,6 +28,7 @@ const ALLOWED_SKY_ICON_SQL = ALLOWED_SKY_ICONS.map(escapeSqlLiteral).join(', ');
 
 // In-memory cache for LL2 launches (avoids hitting LL2 on every request)
 let launchCache = { data: null, ts: 0 };
+let launchRefresh = null;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 async function fetchLL2(endpoint, params) {
@@ -39,35 +40,32 @@ async function fetchLL2(endpoint, params) {
 }
 
 async function getLaunchById(id) {
+  await tablesReady;
   if (launchCache.data && Date.now() - launchCache.ts < CACHE_TTL) {
     const cached = launchCache.data.find(l => l.id === id);
     if (cached) return cached;
   }
-  try {
-    const data = await fetchLL2(`/launches/${encodeURIComponent(id)}/`, { mode: 'detailed' });
-    if (data && data.id) return data;
-  } catch (err) {
-    if (!err.response || err.response.status !== 404) throw err;
-  }
-
   const { rows } = await db.query(
-    'SELECT launch_data FROM go4launch_archive WHERE launch_id = $1',
+    `SELECT launch_data FROM go4launch_listing WHERE launch_id = $1
+     UNION ALL SELECT launch_data FROM go4launch_archive WHERE launch_id = $1
+     LIMIT 1`,
     [id]
   );
-  if (!rows.length || !rows[0].launch_data) return null;
-  const archived = rows[0].launch_data;
-  if (!archived.id) archived.id = id;
-  return archived;
+  if (rows.length && rows[0].launch_data) {
+    const stored = rows[0].launch_data;
+    if (!stored.id) stored.id = id;
+    return stored;
+  }
+  try {
+    const data = await fetchLL2(`/launches/${encodeURIComponent(id)}/`, { mode: 'detailed' });
+    return data?.id === id ? data : null;
+  } catch (err) {
+    if (err.response?.status === 404) return null;
+    throw err;
+  }
 }
 
-// GET /api/launches — proxied upcoming + recent launches
-router.get('/launches', async (_req, res) => {
-  try {
-    // Return cached data if fresh
-    if (launchCache.data && Date.now() - launchCache.ts < CACHE_TTL) {
-      return res.json(launchCache.data);
-    }
-
+async function refreshLaunches() {
     const locIds = LOC_IDS.join(',');
     const cutoff = new Date(Date.now() + 14 * 86400000).toISOString();
 
@@ -110,22 +108,63 @@ router.get('/launches', async (_req, res) => {
     });
     unique.sort((a, b) => new Date(a.net) - new Date(b.net));
 
-    // Cache result (even if empty — avoids hammering LL2 when there are genuinely no launches)
+    for (const launch of unique) {
+      await db.query(
+        `INSERT INTO go4launch_listing (launch_id, launch_data)
+         VALUES ($1, $2)
+         ON CONFLICT (launch_id) DO UPDATE SET launch_data = EXCLUDED.launch_data`,
+        [launch.id, launch]
+      );
+    }
+
+    // Keep out-of-window pending launches current, including manually added ones.
+    const stored = await db.query('SELECT launch_id, launch_data FROM go4launch_listing');
+    if (upRes.status === 'rejected' && prevRes.status === 'rejected' && !stored.rows.length) {
+      throw new Error('Both LL2 launch requests failed and no launches are stored');
+    }
+    const refreshedOutsideWindow = [];
+    for (const row of stored.rows) {
+      if (seen.has(row.launch_id) || COMPLETED_STATUS_IDS.includes(row.launch_data.status?.id)) continue;
+      try {
+        const latest = await fetchLL2(`/launches/${encodeURIComponent(row.launch_id)}/`, { mode: 'detailed' });
+        if (latest?.id === row.launch_id) {
+          await db.query('UPDATE go4launch_listing SET launch_data = $2 WHERE launch_id = $1', [row.launch_id, latest]);
+          refreshedOutsideWindow.push(latest);
+        }
+      } catch (err) {
+        console.warn('[go4launch] Launch refresh failed:', row.launch_id, err.message);
+      }
+    }
+
     launchCache = { data: unique, ts: Date.now() };
 
     // Auto-archive completed launches (fire-and-forget, never blocks response)
-    autoArchiveCompleted(unique).catch(e =>
+    autoArchiveCompleted([...unique, ...refreshedOutsideWindow]).catch(e =>
       console.warn('[go4launch] auto-archive error:', e.message)
     );
 
-    return res.json(unique);
+}
+
+async function getListing(includeHidden = false) {
+  await tablesReady;
+  if (!launchCache.data || Date.now() - launchCache.ts >= CACHE_TTL) {
+    if (!launchRefresh) {
+      launchRefresh = refreshLaunches().finally(() => { launchRefresh = null; });
+    }
+    await launchRefresh;
+  }
+  const { rows } = await db.query(
+    `SELECT launch_data FROM go4launch_listing ${includeHidden ? '' : 'WHERE is_visible = TRUE'}`
+  );
+  return rows.map(row => row.launch_data).sort((a, b) => new Date(a.net) - new Date(b.net));
+}
+
+// GET /api/launches — manager-selected launches
+router.get('/launches', async (_req, res) => {
+  try {
+    return res.json(await getListing());
   } catch (err) {
     console.error('[go4launch] /api/launches error:', err.message);
-
-    // Return stale cache if available
-    if (launchCache.data) {
-      return res.json(launchCache.data);
-    }
     return res.status(502).json({ error: 'Failed to fetch launches from LL2 API' });
   }
 });
@@ -184,7 +223,7 @@ async function autoArchiveCompleted(launches) {
 // ============================================================
 // AUTO-CREATE TABLES
 // ============================================================
-(async () => {
+const tablesReady = (async () => {
   try {
     await db.query(`
       CREATE TABLE IF NOT EXISTS go4launch_content (
@@ -200,6 +239,14 @@ async function autoArchiveCompleted(launches) {
         rtl_datetime    TIMESTAMPTZ,
         rtl_notes       TEXT,
         updated_at      TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS go4launch_listing (
+        launch_id   TEXT PRIMARY KEY,
+        launch_data JSONB NOT NULL,
+        is_visible  BOOLEAN NOT NULL DEFAULT TRUE
       )
     `);
 
@@ -268,8 +315,10 @@ async function autoArchiveCompleted(launches) {
     console.log('[go4launch] Tables ready.');
   } catch (err) {
     console.error('[go4launch] Table creation error:', err.message);
+    throw err;
   }
 })();
+tablesReady.catch(() => {});
 
 // ============================================================
 // CONFIGURABLE URLS
@@ -569,6 +618,9 @@ module.exports = router;
 module.exports.sendGalleryEmail = sendGalleryEmail;
 module.exports.ARCHIVE_BASE_URL = ARCHIVE_BASE_URL;
 module.exports.LL2_BASE = LL2_BASE;
+module.exports.getListing = getListing;
+module.exports.getLaunchById = getLaunchById;
+module.exports.tablesReady = tablesReady;
 
 // ============================================================
 // BLOG — PUBLIC ROUTES

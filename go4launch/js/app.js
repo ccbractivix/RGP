@@ -4,17 +4,12 @@
 // CONFIGURATION
 // ============================================================
 const CONFIG = {
-    LL2_BASE: 'https://ll.thespacedevs.com/2.3.0',
     BACKEND: (() => {
         const meta = document.querySelector('meta[name="api-base"]');
         return (meta && meta.getAttribute('content')) || '';
     })(),
-    LOCATION_IDS: [12, 27], // Cape Canaveral SFS (12), Kennedy Space Center (27) — Florida only
-    CACHE_KEY: 'go4launch_v1',
-    CACHE_TTL: 6 * 60 * 60 * 1000,
+    CACHE_KEY: 'go4launch_managed_v1',
     DATA_REFRESH_MS: 5 * 60 * 1000,
-    MAX_LAUNCHES: 15,
-    MAX_DAYS: 14,
     GALLERIES_JSON: 'data/galleries.json',
     GALLERY_CATEGORIES_JSON: 'data/gallery-categories.json',
 };
@@ -189,7 +184,7 @@ function buildSkyPositionSection(cms) {
 }
 
 // ============================================================
-// LAUNCH FETCHING (via backend proxy, with LL2 direct fallback)
+// LAUNCH FETCHING
 // ============================================================
 
 // Primary: fetch from go4launch-backend proxy (avoids CORS / rate-limit issues)
@@ -202,87 +197,11 @@ async function fetchLaunchesFromProxy() {
     return data;
 }
 
-// Fallback: fetch directly from LL2 dev API (browser-side, CORS-friendly).
-// Throws if BOTH requests fail so callers can distinguish a genuine empty
-// schedule (HTTP 200 with no results) from a fetch/rate-limit failure.
-async function fetchLL2Direct() {
-    const locIds = CONFIG.LOCATION_IDS.join(',');
-    const cutoff = new Date(Date.now() + CONFIG.MAX_DAYS * 86400000).toISOString();
-
-    const [upResp, prevResp] = await Promise.allSettled([
-        fetch(`${CONFIG.LL2_BASE}/launches/upcoming/?location__ids=${locIds}&limit=${CONFIG.MAX_LAUNCHES}&mode=detailed&net__lte=${cutoff}`),
-        fetch(`${CONFIG.LL2_BASE}/launches/previous/?location__ids=${locIds}&limit=5&mode=detailed`),
-    ]);
-
-    let upResults = [];
-    let prevResults = [];
-    let upOk = false;
-    let prevOk = false;
-
-    if (upResp.status === 'fulfilled' && upResp.value.ok) {
-        const d = await upResp.value.json();
-        upResults = d.results || [];
-        upOk = true;
-    } else {
-        console.warn('LL2 upcoming failed:', upResp.status === 'rejected' ? upResp.reason : `HTTP ${upResp.value?.status}`);
-    }
-
-    if (prevResp.status === 'fulfilled' && prevResp.value.ok) {
-        const d = await prevResp.value.json();
-        prevResults = d.results || [];
-        prevOk = true;
-    } else {
-        console.warn('LL2 previous failed:', prevResp.status === 'rejected' ? prevResp.reason : `HTTP ${prevResp.value?.status}`);
-    }
-
-    // If neither request succeeded, this is a fetch/rate-limit failure, not an
-    // empty schedule. Surface it so the UI doesn't claim "no launches".
-    if (!upOk && !prevOk) {
-        throw new Error('LL2 direct fallback failed (both requests errored)');
-    }
-
-    // prevResults first so that authoritative post-launch data wins over stale
-    // upcoming entries for the same launch ID during the transition after liftoff.
-    const combined = [...prevResults, ...upResults];
-    const seen = new Set();
-    const unique = combined.filter(l => {
-        if (seen.has(l.id)) return false;
-        seen.add(l.id);
-        return true;
-    });
-    unique.sort((a, b) => new Date(a.net) - new Date(b.net));
-    return unique;
-}
-
-// Combined fetch: proxy first, then LL2 direct fallback
 async function fetchLaunches() {
-    // Try backend proxy first (server-to-server, no CORS issues)
-    try {
-        const data = await fetchLaunchesFromProxy();
-        if (data && data.length) return data;
-        console.warn('Backend proxy returned empty data, trying LL2 direct');
-    } catch (e) {
-        console.warn('Backend proxy failed, trying LL2 direct:', e.message);
-    }
-
-    // Fallback to direct LL2 dev API (CORS-friendly)
-    return await fetchLL2Direct();
+    return await fetchLaunchesFromProxy();
 }
 
 async function loadLaunches() {
-    // Try cache first
-    const cached = localStorage.getItem(CONFIG.CACHE_KEY);
-    if (cached) {
-        try {
-            const { data, ts } = JSON.parse(cached);
-            if (Date.now() - ts < CONFIG.CACHE_TTL && data?.length) {
-                refreshInBackground();
-                return data;
-            }
-        } catch (e) {
-            localStorage.removeItem(CONFIG.CACHE_KEY);
-        }
-    }
     return await fetchAndCache();
 }
 
@@ -310,13 +229,7 @@ async function fetchAndCache() {
         if (stale) return stale;
         throw e;
     }
-    if (data.length) {
-        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
-        return data;
-    }
-    // API returned nothing — fall back to stale cache if available
-    const stale = readStaleCache();
-    if (stale) return stale;
+    localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
     return data;
 }
 
@@ -325,7 +238,6 @@ async function refreshLaunchData() {
     launchRefreshInFlight = true;
     try {
         const fresh = await fetchLaunches();
-        if (!fresh.length) return;
         localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
         allLaunches = fresh;
         await loadCMS();
@@ -352,10 +264,6 @@ function startLaunchRefreshLoop() {
     }, CONFIG.DATA_REFRESH_MS);
 }
 
-async function refreshInBackground() {
-    await refreshLaunchData();
-}
-
 // ============================================================
 // CMS CONTENT (from backend)
 // ============================================================
@@ -376,27 +284,6 @@ async function loadCMS() {
 // ============================================================
 // FILTERING
 // ============================================================
-function filterActiveLaunches(launches) {
-    const now = Date.now();
-    const maxFuture = now + CONFIG.MAX_DAYS * 86400000;
-
-    return launches.filter(launch => {
-        const net = new Date(launch.net).getTime();
-
-        // Completed launches: keep for 48 hours after NET
-        if (isCompleted(launch)) {
-            const cutoff = net + 48 * 3600000;
-            return now <= cutoff;
-        }
-
-        // In-flight: always show
-        if (isInFlight(launch)) return true;
-
-        // Future launches: within MAX_DAYS
-        return net <= maxFuture;
-    });
-}
-
 // ============================================================
 // ROUTER
 // ============================================================
@@ -438,7 +325,7 @@ function handleRoute() {
 // ============================================================
 function renderMainPage() {
     const app = document.getElementById('app');
-    const active = filterActiveLaunches(allLaunches);
+    const active = allLaunches;
 
     let html = '';
 
@@ -448,7 +335,7 @@ function renderMainPage() {
     </div>`;
 
     if (!active.length) {
-        html += '<div class="no-launches">No upcoming launches scheduled in the next 14 days. Check back soon!</div>';
+        html += '<div class="no-launches">No launches are currently displayed. Check back soon!</div>';
     } else {
         active.forEach(launch => {
             html += buildCard(launch);

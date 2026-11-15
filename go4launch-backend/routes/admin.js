@@ -3,7 +3,7 @@
 const express = require('express');
 const axios   = require('axios');
 const db      = require('../db/db');
-const { sendGalleryEmail, ARCHIVE_BASE_URL } = require('./api');
+const { sendGalleryEmail, ARCHIVE_BASE_URL, getListing, getLaunchById, tablesReady } = require('./api');
 const { ALLOWED_SKY_ICONS } = require('../constants/skyIcons');
 
 const router = express.Router();
@@ -34,11 +34,24 @@ router.post('/verify', (req, res) => {
 // All routes below require auth
 router.use(requireAuth);
 
+router.get('/launches', async (_req, res) => {
+  try {
+    return res.json(await getListing(true));
+  } catch (err) {
+    console.error('[go4launch] GET /admin/launches error:', err.message);
+    return res.status(500).json({ error: 'Failed to load launches' });
+  }
+});
+
 // ── GET /admin/content/:launchId — load existing content ──
 router.get('/content/:launchId', async (req, res) => {
   try {
+    await tablesReady;
     const { rows } = await db.query(
-      'SELECT * FROM go4launch_content WHERE launch_id = $1',
+      `SELECT c.*, COALESCE(l.is_visible, TRUE) AS is_visible
+       FROM (SELECT $1::text AS launch_id) AS selected
+       LEFT JOIN go4launch_content c ON c.launch_id = selected.launch_id
+       LEFT JOIN go4launch_listing l ON l.launch_id = selected.launch_id`,
       [req.params.launchId]
     );
     return res.json(rows[0] || null);
@@ -61,9 +74,13 @@ router.post('/content', async (req, res) => {
     gallery_url,
     rtl_datetime,
     rtl_notes,
+    is_visible,
   } = req.body;
   if (!launch_id) {
     return res.status(400).json({ error: 'launch_id required' });
+  }
+  if (is_visible !== undefined && typeof is_visible !== 'boolean') {
+    return res.status(400).json({ error: 'is_visible must be a boolean' });
   }
 
   const incomingSkyIcon = typeof sky_position_icon === 'string' ? sky_position_icon.trim().toLowerCase() : '';
@@ -72,32 +89,56 @@ router.post('/content', async (req, res) => {
     ? sky_position_text.trim()
     : '';
   try {
-    await db.query(`
-      INSERT INTO go4launch_content (launch_id, headline, viewing_guide, chris_says, trajectory, sky_position_icon, sky_position_text, gallery_url, rtl_datetime, rtl_notes, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-      ON CONFLICT (launch_id) DO UPDATE SET
-        headline = EXCLUDED.headline,
-        viewing_guide = EXCLUDED.viewing_guide,
-        chris_says = EXCLUDED.chris_says,
-        trajectory = EXCLUDED.trajectory,
-        sky_position_icon = EXCLUDED.sky_position_icon,
-        sky_position_text = EXCLUDED.sky_position_text,
-        gallery_url = EXCLUDED.gallery_url,
-        rtl_datetime = EXCLUDED.rtl_datetime,
-        rtl_notes = EXCLUDED.rtl_notes,
-        updated_at = NOW()
-    `, [
-      launch_id,
-      headline || null,
-      viewing_guide || null,
-      chris_says || null,
-      trajectory || null,
-      normalizedSkyIcon,
-      normalizedSkyText || null,
-      gallery_url || null,
-      rtl_datetime || null,
-      rtl_notes || null,
-    ]);
+    await tablesReady;
+    let launch;
+    if (is_visible !== undefined) {
+      if (!isValidUUID(launch_id)) return res.status(400).json({ error: 'Invalid launch_id format (expected UUID)' });
+      launch = await getLaunchById(launch_id);
+      if (!launch) return res.status(404).json({ error: 'Launch not found' });
+    }
+    const client = await db.connect();
+    try {
+      await client.query('BEGIN');
+      if (launch) {
+        await client.query(`
+          INSERT INTO go4launch_listing (launch_id, launch_data, is_visible)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (launch_id) DO UPDATE SET is_visible = EXCLUDED.is_visible
+        `, [launch_id, launch, is_visible]);
+      }
+      await client.query(`
+        INSERT INTO go4launch_content (launch_id, headline, viewing_guide, chris_says, trajectory, sky_position_icon, sky_position_text, gallery_url, rtl_datetime, rtl_notes, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+        ON CONFLICT (launch_id) DO UPDATE SET
+          headline = EXCLUDED.headline,
+          viewing_guide = EXCLUDED.viewing_guide,
+          chris_says = EXCLUDED.chris_says,
+          trajectory = EXCLUDED.trajectory,
+          sky_position_icon = EXCLUDED.sky_position_icon,
+          sky_position_text = EXCLUDED.sky_position_text,
+          gallery_url = EXCLUDED.gallery_url,
+          rtl_datetime = EXCLUDED.rtl_datetime,
+          rtl_notes = EXCLUDED.rtl_notes,
+          updated_at = NOW()
+      `, [
+        launch_id,
+        headline || null,
+        viewing_guide || null,
+        chris_says || null,
+        trajectory || null,
+        normalizedSkyIcon,
+        normalizedSkyText || null,
+        gallery_url || null,
+        rtl_datetime || null,
+        rtl_notes || null,
+      ]);
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
     return res.json({ ok: true });
   } catch (err) {
     console.error('[go4launch] POST /admin/content error:', err.message);
