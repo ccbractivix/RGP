@@ -2,11 +2,12 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const express = require('express');
+const { inflateSync } = require('node:zlib');
 
 // Keep tests isolated from the production PostgreSQL pool and its migrations.
 const db = { query: async () => { throw new Error('Unexpected database query'); } };
 require.cache[require.resolve('../db/db')] = { exports: db };
-const { currentWeek, createPrintPdf, generatePrintSchedule, PRINT_KEY, PrintScheduleTooLargeError } = require('../services/print-schedule');
+const { currentWeek, createPrintPdf, generatePrintSchedule, PRINT_KEY } = require('../services/print-schedule');
 const { buildDays } = require('../services/schedule-data');
 const api = require('../routes/api');
 const admin = require('../routes/admin');
@@ -25,6 +26,17 @@ function movie(date = week.start, overrides = {}) {
 
 function pageCount(pdf) {
   return (pdf.toString('latin1').match(/\/Type \/Page\b/g) || []).length;
+}
+
+function pdfText(pdf) {
+  const streams = [...pdf.toString('latin1').matchAll(/stream\n([\s\S]*?)\nendstream/g)];
+  return streams.map(stream => {
+    const content = inflateSync(Buffer.from(stream[1], 'latin1')).toString();
+    return [...content.matchAll(/BT\b([\s\S]*?)ET\b/g)].map(block =>
+      [...block[1].matchAll(/<([0-9a-f]+)>/gi)]
+        .map(match => Buffer.from(match[1], 'hex').toString('latin1')).join('')
+    ).join('\n');
+  }).join('\n');
 }
 
 test('current week uses resort local time across Mondays, Sundays, DST and year boundaries', () => {
@@ -53,7 +65,7 @@ test('shared schedule shaping preserves public filtering and includes all days f
   assert.equal(printDays[6].label, 'Sunday, Nov 22');
 });
 
-test('PDF is one letter-size page with linked metadata, QR image and no posters', async () => {
+test('staff PDF keeps operational details and omits guest metadata and promotions', async () => {
   const days = buildDays([
     movie(),
     movie('2026-11-18', {
@@ -66,32 +78,63 @@ test('PDF is one letter-size page with linked metadata, QR image and no posters'
   const raw = pdf.toString('latin1');
   assert.equal(pageCount(pdf), 1);
   assert.match(raw, /\/MediaBox \[0 0 612 792\]/);
-  assert.match(raw, /https:\/\/www\.imdb\.com\/title\/tt1234567\/parentalguide/);
-  assert.match(raw, /https:\/\/example\.com\/tickets/);
-  assert.match(raw, /https:\/\/sites\.google\.com\/view\/holidayinnclubcape\/home\/info-director/);
-  // PNG transparency is emitted as an auxiliary grayscale image mask.
-  assert.equal((raw.match(/\/Subtype \/Image\b/g) || []).length, 2);
-  assert.equal((raw.match(/\/Width 600/g) || []).length, 2);
+  const text = pdfText(pdf);
+  for (const included of [
+    'Example Movie', '3:30 PM - 5:05 PM', 'PG', 'LIVE: Live Show', 'Resort Video',
+    'Closed for Maintenance', 'Expected to re-open:', 'November 18, 2026 at 3:00 PM',
+    'Sunday, Nov 22', 'No showings scheduled.', 'Updated', 'EST', 'Page 1',
+  ]) assert.ok(text.includes(included), `Missing ${included}`);
+  for (const omitted of [
+    'Family matinee', 'Theatrical edition', 'Special Guest', 'One night only',
+    'Adventure', 'Comedy', '2025', 'IMDb', "Parents' Guide", '7.8', 'Get Tickets',
+    'Resort Guest Portal', 'rocketbeachresort', 'free!',
+  ]) assert.ok(!text.includes(omitted), `Unexpected ${omitted}`);
+  assert.doesNotMatch(raw, /\/Subtype \/(?:Image|Link)\b/);
 });
 
-test('empty and densely populated weeks fit on one page; oversized content is rejected', async () => {
+test('empty and ordinary four-show-per-day weeks fit on one page, even with long omitted notes', async () => {
   const empty = buildDays([], {}, week.start, week.end, true);
   assert.equal(pageCount(await createPrintPdf(empty, week, now)), 1);
   const rows = Array.from({ length: 28 }, (_, index) => movie(`2026-11-${16 + Math.floor(index / 4)}`, {
     start_time: `${10 + index % 4 * 3}:00:00`, title: `Movie Number ${index + 1}`,
-    notes: '', version_label: '',
+    notes: 'Very long program notes. '.repeat(3000),
   }));
   assert.equal(pageCount(await createPrintPdf(buildDays(rows, {}, week.start, week.end, true), week, now)), 1);
-  const oversized = buildDays([movie(week.start, { notes: 'Very long program notes. '.repeat(3000) })], {}, week.start, week.end, true);
-  await assert.rejects(createPrintPdf(oversized, week, now), PrintScheduleTooLargeError);
 });
 
-test('publishing persists a snapshot and rendering failure leaves previous version intact', async () => {
+test('busy weeks continue onto readable pages without dropping shows or day labels', async () => {
+  const rows = Array.from({ length: 140 }, (_, index) => movie(`2026-11-${16 + Math.floor(index / 20)}`, {
+    title: `Showing-${String(index).padStart(3, '0')}`,
+  }));
+  const pdf = await createPrintPdf(buildDays(rows, {}, week.start, week.end, true), week, now);
+  const text = pdfText(pdf);
+  assert.ok(pageCount(pdf) > 1);
+  rows.forEach(row => assert.equal(text.split(row.title).length - 1, 1, row.title));
+  assert.equal(text.split('TITLE / STATUS').length - 1, pageCount(pdf));
+  assert.equal(text.split('Updated ').length - 1, pageCount(pdf));
+  assert.match(text, /\(continued\)/);
+  assert.ok(text.includes('Sunday, Nov 22'));
+});
+
+test('a title taller than a page continues in full, including unbroken words', async () => {
+  for (const title of ['Long movie title '.repeat(1200), 'W'.repeat(8000)]) {
+    const pdf = await createPrintPdf(buildDays([movie(week.start, { title })], {}, week.start, week.end, true), week, now);
+    assert.ok(pageCount(pdf) > 1);
+    const text = pdfText(pdf);
+    const titleLines = text.split('\n').filter(line => /^(?:Long|movie|title|W+$)/.test(line));
+    assert.equal(titleLines.join('').replace(/\s/g, ''), title.replace(/\s/g, ''));
+    assert.ok(text.includes('Sunday, Nov 22'));
+  }
+});
+
+test('publishing persists overflow pages and a database failure leaves previous version intact', async () => {
   let saved = 'previous version';
   let rows = [movie()];
+  let fail = false;
   const queries = [];
   db.query = async (sql, params) => {
     queries.push({ sql, params });
+    if (fail) throw new Error('Database unavailable');
     if (sql.startsWith('INSERT INTO settings')) {
       assert.equal(params[0], PRINT_KEY);
       saved = params[1];
@@ -103,9 +146,12 @@ test('publishing persists a snapshot and rendering failure leaves previous versi
   assert.deepEqual(result, { weekStart: week.start, weekEnd: week.end, url: '/api/schedule/print' });
   assert.deepEqual(queries[0].params, [week.start, week.end]);
   assert.equal(pageCount(Buffer.from(saved, 'base64')), 1);
+  rows = [movie(week.start, { title: 'A very long title '.repeat(1000) })];
+  await generatePrintSchedule(now);
+  assert.ok(pageCount(Buffer.from(saved, 'base64')) > 1);
   const previous = saved;
-  rows = [movie(week.start, { notes: 'Too much information. '.repeat(3000) })];
-  await assert.rejects(generatePrintSchedule(now), PrintScheduleTooLargeError);
+  fail = true;
+  await assert.rejects(generatePrintSchedule(now), /Database unavailable/);
   assert.equal(saved, previous);
 });
 
