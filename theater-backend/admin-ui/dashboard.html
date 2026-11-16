@@ -67,7 +67,9 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      overflow-x: auto;
     }
+    .btn:disabled { opacity: 0.6; cursor: wait; }
 
     .btn {
       background: var(--card);
@@ -547,6 +549,8 @@
     <div class="header-title">🎬 Schedule Builder</div>
     <div class="header-actions">
       <button class="btn btn-gold" id="btn-update-now">⚡ Update Now</button>
+      <button class="btn" id="btn-update-print" title="Publish this week's Monday-Sunday print schedule, regardless of the week selected below">Update Print Schedule</button>
+      <a class="btn" href="/api/schedule/print" target="_blank" rel="noopener">View Current Print Schedule</a>
       <a class="btn" href="/admin-ui/library.html">📚 Library</a>
       <button class="btn btn-danger" id="btn-logout">⏻ Logout</button>
     </div>
@@ -1351,6 +1355,24 @@
           else        showToast('Update failed', 'error');
         })
         .catch(err => { if (err.message !== 'Unauthorized') showToast('Error', 'error'); });
+    });
+
+    document.getElementById('btn-update-print').addEventListener('click', async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      button.textContent = 'Updating Print Schedule...';
+      try {
+        const res = await apiFetch('/admin/print-schedule', { method: 'POST' });
+        if (res.status === 401) return;
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Failed to update print schedule');
+        showToast(`Print schedule updated: ${result.weekStart} to ${result.weekEnd}`, 'success');
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Update Print Schedule';
+      }
     });
 
     /* ── Escape helper ── */
