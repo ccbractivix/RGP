@@ -4,6 +4,7 @@ const axios   = require('axios');
 const db      = require('../db/db');
 const { runNightlyJobs } = require('../services/scheduler');
 const { generateSlide }  = require('../services/slides');
+const { generatePrintSchedule, PrintScheduleTooLargeError } = require('../services/print-schedule');
 const router = express.Router();
 
 function requireAuth(req, res, next) {
@@ -42,6 +43,16 @@ router.post('/cron/nightly', async (req, res) => {
 
 // All routes below require auth
 router.use(requireAuth);
+
+router.post('/print-schedule', async (_req, res) => {
+  try {
+    return res.json({ ok: true, ...await generatePrintSchedule() });
+  } catch (e) {
+    console.error('[print-schedule] Generation failed:', e);
+    return res.status(500).json({ error: e instanceof PrintScheduleTooLargeError
+      ? e.message : 'Failed to update the print schedule. The previous version has been kept.' });
+  }
+});
 
 // GET /admin/schedule/:weekStart
 router.get('/schedule/:weekStart', async (req, res) => {

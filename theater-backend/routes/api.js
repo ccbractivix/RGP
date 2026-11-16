@@ -3,30 +3,10 @@ const express      = require('express');
 const db           = require('../db/db');
 const { fetchPoster } = require('../services/tmdb');
 const { fetchMovie }  = require('../services/omdb');
+const { getRange, getClosures, buildDays } = require('../services/schedule-data');
+const { PRINT_KEY } = require('../services/print-schedule');
 const router       = express.Router();
 
-function formatDateLabel(date) {
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'America/New_York' });
-}
-function formatTime(t) {
-  if (!t) return '';
-  const [hStr, mStr] = t.split(':');
-  let h = parseInt(hStr, 10);
-  const m = parseInt(mStr, 10);
-  const s = h >= 12 ? 'PM' : 'AM';
-  if (h === 0) h = 12; else if (h > 12) h -= 12;
-  return `${h}:${String(m).padStart(2,'0')} ${s}`;
-}
-function calcEndTime(t, min) {
-  if (!t || !min) return '';
-  const [hStr, mStr] = t.split(':');
-  let total = parseInt(hStr,10)*60 + parseInt(mStr,10) + parseInt(min,10);
-  total = total % 1440;
-  const h = Math.floor(total/60), m = total%60;
-  const s = h >= 12 ? 'PM' : 'AM';
-  const h12 = h===0?12:h>12?h-12:h;
-  return `${h12}:${String(m).padStart(2,'0')} ${s}`;
-}
 function calcEndTime24(t, min) {
   if (!t || !min) return '';
   const [hStr, mStr] = t.split(':');
@@ -34,80 +14,6 @@ function calcEndTime24(t, min) {
   total = total % 1440;
   const h = Math.floor(total/60), m = total%60;
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:00`;
-}
-
-async function getRange(startDate, endDate) {
-  const r = await db.query(
-    `SELECT s.id, s.date, s.start_time, s.notes, s.is_inherited,
-            l.id AS library_id, l.title, l.title_line2, l.title_line3,
-            l.type, l.mpaa_rating,
-            l.runtime_min, l.genres, l.imdb_rating, l.poster_url,
-            l.ticket_url, l.custom_art, l.release_year,
-            l.version_label
-     FROM schedule s JOIN library l ON l.id = s.library_id
-     WHERE s.date >= $1 AND s.date <= $2
-     ORDER BY s.date, s.start_time`,
-    [startDate, endDate]
-  );
-  return r.rows;
-}
-
-function buildDays(rows, closures, startDate, endDate) {
-  const map = new Map();
-
-  // Pre-populate all dates in the range so closure-only days are included
-  if (startDate && endDate) {
-    const cur = new Date(startDate + 'T12:00:00Z');
-    const last = new Date(endDate + 'T12:00:00Z');
-    while (cur <= last) {
-      const ds = cur.toISOString().split('T')[0];
-      const d = new Date(ds + 'T12:00:00Z');
-      map.set(ds, { label: formatDateLabel(d), shows: [] });
-      cur.setUTCDate(cur.getUTCDate() + 1);
-    }
-  }
-
-  rows.forEach(row => {
-    const ds = String(row.date).split('T')[0];
-    if (!map.has(ds)) {
-      const d = new Date(ds + 'T12:00:00Z');
-      map.set(ds, { label: formatDateLabel(d), shows: [] });
-    }
-    const isLive = row.type === 'live_event';
-    const isVideo = row.type === 'video';
-    const imdbId = isLive || isVideo ? null : row.library_id;
-    map.get(ds).shows.push({
-      title: row.title,
-      titleLine2: row.title_line2 || '',
-      titleLine3: row.title_line3 || '',
-      time: formatTime(row.start_time),
-      endTime: calcEndTime(row.start_time, row.runtime_min),
-      runtime: row.runtime_min,
-      rating: row.mpaa_rating || '',
-      year: row.release_year || '',
-      genre: (row.genres || []).join(', '),
-      poster: (isLive || isVideo) && row.custom_art
-        ? 'static/' + row.custom_art
-        : (row.poster_url || ''),
-      imdbId,
-      imdbRating: row.imdb_rating || null,
-      imdbUrl: imdbId ? `https://www.imdb.com/title/${imdbId}/` : '',
-      parentsGuideUrl: imdbId ? `https://www.imdb.com/title/${imdbId}/parentalguide` : '',
-      contentType: isLive ? 'live event' : isVideo ? 'video' : 'movie',
-      notes: row.notes || '',
-      ticketUrl: row.ticket_url || '',
-      libraryId: row.library_id,
-      versionLabel: row.version_label || '',
-    });
-  });
-
-  const sorted = Array.from(map.entries()).sort(([a],[b])=>a.localeCompare(b)).map(([ds, v]) => {
-    if (closures && closures[ds]) v.closure = closures[ds];
-    return v;
-  });
-
-  // Filter out empty days: include only days with shows or an active closure
-  return sorted.filter(day => day.closure || day.shows.length > 0);
 }
 
 /**
@@ -154,19 +60,6 @@ async function backfillYears(rows) {
       }
     } catch (_) { /* non-fatal */ }
   }));
-}
-
-async function getClosures(startDate, endDate) {
-  const r = await db.query(
-    `SELECT date, type, expected_reopen FROM theater_closures WHERE date >= $1 AND date <= $2`,
-    [startDate, endDate]
-  );
-  const map = {};
-  r.rows.forEach(row => {
-    const ds = String(row.date).split('T')[0];
-    map[ds] = { type: row.type, expectedReopen: row.expected_reopen || null };
-  });
-  return map;
 }
 
 router.get('/library/:id', async (req, res) => {
@@ -230,6 +123,21 @@ router.get('/schedule/playback', async (_req, res) => {
       shows,
     });
   } catch (e) { console.error(e); return res.status(500).json({ error: 'Failed to load playback schedule' }); }
+});
+
+router.get('/schedule/print', async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    const result = await db.query('SELECT value FROM settings WHERE key = $1', [PRINT_KEY]);
+    if (!result.rows[0]?.value) {
+      return res.status(404).type('text').send('No print schedule has been published yet. Use Update Print Schedule in the theater dashboard first.');
+    }
+    return res.type('pdf').set('Content-Disposition', 'inline; filename="theater-schedule.pdf"')
+      .send(Buffer.from(result.rows[0].value, 'base64'));
+  } catch (e) {
+    console.error('[print-schedule] Loading failed:', e);
+    return res.status(500).json({ error: 'Failed to load the print schedule' });
+  }
 });
 
 router.get('/schedule', async (_req, res) => {
