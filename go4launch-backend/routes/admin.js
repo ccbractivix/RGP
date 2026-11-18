@@ -34,6 +34,96 @@ router.post('/verify', (req, res) => {
 // All routes below require auth
 router.use(requireAuth);
 
+router.get('/special-event', async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    await tablesReady;
+    const { rows } = await db.query(`
+      SELECT is_visible, title, subtitle, location, description,
+        to_char(event_local, 'YYYY-MM-DD"T"HH24:MI') AS event_local,
+        image_data IS NOT NULL AS has_image
+      FROM go4launch_special_event WHERE id
+    `);
+    return res.json(rows[0] || null);
+  } catch (err) {
+    console.error('[go4launch] GET /admin/special-event error:', err.message);
+    return res.status(500).json({ error: 'Failed to load special event' });
+  }
+});
+
+function isValidEventDate(value) {
+  if (typeof value !== 'string' || !/^[1-9]\d{3}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 16) === value;
+}
+
+function getEventImageType(bytes) {
+  if (bytes.subarray(0, 3).equals(Buffer.from('ffd8ff', 'hex'))) return 'image/jpeg';
+  if (bytes.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'))) return 'image/png';
+  if (bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP') return 'image/webp';
+  return null;
+}
+
+router.put('/special-event', async (req, res) => {
+  const {
+    is_visible, title = '', subtitle = '', location = '', description = '',
+    event_local = null, image_data, remove_image = false,
+  } = req.body;
+  if (typeof is_visible !== 'boolean' || typeof remove_image !== 'boolean') {
+    return res.status(400).json({ error: 'Invalid display or image removal setting.' });
+  }
+  if ([title, subtitle, location].some(text => typeof text !== 'string' || text.length > 200)
+      || typeof description !== 'string' || description.length > 5000) {
+    return res.status(400).json({ error: 'Limit title, subtitle, and location to 200 characters each and the description to 5,000 characters.' });
+  }
+  if (event_local !== null && !isValidEventDate(event_local)) {
+    return res.status(400).json({ error: 'Enter a valid Eastern date and time.' });
+  }
+  if (is_visible && (!title.trim() || !event_local)) {
+    return res.status(400).json({ error: 'Add a title, date, and time before displaying the event.' });
+  }
+
+  let bytes = null;
+  let imageType = null;
+  if (image_data !== undefined) {
+    const maxSize = 8 * 1024 * 1024;
+    if (remove_image || typeof image_data !== 'string' || image_data.length > 4 * Math.ceil(maxSize / 3)) {
+      return res.status(400).json({ error: 'Choose a JPG, PNG, or WebP image up to 8 MB, or remove the current image.' });
+    }
+    bytes = Buffer.from(image_data, 'base64');
+    imageType = getEventImageType(bytes);
+    if (bytes.length > maxSize || !imageType || bytes.toString('base64') !== image_data) {
+      return res.status(400).json({ error: 'Choose a valid JPG, PNG, or WebP image up to 8 MB.' });
+    }
+  }
+
+  try {
+    await tablesReady;
+    // A round trip through Eastern time rejects local times skipped by the spring DST transition.
+    const { rowCount } = await db.query(`
+      INSERT INTO go4launch_special_event
+        (id, is_visible, title, subtitle, location, description, event_local, image_type, image_data)
+      SELECT TRUE, $1, $2, $3, $4, $5, $6::timestamp, $7, $8
+      WHERE $6::timestamp IS NULL OR
+        ($6::timestamp AT TIME ZONE 'America/New_York') AT TIME ZONE 'America/New_York' = $6::timestamp
+      ON CONFLICT (id) DO UPDATE SET
+        is_visible = EXCLUDED.is_visible, title = EXCLUDED.title,
+        subtitle = EXCLUDED.subtitle, location = EXCLUDED.location,
+        description = EXCLUDED.description, event_local = EXCLUDED.event_local,
+        image_type = CASE WHEN $9::boolean THEN NULL ELSE
+          COALESCE(EXCLUDED.image_type, go4launch_special_event.image_type) END,
+        image_data = CASE WHEN $9::boolean THEN NULL ELSE
+          COALESCE(EXCLUDED.image_data, go4launch_special_event.image_data) END
+    `, [is_visible, title.trim(), subtitle.trim(), location.trim(), description.trim(),
+      event_local, imageType, bytes, remove_image]);
+    if (!rowCount) return res.status(400).json({ error: 'That time is skipped when clocks move forward. Choose another Eastern time.' });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[go4launch] PUT /admin/special-event error:', err.message);
+    return res.status(500).json({ error: 'Failed to save special event' });
+  }
+});
+
 router.get('/launches', async (_req, res) => {
   try {
     return res.json(await getListing(true));

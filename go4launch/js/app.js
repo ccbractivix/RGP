@@ -18,6 +18,8 @@ const CONFIG = {
 // STATE
 // ============================================================
 let allLaunches = [];
+let specialEvent = null;
+let launchesUnavailable = false;
 let cmsContent = {};
 let blogPosts = [];    // published posts (metadata, no body) sorted newest-first
 let galleryData = [];  // all galleries from static JSON sorted newest-first
@@ -201,6 +203,18 @@ async function fetchLaunches() {
     return await fetchLaunchesFromProxy();
 }
 
+async function fetchSpecialEvent() {
+    if (!CONFIG.BACKEND) return null;
+    try {
+        const res = await fetch(`${CONFIG.BACKEND}/api/special-event`);
+        if (!res.ok) throw new Error(`Special event returned ${res.status}`);
+        return await res.json();
+    } catch (e) {
+        console.warn('Special event load failed:', e);
+        return null;
+    }
+}
+
 async function loadLaunches() {
     return await fetchAndCache();
 }
@@ -237,11 +251,23 @@ async function refreshLaunchData() {
     if (launchRefreshInFlight) return;
     launchRefreshInFlight = true;
     try {
-        const fresh = await fetchLaunches();
-        localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
-        allLaunches = fresh;
-        await loadCMS();
-        handleRoute();
+        const [fresh, event] = await Promise.all([
+            fetchLaunches().catch(e => {
+                console.warn('Launch refresh failed:', e);
+                return null;
+            }),
+            fetchSpecialEvent(),
+        ]);
+        specialEvent = event;
+        if (fresh) {
+            localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ data: fresh, ts: Date.now() }));
+            allLaunches = fresh;
+            launchesUnavailable = false;
+            await loadCMS();
+            handleRoute();
+        } else if (!window.location.hash || window.location.hash === '#/') {
+            renderMainPage();
+        }
     } catch (e) {
         console.warn('Launch refresh failed:', e);
     } finally {
@@ -334,7 +360,11 @@ function renderMainPage() {
         <div class="subtitle">Resort Rocket Launch Viewing Companion</div>
     </div>`;
 
-    if (!active.length) {
+    if (specialEvent) html += buildSpecialEventCard(specialEvent);
+
+    if (launchesUnavailable) {
+        html += '<div class="no-launches">Unable to load launch data. Please try again later.</div>';
+    } else if (!active.length && !specialEvent) {
         html += '<div class="no-launches">No launches are currently displayed. Check back soon!</div>';
     } else {
         active.forEach(launch => {
@@ -354,6 +384,24 @@ function renderMainPage() {
 
     app.innerHTML = html;
     startCountdowns();
+}
+
+function buildSpecialEventCard(event) {
+    const image = event.has_image
+        ? `<div class="card-image"><img src="${esc(CONFIG.BACKEND)}/api/special-event/image" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`
+        : '';
+    return `<article class="launch-card special-event-card">
+        ${image}
+        <div class="card-body">
+            <h2 class="mission-name">${esc(event.title)}</h2>
+            <div><span class="status-badge status-inflight">Special Event</span></div>
+            ${event.subtitle ? `<div class="card-meta">${esc(event.subtitle)}</div>` : ''}
+            ${event.location ? `<div class="card-meta">${esc(event.location)}</div>` : ''}
+            <div class="card-day-of-week">${esc(getDayOfWeekET(event.event_datetime))}</div>
+            <div class="card-date">${esc(formatDateET(event.event_datetime))}</div>
+            ${event.description ? `<div class="special-event-description">${esc(event.description)}</div>` : ''}
+        </div>
+    </article>`;
 }
 
 function buildCard(launch) {
@@ -972,15 +1020,21 @@ function checkAndShowRTLPopup() {
 // ============================================================
 async function init() {
     try {
-        const [launches] = await Promise.all([
-            loadLaunches(),
+        const [launches, event] = await Promise.all([
+            loadLaunches().catch(e => {
+                console.warn('Launch load failed:', e);
+                return null;
+            }),
+            fetchSpecialEvent(),
             loadCMS(),
             loadBlog(),
             loadGalleries(),
             loadGalleryCategories(),
         ]);
 
-        allLaunches = launches;
+        allLaunches = launches || [];
+        launchesUnavailable = launches === null;
+        specialEvent = event;
         startLaunchRefreshLoop();
         renderNavBar();
         handleRoute();

@@ -40,6 +40,8 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 - `GET /api/content` — All CMS content
 - `GET /api/content/:launchId` — Single launch content
 - `GET /api/launches` — Launches selected for the main listing (LL2 proxy + stored snapshots)
+- `GET /api/special-event` — Visible special-event card, or `null` when hidden
+- `GET /api/special-event/image` — Custom image for the visible special-event card
 - `GET /api/galleries` — Auto-built gallery hall (see **Gallery hall automation** below)
 - `GET /api/ll2-status` — Latest result of the scheduled LL2 API version/deprecation monitor
 - `POST /api/archive` — Archive a completed launch
@@ -51,6 +53,7 @@ Standalone backend for the **go4launch** Space Coast launch tracker.
 ### Admin (`/admin`) — requires `X-Auth-Code` header
 - `POST /admin/verify` — Verify an auth code (no auth required)
 - `GET /admin/launches` — All managed launches, including hidden ones
+- `GET /admin/special-event` / `PUT /admin/special-event` — Load or save the reusable special-event card
 - `GET /admin/content/:launchId` — Load content for editing
 - `POST /admin/content` — Save/update launch content
 - `POST /admin/upload-image` — Upload launch card image
@@ -66,6 +69,14 @@ or hide it. Hidden launches remain in the editor. To add an older or more distan
 launch, enter its LL2 UUID manually and save it with the box checked. LL2
 discovery still covers the next 14 days and recent launches; the archive and
 gallery pages are independent of this main-listing setting.
+
+Use **Special Event Card** to edit the single reusable card shown above the
+launches. Add a title and an Eastern date and time to display it. Subtitle,
+location, a plain-text description with paragraph breaks, and a JPG, PNG, or
+WebP image up to 8 MB are optional. Check **Display this special event** and
+select **Save Special Event** to publish it. Uncheck and save to hide it without
+losing the saved content or image. It stays on the homepage until hidden and
+has no detail or archive page.
 
 ## Gallery hall automation
 

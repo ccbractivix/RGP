@@ -169,6 +169,40 @@ router.get('/launches', async (_req, res) => {
   }
 });
 
+router.get('/special-event', async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    await tablesReady;
+    const { rows } = await db.query(`
+      SELECT title, subtitle, location, description,
+        event_local AT TIME ZONE 'America/New_York' AS event_datetime,
+        image_data IS NOT NULL AS has_image
+      FROM go4launch_special_event WHERE id AND is_visible
+    `);
+    return res.json(rows[0] || null);
+  } catch (err) {
+    console.error('[go4launch] GET /api/special-event error:', err.message);
+    return res.status(500).json({ error: 'Failed to load special event' });
+  }
+});
+
+router.get('/special-event/image', async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    await tablesReady;
+    const { rows } = await db.query(`
+      SELECT image_type, image_data FROM go4launch_special_event
+      WHERE id AND is_visible AND image_data IS NOT NULL
+    `);
+    if (!rows.length) return res.sendStatus(404);
+    return res.set('X-Content-Type-Options', 'nosniff')
+      .type(rows[0].image_type).send(rows[0].image_data);
+  } catch (err) {
+    console.error('[go4launch] GET /api/special-event/image error:', err.message);
+    return res.status(500).json({ error: 'Failed to load special event image' });
+  }
+});
+
 // GET /api/launches/:id — single launch by ID (cache-first, then LL2 fallback)
 router.get('/launches/:id', async (req, res) => {
   const id = req.params.id;
@@ -247,6 +281,20 @@ const tablesReady = (async () => {
         launch_id   TEXT PRIMARY KEY,
         launch_data JSONB NOT NULL,
         is_visible  BOOLEAN NOT NULL DEFAULT TRUE
+      )
+    `);
+
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS go4launch_special_event (
+        id            BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
+        is_visible    BOOLEAN NOT NULL DEFAULT FALSE,
+        title         TEXT NOT NULL DEFAULT '',
+        subtitle      TEXT NOT NULL DEFAULT '',
+        location      TEXT NOT NULL DEFAULT '',
+        description   TEXT NOT NULL DEFAULT '',
+        event_local   TIMESTAMP,
+        image_type    TEXT,
+        image_data    BYTEA
       )
     `);
 
