@@ -186,6 +186,16 @@ body {
     margin-bottom: 0.2rem;
 }
 
+.special-event-card {
+    overflow-wrap: anywhere;
+}
+
+.special-event-description {
+    margin: 1rem 0 0;
+    text-align: left;
+    white-space: pre-wrap;
+}
+
 /* --- Countdown --- */
 .countdown-row {
     display: flex;

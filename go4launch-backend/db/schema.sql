@@ -45,6 +45,18 @@ CREATE TABLE IF NOT EXISTS go4launch_listing (
   is_visible  BOOLEAN NOT NULL DEFAULT TRUE
 );
 
+CREATE TABLE IF NOT EXISTS go4launch_special_event (
+  id            BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (id),
+  is_visible    BOOLEAN NOT NULL DEFAULT FALSE,
+  title         TEXT NOT NULL DEFAULT '',
+  subtitle      TEXT NOT NULL DEFAULT '',
+  location      TEXT NOT NULL DEFAULT '',
+  description   TEXT NOT NULL DEFAULT '',
+  event_local   TIMESTAMP,
+  image_type    TEXT,
+  image_data    BYTEA
+);
+
 CREATE TABLE IF NOT EXISTS go4launch_saw_it (
   id         SERIAL PRIMARY KEY,
   launch_id  TEXT NOT NULL,

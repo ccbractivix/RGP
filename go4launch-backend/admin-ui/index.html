@@ -56,6 +56,8 @@
       margin: 1rem 0 0.35rem;
     }
 
+    label[hidden] { display: none; }
+
     select, input[type="text"], input[type="url"], input[type="datetime-local"],
     input[type="file"], input[type="password"], textarea {
       width: 100%;
@@ -299,6 +301,45 @@
         <div class="field-hint">Automated monitor of the Launch Library 2 API version this backend depends on.</div>
       </div>
 
+      <div class="panel">
+        <div class="panel-title">Special Event Card</div>
+        <form id="event-form">
+          <fieldset id="event-fields" disabled style="border:0;padding:0;min-width:0;">
+            <label for="event-visible" style="display:flex;align-items:center;gap:0.5rem;">
+              <input type="checkbox" id="event-visible"> Display this special event
+            </label>
+            <div class="field-hint">Uncheck and save to hide the card without clearing its details or image.</div>
+
+            <label for="event-title">Title</label>
+            <input type="text" id="event-title" maxlength="200">
+            <label for="event-subtitle">Subtitle</label>
+            <input type="text" id="event-subtitle" maxlength="200">
+            <label for="event-location">Location</label>
+            <input type="text" id="event-location" maxlength="200">
+            <label for="event-date">Date &amp; Time (Eastern Time)</label>
+            <input type="datetime-local" id="event-date">
+            <div class="field-hint">Title, date, and time are required to display the card.</div>
+
+            <label for="event-description">Description</label>
+            <textarea id="event-description" rows="5" maxlength="5000"></textarea>
+            <div class="field-hint">Shown directly on the homepage card. Use blank lines to separate paragraphs.</div>
+
+            <label for="event-image">Custom Card Image (JPG, PNG, or WebP)</label>
+            <input type="file" id="event-image" accept="image/jpeg,image/png,image/webp">
+            <div class="field-hint">Optional, up to 8 MB. Leave blank to keep the current image.</div>
+            <label for="event-remove-image" id="event-remove-label" hidden>
+              <input type="checkbox" id="event-remove-image"> Remove the saved image
+            </label>
+
+            <div class="btn-row">
+              <button type="submit" class="btn btn-primary">Save Special Event</button>
+            </div>
+          </fieldset>
+          <div id="event-status" class="status-msg" role="status"></div>
+          <button type="button" class="btn btn-secondary" id="event-retry" hidden>Retry loading</button>
+        </form>
+      </div>
+
       <!-- Launch Selector -->
       <div class="panel">
         <div class="panel-title">📋 Select Launch</div>
@@ -504,7 +545,95 @@
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
         loadLL2Status();
-        await populateDropdown();
+        await Promise.all([populateDropdown(), loadSpecialEvent()]);
+      }
+
+      function setEventStatus(message, type) {
+        const status = document.getElementById('event-status');
+        status.textContent = message;
+        status.className = 'status-msg ' + type;
+      }
+
+      async function eventRequest(options) {
+        const r = await adminFetch('/admin/special-event', options);
+        if (r.status === 401) {
+          doLogout();
+          throw new Error('Session expired. Log in again.');
+        }
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          throw new Error(d.error || `Special event request failed (${r.status}).`);
+        }
+        return r.json();
+      }
+
+      async function loadSpecialEvent() {
+        const fields = document.getElementById('event-fields');
+        const retry = document.getElementById('event-retry');
+        fields.disabled = true;
+        retry.hidden = true;
+        document.getElementById('event-form').reset();
+        setEventStatus('Loading special event…', 'info');
+        try {
+          const event = await eventRequest();
+          document.getElementById('event-visible').checked = event?.is_visible ?? false;
+          for (const field of ['title', 'subtitle', 'location', 'description']) {
+            document.getElementById('event-' + field).value = event?.[field] ?? '';
+          }
+          document.getElementById('event-date').value = event?.event_local ?? '';
+          document.getElementById('event-remove-label').hidden = !event?.has_image;
+          fields.disabled = false;
+          setEventStatus('', '');
+        } catch (e) {
+          retry.hidden = false;
+          setEventStatus(e.message, 'error');
+        }
+      }
+
+      async function saveSpecialEvent(e) {
+        e.preventDefault();
+        const fields = document.getElementById('event-fields');
+        if (fields.disabled) return;
+        const input = document.getElementById('event-image');
+        const file = input.files[0];
+        const remove = document.getElementById('event-remove-image');
+        const removeLabel = document.getElementById('event-remove-label');
+        const payload = {
+          is_visible: document.getElementById('event-visible').checked,
+          event_local: document.getElementById('event-date').value || null,
+          remove_image: remove.checked,
+        };
+        for (const field of ['title', 'subtitle', 'location', 'description']) {
+          payload[field] = document.getElementById('event-' + field).value.trim();
+        }
+        if (payload.is_visible && (!payload.title || !payload.event_local)) {
+          return setEventStatus('Add a title, date, and time before displaying the event.', 'error');
+        }
+        if (file && (remove.checked || file.size > 8 * 1024 * 1024)) {
+          return setEventStatus('Choose an image up to 8 MB, or remove the saved image.', 'error');
+        }
+
+        fields.disabled = true;
+        setEventStatus('Saving special event…', 'info');
+        try {
+          if (file) {
+            payload.image_data = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result.split(',')[1]);
+              reader.onerror = () => reject(new Error('Could not read the selected image.'));
+              reader.readAsDataURL(file);
+            });
+          }
+          await eventRequest({ method: 'PUT', body: JSON.stringify(payload) });
+          if (file || remove.checked) removeLabel.hidden = !file;
+          input.value = '';
+          remove.checked = false;
+          setEventStatus(payload.is_visible ? 'Saved and displayed.' : 'Saved and hidden.', 'success');
+        } catch (e) {
+          setEventStatus(e.message, 'error');
+        } finally {
+          fields.disabled = false;
+        }
       }
 
       async function fetchUpcoming() {
@@ -870,6 +999,8 @@
       });
       document.getElementById('btn-logout').addEventListener('click', doLogout);
       document.getElementById('btn-refresh-ll2').addEventListener('click', loadLL2Status);
+      document.getElementById('event-form').addEventListener('submit', saveSpecialEvent);
+      document.getElementById('event-retry').addEventListener('click', loadSpecialEvent);
 
       document.getElementById('launch-select').addEventListener('change', function() {
         loadContent(this.value);
