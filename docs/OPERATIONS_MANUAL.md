@@ -31,6 +31,9 @@
 **Magic Show:** [Deployment and operations guide](../magic-show-web/SETUP_GUIDE.md)
 — separate backend/database, desktop reservations, and smartphone check-in.
 
+**Portside LIVE!:** [Deployment and staff guide](../portside/SETUP_GUIDE.md)
+— separate backend, PostgreSQL, manual cruise schedule CSV imports, and guest page.
+
 ---
 
 ## 1. What Is RGP?
@@ -82,6 +85,7 @@ Here is how all the tools connect:
 | **Theater Showtimes** | 7-day movie schedule with times | TVs, guests on phone |
 | **Launch Tracker** | Upcoming space launches at KSC/Cape Canaveral | TVs, guests on phone |
 | **Disc Rentals** | Guest-facing library + staff checkout system | Guests, front-desk staff |
+| **Portside LIVE!** | Upcoming Port Canaveral ship departures and estimated returns | Guests, staff (schedule management) |
 
 ---
 

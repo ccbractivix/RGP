@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Set to your deployed Portside backend URL, without a trailing slash. -->
+  <meta name="api-base" content="">
+  <title>Portside LIVE! | Resort Guest Portal</title>
+  <link rel="icon" href="assets/ship-placeholder.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <img class="logo" src="assets/portside-logo.svg" alt="Portside LIVE! Your front-row seat to Port Canaveral">
+    <p class="eyebrow">A RESORT GUEST PORTAL EXPERIENCE</p>
+    <h1>Every departure is an event.</h1>
+    <p>Find your spot, watch the ships sail, and be part of the Port Canaveral story.</p>
+  </header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow">YOUR NEXT 30 DAYS</p>
+      <h2>Coming up at the port</h2>
+      <p>Scheduled times are Eastern and may change. “LIVE!” celebrates the experience; this is not live vessel tracking.</p>
+    </section>
+    <div id="status" role="status">Loading the schedule…</div>
+    <div id="cards" class="cards"></div>
+  </main>
+  <footer>
+    <p>Schedule entered from <a href="https://www.portcanaveral.com/cruise/cruise-ship-schedule" target="_blank" rel="noopener noreferrer">Port Canaveral</a>. Confirm times with the port or cruise line.</p>
+    <p>Portside LIVE! is a Resort Guest Portal experience and is not affiliated with Port Canaveral or cruise lines.</p>
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>

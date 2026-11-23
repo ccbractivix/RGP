@@ -18,3 +18,4 @@ A modular collection of tools that power the resort's digital displays, guest se
 - [Disc Rentals User Manual](rentals-docs/USERS_MANUAL.md) — Guest, operator & admin workflows
 - [Activities Setup Guide](activities-web/SETUP_GUIDE.md) — Activities scheduler setup & usage
 - [Magic Show Reservations & Check-in](magic-show-web/SETUP_GUIDE.md) — Desktop reservations, mobile check-in, and deployment
+- [Portside LIVE! Setup & Staff Guide](portside/SETUP_GUIDE.md) — Cruise schedule imports, ship photos, itineraries, and deployment

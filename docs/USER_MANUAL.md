@@ -23,6 +23,10 @@
 **Magic Show:** [Reservations desk and smartphone check-in guide](../magic-show-web/SETUP_GUIDE.md)
 — free Thursday shows at 7 pm Eastern, general admission, 53 seats with overselling.
 
+**Portside LIVE!:** [Staff and setup guide](../portside/SETUP_GUIDE.md) —
+monthly CSV schedule imports, ship photos, itinerary notes, and guest cards.
+The schedule is manually maintained, not live tracking.
+
 ---
 
 ## 1. Introduction

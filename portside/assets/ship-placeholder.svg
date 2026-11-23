@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 480" role="img" aria-labelledby="title">
+  <title id="title">Cruise ship illustration</title>
+  <defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#183c57"/><stop offset="1" stop-color="#f4a66e"/></linearGradient></defs>
+  <path fill="url(#sky)" d="M0 0h1000v480H0z"/>
+  <circle fill="#ffd7a0" cx="760" cy="150" r="80"/>
+  <path fill="#123d54" d="M0 310q125-30 250 0t250 0 250 0 250 0v170H0z"/>
+  <path fill="#dbeff2" d="M180 268h611l-77 79H274zM286 234h420l38 28H261zM334 198h322l28 28H310zM396 167h190l15 23H380z"/>
+  <path fill="#103348" d="M305 249h20v7h-20zm45 0h20v7h-20zm45 0h20v7h-20zm45 0h20v7h-20zm45 0h20v7h-20zm45 0h20v7h-20zm45 0h20v7h-20zm45 0h20v7h-20zm45 0h20v7h-20z"/>
+  <path fill="none" stroke="#64d8d1" stroke-width="7" d="M0 383q100-25 200 0t200 0 200 0 200 0 200 0M0 420q100-25 200 0t200 0 200 0 200 0 200 0"/>
+</svg>
