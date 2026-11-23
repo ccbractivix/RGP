@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 220" role="img" aria-labelledby="title">
+  <title id="title">Portside LIVE! Your front-row seat to Port Canaveral</title>
+  <defs><linearGradient id="sea" x2="1" y2="1"><stop stop-color="#62f3e7"/><stop offset="1" stop-color="#1f95c5"/></linearGradient></defs>
+  <circle cx="92" cy="90" r="68" fill="#ffca78"/>
+  <path d="M25 92h134v22H25z" fill="#102b41"/>
+  <path d="M34 110h123l-17 30H52zM63 81h68l9 23H55zM81 64h36v14H81z" fill="#eafcff"/>
+  <path d="M26 148q22-10 44 0t44 0 44 0M26 162q22-10 44 0t44 0 44 0" fill="none" stroke="url(#sea)" stroke-width="7" stroke-linecap="round"/>
+  <text x="185" y="106" fill="#f3fbff" font-family="Arial,sans-serif" font-weight="800" font-size="68" letter-spacing="2">PORTSIDE</text>
+  <text x="188" y="155" fill="#65e8df" font-family="Arial,sans-serif" font-weight="800" font-size="38" letter-spacing="4">LIVE!</text>
+  <text x="190" y="187" fill="#c0d8e2" font-family="Arial,sans-serif" font-size="19">YOUR FRONT-ROW SEAT TO PORT CANAVERAL</text>
+</svg>

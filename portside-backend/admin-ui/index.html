@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portside LIVE! Admin</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#081c2a;color:#eef8fa;font:16px/1.5 system-ui,sans-serif}
+    main{max-width:760px;margin:auto;padding:1.5rem}h1,h2{line-height:1.2}h2{font-size:1.3rem}section{background:#123247;border:1px solid #28546a;border-radius:12px;padding:1rem 1.2rem;margin:1rem 0}
+    label{display:block;font-weight:650;margin:.8rem 0 .25rem}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;padding:.65rem;background:#081c2a;color:white;border:1px solid #71919f;border-radius:6px}textarea{min-height:110px}
+    button{background:#65ded6;color:#052c37;border:0;border-radius:6px;padding:.65rem 1rem;margin-top:.8rem;font-weight:750;cursor:pointer}button:disabled{opacity:.5}a{color:#8df2e9}.hint{color:#b9d1db;font-size:.9rem}.notice{min-height:1.5em;color:#ffdc9c}fieldset{border:0;padding:0;margin:0}fieldset:disabled{opacity:.55}
+  </style>
+</head>
+<body><main>
+  <h1>Portside LIVE! Admin</h1>
+  <p class="hint">Schedule times are Eastern. Staff enter schedules manually; this is not live vessel tracking.</p>
+  <section><h2>Sign in</h2><form id="login"><label for="code">Access code</label><input id="code" type="password" autocomplete="current-password" required><button>Sign in</button></form></section>
+  <p id="message" class="notice" role="status" aria-live="polite"></p>
+  <fieldset id="tools" disabled>
+    <section><h2>1. Replace schedule from CSV</h2>
+      <p class="hint">Upload the seven-column, headerless port schedule CSV. Import replaces all previously imported visits; photos, templates, and per-sailing notes remain. Check coverage and verify the source first.</p>
+      <form id="import"><label for="csv">Schedule CSV (up to 2 MB)</label><input id="csv" type="file" accept=".csv,text/csv" required><button>Replace schedule</button></form>
+      <p id="coverage" class="hint"></p>
+    </section>
+    <section><h2>2. Ship photos and itinerary templates</h2>
+      <label for="ship">Ship</label><select id="ship"></select>
+      <form id="photo"><label for="image">Ship photo (JPG, PNG, WebP; up to 8 MB)</label><input id="image" type="file" accept="image/jpeg,image/png,image/webp" required><p class="hint">Only upload photos you have permission to use. The original illustration appears until a photo is added.</p><button>Save photo</button></form>
+      <form id="template"><label for="nights">Trip length in nights</label><input id="nights" type="number" min="1" max="365" required><label for="template-notes">Reusable itinerary notes</label><textarea id="template-notes" maxlength="2000"></textarea><p class="hint">Shown only when a home-port sailing's inferred return matches this duration. Leave blank to delete this template. Matching a duration does not confirm the itinerary.</p><button>Save template</button></form>
+      <p id="templates" class="hint"></p>
+    </section>
+    <section><h2>3. Override one sailing</h2>
+      <form id="override"><label for="visit">Upcoming departure</label><select id="visit"></select><label for="visit-notes">Itinerary notes for this departure</label><textarea id="visit-notes" maxlength="2000"></textarea><p class="hint">Overrides the reusable template for this ship and departure time. Leave blank to use the template. Notes for a changed departure time must be re-entered.</p><button>Save sailing notes</button></form>
+    </section>
+  </fieldset>
+</main><script src="admin.js"></script></body></html>

@@ -19,6 +19,8 @@
 11. [File & Folder Map](#11-file--folder-map)
 12. [Adding a New Service](#12-adding-a-new-service)
 
+**Portside LIVE!:** [Setup, data format, and staff guide](../portside/SETUP_GUIDE.md).
+
 ---
 
 ## 1. Architecture Overview
@@ -75,6 +77,7 @@ RGP is a modular resort platform built as a collection of independent micro-serv
 | **go4launch** | `go4launch-backend/` + `go4launch/` | 3002 | Rocket launch tracker, blog, galleries | PIN (X-Auth-Code) |
 | **Cabana Booking** | `cabana-backend/` + `cabana-web/` | 3007 | Poolside cabana reservations | Session + CSRF |
 | **Magic Show** | `magic-show-backend/` + `magic-show-web/` | 3005 via Checkout; 3009 standalone | Weekly reservations, overselling, partial-party check-in | Open access (no authentication) |
+| **Portside LIVE!** | `portside-backend/` + `portside/` | 3010 | Manually imported cruise departures, photos and route notes | PIN (X-Auth-Code) |
 
 > **Note:** go4launch-backend and rentals-backend both default to port 3002 locally; on Render they are separate services with separate URLs.
 
@@ -85,6 +88,14 @@ to coordinate concurrent check-ins. Capacity is 53; booking beyond capacity is
 allowed, while admission beyond capacity requires an explicit override.
 `shared/rooms.js` supplies the same room/unit data to Express Checkout and
 Magic Show. See the [setup and API testing guide](../magic-show-web/SETUP_GUIDE.md).
+
+Portside LIVE! is independent of go4launch. Its PostgreSQL tables retain ships,
+photos, duration-based itinerary templates, per-departure overrides, visits and
+import metadata. An authenticated CSV import validates the entire file before
+replacing visits in one transaction. `GET /api/schedule` serves upcoming
+departures within the current Eastern calendar day and next 29 days; a later
+listed arrival of the same ship is only an estimate. `GET /api/ships/:id/image`
+serves uploaded photos. There is no external schedule fetch or live tracking.
 
 ### Static-only frontends (no backend)
 
