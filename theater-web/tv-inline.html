@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Theater TV Display - Inline Titles</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    html, body, iframe {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      border: 0;
+      overflow: hidden;
+    }
+
+    iframe { display: block; }
+  </style>
+</head>
+<body>
+  <iframe src="tv.html" title="Theater TV schedule with inline show titles"></iframe>
+  <script>
+    var frame = document.querySelector('iframe');
+    frame.addEventListener('load', function () {
+      var style = frame.contentDocument.createElement('style');
+      style.textContent = [
+        '.tv-show-time { display: inline; margin-right: 0.4em; }',
+        '.tv-show-title { display: inline; }',
+        '.tv-show-title + .tv-show-title::before { content: " "; }'
+      ].join('\n');
+      frame.contentDocument.head.appendChild(style);
+    });
+  </script>
+</body>
+</html>
