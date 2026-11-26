@@ -251,6 +251,17 @@ Click **+ Register Slide** and fill in:
 - A weather widget page
 - A QR code landing page
 
+#### Creating an Image Slide
+
+Click **Image Slide** in the Slides Library, then choose an image from the grouped
+`/static/images`, `/theater-web/static`, or `/Activities_Images` folders. Add a
+label and any optional title, message, or colors, then click **Create & Register**.
+You can instead enter an image URL, which overrides the selected image.
+
+To add images to a folder, commit them to the repository and wait for GitHub Pages
+to deploy. Reopen the image slide dialog to refresh the list. If a folder cannot
+be loaded, the dialog reports it and you can retry by reopening it.
+
 #### Removing a Slide
 Click the **Remove** button on a slide card. This removes it from the library but does NOT automatically remove it from channels that are currently using it. The channels will still try to load the URL — so if the page still exists, it'll still work.
 
